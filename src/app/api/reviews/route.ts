@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         strengths: data.strengths || null,
         improvements: data.improvements || null,
         comment: data.comment || null,
-        criteria: {},
+        criteria: null,
       },
     })
 

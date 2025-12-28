@@ -18,7 +18,7 @@ import {
   FileText,
 } from "lucide-react"
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   PENDING: {
     label: "На проверке",
     color: "bg-blue-100 text-blue-700",

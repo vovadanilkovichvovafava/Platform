@@ -22,9 +22,6 @@ import {
   FolderGit2,
   LucideIcon,
 } from "lucide-react"
-type ModuleType = "THEORY" | "PRACTICE" | "PROJECT"
-type ModuleStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
-
 const iconMap: Record<string, LucideIcon> = {
   Code,
   Target,
@@ -32,13 +29,13 @@ const iconMap: Record<string, LucideIcon> = {
   Lightbulb,
 }
 
-const typeIcons: Record<ModuleType, LucideIcon> = {
+const typeIcons: Record<string, LucideIcon> = {
   THEORY: BookOpen,
   PRACTICE: Wrench,
   PROJECT: FolderGit2,
 }
 
-const typeLabels: Record<ModuleType, string> = {
+const typeLabels: Record<string, string> = {
   THEORY: "Теория",
   PRACTICE: "Практика",
   PROJECT: "Проект",
@@ -66,7 +63,7 @@ export default async function TrailPage({ params }: Props) {
   }
 
   let isEnrolled = false
-  let moduleProgressMap: Record<string, ModuleStatus> = {}
+  let moduleProgressMap: Record<string, string> = {}
 
   if (session) {
     const enrollment = await prisma.enrollment.findUnique({

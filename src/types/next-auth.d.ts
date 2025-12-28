@@ -1,14 +1,12 @@
 import "next-auth"
 
-type Role = "STUDENT" | "TEACHER"
-
 declare module "next-auth" {
   interface Session {
     user: {
       id: string
       email: string
       name: string
-      role: Role
+      role: string
     }
   }
 
@@ -16,13 +14,13 @@ declare module "next-auth" {
     id: string
     email: string
     name: string
-    role: Role
+    role: string
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id: string
-    role: Role
+    role: string
   }
 }
