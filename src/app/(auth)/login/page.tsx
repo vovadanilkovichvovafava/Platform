@@ -57,9 +57,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-[#070714] px-4">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md">
-        <div className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+        <div className="p-8 rounded-2xl bg-white border border-slate-200 shadow-xl">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
@@ -67,8 +67,8 @@ export default function LoginPage() {
                 <Flame className="h-6 w-6 text-white" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-white">Вход в Prometheus</h1>
-            <p className="text-white/50 mt-2">
+            <h1 className="text-2xl font-bold text-slate-900">Вход в Prometheus</h1>
+            <p className="text-slate-500 mt-2">
               Введите email и пароль для входа
             </p>
           </div>
@@ -76,44 +76,44 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
                 {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-white/70">Email</Label>
+              <Label htmlFor="email" className="text-slate-700">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 {...register("email")}
                 disabled={isLoading}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-orange-500/50 focus:ring-orange-500/20"
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.email && (
-                <p className="text-sm text-red-400">{errors.email.message}</p>
+                <p className="text-sm text-red-500">{errors.email.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-white/70">Пароль</Label>
+              <Label htmlFor="password" className="text-slate-700">Пароль</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••"
                 {...register("password")}
                 disabled={isLoading}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-orange-500/50 focus:ring-orange-500/20"
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.password && (
-                <p className="text-sm text-red-400">{errors.password.message}</p>
+                <p className="text-sm text-red-500">{errors.password.message}</p>
               )}
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white border-0 h-11"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white border-0 h-11"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -127,18 +127,18 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-white/50">
+          <div className="mt-6 text-center text-sm text-slate-500">
             Нет аккаунта?{" "}
             <Link
               href="/register"
-              className="font-medium text-orange-400 hover:text-orange-300"
+              className="font-medium text-orange-500 hover:text-orange-600"
             >
               Зарегистрироваться
             </Link>
           </div>
 
-          <div className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10 text-xs text-white/40">
-            <p className="font-medium mb-2 text-white/60">Тестовые аккаунты:</p>
+          <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
+            <p className="font-medium mb-2 text-slate-600">Тестовые аккаунты:</p>
             <p>Кандидат: student@rnd.academy / password123</p>
             <p>Эксперт: teacher@rnd.academy / password123</p>
           </div>

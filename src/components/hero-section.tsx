@@ -2,260 +2,211 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { useEffect, useRef } from "react"
 
 export function HeroSection() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-    }
-    resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
-
-    // Stars
-    const stars: Array<{ x: number; y: number; size: number; opacity: number; speed: number }> = []
-    for (let i = 0; i < 150; i++) {
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 1.5 + 0.5,
-        opacity: Math.random() * 0.8 + 0.2,
-        speed: Math.random() * 0.02 + 0.01,
-      })
-    }
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      stars.forEach((star) => {
-        star.opacity += Math.sin(Date.now() * star.speed) * 0.01
-        star.opacity = Math.max(0.1, Math.min(1, star.opacity))
-
-        ctx.beginPath()
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`
-        ctx.fill()
-      })
-
-      requestAnimationFrame(animate)
-    }
-    animate()
-
-    return () => {
-      window.removeEventListener("resize", resizeCanvas)
-    }
-  }, [])
-
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-[#070714]">
-      {/* Canvas for stars */}
-      <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
+    <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+      {/* Cosmic Background Illustration */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Stars scattered across the background */}
+        <div className="absolute inset-0">
+          {/* Static stars as simple dots */}
+          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10%" cy="20%" r="1" fill="#94a3b8" opacity="0.4" />
+            <circle cx="15%" cy="35%" r="1.5" fill="#94a3b8" opacity="0.3" />
+            <circle cx="20%" cy="15%" r="1" fill="#94a3b8" opacity="0.5" />
+            <circle cx="25%" cy="45%" r="1.2" fill="#94a3b8" opacity="0.3" />
+            <circle cx="30%" cy="25%" r="1" fill="#94a3b8" opacity="0.4" />
+            <circle cx="35%" cy="55%" r="1.5" fill="#94a3b8" opacity="0.25" />
+            <circle cx="40%" cy="12%" r="1" fill="#94a3b8" opacity="0.4" />
+            <circle cx="45%" cy="40%" r="1.2" fill="#94a3b8" opacity="0.3" />
+            <circle cx="50%" cy="8%" r="1.5" fill="#94a3b8" opacity="0.35" />
+            <circle cx="55%" cy="30%" r="1" fill="#94a3b8" opacity="0.4" />
+            <circle cx="60%" cy="18%" r="1.3" fill="#94a3b8" opacity="0.3" />
+            <circle cx="65%" cy="50%" r="1" fill="#94a3b8" opacity="0.35" />
+            <circle cx="70%" cy="10%" r="1.5" fill="#94a3b8" opacity="0.4" />
+            <circle cx="75%" cy="35%" r="1" fill="#94a3b8" opacity="0.3" />
+            <circle cx="80%" cy="22%" r="1.2" fill="#94a3b8" opacity="0.35" />
+            <circle cx="85%" cy="45%" r="1" fill="#94a3b8" opacity="0.4" />
+            <circle cx="90%" cy="15%" r="1.5" fill="#94a3b8" opacity="0.3" />
+            <circle cx="95%" cy="38%" r="1" fill="#94a3b8" opacity="0.35" />
+          </svg>
+        </div>
 
-      {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-900/10 via-transparent to-purple-900/5 pointer-events-none" />
+        {/* Cosmic gradient at the bottom (like hills in the original) */}
+        <div className="absolute bottom-0 left-0 right-0 h-[45%]">
+          {/* Deep space gradient base */}
+          <svg className="absolute bottom-0 w-full h-full" viewBox="0 0 1440 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="spaceGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#1e293b" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#0f172a" stopOpacity="0.4" />
+              </linearGradient>
+              <linearGradient id="spaceGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#334155" stopOpacity="0.1" />
+                <stop offset="100%" stopColor="#1e293b" stopOpacity="0.3" />
+              </linearGradient>
+              <linearGradient id="spaceGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#475569" stopOpacity="0.05" />
+                <stop offset="100%" stopColor="#334155" stopOpacity="0.2" />
+              </linearGradient>
+            </defs>
 
-      {/* Saturn */}
-      <div className="absolute right-[5%] lg:right-[10%] top-1/2 -translate-y-1/2 pointer-events-none">
-        <svg
-          className="w-[400px] h-[400px] md:w-[500px] md:h-[500px] lg:w-[600px] lg:h-[600px]"
-          viewBox="0 0 500 500"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            {/* Saturn body gradient */}
-            <radialGradient id="saturnBody" cx="40%" cy="40%" r="60%">
-              <stop offset="0%" stopColor="#F5D89A" />
-              <stop offset="40%" stopColor="#E8C370" />
-              <stop offset="70%" stopColor="#D4A84A" />
-              <stop offset="100%" stopColor="#B8863A" />
-            </radialGradient>
+            {/* Back layer - darkest */}
+            <path d="M0,100 Q200,50 400,120 T800,80 T1200,130 T1440,90 L1440,400 L0,400 Z" fill="url(#spaceGrad1)" />
 
-            {/* Saturn shadow */}
-            <radialGradient id="saturnShadow" cx="70%" cy="60%" r="50%">
-              <stop offset="0%" stopColor="transparent" />
-              <stop offset="60%" stopColor="rgba(0,0,0,0.3)" />
-              <stop offset="100%" stopColor="rgba(0,0,0,0.6)" />
-            </radialGradient>
+            {/* Middle layer */}
+            <path d="M0,180 Q250,130 500,200 T1000,160 T1440,190 L1440,400 L0,400 Z" fill="url(#spaceGrad2)" />
+
+            {/* Front layer - lightest */}
+            <path d="M0,260 Q300,220 600,280 T1200,250 T1440,270 L1440,400 L0,400 Z" fill="url(#spaceGrad3)" />
+
+            {/* Tiny stars in the cosmic hills */}
+            <circle cx="100" cy="300" r="1.5" fill="#e2e8f0" opacity="0.6" />
+            <circle cx="250" cy="250" r="1" fill="#e2e8f0" opacity="0.5" />
+            <circle cx="400" cy="320" r="1.5" fill="#e2e8f0" opacity="0.4" />
+            <circle cx="550" cy="280" r="1" fill="#e2e8f0" opacity="0.5" />
+            <circle cx="700" cy="310" r="1.2" fill="#e2e8f0" opacity="0.6" />
+            <circle cx="850" cy="260" r="1" fill="#e2e8f0" opacity="0.5" />
+            <circle cx="1000" cy="300" r="1.5" fill="#e2e8f0" opacity="0.4" />
+            <circle cx="1150" cy="270" r="1" fill="#e2e8f0" opacity="0.5" />
+            <circle cx="1300" cy="290" r="1.2" fill="#e2e8f0" opacity="0.6" />
+          </svg>
+        </div>
+
+        {/* Saturn Planet */}
+        <div className="absolute right-[5%] lg:right-[12%] top-[15%] lg:top-[20%]">
+          <svg
+            className="w-[200px] h-[200px] md:w-[280px] md:h-[280px] lg:w-[350px] lg:h-[350px]"
+            viewBox="0 0 350 350"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              {/* Saturn body gradient - warm golden */}
+              <radialGradient id="saturnBodyLight" cx="35%" cy="35%" r="65%">
+                <stop offset="0%" stopColor="#fbbf24" />
+                <stop offset="40%" stopColor="#f59e0b" />
+                <stop offset="70%" stopColor="#d97706" />
+                <stop offset="100%" stopColor="#b45309" />
+              </radialGradient>
+
+              {/* Saturn shadow */}
+              <radialGradient id="saturnShadowLight" cx="70%" cy="65%" r="45%">
+                <stop offset="0%" stopColor="transparent" />
+                <stop offset="60%" stopColor="rgba(146,64,14,0.2)" />
+                <stop offset="100%" stopColor="rgba(120,53,15,0.4)" />
+              </radialGradient>
+
+              {/* Outer glow */}
+              <radialGradient id="outerGlowLight" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.2" />
+                <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.1" />
+                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+              </radialGradient>
+
+              {/* Ring gradient */}
+              <linearGradient id="ringGradLight" x1="0%" y1="50%" x2="100%" y2="50%">
+                <stop offset="0%" stopColor="#d4a574" stopOpacity="0" />
+                <stop offset="15%" stopColor="#e8c9a0" stopOpacity="0.6" />
+                <stop offset="35%" stopColor="#f5dfc0" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#fef3e2" stopOpacity="0.9" />
+                <stop offset="65%" stopColor="#f5dfc0" stopOpacity="0.8" />
+                <stop offset="85%" stopColor="#e8c9a0" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#d4a574" stopOpacity="0" />
+              </linearGradient>
+
+              {/* Clip paths for 3D ring effect */}
+              <clipPath id="ringBehindLight">
+                <rect x="0" y="0" width="350" height="175" />
+              </clipPath>
+              <clipPath id="ringFrontLight">
+                <rect x="0" y="175" width="350" height="175" />
+              </clipPath>
+            </defs>
 
             {/* Outer glow */}
-            <radialGradient id="outerGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#F5D89A" stopOpacity="0.3" />
-              <stop offset="50%" stopColor="#E8C370" stopOpacity="0.1" />
-              <stop offset="100%" stopColor="#E8C370" stopOpacity="0" />
-            </radialGradient>
+            <circle cx="175" cy="175" r="140" fill="url(#outerGlowLight)" />
 
-            {/* Ring gradients */}
-            <linearGradient id="ringGradient1" x1="0%" y1="50%" x2="100%" y2="50%">
-              <stop offset="0%" stopColor="#C9B896" stopOpacity="0" />
-              <stop offset="15%" stopColor="#D4C4A0" stopOpacity="0.7" />
-              <stop offset="35%" stopColor="#E8D6B0" stopOpacity="0.9" />
-              <stop offset="50%" stopColor="#F0E0C0" stopOpacity="1" />
-              <stop offset="65%" stopColor="#E8D6B0" stopOpacity="0.9" />
-              <stop offset="85%" stopColor="#D4C4A0" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#C9B896" stopOpacity="0" />
-            </linearGradient>
+            {/* Ring behind planet */}
+            <g clipPath="url(#ringBehindLight)" opacity="0.5">
+              <ellipse
+                cx="175"
+                cy="175"
+                rx="155"
+                ry="35"
+                fill="none"
+                stroke="url(#ringGradLight)"
+                strokeWidth="25"
+                transform="rotate(-15, 175, 175)"
+              />
+            </g>
 
-            <linearGradient id="ringGradient2" x1="0%" y1="50%" x2="100%" y2="50%">
-              <stop offset="0%" stopColor="#A89070" stopOpacity="0" />
-              <stop offset="20%" stopColor="#C0A880" stopOpacity="0.5" />
-              <stop offset="50%" stopColor="#D8C090" stopOpacity="0.7" />
-              <stop offset="80%" stopColor="#C0A880" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#A89070" stopOpacity="0" />
-            </linearGradient>
+            {/* Saturn body */}
+            <circle cx="175" cy="175" r="70" fill="url(#saturnBodyLight)" />
 
-            {/* Clip path for ring behind planet */}
-            <clipPath id="ringBehind">
-              <rect x="0" y="0" width="500" height="250" />
-            </clipPath>
+            {/* Saturn bands */}
+            <ellipse cx="175" cy="158" rx="66" ry="7" fill="#ca8a04" opacity="0.2" />
+            <ellipse cx="175" cy="170" rx="68" ry="5" fill="#fef3c7" opacity="0.15" />
+            <ellipse cx="175" cy="182" rx="69" ry="4" fill="#a16207" opacity="0.15" />
+            <ellipse cx="175" cy="192" rx="65" ry="6" fill="#ca8a04" opacity="0.2" />
 
-            {/* Clip path for ring in front of planet */}
-            <clipPath id="ringFront">
-              <rect x="0" y="250" width="500" height="250" />
-            </clipPath>
+            {/* Saturn shadow overlay */}
+            <circle cx="175" cy="175" r="70" fill="url(#saturnShadowLight)" />
 
-            {/* Filter for subtle glow */}
-            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
+            {/* Ring in front of planet */}
+            <g clipPath="url(#ringFrontLight)">
+              <ellipse
+                cx="175"
+                cy="175"
+                rx="155"
+                ry="35"
+                fill="none"
+                stroke="url(#ringGradLight)"
+                strokeWidth="25"
+                transform="rotate(-15, 175, 175)"
+              />
+              {/* Inner ring detail */}
+              <ellipse
+                cx="175"
+                cy="175"
+                rx="130"
+                ry="29"
+                fill="none"
+                stroke="#fef3e2"
+                strokeWidth="1"
+                opacity="0.4"
+                transform="rotate(-15, 175, 175)"
+              />
+            </g>
 
-          {/* Outer glow */}
-          <circle cx="250" cy="250" r="200" fill="url(#outerGlow)" />
+            {/* Small highlight */}
+            <circle cx="155" cy="155" r="20" fill="white" opacity="0.15" />
+          </svg>
+        </div>
 
-          {/* Ring behind planet */}
-          <g clipPath="url(#ringBehind)" opacity="0.6">
-            <ellipse
-              cx="250"
-              cy="250"
-              rx="220"
-              ry="50"
-              fill="none"
-              stroke="url(#ringGradient1)"
-              strokeWidth="35"
-              transform="rotate(-20, 250, 250)"
-            />
-            <ellipse
-              cx="250"
-              cy="250"
-              rx="180"
-              ry="40"
-              fill="none"
-              stroke="url(#ringGradient2)"
-              strokeWidth="15"
-              transform="rotate(-20, 250, 250)"
-            />
-          </g>
-
-          {/* Saturn body */}
-          <circle cx="250" cy="250" r="100" fill="url(#saturnBody)" />
-
-          {/* Saturn bands */}
-          <ellipse cx="250" cy="225" rx="95" ry="10" fill="#C4923D" opacity="0.25" />
-          <ellipse cx="250" cy="240" rx="98" ry="8" fill="#E8D6B0" opacity="0.15" />
-          <ellipse cx="250" cy="255" rx="99" ry="6" fill="#B88A3A" opacity="0.2" />
-          <ellipse cx="250" cy="270" rx="96" ry="9" fill="#D4A84A" opacity="0.2" />
-          <ellipse cx="250" cy="285" rx="90" ry="7" fill="#C4923D" opacity="0.15" />
-
-          {/* Saturn shadow */}
-          <circle cx="250" cy="250" r="100" fill="url(#saturnShadow)" />
-
-          {/* Ring in front of planet */}
-          <g clipPath="url(#ringFront)" filter="url(#glow)">
-            <ellipse
-              cx="250"
-              cy="250"
-              rx="220"
-              ry="50"
-              fill="none"
-              stroke="url(#ringGradient1)"
-              strokeWidth="35"
-              transform="rotate(-20, 250, 250)"
-            />
-            <ellipse
-              cx="250"
-              cy="250"
-              rx="180"
-              ry="40"
-              fill="none"
-              stroke="url(#ringGradient2)"
-              strokeWidth="15"
-              transform="rotate(-20, 250, 250)"
-            />
-            {/* Ring detail lines */}
-            <ellipse
-              cx="250"
-              cy="250"
-              rx="200"
-              ry="45"
-              fill="none"
-              stroke="#F0E8D8"
-              strokeWidth="1"
-              opacity="0.4"
-              transform="rotate(-20, 250, 250)"
-            />
-            <ellipse
-              cx="250"
-              cy="250"
-              rx="160"
-              ry="36"
-              fill="none"
-              stroke="#F0E8D8"
-              strokeWidth="1"
-              opacity="0.3"
-              transform="rotate(-20, 250, 250)"
-            />
-          </g>
-
-          {/* Small highlight on planet */}
-          <circle cx="220" cy="220" r="30" fill="white" opacity="0.1" />
-        </svg>
+        {/* Small decorative planets/moons */}
+        <div className="absolute left-[8%] top-[25%] w-3 h-3 rounded-full bg-gradient-to-br from-orange-300 to-orange-500 opacity-60" />
+        <div className="absolute left-[15%] top-[60%] w-2 h-2 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 opacity-50" />
+        <div className="absolute right-[25%] top-[70%] w-2.5 h-2.5 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-400 opacity-40" />
       </div>
 
       {/* Content */}
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-2xl">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10 mb-10">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-            </span>
-            <span className="text-white/80 text-sm font-medium tracking-wide">
-              PROMETHEUS
-            </span>
-            <span className="text-white/30">|</span>
-            <span className="text-orange-400/80 text-sm">
-              Skill Assessment
-            </span>
-          </div>
-
           {/* Heading */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tight">
-            Докажи свой
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-4 leading-[1.1] tracking-tight">
+            Научись создавать
             <br />
-            <span className="bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400 bg-clip-text text-transparent">
-              уровень
+            <span className="text-orange-500">
+              продукты будущего
             </span>
           </h1>
 
           {/* Description */}
-          <p className="text-lg md:text-xl text-white/60 mb-10 leading-relaxed max-w-xl">
-            Платформа оценки навыков через реальные проекты.
-            <span className="text-white/80"> Vibe Coding, маркетинг, UI дизайн, R&D.</span>
+          <p className="text-lg md:text-xl text-slate-600 mb-8 leading-relaxed max-w-xl">
+            Освой Vibe Coding, маркетинг, UI дизайн и R&D. Практические проекты,
+            менторство и сертификаты.
           </p>
 
           {/* CTA Buttons */}
@@ -263,42 +214,21 @@ export function HeroSection() {
             <Button
               asChild
               size="lg"
-              className="h-14 px-8 text-base font-semibold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white border-0 shadow-xl shadow-orange-500/20"
+              className="h-12 px-8 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
             >
-              <Link href="/register">Начать оценку</Link>
+              <Link href="/register">Начать обучение</Link>
             </Button>
             <Button
               asChild
               size="lg"
               variant="outline"
-              className="h-14 px-8 text-base font-semibold bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 backdrop-blur-sm"
+              className="h-12 px-8 text-base font-semibold border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400"
             >
-              <Link href="/trails">Выбрать направление</Link>
+              <Link href="/trails">Смотреть trails</Link>
             </Button>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center gap-12 mt-16 pt-8 border-t border-white/10">
-            <div>
-              <div className="text-3xl font-bold text-white">4</div>
-              <div className="text-sm text-white/40 mt-1">направления</div>
-            </div>
-            <div className="w-px h-12 bg-white/10" />
-            <div>
-              <div className="text-3xl font-bold text-white">3</div>
-              <div className="text-sm text-white/40 mt-1">уровня задач</div>
-            </div>
-            <div className="w-px h-12 bg-white/10" />
-            <div>
-              <div className="text-3xl font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">Pro</div>
-              <div className="text-sm text-white/40 mt-1">оценка</div>
-            </div>
           </div>
         </div>
       </div>
-
-      {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#070714] to-transparent pointer-events-none" />
     </section>
   )
 }
