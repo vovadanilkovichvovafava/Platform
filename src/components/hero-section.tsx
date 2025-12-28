@@ -9,7 +9,7 @@ export function HeroSection() {
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
       {/* Background Image */}
       <Image
-        src="/hero-bg.jpg"
+        src="/hero-bg.png"
         alt="Cosmic background with Saturn"
         fill
         className="object-cover"
