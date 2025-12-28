@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+}
+
+enum ModuleType {
+  THEORY
+  PRACTICE
+  PROJECT
+}
+
+enum ModuleStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REVISION
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(STUDENT)
+  totalXP       Int       @default(0)
+  currentStreak Int       @default(0)
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  enrollments     Enrollment[]
+  moduleProgress  ModuleProgress[]
+  unitProgress    UnitProgress[]
+  submissions     Submission[]
+  reviews         Review[]         @relation("Reviewer")
+}
+
+model Trail {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  subtitle    String
+  description String
+  icon        String
+  color       String
+  duration    String
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules     Module[]
+  enrollments Enrollment[]
+}
+
+model Module {
+  id           String     @id @default(cuid())
+  slug         String     @unique
+  title        String
+  description  String
+  type         ModuleType
+  level        String     @default("Beginner")
+  points       Int        @default(50)
+  duration     String
+  content      String?    @db.Text
+  requirements String?    @db.Text
+  order        Int        @default(0)
+  trailId      String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  trail    Trail            @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  units    Unit[]
+  progress ModuleProgress[]
+  submissions Submission[]
+
+  @@index([trailId])
+}
+
+model Unit {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  duration    Int      @default(10)
+  points      Int      @default(25)
+  isChallenge Boolean  @default(false)
+  order       Int      @default(0)
+  moduleId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module   Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress UnitProgress[]
+
+  @@index([moduleId])
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  trailId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trailId])
+  @@index([userId])
+  @@index([trailId])
+}
+
+model ModuleProgress {
+  id        String       @id @default(cuid())
+  userId    String
+  moduleId  String
+  status    ModuleStatus @default(NOT_STARTED)
+  startedAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([userId])
+  @@index([moduleId])
+}
+
+model UnitProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  unitId      String
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, unitId])
+  @@index([userId])
+  @@index([unitId])
+}
+
+model Submission {
+  id        String           @id @default(cuid())
+  githubUrl String?
+  deployUrl String?
+  comment   String?          @db.Text
+  fileUrl   String?
+  status    SubmissionStatus @default(PENDING)
+  userId    String
+  moduleId  String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  review Review?
+
+  @@index([userId])
+  @@index([moduleId])
+  @@index([status])
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  score        Int
+  criteria     Json?
+  strengths    String?  @db.Text
+  improvements String?  @db.Text
+  comment      String?  @db.Text
+  submissionId String   @unique
+  reviewerId   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer   User       @relation("Reviewer", fields: [reviewerId], references: [id])
+
+  @@index([reviewerId])
+}
