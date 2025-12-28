@@ -3,15 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
-// Note: SQLite doesn't support enums, using String instead
-// Role: "STUDENT" | "TEACHER"
-// ModuleType: "THEORY" | "PRACTICE" | "PROJECT"
-// ModuleStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
-// SubmissionStatus: "PENDING" | "APPROVED" | "REVISION"
 
 model User {
   id            String    @id @default(cuid())
