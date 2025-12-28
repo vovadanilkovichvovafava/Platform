@@ -19,11 +19,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  enrollments     Enrollment[]
-  moduleProgress  ModuleProgress[]
-  unitProgress    UnitProgress[]
-  submissions     Submission[]
-  reviews         Review[]         @relation("Reviewer")
+  enrollments      Enrollment[]
+  moduleProgress   ModuleProgress[]
+  unitProgress     UnitProgress[]
+  submissions      Submission[]
+  reviews          Review[]           @relation("Reviewer")
+  questionAttempts QuestionAttempt[]
+  taskProgress     TaskProgress[]
 }
 
 model Trail {
@@ -40,8 +42,9 @@ model Trail {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  modules     Module[]
-  enrollments Enrollment[]
+  modules      Module[]
+  enrollments  Enrollment[]
+  taskProgress TaskProgress[]
 }
 
 model Module {
@@ -64,6 +67,7 @@ model Module {
   units       Unit[]
   progress    ModuleProgress[]
   submissions Submission[]
+  questions   Question[]
 
   @@index([trailId])
 }
@@ -172,4 +176,60 @@ model Review {
   reviewer   User       @relation("Reviewer", fields: [reviewerId], references: [id])
 
   @@index([reviewerId])
+}
+
+// Theory questions for skill assessment
+model Question {
+  id            String   @id @default(cuid())
+  moduleId      String
+  question      String
+  options       String   // JSON array of options
+  correctAnswer Int      // Index of correct option (0-3)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  module   Module            @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  attempts QuestionAttempt[]
+
+  @@index([moduleId])
+}
+
+// Track question attempts for scoring (100% -> 65% -> 35%)
+model QuestionAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  questionId  String
+  attempts    Int      @default(0)  // Number of attempts
+  isCorrect   Boolean  @default(false)
+  earnedScore Int      @default(0)  // Score based on attempts
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+  @@index([questionId])
+}
+
+// Track candidate's task level progression
+model TaskProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  trailId      String
+  currentLevel String   @default("MIDDLE")  // JUNIOR, MIDDLE, SENIOR
+  middleStatus String   @default("PENDING") // PENDING, PASSED, FAILED
+  juniorStatus String   @default("LOCKED")  // LOCKED, PENDING, PASSED, FAILED
+  seniorStatus String   @default("LOCKED")  // LOCKED, PENDING, PASSED, FAILED
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trailId])
+  @@index([userId])
+  @@index([trailId])
 }

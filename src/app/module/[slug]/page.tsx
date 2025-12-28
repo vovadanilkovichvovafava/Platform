@@ -16,6 +16,7 @@ import {
   FolderGit2,
 } from "lucide-react"
 import { SubmitProjectForm } from "@/components/submit-project-form"
+import { QuizSection } from "@/components/quiz-section"
 
 const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
@@ -45,6 +46,9 @@ export default async function ModulePage({ params }: Props) {
     where: { slug },
     include: {
       trail: true,
+      questions: {
+        orderBy: { order: "asc" },
+      },
     },
   })
 
@@ -90,6 +94,14 @@ export default async function ModulePage({ params }: Props) {
       },
     })
   }
+
+  // Get question attempts for quiz
+  const questionAttempts = await prisma.questionAttempt.findMany({
+    where: {
+      userId: session.user.id,
+      questionId: { in: module.questions.map((q) => q.id) },
+    },
+  })
 
   const isCompleted = progress?.status === "COMPLETED"
   const isProject = module.type === "PROJECT"
@@ -302,6 +314,25 @@ export default async function ModulePage({ params }: Props) {
                   {renderContent(module.requirements)}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Quiz section for theory/practice modules */}
+            {!isProject && module.questions.length > 0 && (
+              <QuizSection
+                questions={module.questions.map((q) => ({
+                  id: q.id,
+                  question: q.question,
+                  options: JSON.parse(q.options) as string[],
+                  order: q.order,
+                }))}
+                attempts={questionAttempts.map((a) => ({
+                  questionId: a.questionId,
+                  isCorrect: a.isCorrect,
+                  attempts: a.attempts,
+                  earnedScore: a.earnedScore,
+                }))}
+                moduleSlug={module.slug}
+              />
             )}
           </div>
 

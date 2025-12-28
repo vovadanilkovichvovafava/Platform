@@ -5,6 +5,9 @@ const prisma = new PrismaClient()
 
 async function main() {
   // Clean existing data
+  await prisma.questionAttempt.deleteMany()
+  await prisma.question.deleteMany()
+  await prisma.taskProgress.deleteMany()
   await prisma.review.deleteMany()
   await prisma.submission.deleteMany()
   await prisma.unitProgress.deleteMany()
@@ -262,8 +265,43 @@ Vibe Coding — это современный подход к разработк
     },
   ]
 
+  // Create modules and questions for Vibe Coder
+  const vibeCoderQuestions: Record<string, Array<{ question: string; options: string[]; correctAnswer: number }>> = {
+    "vibe-intro": [
+      { question: "Что такое Vibe Coding?", options: ["Программирование под музыку", "Подход к разработке с использованием AI-ассистентов", "Язык программирования", "Метод тестирования"], correctAnswer: 1 },
+      { question: "Какой инструмент НЕ используется в Vibe Coding?", options: ["Claude", "Cursor", "Visual Basic 6", "ChatGPT"], correctAnswer: 2 },
+      { question: "Что НЕ входит в ключевые компетенции Vibe Coder?", options: ["Промптинг", "Понимание архитектуры", "Ручное написание ассемблера", "Деплой и DevOps"], correctAnswer: 2 },
+    ],
+    "vibe-prompting": [
+      { question: "Какой элемент НЕ входит в структуру эффективного промпта?", options: ["Контекст", "Задача", "Ваше настроение", "Требования"], correctAnswer: 2 },
+      { question: "Что лучше делать при сложной задаче для AI?", options: ["Писать один большой промпт", "Разбивать на шаги", "Не использовать примеры", "Избегать контекста"], correctAnswer: 1 },
+      { question: "Как правильно описать задачу AI?", options: ["Абстрактно и кратко", "Конкретно с примерами", "Только код без объяснений", "Только на английском"], correctAnswer: 1 },
+    ],
+    "vibe-architecture": [
+      { question: "Что такое Server Components в Next.js?", options: ["Компоненты для серверной комнаты", "Компоненты, рендерящиеся на сервере с доступом к БД", "Компоненты только для API", "Устаревшая технология"], correctAnswer: 1 },
+      { question: "Какой ORM рекомендуется для Next.js?", options: ["Sequelize", "Prisma", "Mongoose", "TypeORM"], correctAnswer: 1 },
+      { question: "Для чего нужен Tailwind CSS?", options: ["Для работы с базой данных", "Для utility-first стилизации", "Для тестирования", "Для деплоя"], correctAnswer: 1 },
+    ],
+  }
+
   for (const module of vibeCoderModules) {
-    await prisma.module.create({ data: { ...module, trailId: vibeCoder.id } })
+    const createdModule = await prisma.module.create({ data: { ...module, trailId: vibeCoder.id } })
+
+    // Add questions for theory/practice modules
+    const questions = vibeCoderQuestions[module.slug]
+    if (questions) {
+      for (let i = 0; i < questions.length; i++) {
+        await prisma.question.create({
+          data: {
+            moduleId: createdModule.id,
+            question: questions[i].question,
+            options: JSON.stringify(questions[i].options),
+            correctAnswer: questions[i].correctAnswer,
+            order: i + 1,
+          },
+        })
+      }
+    }
   }
 
   // =====================
@@ -484,8 +522,42 @@ Vibe Coding — это современный подход к разработк
     },
   ]
 
+  // Create modules and questions for Marketer
+  const marketerQuestions: Record<string, Array<{ question: string; options: string[]; correctAnswer: number }>> = {
+    "marketing-intro": [
+      { question: "Что такое конверсия?", options: ["Валютный курс", "Процент посетителей, совершающих целевое действие", "Тип рекламы", "Метод SEO"], correctAnswer: 1 },
+      { question: "Что означает буква D в модели AIDA?", options: ["Decision", "Desire", "Delivery", "Data"], correctAnswer: 1 },
+      { question: "Что НЕ является частью воронки AIDA?", options: ["Attention", "Interest", "Investigation", "Action"], correctAnswer: 2 },
+    ],
+    "marketing-audience": [
+      { question: "Что такое Jobs To Be Done?", options: ["Список вакансий", "Концепция: клиенты 'нанимают' продукты для работы", "Метод управления", "Тип CRM"], correctAnswer: 1 },
+      { question: "Что входит в психографику аудитории?", options: ["Возраст и пол", "Ценности и страхи", "Город проживания", "Доход"], correctAnswer: 1 },
+      { question: "Для чего создают персоны?", options: ["Для дизайна логотипа", "Для понимания целевой аудитории", "Для SEO", "Для бухгалтерии"], correctAnswer: 1 },
+    ],
+    "marketing-copywriting": [
+      { question: "Что такое УТП?", options: ["Уникальное торговое предложение", "Универсальный текстовый процессор", "Условия торговой площадки", "Ускоренный тест продукта"], correctAnswer: 0 },
+      { question: "Что обычно идёт в Hero-секции лендинга?", options: ["FAQ", "УТП и CTA", "Отзывы", "Контакты"], correctAnswer: 1 },
+      { question: "Какая формула заголовка эффективна?", options: ["Просто название компании", "Как [результат] без [боли]", "Только цена", "Дата основания"], correctAnswer: 1 },
+    ],
+  }
+
   for (const module of marketerModules) {
-    await prisma.module.create({ data: { ...module, trailId: marketer.id } })
+    const createdModule = await prisma.module.create({ data: { ...module, trailId: marketer.id } })
+
+    const questions = marketerQuestions[module.slug]
+    if (questions) {
+      for (let i = 0; i < questions.length; i++) {
+        await prisma.question.create({
+          data: {
+            moduleId: createdModule.id,
+            question: questions[i].question,
+            options: JSON.stringify(questions[i].options),
+            correctAnswer: questions[i].correctAnswer,
+            order: i + 1,
+          },
+        })
+      }
+    }
   }
 
   // =====================
@@ -714,8 +786,42 @@ Atoms → Molecules → Organisms → Templates → Pages`,
     },
   ]
 
+  // Create modules and questions for UI Designer
+  const uiDesignerQuestions: Record<string, Array<{ question: string; options: string[]; correctAnswer: number }>> = {
+    "design-intro": [
+      { question: "Какой базовый шаг сетки используется в UI?", options: ["4px", "8px", "10px", "12px"], correctAnswer: 1 },
+      { question: "Что означает принцип Proximity?", options: ["Цветовая схема", "Связанные элементы группируются", "Большие отступы", "Яркие кнопки"], correctAnswer: 1 },
+      { question: "Что НЕ является принципом визуального дизайна?", options: ["Иерархия", "Консистентность", "Максимализм", "Alignment"], correctAnswer: 2 },
+    ],
+    "design-figma": [
+      { question: "Что такое Auto Layout в Figma?", options: ["Автоматическая генерация кода", "Система автоматического размещения элементов", "Плагин для анимаций", "Экспорт в CSS"], correctAnswer: 1 },
+      { question: "Для чего нужны Variants в Figma?", options: ["Для экспорта", "Для разных состояний компонента", "Для анимаций", "Для комментариев"], correctAnswer: 1 },
+      { question: "Что такое Atomic Design?", options: ["Физика в дизайне", "Методология: Atoms → Molecules → Organisms", "Плагин Figma", "Тип шрифта"], correctAnswer: 1 },
+    ],
+    "design-systems": [
+      { question: "Что такое Design Tokens?", options: ["Криптовалюта для дизайнеров", "Переменные для цветов, шрифтов, отступов", "Тип компонента", "Метод анимации"], correctAnswer: 1 },
+      { question: "Какой компонент НЕ входит в типичную дизайн-систему?", options: ["Кнопки", "Инпуты", "Бэкенд код", "Карточки"], correctAnswer: 2 },
+      { question: "Что должна содержать документация компонента?", options: ["Только скриншот", "Когда использовать, варианты, Do's/Don'ts", "Только код", "Ничего"], correctAnswer: 1 },
+    ],
+  }
+
   for (const module of uiDesignerModules) {
-    await prisma.module.create({ data: { ...module, trailId: uiDesigner.id } })
+    const createdModule = await prisma.module.create({ data: { ...module, trailId: uiDesigner.id } })
+
+    const questions = uiDesignerQuestions[module.slug]
+    if (questions) {
+      for (let i = 0; i < questions.length; i++) {
+        await prisma.question.create({
+          data: {
+            moduleId: createdModule.id,
+            question: questions[i].question,
+            options: JSON.stringify(questions[i].options),
+            correctAnswer: questions[i].correctAnswer,
+            order: i + 1,
+          },
+        })
+      }
+    }
   }
 
   // =====================
@@ -966,8 +1072,42 @@ AI для HR / маркетинга / продаж / образования / ф
     },
   ]
 
+  // Create modules and questions for R&D Creator
+  const rndCreatorQuestions: Record<string, Array<{ question: string; options: string[]; correctAnswer: number }>> = {
+    "rnd-intro": [
+      { question: "Какой главный вопрос Product Thinking?", options: ["Сколько это стоит?", "Какую проблему решаем?", "Какой цвет логотипа?", "Кто конкуренты?"], correctAnswer: 1 },
+      { question: "Что означает Jobs To Be Done?", options: ["Список задач для разработчиков", "Клиенты 'нанимают' продукты для работы", "Метод управления проектами", "KPI для сотрудников"], correctAnswer: 1 },
+      { question: "Что НЕ является компетенцией R&D Креатора?", options: ["Креативность", "Написание кода", "Понимание рынка", "Product sense"], correctAnswer: 1 },
+    ],
+    "rnd-competitors": [
+      { question: "Кто такие косвенные конкуренты?", options: ["Партнёры", "Решают ту же проблему другим способом", "Клиенты", "Инвесторы"], correctAnswer: 1 },
+      { question: "Какой инструмент используют для анализа трафика конкурентов?", options: ["Figma", "SimilarWeb", "Prisma", "Next.js"], correctAnswer: 1 },
+      { question: "Что анализируют в продукте конкурента?", options: ["Только цену", "Функционал, UX, уникальные фичи", "Только дизайн", "Только логотип"], correctAnswer: 1 },
+    ],
+    "rnd-business-model": [
+      { question: "Что такое CAC?", options: ["Тип компании", "Стоимость привлечения клиента", "Вид рекламы", "Метрика скорости"], correctAnswer: 1 },
+      { question: "Какое правило связывает LTV и CAC?", options: ["LTV = CAC", "LTV > 3x CAC", "CAC > LTV", "LTV < CAC"], correctAnswer: 1 },
+      { question: "Что такое Freemium модель?", options: ["Всё платно", "Базовое бесплатно, премиум платно", "Только реклама", "Подписка"], correctAnswer: 1 },
+    ],
+  }
+
   for (const module of rndCreatorModules) {
-    await prisma.module.create({ data: { ...module, trailId: rndCreator.id } })
+    const createdModule = await prisma.module.create({ data: { ...module, trailId: rndCreator.id } })
+
+    const questions = rndCreatorQuestions[module.slug]
+    if (questions) {
+      for (let i = 0; i < questions.length; i++) {
+        await prisma.question.create({
+          data: {
+            moduleId: createdModule.id,
+            question: questions[i].question,
+            options: JSON.stringify(questions[i].options),
+            correctAnswer: questions[i].correctAnswer,
+            order: i + 1,
+          },
+        })
+      }
+    }
   }
 
   console.log("Created trails:", [vibeCoder.title, marketer.title, uiDesigner.title, rndCreator.title])
