@@ -47,12 +47,49 @@ body {
   background-clip: text;
 }
 
-/* Titan cosmic gradient */
+/* Prometheus fire gradient */
+.prometheus-gradient {
+  background: linear-gradient(135deg, #FF6B00 0%, #FFA500 30%, #FFD700 60%, #FFFFFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .titan-gradient {
   background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 30%, #F97316 70%, #EA580C 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Fire button animation */
+.fire-button {
+  animation: fireGlow 2s ease-in-out infinite;
+}
+
+@keyframes fireGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.4), 0 0 40px rgba(255, 165, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 107, 0, 0.6), 0 0 60px rgba(255, 165, 0, 0.3);
+  }
+}
+
+/* Float animation for sparks */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 1;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
 
 .hero-gradient {
