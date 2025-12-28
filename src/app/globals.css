@@ -62,34 +62,50 @@ body {
   background-clip: text;
 }
 
-/* Fire button animation */
-.fire-button {
-  animation: fireGlow 2s ease-in-out infinite;
-}
-
-@keyframes fireGlow {
+/* Floating animations */
+@keyframes float-slow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 107, 0, 0.4), 0 0 40px rgba(255, 165, 0, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(255, 107, 0, 0.6), 0 0 60px rgba(255, 165, 0, 0.3);
-  }
-}
-
-/* Float animation for sparks */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     opacity: 0.6;
   }
   50% {
-    transform: translateY(-20px) scale(1.2);
+    transform: translateY(-12px);
     opacity: 1;
   }
 }
 
-.animate-float {
-  animation: float 3s ease-in-out infinite;
+@keyframes float-medium {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 0.9;
+  }
+}
+
+@keyframes float-fast {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 4s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: float-medium 3s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: float-fast 2s ease-in-out infinite;
 }
 
 .hero-gradient {
