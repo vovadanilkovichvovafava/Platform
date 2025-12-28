@@ -15,7 +15,7 @@ import {
   Wrench,
   FolderGit2,
 } from "lucide-react"
-import { ModuleType } from "@prisma/client"
+type ModuleType = "THEORY" | "PRACTICE" | "PROJECT"
 import { SubmitProjectForm } from "@/components/submit-project-form"
 
 const typeIcons = {
