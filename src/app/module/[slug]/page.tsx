@@ -107,6 +107,14 @@ export default async function ModulePage({ params }: Props) {
   const isProject = module.type === "PROJECT"
   const TypeIcon = typeIcons[module.type]
 
+  // Check if all questions are answered (for enabling completion)
+  const totalQuestions = module.questions.length
+  const answeredQuestions = questionAttempts.filter(
+    (a) => a.isCorrect || a.attempts >= 3
+  ).length
+  const allQuestionsAnswered = totalQuestions === 0 || answeredQuestions === totalQuestions
+  const quizScore = questionAttempts.reduce((sum, a) => sum + a.earnedScore, 0)
+
   // Capture values for server action closure
   const moduleId = module.id
   const modulePoints = module.points
@@ -410,30 +418,56 @@ export default async function ModulePage({ params }: Props) {
                     <div className="text-center">
                       <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
                       <h3 className="font-semibold text-lg mb-2">
-                        Модуль завершен!
+                        Оценка пройдена!
                       </h3>
                       <p className="text-gray-600 text-sm mb-4">
-                        Вы получили {module.points} XP
+                        Вы набрали {quizScore} XP
                       </p>
                       <Button asChild variant="outline" className="w-full">
                         <Link href={`/trails/${module.trail.slug}`}>
-                          Вернуться к trail
+                          К заданиям
                         </Link>
                       </Button>
                     </div>
                   ) : (
-                    <form action={handleComplete}>
-                      <Button
-                        type="submit"
-                        className="w-full bg-[#2E844A] hover:bg-[#256E3D]"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Завершить модуль
-                      </Button>
-                      <p className="text-xs text-gray-500 text-center mt-3">
-                        Вы получите {module.points} XP
-                      </p>
-                    </form>
+                    <div className="space-y-4">
+                      {/* Quiz Progress */}
+                      {totalQuestions > 0 && (
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Прогресс теста</span>
+                            <span className="font-medium">{answeredQuestions}/{totalQuestions}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-[#0176D3] h-2 rounded-full transition-all"
+                              style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
+                            />
+                          </div>
+                          {quizScore > 0 && (
+                            <p className="text-sm text-[#0176D3] mt-2">
+                              Набрано: {quizScore} XP
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <form action={handleComplete}>
+                        <Button
+                          type="submit"
+                          className="w-full bg-[#2E844A] hover:bg-[#256E3D] disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={!allQuestionsAnswered}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Завершить оценку
+                        </Button>
+                        {!allQuestionsAnswered && (
+                          <p className="text-xs text-orange-600 text-center mt-3">
+                            Ответьте на все вопросы для завершения
+                          </p>
+                        )}
+                      </form>
+                    </div>
                   )}
                 </CardContent>
               </Card>
