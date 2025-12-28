@@ -15,16 +15,15 @@ import {
   Wrench,
   FolderGit2,
 } from "lucide-react"
-type ModuleType = "THEORY" | "PRACTICE" | "PROJECT"
 import { SubmitProjectForm } from "@/components/submit-project-form"
 
-const typeIcons = {
+const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
   PRACTICE: Wrench,
   PROJECT: FolderGit2,
 }
 
-const typeLabels: Record<ModuleType, string> = {
+const typeLabels: Record<string, string> = {
   THEORY: "Теория",
   PRACTICE: "Практика",
   PROJECT: "Проект",
