@@ -143,16 +143,31 @@ export default async function TrailPage({ params }: Props) {
       redirect("/login")
     }
 
-    await prisma.enrollment.create({
-      data: {
+    // Use upsert to prevent duplicate enrollment errors
+    await prisma.enrollment.upsert({
+      where: {
+        userId_trailId: {
+          userId: session.user.id,
+          trailId: trailId,
+        },
+      },
+      update: {},
+      create: {
         userId: session.user.id,
         trailId: trailId,
       },
     })
 
-    // Create task progress (start with MIDDLE)
-    await prisma.taskProgress.create({
-      data: {
+    // Create task progress (start with MIDDLE) - use upsert
+    await prisma.taskProgress.upsert({
+      where: {
+        userId_trailId: {
+          userId: session.user.id,
+          trailId: trailId,
+        },
+      },
+      update: {},
+      create: {
         userId: session.user.id,
         trailId: trailId,
         currentLevel: "MIDDLE",
@@ -162,10 +177,17 @@ export default async function TrailPage({ params }: Props) {
       },
     })
 
-    // Start first assessment module
+    // Start first assessment module - use upsert
     if (firstModuleId) {
-      await prisma.moduleProgress.create({
-        data: {
+      await prisma.moduleProgress.upsert({
+        where: {
+          userId_moduleId: {
+            userId: session.user.id,
+            moduleId: firstModuleId,
+          },
+        },
+        update: {},
+        create: {
           userId: session.user.id,
           moduleId: firstModuleId,
           status: "IN_PROGRESS",

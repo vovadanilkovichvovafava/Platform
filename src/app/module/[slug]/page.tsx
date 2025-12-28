@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -16,7 +15,7 @@ import {
   FolderGit2,
 } from "lucide-react"
 import { SubmitProjectForm } from "@/components/submit-project-form"
-import { QuizSection } from "@/components/quiz-section"
+import { AssessmentSection } from "@/components/assessment-section"
 
 const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
@@ -107,89 +106,6 @@ export default async function ModulePage({ params }: Props) {
   const isProject = module.type === "PROJECT"
   const TypeIcon = typeIcons[module.type]
 
-  // Check if all questions are answered (for enabling completion)
-  const totalQuestions = module.questions.length
-  const answeredQuestions = questionAttempts.filter(
-    (a) => a.isCorrect || a.attempts >= 3
-  ).length
-  const allQuestionsAnswered = totalQuestions === 0 || answeredQuestions === totalQuestions
-  const quizScore = questionAttempts.reduce((sum, a) => sum + a.earnedScore, 0)
-
-  // Capture values for server action closure
-  const moduleId = module.id
-  const modulePoints = module.points
-  const moduleTrailId = module.trailId
-  const moduleOrder = module.order
-  const trailSlug = module.trail.slug
-
-  async function handleComplete() {
-    "use server"
-
-    const session = await getServerSession(authOptions)
-    if (!session) return
-
-    // Update progress
-    await prisma.moduleProgress.upsert({
-      where: {
-        userId_moduleId: {
-          userId: session.user.id,
-          moduleId: moduleId,
-        },
-      },
-      update: {
-        status: "COMPLETED",
-        completedAt: new Date(),
-      },
-      create: {
-        userId: session.user.id,
-        moduleId: moduleId,
-        status: "COMPLETED",
-        startedAt: new Date(),
-        completedAt: new Date(),
-      },
-    })
-
-    // Add XP
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        totalXP: { increment: modulePoints },
-      },
-    })
-
-    // Start next module if exists
-    const nextModule = await prisma.module.findFirst({
-      where: {
-        trailId: moduleTrailId,
-        order: { gt: moduleOrder },
-      },
-      orderBy: { order: "asc" },
-    })
-
-    if (nextModule) {
-      await prisma.moduleProgress.upsert({
-        where: {
-          userId_moduleId: {
-            userId: session.user.id,
-            moduleId: nextModule.id,
-          },
-        },
-        update: {
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
-        },
-        create: {
-          userId: session.user.id,
-          moduleId: nextModule.id,
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
-        },
-      })
-    }
-
-    redirect(`/trails/${trailSlug}`)
-  }
-
   // Simple markdown-like rendering
   const renderContent = (content: string) => {
     const lines = content.split("\n")
@@ -222,10 +138,10 @@ export default async function ModulePage({ params }: Props) {
           </li>
         )
       }
-      if (line.startsWith("1. ") || line.startsWith("2. ") || line.startsWith("3. ") || line.startsWith("4. ")) {
+      if (/^\d+\. /.test(line)) {
         return (
           <li key={i} className="ml-4 mb-1 list-decimal">
-            {line.slice(3)}
+            {line.slice(line.indexOf(" ") + 1)}
           </li>
         )
       }
@@ -263,10 +179,7 @@ export default async function ModulePage({ params }: Props) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Badge
-                  variant="secondary"
-                  className="bg-gray-100"
-                >
+                <Badge variant="secondary" className="bg-gray-100">
                   <TypeIcon className="h-3 w-3 mr-1" />
                   {typeLabels[module.type]}
                 </Badge>
@@ -277,9 +190,7 @@ export default async function ModulePage({ params }: Props) {
                   </Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {module.title}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">{module.title}</h1>
               <p className="text-gray-600 mt-1">{module.description}</p>
             </div>
 
@@ -322,25 +233,6 @@ export default async function ModulePage({ params }: Props) {
                   {renderContent(module.requirements)}
                 </CardContent>
               </Card>
-            )}
-
-            {/* Quiz section for theory/practice modules */}
-            {!isProject && module.questions.length > 0 && (
-              <QuizSection
-                questions={module.questions.map((q) => ({
-                  id: q.id,
-                  question: q.question,
-                  options: JSON.parse(q.options) as string[],
-                  order: q.order,
-                }))}
-                attempts={questionAttempts.map((a) => ({
-                  questionId: a.questionId,
-                  isCorrect: a.isCorrect,
-                  attempts: a.attempts,
-                  earnedScore: a.earnedScore,
-                }))}
-                moduleSlug={module.slug}
-              />
             )}
           </div>
 
@@ -412,65 +304,26 @@ export default async function ModulePage({ params }: Props) {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardContent className="p-6">
-                  {isCompleted ? (
-                    <div className="text-center">
-                      <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                      <h3 className="font-semibold text-lg mb-2">
-                        Оценка пройдена!
-                      </h3>
-                      <p className="text-gray-600 text-sm mb-4">
-                        Вы набрали {quizScore} XP
-                      </p>
-                      <Button asChild variant="outline" className="w-full">
-                        <Link href={`/trails/${module.trail.slug}`}>
-                          К заданиям
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Quiz Progress */}
-                      {totalQuestions > 0 && (
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <div className="flex justify-between text-sm mb-2">
-                            <span className="text-gray-600">Прогресс теста</span>
-                            <span className="font-medium">{answeredQuestions}/{totalQuestions}</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-[#0176D3] h-2 rounded-full transition-all"
-                              style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
-                            />
-                          </div>
-                          {quizScore > 0 && (
-                            <p className="text-sm text-[#0176D3] mt-2">
-                              Набрано: {quizScore} XP
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      <form action={handleComplete}>
-                        <Button
-                          type="submit"
-                          className="w-full bg-[#2E844A] hover:bg-[#256E3D] disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={!allQuestionsAnswered}
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Завершить оценку
-                        </Button>
-                        {!allQuestionsAnswered && (
-                          <p className="text-xs text-orange-600 text-center mt-3">
-                            Ответьте на все вопросы для завершения
-                          </p>
-                        )}
-                      </form>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              /* Assessment Section - handles quiz + completion */
+              <AssessmentSection
+                questions={module.questions.map((q) => ({
+                  id: q.id,
+                  question: q.question,
+                  options: JSON.parse(q.options) as string[],
+                  order: q.order,
+                }))}
+                initialAttempts={questionAttempts.map((a) => ({
+                  questionId: a.questionId,
+                  isCorrect: a.isCorrect,
+                  attempts: a.attempts,
+                  earnedScore: a.earnedScore,
+                }))}
+                moduleId={module.id}
+                moduleSlug={module.slug}
+                trailSlug={module.trail.slug}
+                modulePoints={module.points}
+                isCompleted={isCompleted}
+              />
             )}
           </div>
         </div>
