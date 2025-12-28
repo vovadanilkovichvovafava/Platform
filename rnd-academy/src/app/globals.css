@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0f172a;
+  --color-primary: #0176D3;
+  --color-primary-foreground: #f8fafc;
+  --color-secondary: #f1f5f9;
+  --color-secondary-foreground: #1e293b;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-accent: #f1f5f9;
+  --color-accent-foreground: #1e293b;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #0176D3;
+  --color-success: #2E844A;
+  --color-success-foreground: #f8fafc;
+  --color-warning: #FE9339;
+  --color-warning-foreground: #1e293b;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+/* Custom Trailhead-inspired utilities */
+.text-gradient {
+  background: linear-gradient(135deg, #0176D3 0%, #1B96FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-gradient {
+  background: linear-gradient(180deg, #F0F5FA 0%, #FFFFFF 100%);
+}
+
+.card-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.card-shadow-hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Progress bar colors */
+.progress-green {
+  background-color: #2E844A;
+}
+
+.progress-blue {
+  background-color: #0176D3;
+}
+
+/* Badge colors */
+.badge-warning {
+  background-color: #FE9339;
+}
+
+/* Trail colors */
+.trail-vibe-coder {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.trail-marketer {
+  background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+}
+
+.trail-ui-designer {
+  background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+}
+
+.trail-rnd-creator {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}
