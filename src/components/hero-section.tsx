@@ -9,15 +9,16 @@ export function HeroSection() {
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
       {/* Background Image */}
       <Image
-        src="https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=1920&q=85"
-        alt="Cosmic background"
+        src="/hero-bg.jpg"
+        alt="Cosmic background with Saturn"
         fill
         className="object-cover"
         priority
+        quality={90}
       />
 
       {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
 
       {/* Content */}
       <div className="container mx-auto px-4 relative z-10">
