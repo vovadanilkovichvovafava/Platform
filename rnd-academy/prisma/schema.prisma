@@ -3,39 +3,22 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-enum Role {
-  STUDENT
-  TEACHER
-}
-
-enum ModuleType {
-  THEORY
-  PRACTICE
-  PROJECT
-}
-
-enum ModuleStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
-}
-
-enum SubmissionStatus {
-  PENDING
-  APPROVED
-  REVISION
-}
+// Note: SQLite doesn't support enums, using String instead
+// Role: "STUDENT" | "TEACHER"
+// ModuleType: "THEORY" | "PRACTICE" | "PROJECT"
+// ModuleStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
+// SubmissionStatus: "PENDING" | "APPROVED" | "REVISION"
 
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   password      String
   name          String
-  role          Role      @default(STUDENT)
+  role          String    @default("STUDENT")
   totalXP       Int       @default(0)
   currentStreak Int       @default(0)
   avatarUrl     String?
@@ -68,24 +51,24 @@ model Trail {
 }
 
 model Module {
-  id           String     @id @default(cuid())
-  slug         String     @unique
+  id           String   @id @default(cuid())
+  slug         String   @unique
   title        String
   description  String
-  type         ModuleType
-  level        String     @default("Beginner")
-  points       Int        @default(50)
+  type         String   @default("THEORY")
+  level        String   @default("Beginner")
+  points       Int      @default(50)
   duration     String
-  content      String?    @db.Text
-  requirements String?    @db.Text
-  order        Int        @default(0)
+  content      String?
+  requirements String?
+  order        Int      @default(0)
   trailId      String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  trail    Trail            @relation(fields: [trailId], references: [id], onDelete: Cascade)
-  units    Unit[]
-  progress ModuleProgress[]
+  trail       Trail            @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  units       Unit[]
+  progress    ModuleProgress[]
   submissions Submission[]
 
   @@index([trailId])
@@ -94,7 +77,7 @@ model Module {
 model Unit {
   id          String   @id @default(cuid())
   title       String
-  content     String   @db.Text
+  content     String
   duration    Int      @default(10)
   points      Int      @default(25)
   isChallenge Boolean  @default(false)
@@ -124,14 +107,14 @@ model Enrollment {
 }
 
 model ModuleProgress {
-  id        String       @id @default(cuid())
-  userId    String
-  moduleId  String
-  status    ModuleStatus @default(NOT_STARTED)
-  startedAt DateTime?
+  id          String    @id @default(cuid())
+  userId      String
+  moduleId    String
+  status      String    @default("NOT_STARTED")
+  startedAt   DateTime?
   completedAt DateTime?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
@@ -142,13 +125,13 @@ model ModuleProgress {
 }
 
 model UnitProgress {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   unitId      String
-  isCompleted Boolean  @default(false)
+  isCompleted Boolean   @default(false)
   completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
@@ -159,16 +142,16 @@ model UnitProgress {
 }
 
 model Submission {
-  id        String           @id @default(cuid())
+  id        String   @id @default(cuid())
   githubUrl String?
   deployUrl String?
-  comment   String?          @db.Text
+  comment   String?
   fileUrl   String?
-  status    SubmissionStatus @default(PENDING)
+  status    String   @default("PENDING")
   userId    String
   moduleId  String
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   module Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
@@ -182,10 +165,10 @@ model Submission {
 model Review {
   id           String   @id @default(cuid())
   score        Int
-  criteria     Json?
-  strengths    String?  @db.Text
-  improvements String?  @db.Text
-  comment      String?  @db.Text
+  criteria     String?
+  strengths    String?
+  improvements String?
+  comment      String?
   submissionId String   @unique
   reviewerId   String
   createdAt    DateTime @default(now())

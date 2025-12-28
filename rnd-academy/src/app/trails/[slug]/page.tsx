@@ -22,7 +22,8 @@ import {
   FolderGit2,
   LucideIcon,
 } from "lucide-react"
-import { ModuleStatus, ModuleType } from "@prisma/client"
+type ModuleType = "THEORY" | "PRACTICE" | "PROJECT"
+type ModuleStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
 
 const iconMap: Record<string, LucideIcon> = {
   Code,
