@@ -47,8 +47,16 @@ body {
   background-clip: text;
 }
 
+/* Titan cosmic gradient */
+.titan-gradient {
+  background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 30%, #F97316 70%, #EA580C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .hero-gradient {
-  background: linear-gradient(180deg, #F0F5FA 0%, #FFFFFF 100%);
+  background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%);
 }
 
 .card-shadow {
