@@ -9,15 +9,17 @@ async function main() {
 
   try {
     const trailCount = await prisma.trail.count();
-    console.log(`Found ${trailCount} trails in database`);
+    const questionCount = await prisma.question.count();
+    console.log(`Found ${trailCount} trails and ${questionCount} questions in database`);
 
-    if (trailCount === 0) {
-      console.log('No trails found, running seed...');
+    // Re-seed if no trails OR no questions (schema was updated)
+    if (trailCount === 0 || questionCount === 0) {
+      console.log('Database needs seeding, running seed...');
       execSync('npm run db:seed', { stdio: 'inherit' });
       console.log('Seed completed!');
     }
   } catch (error) {
-    console.log('Could not check trails, running seed...');
+    console.log('Could not check database, running seed...', error.message);
     execSync('npm run db:seed', { stdio: 'inherit' });
   } finally {
     await prisma.$disconnect();
