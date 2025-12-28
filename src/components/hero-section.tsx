@@ -21,48 +21,28 @@ export function HeroSection() {
     resizeCanvas()
     window.addEventListener("resize", resizeCanvas)
 
-    // Particles system
-    const particles: Array<{
-      x: number
-      y: number
-      vx: number
-      vy: number
-      size: number
-      opacity: number
-      color: string
-    }> = []
-
-    // Create particles
-    for (let i = 0; i < 100; i++) {
-      particles.push({
+    // Stars
+    const stars: Array<{ x: number; y: number; size: number; opacity: number; speed: number }> = []
+    for (let i = 0; i < 150; i++) {
+      stars.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        size: Math.random() * 2 + 0.5,
-        opacity: Math.random() * 0.5 + 0.2,
-        color: Math.random() > 0.7 ? "#FFA500" : "#FFFFFF",
+        size: Math.random() * 1.5 + 0.5,
+        opacity: Math.random() * 0.8 + 0.2,
+        speed: Math.random() * 0.02 + 0.01,
       })
     }
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      particles.forEach((p) => {
-        p.x += p.vx
-        p.y += p.vy
-
-        if (p.x < 0) p.x = canvas.width
-        if (p.x > canvas.width) p.x = 0
-        if (p.y < 0) p.y = canvas.height
-        if (p.y > canvas.height) p.y = 0
+      stars.forEach((star) => {
+        star.opacity += Math.sin(Date.now() * star.speed) * 0.01
+        star.opacity = Math.max(0.1, Math.min(1, star.opacity))
 
         ctx.beginPath()
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-        ctx.fillStyle =
-          p.color === "#FFFFFF"
-            ? `rgba(255, 255, 255, ${p.opacity})`
-            : `rgba(255, 165, 0, ${p.opacity})`
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`
         ctx.fill()
       })
 
@@ -77,54 +57,172 @@ export function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-[#070714]">
-      {/* Canvas for particles */}
+      {/* Canvas for stars */}
       <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
 
       {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-900/20 via-transparent to-purple-900/10 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#070714] to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-900/10 via-transparent to-purple-900/5 pointer-events-none" />
 
-      {/* Main orb / Prometheus spark */}
-      <div className="absolute right-[10%] top-1/2 -translate-y-1/2 pointer-events-none">
-        {/* Outer glow rings */}
-        <div className="relative">
-          {/* Ring 3 - outermost */}
-          <div className="absolute -inset-32 rounded-full border border-orange-500/10 animate-[spin_60s_linear_infinite]" />
-          <div className="absolute -inset-24 rounded-full border border-orange-500/15 animate-[spin_45s_linear_infinite_reverse]" />
-          <div className="absolute -inset-16 rounded-full border border-orange-500/20 animate-[spin_30s_linear_infinite]" />
+      {/* Saturn */}
+      <div className="absolute right-[5%] lg:right-[10%] top-1/2 -translate-y-1/2 pointer-events-none">
+        <svg
+          className="w-[400px] h-[400px] md:w-[500px] md:h-[500px] lg:w-[600px] lg:h-[600px]"
+          viewBox="0 0 500 500"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            {/* Saturn body gradient */}
+            <radialGradient id="saturnBody" cx="40%" cy="40%" r="60%">
+              <stop offset="0%" stopColor="#F5D89A" />
+              <stop offset="40%" stopColor="#E8C370" />
+              <stop offset="70%" stopColor="#D4A84A" />
+              <stop offset="100%" stopColor="#B8863A" />
+            </radialGradient>
 
-          {/* Core orb */}
-          <div className="relative w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96">
+            {/* Saturn shadow */}
+            <radialGradient id="saturnShadow" cx="70%" cy="60%" r="50%">
+              <stop offset="0%" stopColor="transparent" />
+              <stop offset="60%" stopColor="rgba(0,0,0,0.3)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0.6)" />
+            </radialGradient>
+
             {/* Outer glow */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-500/40 via-amber-400/30 to-yellow-300/20 blur-3xl" />
+            <radialGradient id="outerGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#F5D89A" stopOpacity="0.3" />
+              <stop offset="50%" stopColor="#E8C370" stopOpacity="0.1" />
+              <stop offset="100%" stopColor="#E8C370" stopOpacity="0" />
+            </radialGradient>
 
-            {/* Middle layer */}
-            <div className="absolute inset-8 rounded-full bg-gradient-to-br from-orange-400/60 via-amber-400/50 to-yellow-400/40 blur-2xl" />
+            {/* Ring gradients */}
+            <linearGradient id="ringGradient1" x1="0%" y1="50%" x2="100%" y2="50%">
+              <stop offset="0%" stopColor="#C9B896" stopOpacity="0" />
+              <stop offset="15%" stopColor="#D4C4A0" stopOpacity="0.7" />
+              <stop offset="35%" stopColor="#E8D6B0" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#F0E0C0" stopOpacity="1" />
+              <stop offset="65%" stopColor="#E8D6B0" stopOpacity="0.9" />
+              <stop offset="85%" stopColor="#D4C4A0" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#C9B896" stopOpacity="0" />
+            </linearGradient>
 
-            {/* Inner core */}
-            <div className="absolute inset-16 rounded-full bg-gradient-to-br from-orange-300 via-amber-200 to-yellow-100 blur-xl" />
+            <linearGradient id="ringGradient2" x1="0%" y1="50%" x2="100%" y2="50%">
+              <stop offset="0%" stopColor="#A89070" stopOpacity="0" />
+              <stop offset="20%" stopColor="#C0A880" stopOpacity="0.5" />
+              <stop offset="50%" stopColor="#D8C090" stopOpacity="0.7" />
+              <stop offset="80%" stopColor="#C0A880" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#A89070" stopOpacity="0" />
+            </linearGradient>
 
-            {/* Bright center */}
-            <div className="absolute inset-24 rounded-full bg-gradient-to-br from-white via-yellow-100 to-amber-200 blur-md" />
+            {/* Clip path for ring behind planet */}
+            <clipPath id="ringBehind">
+              <rect x="0" y="0" width="500" height="250" />
+            </clipPath>
 
-            {/* Hottest point */}
-            <div className="absolute inset-28 rounded-full bg-white/90 blur-sm" />
+            {/* Clip path for ring in front of planet */}
+            <clipPath id="ringFront">
+              <rect x="0" y="250" width="500" height="250" />
+            </clipPath>
 
-            {/* Saturn-style rings */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[30%]">
-              <div className="absolute inset-0 rounded-full border-2 border-orange-400/30 transform -rotate-12"
-                   style={{ boxShadow: "0 0 20px rgba(251, 146, 60, 0.3)" }} />
-              <div className="absolute inset-2 rounded-full border border-amber-300/20 transform -rotate-12" />
-              <div className="absolute inset-4 rounded-full border border-yellow-200/10 transform -rotate-12" />
-            </div>
+            {/* Filter for subtle glow */}
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-            {/* Floating particles around orb */}
-            <div className="absolute -top-4 left-1/4 w-2 h-2 rounded-full bg-orange-400 animate-float-slow" />
-            <div className="absolute top-1/4 -right-4 w-1.5 h-1.5 rounded-full bg-amber-300 animate-float-medium" />
-            <div className="absolute -bottom-2 right-1/4 w-2 h-2 rounded-full bg-yellow-300 animate-float-fast" />
-            <div className="absolute bottom-1/4 -left-4 w-1 h-1 rounded-full bg-orange-300 animate-float-medium" />
-          </div>
-        </div>
+          {/* Outer glow */}
+          <circle cx="250" cy="250" r="200" fill="url(#outerGlow)" />
+
+          {/* Ring behind planet */}
+          <g clipPath="url(#ringBehind)" opacity="0.6">
+            <ellipse
+              cx="250"
+              cy="250"
+              rx="220"
+              ry="50"
+              fill="none"
+              stroke="url(#ringGradient1)"
+              strokeWidth="35"
+              transform="rotate(-20, 250, 250)"
+            />
+            <ellipse
+              cx="250"
+              cy="250"
+              rx="180"
+              ry="40"
+              fill="none"
+              stroke="url(#ringGradient2)"
+              strokeWidth="15"
+              transform="rotate(-20, 250, 250)"
+            />
+          </g>
+
+          {/* Saturn body */}
+          <circle cx="250" cy="250" r="100" fill="url(#saturnBody)" />
+
+          {/* Saturn bands */}
+          <ellipse cx="250" cy="225" rx="95" ry="10" fill="#C4923D" opacity="0.25" />
+          <ellipse cx="250" cy="240" rx="98" ry="8" fill="#E8D6B0" opacity="0.15" />
+          <ellipse cx="250" cy="255" rx="99" ry="6" fill="#B88A3A" opacity="0.2" />
+          <ellipse cx="250" cy="270" rx="96" ry="9" fill="#D4A84A" opacity="0.2" />
+          <ellipse cx="250" cy="285" rx="90" ry="7" fill="#C4923D" opacity="0.15" />
+
+          {/* Saturn shadow */}
+          <circle cx="250" cy="250" r="100" fill="url(#saturnShadow)" />
+
+          {/* Ring in front of planet */}
+          <g clipPath="url(#ringFront)" filter="url(#glow)">
+            <ellipse
+              cx="250"
+              cy="250"
+              rx="220"
+              ry="50"
+              fill="none"
+              stroke="url(#ringGradient1)"
+              strokeWidth="35"
+              transform="rotate(-20, 250, 250)"
+            />
+            <ellipse
+              cx="250"
+              cy="250"
+              rx="180"
+              ry="40"
+              fill="none"
+              stroke="url(#ringGradient2)"
+              strokeWidth="15"
+              transform="rotate(-20, 250, 250)"
+            />
+            {/* Ring detail lines */}
+            <ellipse
+              cx="250"
+              cy="250"
+              rx="200"
+              ry="45"
+              fill="none"
+              stroke="#F0E8D8"
+              strokeWidth="1"
+              opacity="0.4"
+              transform="rotate(-20, 250, 250)"
+            />
+            <ellipse
+              cx="250"
+              cy="250"
+              rx="160"
+              ry="36"
+              fill="none"
+              stroke="#F0E8D8"
+              strokeWidth="1"
+              opacity="0.3"
+              transform="rotate(-20, 250, 250)"
+            />
+          </g>
+
+          {/* Small highlight on planet */}
+          <circle cx="220" cy="220" r="30" fill="white" opacity="0.1" />
+        </svg>
       </div>
 
       {/* Content */}
@@ -139,7 +237,7 @@ export function HeroSection() {
             <span className="text-white/80 text-sm font-medium tracking-wide">
               PROMETHEUS
             </span>
-            <span className="text-white/40">|</span>
+            <span className="text-white/30">|</span>
             <span className="text-orange-400/80 text-sm">
               Skill Assessment
             </span>
@@ -198,6 +296,9 @@ export function HeroSection() {
           </div>
         </div>
       </div>
+
+      {/* Bottom fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#070714] to-transparent pointer-events-none" />
     </section>
   )
 }
