@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText } from "lucide-react"
+import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users } from "lucide-react"
 import Link from "next/link"
 
 interface Invite {
@@ -142,13 +142,22 @@ export default function AdminInvitesPage() {
               <p className="text-slate-500 text-sm">Создавайте и управляйте кодами приглашений</p>
             </div>
           </div>
-          <Link
-            href="/admin/content"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <FileText className="h-4 w-4" />
-            Контент
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/users"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <Users className="h-4 w-4" />
+              Пользователи
+            </Link>
+            <Link
+              href="/admin/content"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <FileText className="h-4 w-4" />
+              Контент
+            </Link>
+          </div>
         </div>
 
         {/* Create New Invite */}
