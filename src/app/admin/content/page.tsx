@@ -21,6 +21,10 @@ import {
   RefreshCw,
   Plus,
   X,
+  Upload,
+  FileText,
+  Download,
+  CheckCircle,
 } from "lucide-react"
 
 interface Module {
@@ -88,6 +92,11 @@ export default function AdminContentPage() {
   const [newModuleTitle, setNewModuleTitle] = useState("")
   const [newModuleType, setNewModuleType] = useState<"THEORY" | "PRACTICE" | "PROJECT">("THEORY")
   const [creatingModule, setCreatingModule] = useState(false)
+
+  // Import modal
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const fetchTrails = async () => {
     try {
@@ -170,6 +179,104 @@ export default function AdminContentPage() {
     setShowModuleModal(true)
   }
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setImporting(true)
+      setImportResult(null)
+
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const res = await fetch("/api/admin/import", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setImportResult({ success: false, message: data.error || "Ошибка импорта" })
+      } else {
+        setImportResult({ success: true, message: data.message })
+        fetchTrails()
+      }
+    } catch {
+      setImportResult({ success: false, message: "Ошибка при загрузке файла" })
+    } finally {
+      setImporting(false)
+      // Reset file input
+      e.target.value = ""
+    }
+  }
+
+  const sampleFormat = `=== TRAIL ===
+название: Vibe Coding
+slug: vibe-coding
+подзаголовок: Научись кодить с AI
+описание: Полный курс по Vibe Coding
+иконка: 💻
+цвет: #6366f1
+
+=== MODULE ===
+название: Введение в Vibe Coding
+slug: intro-vibe-coding
+тип: урок
+очки: 50
+описание: Основы работы с AI-ассистентами
+---
+# Добро пожаловать в Vibe Coding!
+
+Vibe Coding — это современный подход к программированию...
+
+## Что такое AI-ассистент?
+
+Здесь пишется контент модуля в формате Markdown.
+---
+
+=== ВОПРОСЫ ===
+В: Что такое Vibe Coding?
+- Программирование без компьютера
+- Программирование с помощью AI *
+- Визуальное программирование
+- Игра
+
+В: Какой инструмент используется для Vibe Coding?
+- Excel
+- Word
+- Claude / ChatGPT *
+- Paint
+
+=== MODULE ===
+название: Практика промптинга
+slug: prompting-practice
+тип: проект
+очки: 100
+описание: Создай свой первый проект
+---
+# Задание
+
+Создайте простое приложение используя AI-ассистента.
+
+## Требования
+
+1. Опишите задачу ассистенту
+2. Получите код
+3. Протестируйте результат
+---`
+
+  const downloadSample = () => {
+    const blob = new Blob([sampleFormat], { type: "text/plain" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "sample-import.txt"
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -207,6 +314,10 @@ export default function AdminContentPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button onClick={() => setShowImportModal(true)} variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Импорт из файла
+              </Button>
               <Button onClick={() => setShowTrailModal(true)} className="bg-green-600 hover:bg-green-700">
                 <Plus className="h-4 w-4 mr-2" />
                 Новый Trail
@@ -509,6 +620,112 @@ export default function AdminContentPage() {
                   )}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Импорт из текстового файла
+              </h2>
+              <button
+                onClick={() => {
+                  setShowImportModal(false)
+                  setImportResult(null)
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {importResult ? (
+                <div className={`p-4 rounded-lg mb-4 ${
+                  importResult.success
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-red-50 border border-red-200"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {importResult.success ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <X className="h-5 w-5 text-red-600" />
+                    )}
+                    <span className={importResult.success ? "text-green-700" : "text-red-700"}>
+                      {importResult.message}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Загрузить файл</h3>
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      {importing ? (
+                        <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mb-2" />
+                      ) : (
+                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                      )}
+                      <p className="text-sm text-gray-500">
+                        {importing ? "Импортируем..." : "Нажмите для выбора .txt файла"}
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".txt"
+                      onChange={handleImport}
+                      disabled={importing}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-gray-900">Формат файла</h3>
+                    <Button variant="outline" size="sm" onClick={downloadSample}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Скачать пример
+                    </Button>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-64 overflow-y-auto">
+                    <pre className="text-gray-700 whitespace-pre-wrap">{sampleFormat}</pre>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-900 mb-2">Подсказки:</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Используйте <code className="bg-blue-100 px-1 rounded">=== TRAIL ===</code> для начала нового trail</li>
+                    <li>• Используйте <code className="bg-blue-100 px-1 rounded">=== MODULE ===</code> для начала нового модуля</li>
+                    <li>• Контент модуля оборачивается в <code className="bg-blue-100 px-1 rounded">---</code></li>
+                    <li>• Правильный ответ отмечается <code className="bg-blue-100 px-1 rounded">*</code> в конце</li>
+                    <li>• Типы: урок, тест, проект</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t bg-gray-50">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowImportModal(false)
+                  setImportResult(null)
+                }}
+                className="w-full"
+              >
+                Закрыть
+              </Button>
             </div>
           </div>
         </div>
