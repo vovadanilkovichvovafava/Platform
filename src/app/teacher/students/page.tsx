@@ -41,7 +41,11 @@ export default async function TeacherStudentsPage() {
       enrollments: {
         include: {
           trail: {
-            select: { title: true, slug: true },
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+            },
           },
         },
       },
@@ -64,6 +68,29 @@ export default async function TeacherStudentsPage() {
       },
     },
   })
+
+  // Get all trails with their modules to calculate max XP
+  // XP is earned through quiz questions - each module's questions give up to module.points total
+  const trails = await prisma.trail.findMany({
+    include: {
+      modules: {
+        select: {
+          points: true,
+        },
+      },
+    },
+  })
+
+  // Calculate max XP per trail (sum of all module points)
+  const maxXPByTrail: Record<string, number> = {}
+  for (const trail of trails) {
+    maxXPByTrail[trail.id] = trail.modules.reduce((sum, m) => sum + m.points, 0)
+  }
+
+  // Function to calculate max XP for a student based on their enrollments
+  const getStudentMaxXP = (enrollments: { trail: { id: string } }[]) => {
+    return enrollments.reduce((sum, e) => sum + (maxXPByTrail[e.trail.id] || 0), 0)
+  }
 
   // Get submission stats per student
   const submissionStats = await prisma.submission.groupBy({
@@ -109,6 +136,8 @@ export default async function TeacherStudentsPage() {
           {students.map((student) => {
             const stats = getStudentStats(student.id)
             const lastSubmission = student.submissions[0]
+            const maxXP = getStudentMaxXP(student.enrollments)
+            const progressPercent = maxXP > 0 ? Math.round((student.totalXP / maxXP) * 100) : 0
 
             return (
               <Card key={student.id}>
@@ -143,14 +172,6 @@ export default async function TeacherStudentsPage() {
                     {/* Stats */}
                     <div className="flex items-center gap-6">
                       <div className="text-center">
-                        <div className="flex items-center gap-1 text-yellow-600">
-                          <Trophy className="h-4 w-4" />
-                          <span className="font-bold">{student.totalXP}</span>
-                        </div>
-                        <p className="text-xs text-gray-500">XP</p>
-                      </div>
-
-                      <div className="text-center">
                         <div className="flex items-center gap-1 text-blue-600">
                           <BookOpen className="h-4 w-4" />
                           <span className="font-bold">
@@ -178,9 +199,31 @@ export default async function TeacherStudentsPage() {
                     </div>
                   </div>
 
+                  {/* XP Progress Bar */}
+                  {maxXP > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Trophy className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm font-medium text-gray-700">Прогресс XP</span>
+                        </div>
+                        <span className="text-sm font-bold text-yellow-600">
+                          {student.totalXP} / {maxXP} XP
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all"
+                          style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1 text-right">{progressPercent}% завершено</p>
+                    </div>
+                  )}
+
                   {/* Last submission */}
                   {lastSubmission && (
-                    <div className="mt-4 pt-4 border-t">
+                    <div className={`mt-4 pt-4 ${maxXP > 0 ? "" : "border-t"}`}>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <FileText className="h-4 w-4" />
                         <span>Последняя работа:</span>
