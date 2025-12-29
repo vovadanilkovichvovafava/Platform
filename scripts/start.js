@@ -10,10 +10,11 @@ async function main() {
   try {
     const trailCount = await prisma.trail.count();
     const questionCount = await prisma.question.count();
-    console.log(`Found ${trailCount} trails and ${questionCount} questions in database`);
+    const inviteCount = await prisma.invite.count();
+    console.log(`Found ${trailCount} trails, ${questionCount} questions, ${inviteCount} invites in database`);
 
-    // Re-seed if no trails OR no questions (schema was updated)
-    if (trailCount === 0 || questionCount === 0) {
+    // Re-seed if no trails OR no questions OR no invites (schema was updated)
+    if (trailCount === 0 || questionCount === 0 || inviteCount === 0) {
       console.log('Database needs seeding, running seed...');
       execSync('npm run db:seed', { stdio: 'inherit' });
       console.log('Seed completed!');
