@@ -11,8 +11,7 @@ export default async function TeacherLayout({
 }) {
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  if (!session || session.user.role !== "TEACHER") {
     redirect("/dashboard")
   }
 

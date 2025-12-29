@@ -27,7 +27,7 @@ export default async function ReviewPage({ params }: Props) {
   const { id } = await params
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "TEACHER" && session.user.role !== "ADMIN") {
+  if (!session || session.user.role !== "TEACHER") {
     redirect("/dashboard")
   }
 

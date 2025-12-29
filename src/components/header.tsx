@@ -63,7 +63,7 @@ export function Header() {
               >
                 Мои работы
               </Link>
-              {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
+              {session.user.role === "TEACHER" && (
                 <Link
                   href="/teacher"
                   className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
@@ -123,7 +123,7 @@ export function Header() {
                     Мои работы
                   </Link>
                 </DropdownMenuItem>
-                {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
+                {session.user.role === "TEACHER" && (
                   <>
                     <DropdownMenuSeparator className="bg-slate-100" />
                     <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
