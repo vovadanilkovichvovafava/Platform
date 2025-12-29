@@ -13,7 +13,7 @@ export function HeroSection() {
         alt="Cosmic background with Saturn"
         fill
         priority
-        quality={90}
+        unoptimized
         className="object-cover"
         sizes="100vw"
       />
