@@ -15,6 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
+      <head>
+        <link rel="preload" href="/hero-bg.jpg" as="image" fetchPriority="high" />
+      </head>
       <body className="antialiased">
         <AuthProvider>
           <Header />
