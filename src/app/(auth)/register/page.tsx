@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
 import { useForm } from "react-hook-form"
@@ -10,10 +10,10 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { GraduationCap, Loader2 } from "lucide-react"
+import { Flame, Loader2, Ticket } from "lucide-react"
 
 const registerSchema = z.object({
+  inviteCode: z.string().min(1, "Введите код приглашения"),
   name: z.string().min(2, "Имя должно быть минимум 2 символа"),
   email: z.string().email("Некорректный email"),
   password: z.string().min(6, "Пароль должен быть минимум 6 символов"),
@@ -25,8 +25,11 @@ const registerSchema = z.object({
 
 type RegisterForm = z.infer<typeof registerSchema>
 
-export default function RegisterPage() {
+function RegisterFormComponent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteFromUrl = searchParams.get("invite") || ""
+
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -36,6 +39,9 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      inviteCode: inviteFromUrl,
+    },
   })
 
   const onSubmit = async (data: RegisterForm) => {
@@ -47,6 +53,7 @@ export default function RegisterPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          inviteCode: data.inviteCode,
           name: data.name,
           email: data.email,
           password: data.password,
@@ -81,86 +88,111 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-gray-50 px-4 py-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0176D3]">
-              <GraduationCap className="h-6 w-6 text-white" />
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="p-8 rounded-2xl bg-white border border-slate-200 shadow-xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500">
+                <Flame className="h-6 w-6 text-white" />
+              </div>
             </div>
+            <h1 className="text-2xl font-bold text-slate-900">Регистрация</h1>
+            <p className="text-slate-500 mt-2">
+              Создайте аккаунт по приглашению
+            </p>
           </div>
-          <CardTitle className="text-2xl">Регистрация</CardTitle>
-          <CardDescription>
-            Создайте аккаунт для начала обучения
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+
+          {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
                 {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">Имя</Label>
+              <Label htmlFor="inviteCode" className="text-slate-700 flex items-center gap-2">
+                <Ticket className="h-4 w-4" />
+                Код приглашения
+              </Label>
+              <Input
+                id="inviteCode"
+                type="text"
+                placeholder="PROMETHEUS2024"
+                {...register("inviteCode")}
+                disabled={isLoading}
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20 uppercase"
+              />
+              {errors.inviteCode && (
+                <p className="text-sm text-red-500">{errors.inviteCode.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-slate-700">Имя</Label>
               <Input
                 id="name"
                 type="text"
                 placeholder="Ваше имя"
                 {...register("name")}
                 disabled={isLoading}
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.name && (
-                <p className="text-sm text-red-600">{errors.name.message}</p>
+                <p className="text-sm text-red-500">{errors.name.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-slate-700">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 {...register("email")}
                 disabled={isLoading}
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.email && (
-                <p className="text-sm text-red-600">{errors.email.message}</p>
+                <p className="text-sm text-red-500">{errors.email.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Пароль</Label>
+              <Label htmlFor="password" className="text-slate-700">Пароль</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="Минимум 6 символов"
                 {...register("password")}
                 disabled={isLoading}
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
+                <p className="text-sm text-red-500">{errors.password.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
+              <Label htmlFor="confirmPassword" className="text-slate-700">Подтвердите пароль</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 placeholder="Повторите пароль"
                 {...register("confirmPassword")}
                 disabled={isLoading}
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.confirmPassword && (
-                <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
+                <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
               )}
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-[#0176D3] hover:bg-[#014486]"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white border-0 h-11"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -174,17 +206,34 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-6 text-center text-sm text-slate-500">
             Уже есть аккаунт?{" "}
             <Link
               href="/login"
-              className="font-medium text-[#0176D3] hover:underline"
+              className="font-medium text-orange-500 hover:text-orange-600"
             >
               Войти
             </Link>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
+            <p className="font-medium mb-1 text-slate-600">Нет кода приглашения?</p>
+            <p>Регистрация доступна только по приглашению. Обратитесь к администратору.</p>
+          </div>
+        </div>
+      </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    }>
+      <RegisterFormComponent />
+    </Suspense>
   )
 }

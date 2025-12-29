@@ -66,6 +66,14 @@ export function Header() {
                   Панель эксперта
                 </Link>
               )}
+              {session.user.role === "ADMIN" && (
+                <Link
+                  href="/admin/invites"
+                  className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
+                >
+                  Админ панель
+                </Link>
+              )}
             </nav>
           )}
         </div>

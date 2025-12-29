@@ -12,10 +12,11 @@ model User {
   email         String    @unique
   password      String
   name          String
-  role          String    @default("STUDENT")
+  role          String    @default("STUDENT") // STUDENT, TEACHER, ADMIN
   totalXP       Int       @default(0)
   currentStreak Int       @default(0)
   avatarUrl     String?
+  invitedBy     String?   // ID of user who invited
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -26,6 +27,25 @@ model User {
   reviews          Review[]           @relation("Reviewer")
   questionAttempts QuestionAttempt[]
   taskProgress     TaskProgress[]
+  invitesCreated   Invite[]           @relation("InviteCreator")
+}
+
+// Invite system for registration
+model Invite {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  email       String?   // Optional: restrict to specific email
+  maxUses     Int       @default(1)
+  usedCount   Int       @default(0)
+  expiresAt   DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User @relation("InviteCreator", fields: [createdById], references: [id])
+
+  @@index([code])
+  @@index([createdById])
 }
 
 model Trail {

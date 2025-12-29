@@ -16,7 +16,29 @@ async function main() {
   await prisma.unit.deleteMany()
   await prisma.module.deleteMany()
   await prisma.trail.deleteMany()
+  await prisma.invite.deleteMany()
   await prisma.user.deleteMany()
+
+  // Create admin user
+  const adminPassword = await bcrypt.hash("vova_dev/", 10)
+  const admin = await prisma.user.create({
+    data: {
+      email: "vova.danilkovich.vova@gmail.com",
+      password: adminPassword,
+      name: "Vova Admin",
+      role: "ADMIN",
+      totalXP: 0,
+      currentStreak: 0,
+    },
+  })
+
+  // Create initial invite codes
+  await prisma.invite.createMany({
+    data: [
+      { code: "PROMETHEUS2024", maxUses: 100, createdById: admin.id },
+      { code: "VIBE-CODER-VIP", maxUses: 50, createdById: admin.id },
+    ],
+  })
 
   // Create users
   const hashedPassword = await bcrypt.hash("password123", 10)
@@ -29,6 +51,7 @@ async function main() {
       role: "TEACHER",
       totalXP: 0,
       currentStreak: 0,
+      invitedBy: admin.id,
     },
   })
 
@@ -40,10 +63,11 @@ async function main() {
       role: "STUDENT",
       totalXP: 125,
       currentStreak: 3,
+      invitedBy: admin.id,
     },
   })
 
-  console.log("Created users:", { teacher: teacher.email, student: student.email })
+  console.log("Created users:", { admin: admin.email, teacher: teacher.email, student: student.email })
 
   // =====================
   // TRAIL 1: VIBE CODER
