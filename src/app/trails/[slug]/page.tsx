@@ -381,69 +381,60 @@ export default async function TrailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Projects Section */}
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Практические задания</h2>
-          <p className="text-gray-500 mb-6">
-            {allAssessmentsCompleted
-              ? "Выберите задание вашего уровня"
-              : "Завершите оценку знаний для доступа к заданиям"
-            }
-          </p>
+        {/* Project Section - Single Project */}
+        {projectModules.length > 0 && (
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Практическое задание</h2>
+            <p className="text-gray-500 mb-6">
+              {allAssessmentsCompleted
+                ? "Приступите к выполнению задания"
+                : "Завершите оценку знаний для доступа к заданию"
+              }
+            </p>
 
-          {!allAssessmentsCompleted && (
-            <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-orange-500" />
-              <span className="text-orange-700">
-                Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданиям
-              </span>
-            </div>
-          )}
+            {!allAssessmentsCompleted && (
+              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-orange-500" />
+                <span className="text-orange-700">
+                  Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданию
+                </span>
+              </div>
+            )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {projectModules.map((module) => {
-              const status = getProjectStatus(module.level)
-              const isAvailable = allAssessmentsCompleted && isProjectAvailable(module.level)
-              const isCompleted = moduleProgressMap[module.id] === "COMPLETED"
-              const isPassed = status === "PASSED"
-              const isFailed = status === "FAILED"
+            {(() => {
+              // Show only the Middle level project (or first available)
+              const project = projectModules.find(m => m.level === "Middle") || projectModules[0]
+              if (!project) return null
+
+              const isProjectCompleted = moduleProgressMap[project.id] === "COMPLETED"
 
               return (
-                <Card
-                  key={module.id}
-                  className={`transition-all ${
-                    !isAvailable ? "opacity-60" : "hover:shadow-md"
-                  }`}
-                >
+                <Card className={`max-w-2xl transition-all ${!allAssessmentsCompleted ? "opacity-60" : "hover:shadow-md"}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <Badge className={`${levelColors[module.level]} border-0`}>
-                        {levelLabels[module.level]}
+                      <Badge className="bg-blue-100 text-blue-700 border-0">
+                        <FolderGit2 className="h-3 w-3 mr-1" />
+                        Проект
                       </Badge>
-                      {isPassed && (
+                      {isProjectCompleted && (
                         <Badge className="bg-green-100 text-green-700 border-0">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Пройдено
-                        </Badge>
-                      )}
-                      {isFailed && (
-                        <Badge className="bg-red-100 text-red-700 border-0">
-                          Не пройдено
+                          Сдано
                         </Badge>
                       )}
                     </div>
-                    <CardTitle className="text-lg">{module.title}</CardTitle>
+                    <CardTitle className="text-lg">{project.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">{module.description}</p>
+                    <p className="text-sm text-gray-500 mb-4">{project.description}</p>
                     <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                      <span>{module.duration}</span>
-                      <span className="font-medium">{module.points} XP</span>
+                      <span>{project.duration}</span>
+                      <span className="font-medium">{project.points} XP</span>
                     </div>
-                    {isAvailable ? (
-                      <Button asChild className="w-full" variant={isPassed ? "outline" : "default"}>
-                        <Link href={`/module/${module.slug}`}>
-                          {isPassed ? "Просмотреть" : "Начать задание"}
+                    {allAssessmentsCompleted ? (
+                      <Button asChild className="w-full" variant={isProjectCompleted ? "outline" : "default"}>
+                        <Link href={`/module/${project.slug}`}>
+                          {isProjectCompleted ? "Просмотреть" : "Начать задание"}
                         </Link>
                       </Button>
                     ) : (
@@ -455,9 +446,9 @@ export default async function TrailPage({ params }: Props) {
                   </CardContent>
                 </Card>
               )
-            })}
+            })()}
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
