@@ -106,6 +106,17 @@ export default async function ModulePage({ params }: Props) {
   const isProject = module.type === "PROJECT"
   const TypeIcon = typeIcons[module.type]
 
+  // Parse inline markdown (bold)
+  const parseInlineMarkdown = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g)
+    return parts.map((part, idx) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={idx}>{part.slice(2, -2)}</strong>
+      }
+      return part
+    })
+  }
+
   // Simple markdown-like rendering
   const renderContent = (content: string) => {
     const lines = content.split("\n")
@@ -113,51 +124,44 @@ export default async function ModulePage({ params }: Props) {
       if (line.startsWith("# ")) {
         return (
           <h1 key={i} className="text-2xl font-bold mt-8 mb-4">
-            {line.slice(2)}
+            {parseInlineMarkdown(line.slice(2))}
           </h1>
         )
       }
       if (line.startsWith("## ")) {
         return (
           <h2 key={i} className="text-xl font-semibold mt-6 mb-3">
-            {line.slice(3)}
+            {parseInlineMarkdown(line.slice(3))}
           </h2>
         )
       }
       if (line.startsWith("### ")) {
         return (
           <h3 key={i} className="text-lg font-medium mt-4 mb-2">
-            {line.slice(4)}
+            {parseInlineMarkdown(line.slice(4))}
           </h3>
         )
       }
       if (line.startsWith("- ")) {
         return (
           <li key={i} className="ml-4 mb-1">
-            {line.slice(2)}
+            {parseInlineMarkdown(line.slice(2))}
           </li>
         )
       }
       if (/^\d+\. /.test(line)) {
         return (
           <li key={i} className="ml-4 mb-1 list-decimal">
-            {line.slice(line.indexOf(" ") + 1)}
+            {parseInlineMarkdown(line.slice(line.indexOf(" ") + 1))}
           </li>
         )
       }
       if (line.trim() === "") {
         return <br key={i} />
       }
-      if (line.startsWith("**") && line.endsWith("**")) {
-        return (
-          <p key={i} className="font-semibold mb-2">
-            {line.slice(2, -2)}
-          </p>
-        )
-      }
       return (
         <p key={i} className="mb-2">
-          {line}
+          {parseInlineMarkdown(line)}
         </p>
       )
     })
