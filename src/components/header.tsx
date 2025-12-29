@@ -140,14 +140,9 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild className="text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                <Link href="/login">Войти</Link>
-              </Button>
-              <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white border-0">
-                <Link href="/register">Начать</Link>
-              </Button>
-            </div>
+            <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white border-0">
+              <Link href="/login">Войти</Link>
+            </Button>
           )}
         </div>
       </div>

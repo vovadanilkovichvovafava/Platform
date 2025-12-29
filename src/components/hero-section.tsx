@@ -41,7 +41,7 @@ export function HeroSection() {
               size="lg"
               className="h-12 px-8 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/30"
             >
-              <Link href="/register">Начать обучение</Link>
+              <Link href="/login">Войти в систему</Link>
             </Button>
             <Button
               asChild

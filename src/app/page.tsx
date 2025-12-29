@@ -208,13 +208,13 @@ export default async function HomePage() {
               Готов проверить свои навыки?
             </h2>
             <p className="text-slate-400 text-lg mb-8">
-              Зарегистрируйся и начни оценку прямо сейчас
+              Войди в систему и начни оценку
             </p>
             <a
-              href="/register"
+              href="/login"
               className="inline-flex items-center justify-center h-12 px-10 text-base font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all shadow-lg shadow-orange-500/30"
             >
-              Зарегистрироваться
+              Войти
             </a>
           </div>
         </div>
