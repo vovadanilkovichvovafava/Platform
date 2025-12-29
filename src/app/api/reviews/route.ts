@@ -16,6 +16,63 @@ const reviewSchema = z.object({
   modulePoints: z.number().default(0),
 })
 
+// Helper to update TaskProgress based on project level and result
+async function updateTaskProgress(
+  userId: string,
+  trailId: string,
+  level: string,
+  isApproved: boolean
+) {
+  const taskProgress = await prisma.taskProgress.findUnique({
+    where: { userId_trailId: { userId, trailId } },
+  })
+
+  if (!taskProgress) return
+
+  // Map module.level to TaskProgress level names
+  const levelMap: Record<string, string> = {
+    Junior: "JUNIOR",
+    Middle: "MIDDLE",
+    Senior: "SENIOR",
+  }
+  const normalizedLevel = levelMap[level] || level
+
+  let updateData: Record<string, string> = {}
+
+  if (normalizedLevel === "MIDDLE") {
+    if (isApproved) {
+      // Middle passed → unlock Senior
+      updateData = {
+        middleStatus: "PASSED",
+        seniorStatus: "PENDING",
+        currentLevel: "SENIOR",
+      }
+    } else {
+      // Middle failed → unlock Junior
+      updateData = {
+        middleStatus: "FAILED",
+        juniorStatus: "PENDING",
+        currentLevel: "JUNIOR",
+      }
+    }
+  } else if (normalizedLevel === "JUNIOR") {
+    updateData = {
+      juniorStatus: isApproved ? "PASSED" : "FAILED",
+    }
+  } else if (normalizedLevel === "SENIOR") {
+    updateData = {
+      seniorStatus: isApproved ? "PASSED" : "FAILED",
+    }
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    await prisma.taskProgress.update({
+      where: { userId_trailId: { userId, trailId } },
+      data: updateData,
+    })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
@@ -45,6 +102,22 @@ export async function POST(request: Request) {
       where: { id: data.submissionId },
       data: { status: data.status },
     })
+
+    // Get module info for task progress update
+    const currentModule = await prisma.module.findUnique({
+      where: { id: data.moduleId },
+      include: { trail: true },
+    })
+
+    // Update TaskProgress for project modules (level progression)
+    if (currentModule && currentModule.type === "PROJECT") {
+      await updateTaskProgress(
+        data.userId,
+        currentModule.trailId,
+        currentModule.level,
+        data.status === "APPROVED"
+      )
+    }
 
     // If approved, update module progress and add XP
     if (data.status === "APPROVED") {
@@ -77,42 +150,6 @@ export async function POST(request: Request) {
             totalXP: { increment: data.modulePoints },
           },
         })
-      }
-
-      // Start next module if exists
-      const currentModule = await prisma.module.findUnique({
-        where: { id: data.moduleId },
-      })
-
-      if (currentModule) {
-        const nextModule = await prisma.module.findFirst({
-          where: {
-            trailId: currentModule.trailId,
-            order: { gt: currentModule.order },
-          },
-          orderBy: { order: "asc" },
-        })
-
-        if (nextModule) {
-          await prisma.moduleProgress.upsert({
-            where: {
-              userId_moduleId: {
-                userId: data.userId,
-                moduleId: nextModule.id,
-              },
-            },
-            update: {
-              status: "IN_PROGRESS",
-              startedAt: new Date(),
-            },
-            create: {
-              userId: data.userId,
-              moduleId: nextModule.id,
-              status: "IN_PROGRESS",
-              startedAt: new Date(),
-            },
-          })
-        }
       }
     }
 
