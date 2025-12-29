@@ -33,9 +33,14 @@ export function Header() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500">
               <Flame className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-slate-900">
-              Prometheus
-            </span>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold text-slate-900 leading-tight">
+                Prometheus
+              </span>
+              <span className="text-xs text-slate-500 leading-tight">
+                R&D Academy
+              </span>
+            </div>
           </Link>
 
           {session && (
