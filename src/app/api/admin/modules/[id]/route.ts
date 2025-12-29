@@ -1,0 +1,100 @@
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { z } from "zod"
+
+const moduleUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  content: z.string().optional(),
+  requirements: z.string().optional(),
+  type: z.enum(["THEORY", "PRACTICE", "PROJECT"]).optional(),
+  level: z.string().optional(),
+  points: z.number().optional(),
+  duration: z.string().optional(),
+})
+
+interface Props {
+  params: Promise<{ id: string }>
+}
+
+// GET - Get single module with questions
+export async function GET(request: NextRequest, { params }: Props) {
+  try {
+    const { id } = await params
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    const module = await prisma.module.findUnique({
+      where: { id },
+      include: {
+        trail: true,
+        questions: {
+          orderBy: { order: "asc" },
+        },
+      },
+    })
+
+    if (!module) {
+      return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
+    }
+
+    return NextResponse.json(module)
+  } catch (error) {
+    console.error("Error fetching module:", error)
+    return NextResponse.json({ error: "Ошибка при получении модуля" }, { status: 500 })
+  }
+}
+
+// PATCH - Update module
+export async function PATCH(request: NextRequest, { params }: Props) {
+  try {
+    const { id } = await params
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const data = moduleUpdateSchema.parse(body)
+
+    const module = await prisma.module.update({
+      where: { id },
+      data,
+    })
+
+    return NextResponse.json(module)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors[0].message }, { status: 400 })
+    }
+    console.error("Error updating module:", error)
+    return NextResponse.json({ error: "Ошибка при обновлении модуля" }, { status: 500 })
+  }
+}
+
+// DELETE - Delete module
+export async function DELETE(request: NextRequest, { params }: Props) {
+  try {
+    const { id } = await params
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    await prisma.module.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting module:", error)
+    return NextResponse.json({ error: "Ошибка при удалении модуля" }, { status: 500 })
+  }
+}

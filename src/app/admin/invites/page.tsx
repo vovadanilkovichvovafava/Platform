@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Plus, Trash2, Copy, Check, Ticket } from "lucide-react"
+import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText } from "lucide-react"
+import Link from "next/link"
 
 interface Invite {
   id: string
@@ -131,14 +132,23 @@ export default function AdminInvitesPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500">
-            <Ticket className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500">
+              <Ticket className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Управление приглашениями</h1>
+              <p className="text-slate-500 text-sm">Создавайте и управляйте кодами приглашений</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Управление приглашениями</h1>
-            <p className="text-slate-500 text-sm">Создавайте и управляйте кодами приглашений</p>
-          </div>
+          <Link
+            href="/admin/content"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <FileText className="h-4 w-4" />
+            Контент
+          </Link>
         </div>
 
         {/* Create New Invite */}
