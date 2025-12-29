@@ -1,23 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-      {/* Background Image - priority ensures preloading */}
-      <Image
-        src="/hero-bg.jpg"
-        alt="Cosmic background with Saturn"
-        fill
-        priority
-        unoptimized
-        className="object-cover"
-        sizes="100vw"
-      />
-
+    <section
+      className="relative min-h-[90vh] flex items-center overflow-hidden bg-slate-900 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/hero-bg.jpg')" }}
+    >
       {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
 
