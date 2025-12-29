@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, XCircle, HelpCircle, Lock } from "lucide-react"
+import { CheckCircle2, XCircle, HelpCircle, RotateCcw } from "lucide-react"
 import Link from "next/link"
 
 interface Question {
@@ -47,7 +46,8 @@ export function AssessmentSection({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(initialCompleted)
-  const [result, setResult] = useState<{
+  const [showResult, setShowResult] = useState(false)
+  const [lastResult, setLastResult] = useState<{
     isCorrect: boolean
     message: string
     earnedScore: number
@@ -78,7 +78,9 @@ export function AssessmentSection({
 
   const question = questions[currentQuestion]
   const existingAttempt = attemptData[question?.id]
-  const isAnswered = existingAttempt?.isCorrect || (existingAttempt?.attempts ?? 0) >= 3
+  const currentAttempts = existingAttempt?.attempts || 0
+  const remainingAttempts = 3 - currentAttempts
+  const isQuestionFinished = existingAttempt?.isCorrect || currentAttempts >= 3
 
   // Calculate progress
   const totalQuestions = questions.length
@@ -104,17 +106,19 @@ export function AssessmentSection({
 
       if (!response.ok) {
         const error = await response.json()
-        setResult({
+        setLastResult({
           isCorrect: false,
           message: error.error || "Ошибка при отправке ответа",
           earnedScore: 0,
-          attempts: existingAttempt?.attempts || 0,
+          attempts: currentAttempts,
         })
+        setShowResult(true)
         return
       }
 
       const data = await response.json()
-      setResult(data)
+      setLastResult(data)
+      setShowResult(true)
 
       // Update local attempt data
       setAttemptData((prev) => ({
@@ -128,22 +132,30 @@ export function AssessmentSection({
       }))
     } catch (error) {
       console.error("Error submitting answer:", error)
-      setResult({
+      setLastResult({
         isCorrect: false,
         message: "Ошибка сети. Попробуйте снова.",
         earnedScore: 0,
-        attempts: existingAttempt?.attempts || 0,
+        attempts: currentAttempts,
       })
+      setShowResult(true)
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleTryAgain = () => {
+    setSelectedAnswer(null)
+    setShowResult(false)
+    setLastResult(null)
   }
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
       setSelectedAnswer(null)
-      setResult(null)
+      setShowResult(false)
+      setLastResult(null)
     }
   }
 
@@ -151,7 +163,8 @@ export function AssessmentSection({
     if (currentQuestion > 0) {
       setCurrentQuestion(currentQuestion - 1)
       setSelectedAnswer(null)
-      setResult(null)
+      setShowResult(false)
+      setLastResult(null)
     }
   }
 
@@ -201,6 +214,9 @@ export function AssessmentSection({
     )
   }
 
+  // Check if we should allow retry (wrong answer but attempts left)
+  const canRetry = showResult && lastResult && !lastResult.isCorrect && (lastResult.attempts || 0) < 3
+
   return (
     <div className="space-y-6">
       {/* Quiz Card */}
@@ -238,7 +254,8 @@ export function AssessmentSection({
                   onClick={() => {
                     setCurrentQuestion(idx)
                     setSelectedAnswer(null)
-                    setResult(null)
+                    setShowResult(false)
+                    setLastResult(null)
                   }}
                 />
               )
@@ -247,13 +264,20 @@ export function AssessmentSection({
 
           {/* Question */}
           <div className="mb-6">
-            <div className="text-sm text-gray-500 mb-2">
-              Вопрос {currentQuestion + 1} из {questions.length}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-500">
+                Вопрос {currentQuestion + 1} из {questions.length}
+              </span>
+              {!isQuestionFinished && (
+                <span className="text-sm text-gray-500">
+                  Попыток: {remainingAttempts} из 3
+                </span>
+              )}
             </div>
             <h3 className="text-lg font-medium mb-4">{question?.question}</h3>
 
-            {/* Previously answered */}
-            {isAnswered && !result && (
+            {/* Previously finished question (not current result) */}
+            {isQuestionFinished && !showResult && (
               <div className={`mb-4 p-3 rounded-lg ${existingAttempt?.isCorrect ? "bg-green-50" : "bg-red-50"}`}>
                 <div className="flex items-center gap-2">
                   {existingAttempt?.isCorrect ? (
@@ -282,21 +306,24 @@ export function AssessmentSection({
             {/* Options */}
             <div className="space-y-3">
               {question?.options.map((option, idx) => {
-                let buttonClass = "w-full justify-start text-left h-auto py-3 px-4 whitespace-normal"
+                // Determine button styling
+                let buttonClass = "w-full justify-start text-left h-auto py-3 px-4 whitespace-normal transition-all"
+                let isDisabled = isQuestionFinished || isSubmitting
 
-                if (result) {
-                  if (result.correctAnswer !== undefined && idx === result.correctAnswer) {
-                    buttonClass += " bg-green-100 border-green-500 text-green-700"
-                  } else if (idx === selectedAnswer && !result.isCorrect) {
-                    buttonClass += " bg-red-100 border-red-500 text-red-700"
-                  } else if (idx === selectedAnswer && result.isCorrect) {
-                    buttonClass += " bg-green-100 border-green-500 text-green-700"
+                // Show correct/incorrect after submit
+                if (showResult && lastResult) {
+                  isDisabled = true
+                  if (lastResult.correctAnswer !== undefined && idx === lastResult.correctAnswer) {
+                    buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
+                  } else if (idx === selectedAnswer && !lastResult.isCorrect) {
+                    buttonClass += " bg-red-100 border-red-500 border-2 text-red-700"
+                  } else if (idx === selectedAnswer && lastResult.isCorrect) {
+                    buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
                   }
                 } else if (selectedAnswer === idx) {
-                  buttonClass += " border-blue-500 bg-blue-50"
+                  // Selected but not yet submitted - prominent highlight
+                  buttonClass += " border-blue-600 border-2 bg-blue-100 ring-2 ring-blue-300 ring-offset-1"
                 }
-
-                const isDisabled = isAnswered || isSubmitting || result !== null
 
                 return (
                   <Button
@@ -315,18 +342,23 @@ export function AssessmentSection({
           </div>
 
           {/* Result message */}
-          {result && (
-            <div className={`mb-4 p-4 rounded-lg ${result.isCorrect ? "bg-green-50" : "bg-orange-50"}`}>
+          {showResult && lastResult && (
+            <div className={`mb-4 p-4 rounded-lg ${lastResult.isCorrect ? "bg-green-50" : "bg-orange-50"}`}>
               <div className="flex items-center gap-2">
-                {result.isCorrect ? (
+                {lastResult.isCorrect ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 ) : (
                   <XCircle className="h-5 w-5 text-orange-600" />
                 )}
-                <span className={result.isCorrect ? "text-green-700" : "text-orange-700"}>
-                  {result.message}
+                <span className={lastResult.isCorrect ? "text-green-700" : "text-orange-700"}>
+                  {lastResult.message}
                 </span>
               </div>
+              {canRetry && (
+                <p className="text-sm text-orange-600 mt-2">
+                  Осталось попыток: {3 - (lastResult.attempts || 0)}
+                </p>
+              )}
             </div>
           )}
 
@@ -337,7 +369,20 @@ export function AssessmentSection({
             </Button>
 
             <div className="flex gap-2">
-              {!isAnswered && !result && (
+              {/* Try Again button - when wrong but has attempts left */}
+              {canRetry && (
+                <Button
+                  onClick={handleTryAgain}
+                  variant="outline"
+                  className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Попробовать снова
+                </Button>
+              )}
+
+              {/* Submit button - when not finished and not showing result */}
+              {!isQuestionFinished && !showResult && (
                 <Button
                   onClick={handleSubmit}
                   disabled={selectedAnswer === null || isSubmitting}
@@ -347,7 +392,9 @@ export function AssessmentSection({
                 </Button>
               )}
 
-              {(result || isAnswered) && currentQuestion < questions.length - 1 && (
+              {/* Next button - when question is finished OR correct answer */}
+              {(isQuestionFinished || (showResult && lastResult?.isCorrect)) &&
+               currentQuestion < questions.length - 1 && (
                 <Button onClick={handleNext}>Следующий вопрос</Button>
               )}
             </div>
