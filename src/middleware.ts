@@ -11,6 +11,11 @@ export default withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
+    // Protect admin routes
+    if (path.startsWith("/admin") && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
     return NextResponse.next()
   },
   {
@@ -23,6 +28,7 @@ export default withAuth(
           path === "/" ||
           path === "/login" ||
           path === "/register" ||
+          path.startsWith("/trails") ||
           path.startsWith("/api/auth") ||
           path.startsWith("/api/register")
         ) {
@@ -38,6 +44,13 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|public).*)",
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (images, etc.)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 }
