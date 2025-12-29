@@ -282,7 +282,7 @@ export function AssessmentSection({
             {/* Options */}
             <div className="space-y-3">
               {question?.options.map((option, idx) => {
-                let buttonClass = "w-full justify-start text-left h-auto py-3 px-4"
+                let buttonClass = "w-full justify-start text-left h-auto py-3 px-4 whitespace-normal"
 
                 if (result) {
                   if (result.correctAnswer !== undefined && idx === result.correctAnswer) {
@@ -306,8 +306,8 @@ export function AssessmentSection({
                     onClick={() => !isDisabled && setSelectedAnswer(idx)}
                     disabled={isDisabled}
                   >
-                    <span className="font-medium mr-2">{String.fromCharCode(65 + idx)}.</span>
-                    {option}
+                    <span className="font-medium mr-2 shrink-0">{String.fromCharCode(65 + idx)}.</span>
+                    <span className="text-left">{option}</span>
                   </Button>
                 )
               })}
