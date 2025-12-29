@@ -214,7 +214,7 @@ export default async function HomePage() {
               href="/register"
               className="inline-flex items-center justify-center h-12 px-10 text-base font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all shadow-lg shadow-orange-500/30"
             >
-              Начать бесплатно
+              Зарегистрироваться
             </a>
           </div>
         </div>
