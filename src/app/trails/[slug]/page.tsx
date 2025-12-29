@@ -139,7 +139,7 @@ export default async function TrailPage({ params }: Props) {
     "use server"
 
     const session = await getServerSession(authOptions)
-    if (!session) {
+    if (!session || !session.user?.id) {
       redirect("/login")
     }
 

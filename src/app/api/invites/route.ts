@@ -16,7 +16,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -82,7 +82,7 @@ export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 

@@ -54,9 +54,26 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.role = token.role
+      if (token && token.id) {
+        // Verify user still exists in database (handles FORCE_SEED case)
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { id: true, role: true },
+          })
+
+          if (!dbUser) {
+            // User no longer exists - invalidate session
+            throw new Error("User not found")
+          }
+
+          session.user.id = dbUser.id
+          session.user.role = dbUser.role
+        } catch {
+          // If user doesn't exist, return empty session to force re-login
+          session.user.id = ""
+          session.user.role = ""
+        }
       }
       return session
     },

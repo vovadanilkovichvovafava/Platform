@@ -39,7 +39,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 export default async function MyWorkPage() {
   const session = await getServerSession(authOptions)
 
-  if (!session) {
+  if (!session || !session.user?.id) {
     redirect("/login")
   }
 

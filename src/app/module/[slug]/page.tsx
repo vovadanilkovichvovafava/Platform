@@ -37,7 +37,7 @@ export default async function ModulePage({ params }: Props) {
   const { slug } = await params
   const session = await getServerSession(authOptions)
 
-  if (!session) {
+  if (!session || !session.user?.id) {
     redirect("/login")
   }
 
