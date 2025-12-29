@@ -13,9 +13,10 @@ async function main() {
     const inviteCount = await prisma.invite.count();
     console.log(`Found ${trailCount} trails, ${questionCount} questions, ${inviteCount} invites in database`);
 
-    // Re-seed if no trails OR no questions OR no invites (schema was updated)
-    if (trailCount === 0 || questionCount === 0 || inviteCount === 0) {
-      console.log('Database needs seeding, running seed...');
+    // Re-seed if no data OR FORCE_SEED is set
+    const forceSeed = process.env.FORCE_SEED === 'true';
+    if (forceSeed || trailCount === 0 || questionCount === 0 || inviteCount === 0) {
+      console.log(forceSeed ? 'FORCE_SEED enabled, running seed...' : 'Database needs seeding, running seed...');
       execSync('npm run db:seed', { stdio: 'inherit' });
       console.log('Seed completed!');
     }
