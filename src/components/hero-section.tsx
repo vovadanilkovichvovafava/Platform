@@ -2,19 +2,15 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import Image from "next/image"
 
 export function HeroSection() {
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
       {/* Background Image */}
-      <Image
+      <img
         src="/hero-bg.jpg"
         alt="Cosmic background with Saturn"
-        fill
-        className="object-cover"
-        priority
-        quality={90}
+        className="absolute inset-0 w-full h-full object-cover"
       />
 
       {/* Overlay for better text readability */}
