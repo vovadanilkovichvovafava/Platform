@@ -143,57 +143,62 @@ export default async function TrailPage({ params }: Props) {
       redirect("/login")
     }
 
-    // Use upsert to prevent duplicate enrollment errors
-    await prisma.enrollment.upsert({
-      where: {
-        userId_trailId: {
-          userId: session.user.id,
-          trailId: trailId,
-        },
-      },
-      update: {},
-      create: {
-        userId: session.user.id,
-        trailId: trailId,
-      },
-    })
-
-    // Create task progress (start with MIDDLE) - use upsert
-    await prisma.taskProgress.upsert({
-      where: {
-        userId_trailId: {
-          userId: session.user.id,
-          trailId: trailId,
-        },
-      },
-      update: {},
-      create: {
-        userId: session.user.id,
-        trailId: trailId,
-        currentLevel: "MIDDLE",
-        middleStatus: "PENDING",
-        juniorStatus: "LOCKED",
-        seniorStatus: "LOCKED",
-      },
-    })
-
-    // Start first assessment module - use upsert
-    if (firstModuleId) {
-      await prisma.moduleProgress.upsert({
+    try {
+      // Use upsert to prevent duplicate enrollment errors
+      await prisma.enrollment.upsert({
         where: {
-          userId_moduleId: {
+          userId_trailId: {
             userId: session.user.id,
-            moduleId: firstModuleId,
+            trailId: trailId,
           },
         },
         update: {},
         create: {
           userId: session.user.id,
-          moduleId: firstModuleId,
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
+          trailId: trailId,
         },
       })
+
+      // Create task progress (start with MIDDLE) - use upsert
+      await prisma.taskProgress.upsert({
+        where: {
+          userId_trailId: {
+            userId: session.user.id,
+            trailId: trailId,
+          },
+        },
+        update: {},
+        create: {
+          userId: session.user.id,
+          trailId: trailId,
+          currentLevel: "MIDDLE",
+          middleStatus: "PENDING",
+          juniorStatus: "LOCKED",
+          seniorStatus: "LOCKED",
+        },
+      })
+
+      // Start first assessment module - use upsert
+      if (firstModuleId) {
+        await prisma.moduleProgress.upsert({
+          where: {
+            userId_moduleId: {
+              userId: session.user.id,
+              moduleId: firstModuleId,
+            },
+          },
+          update: {},
+          create: {
+            userId: session.user.id,
+            moduleId: firstModuleId,
+            status: "IN_PROGRESS",
+            startedAt: new Date(),
+          },
+        })
+      }
+    } catch (error) {
+      console.error("Enrollment error:", error)
+      throw error
     }
 
     redirect(`/trails/${slug}`)
@@ -285,7 +290,7 @@ export default async function TrailPage({ params }: Props) {
                     <Progress value={progressPercent} className="h-2" />
                   </CardContent>
                 </Card>
-              ) : (
+              ) : session ? (
                 <form action={handleEnroll}>
                   <Button
                     type="submit"
@@ -295,6 +300,10 @@ export default async function TrailPage({ params }: Props) {
                     Начать оценку
                   </Button>
                 </form>
+              ) : (
+                <Button asChild size="lg" className="bg-[#0176D3] hover:bg-[#014486] w-full md:w-auto">
+                  <Link href="/login">Войти для начала</Link>
+                </Button>
               )}
             </div>
           </div>
