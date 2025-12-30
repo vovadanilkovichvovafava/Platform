@@ -41,6 +41,9 @@ const levelLabels: Record<string, string> = {
   Junior: "Начальный",
   Middle: "Средний",
   Senior: "Продвинутый",
+  JUNIOR: "Начальный",
+  MIDDLE: "Средний",
+  SENIOR: "Продвинутый",
 }
 
 const levelColors: Record<string, string> = {
@@ -405,14 +408,14 @@ export default async function TrailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Project Section - Single Project */}
+        {/* Project Section - Level-based Projects */}
         {projectModules.length > 0 && (
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Практическое задание</h2>
             <p className="text-gray-500 mb-6">
               {allAssessmentsCompleted
-                ? "Приступите к выполнению задания"
-                : "Завершите оценку знаний для доступа к заданию"
+                ? "Выберите уровень сложности и выполните задание"
+                : "Завершите оценку знаний для доступа к заданиям"
               }
             </p>
 
@@ -420,57 +423,95 @@ export default async function TrailPage({ params }: Props) {
               <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-orange-500" />
                 <span className="text-orange-700">
-                  Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданию
+                  Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданиям
                 </span>
               </div>
             )}
 
-            {(() => {
-              // Show only the Middle level project (or first available)
-              const project = projectModules.find(m => m.level === "Middle") || projectModules[0]
-              if (!project) return null
+            {/* Show current level indicator */}
+            {allAssessmentsCompleted && taskProgress && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <span className="text-blue-700">
+                  Текущий уровень: <strong>{levelLabels[taskProgress.currentLevel] || taskProgress.currentLevel}</strong>
+                </span>
+              </div>
+            )}
 
-              const isProjectCompleted = moduleProgressMap[project.id] === "COMPLETED"
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Render projects by level: Junior, Middle, Senior */}
+              {["Junior", "Middle", "Senior"].map((level) => {
+                const project = projectModules.find(m => m.level === level)
+                if (!project) return null
 
-              return (
-                <Card className={`max-w-2xl transition-all ${!allAssessmentsCompleted ? "opacity-60" : "hover:shadow-md"}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <Badge className="bg-blue-100 text-blue-700 border-0">
-                        <FolderGit2 className="h-3 w-3 mr-1" />
-                        Проект
-                      </Badge>
-                      {isProjectCompleted && (
-                        <Badge className="bg-green-100 text-green-700 border-0">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Сдано
+                const projectStatus = getProjectStatus(level)
+                const isLocked = projectStatus === "LOCKED"
+                const isPassed = projectStatus === "PASSED"
+                const isFailed = projectStatus === "FAILED"
+                const isPending = projectStatus === "PENDING"
+                const isProjectCompleted = moduleProgressMap[project.id] === "COMPLETED"
+                const canAccess = allAssessmentsCompleted && !isLocked
+
+                return (
+                  <Card
+                    key={project.id}
+                    className={`transition-all ${
+                      isLocked || !allAssessmentsCompleted
+                        ? "opacity-60"
+                        : "hover:shadow-md"
+                    } ${isPending ? "ring-2 ring-blue-400" : ""}`}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <Badge className={`${levelColors[level]} border-0`}>
+                          {levelLabels[level]}
                         </Badge>
+                        {isPassed && (
+                          <Badge className="bg-green-100 text-green-700 border-0">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Сдано
+                          </Badge>
+                        )}
+                        {isFailed && (
+                          <Badge className="bg-red-100 text-red-700 border-0">
+                            Не сдано
+                          </Badge>
+                        )}
+                        {isLocked && (
+                          <Badge className="bg-gray-100 text-gray-500 border-0">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Закрыт
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-lg">{project.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-500 mb-4 line-clamp-2">{project.description}</p>
+                      <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                        <span>{project.duration}</span>
+                        <span className="font-medium">{project.points} XP</span>
+                      </div>
+                      {canAccess ? (
+                        <Button
+                          asChild
+                          className="w-full"
+                          variant={isProjectCompleted || isPassed ? "outline" : "default"}
+                        >
+                          <Link href={`/module/${project.slug}`}>
+                            {isPassed || isProjectCompleted ? "Просмотреть" : isPending ? "Выполнить" : "Открыть"}
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button disabled className="w-full" variant="outline">
+                          <Lock className="h-4 w-4 mr-2" />
+                          Недоступно
+                        </Button>
                       )}
-                    </div>
-                    <CardTitle className="text-lg">{project.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">{project.description}</p>
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                      <span>{project.duration}</span>
-                      <span className="font-medium">{project.points} XP</span>
-                    </div>
-                    {allAssessmentsCompleted ? (
-                      <Button asChild className="w-full" variant={isProjectCompleted ? "outline" : "default"}>
-                        <Link href={`/module/${project.slug}`}>
-                          {isProjectCompleted ? "Просмотреть" : "Начать задание"}
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button disabled className="w-full" variant="outline">
-                        <Lock className="h-4 w-4 mr-2" />
-                        Недоступно
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              )
-            })()}
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
