@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react"
 import Link from "next/link"
+import { safeJsonParse } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -102,7 +103,7 @@ export default function TeacherModuleEditorPage({ params }: Props) {
         data.questions.map((q) => ({
           id: q.id,
           question: q.question,
-          options: JSON.parse(q.options),
+          options: safeJsonParse<string[]>(q.options, []),
           correctAnswer: q.correctAnswer,
         }))
       )

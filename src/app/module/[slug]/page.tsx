@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { safeJsonParse } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -313,7 +314,7 @@ export default async function ModulePage({ params }: Props) {
                 questions={module.questions.map((q) => ({
                   id: q.id,
                   question: q.question,
-                  options: JSON.parse(q.options) as string[],
+                  options: safeJsonParse<string[]>(q.options, []),
                   order: q.order,
                 }))}
                 initialAttempts={questionAttempts.map((a) => ({

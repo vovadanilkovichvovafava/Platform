@@ -6,10 +6,19 @@ import { z } from "zod"
 
 const questionUpdateSchema = z.object({
   question: z.string().min(1).optional(),
-  options: z.array(z.string()).min(2).optional(),
+  options: z.array(z.string()).min(2).max(10).optional(),
   correctAnswer: z.number().min(0).optional(),
   order: z.number().optional(),
-})
+}).refine(
+  (data) => {
+    // If both options and correctAnswer provided, validate
+    if (data.options && data.correctAnswer !== undefined) {
+      return data.correctAnswer < data.options.length
+    }
+    return true
+  },
+  { message: "correctAnswer должен быть меньше количества вариантов", path: ["correctAnswer"] }
+)
 
 interface Props {
   params: Promise<{ id: string }>
@@ -51,6 +60,23 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     const body = await request.json()
     const data = questionUpdateSchema.parse(body)
+
+    // If correctAnswer is updated without new options, validate against existing
+    if (data.correctAnswer !== undefined && !data.options) {
+      const existingQuestion = await prisma.question.findUnique({
+        where: { id },
+        select: { options: true },
+      })
+      if (existingQuestion) {
+        const existingOptions = JSON.parse(existingQuestion.options) as string[]
+        if (data.correctAnswer >= existingOptions.length) {
+          return NextResponse.json(
+            { error: "correctAnswer должен быть меньше количества вариантов" },
+            { status: 400 }
+          )
+        }
+      }
+    }
 
     const updateData: Record<string, unknown> = {}
     if (data.question) updateData.question = data.question

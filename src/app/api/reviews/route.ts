@@ -16,6 +16,16 @@ const reviewSchema = z.object({
   modulePoints: z.number().default(0),
 })
 
+// Helper to check if teacher is assigned to trail
+async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Promise<boolean> {
+  const assignment = await prisma.trailTeacher.findUnique({
+    where: {
+      trailId_teacherId: { trailId, teacherId },
+    },
+  })
+  return !!assignment
+}
+
 // Helper to update TaskProgress based on project level and result
 async function updateTaskProgress(
   userId: string,
@@ -83,6 +93,22 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const data = reviewSchema.parse(body)
+
+    // Get module to check trail assignment
+    const moduleForCheck = await prisma.module.findUnique({
+      where: { id: data.moduleId },
+      select: { trailId: true },
+    })
+
+    if (!moduleForCheck) {
+      return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
+    }
+
+    // Verify teacher is assigned to this trail
+    const isAssigned = await isTeacherAssignedToTrail(session.user.id, moduleForCheck.trailId)
+    if (!isAssigned) {
+      return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+    }
 
     // Create review
     const review = await prisma.review.create({

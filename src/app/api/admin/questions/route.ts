@@ -7,9 +7,12 @@ import { z } from "zod"
 const questionSchema = z.object({
   moduleId: z.string().min(1),
   question: z.string().min(1),
-  options: z.array(z.string()).min(2),
+  options: z.array(z.string()).min(2).max(10),
   correctAnswer: z.number().min(0),
-})
+}).refine(
+  (data) => data.correctAnswer < data.options.length,
+  { message: "correctAnswer должен быть меньше количества вариантов", path: ["correctAnswer"] }
+)
 
 // Helper to check if teacher is assigned to trail via module
 async function isTeacherAssignedToModule(teacherId: string, moduleId: string): Promise<boolean> {
