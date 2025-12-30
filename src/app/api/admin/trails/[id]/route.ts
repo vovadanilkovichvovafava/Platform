@@ -53,7 +53,17 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 }
 
-// PATCH - Update trail
+// Helper to check if teacher is assigned to trail
+async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Promise<boolean> {
+  const assignment = await prisma.trailTeacher.findUnique({
+    where: {
+      trailId_teacherId: { trailId, teacherId },
+    },
+  })
+  return !!assignment
+}
+
+// PATCH - Update trail (Admin: any, Teacher: only assigned)
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
@@ -61,6 +71,14 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    // Teachers can only update trails they are assigned to
+    if (session.user.role === "TEACHER") {
+      const isAssigned = await isTeacherAssignedToTrail(session.user.id, id)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
     }
 
     const body = await request.json()
@@ -81,7 +99,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   }
 }
 
-// DELETE - Delete trail
+// DELETE - Delete trail (Admin: any, Teacher: only assigned)
 export async function DELETE(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
@@ -89,6 +107,14 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
     if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    // Teachers can only delete trails they are assigned to
+    if (session.user.role === "TEACHER") {
+      const isAssigned = await isTeacherAssignedToTrail(session.user.id, id)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
     }
 
     await prisma.trail.delete({

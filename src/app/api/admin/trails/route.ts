@@ -44,12 +44,13 @@ export async function GET() {
   }
 }
 
-// POST - Create new trail
+// POST - Create new trail (ADMIN only)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    // Only ADMIN can create new trails
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -67,11 +68,13 @@ export async function POST(request: NextRequest) {
       _max: { order: true },
     })
 
+    // New trails are restricted by default
     const trail = await prisma.trail.create({
       data: {
         ...data,
         slug,
         order: (maxOrder._max.order || 0) + 1,
+        isRestricted: true, // By default, trails are restricted
       },
     })
 

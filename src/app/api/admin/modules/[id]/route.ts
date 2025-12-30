@@ -50,7 +50,17 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 }
 
-// PATCH - Update module
+// Helper to check if teacher is assigned to trail
+async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Promise<boolean> {
+  const assignment = await prisma.trailTeacher.findUnique({
+    where: {
+      trailId_teacherId: { trailId, teacherId },
+    },
+  })
+  return !!assignment
+}
+
+// PATCH - Update module (Admin: any, Teacher: only in assigned trails)
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
@@ -58,6 +68,24 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    // Get module to check trail
+    const existingModule = await prisma.module.findUnique({
+      where: { id },
+      select: { trailId: true },
+    })
+
+    if (!existingModule) {
+      return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
+    }
+
+    // Teachers can only update modules in trails they are assigned to
+    if (session.user.role === "TEACHER") {
+      const isAssigned = await isTeacherAssignedToTrail(session.user.id, existingModule.trailId)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
     }
 
     const body = await request.json()
@@ -78,7 +106,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   }
 }
 
-// DELETE - Delete module
+// DELETE - Delete module (Admin: any, Teacher: only in assigned trails)
 export async function DELETE(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
@@ -86,6 +114,24 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
     if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    // Get module to check trail
+    const existingModule = await prisma.module.findUnique({
+      where: { id },
+      select: { trailId: true },
+    })
+
+    if (!existingModule) {
+      return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
+    }
+
+    // Teachers can only delete modules in trails they are assigned to
+    if (session.user.role === "TEACHER") {
+      const isAssigned = await isTeacherAssignedToTrail(session.user.id, existingModule.trailId)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
     }
 
     await prisma.module.delete({

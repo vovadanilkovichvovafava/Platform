@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +24,7 @@ import {
   Trash2,
   Edit,
   Check,
+  AlertCircle,
 } from "lucide-react"
 
 interface Module {
@@ -55,6 +55,10 @@ interface Trail {
   modules: Module[]
 }
 
+interface Assignment {
+  trailId: string
+}
+
 const iconMap: Record<string, typeof Code> = {
   Code,
   Target,
@@ -75,24 +79,13 @@ const typeLabels: Record<string, string> = {
 }
 
 export default function TeacherContentPage() {
-  const router = useRouter()
   const [trails, setTrails] = useState<Trail[]>([])
+  const [assignedTrailIds, setAssignedTrailIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
-  const [showTrailModal, setShowTrailModal] = useState(false)
   const [showModuleModal, setShowModuleModal] = useState(false)
   const [selectedTrailId, setSelectedTrailId] = useState<string>("")
-
-  // Trail form state
-  const [trailForm, setTrailForm] = useState({
-    title: "",
-    subtitle: "",
-    description: "",
-    icon: "Code",
-    color: "#0176D3",
-    duration: "2-4 недели",
-  })
 
   // Module form state
   const [moduleForm, setModuleForm] = useState({
@@ -104,12 +97,20 @@ export default function TeacherContentPage() {
     duration: "15 мин",
   })
 
-  const fetchTrails = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true)
-      const res = await fetch("/api/admin/trails")
-      const data = await res.json()
-      setTrails(data)
+
+      // Fetch all trails
+      const trailsRes = await fetch("/api/admin/trails")
+      const trailsData = await trailsRes.json()
+
+      // Fetch teacher's assignments
+      const assignmentsRes = await fetch("/api/teacher/assignments")
+      const assignmentsData = await assignmentsRes.json()
+
+      setTrails(trailsData)
+      setAssignedTrailIds(assignmentsData.map((a: Assignment) => a.trailId))
     } catch {
       setError("Ошибка загрузки данных")
     } finally {
@@ -118,41 +119,11 @@ export default function TeacherContentPage() {
   }
 
   useEffect(() => {
-    fetchTrails()
+    fetchData()
   }, [])
 
-  const createTrail = async () => {
-    try {
-      const slug = trailForm.title
-        .toLowerCase()
-        .replace(/[^a-zа-яё0-9]+/gi, "-")
-        .replace(/(^-|-$)/g, "")
-
-      const res = await fetch("/api/admin/trails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...trailForm,
-          slug,
-        }),
-      })
-
-      if (!res.ok) throw new Error("Failed to create trail")
-
-      setShowTrailModal(false)
-      setTrailForm({
-        title: "",
-        subtitle: "",
-        description: "",
-        icon: "Code",
-        color: "#0176D3",
-        duration: "2-4 недели",
-      })
-      fetchTrails()
-    } catch {
-      setError("Ошибка создания trail")
-    }
-  }
+  // Filter trails to show only assigned ones
+  const assignedTrails = trails.filter((t) => assignedTrailIds.includes(t.id))
 
   const createModule = async () => {
     if (!selectedTrailId) return
@@ -163,7 +134,7 @@ export default function TeacherContentPage() {
         .replace(/[^a-zа-яё0-9]+/gi, "-")
         .replace(/(^-|-$)/g, "")
 
-      const trail = trails.find((t) => t.id === selectedTrailId)
+      const trail = assignedTrails.find((t) => t.id === selectedTrailId)
       const order = trail ? trail.modules.length : 0
 
       const res = await fetch("/api/admin/modules", {
@@ -177,7 +148,10 @@ export default function TeacherContentPage() {
         }),
       })
 
-      if (!res.ok) throw new Error("Failed to create module")
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to create module")
+      }
 
       setShowModuleModal(false)
       setSelectedTrailId("")
@@ -189,9 +163,9 @@ export default function TeacherContentPage() {
         points: 50,
         duration: "15 мин",
       })
-      fetchTrails()
-    } catch {
-      setError("Ошибка создания модуля")
+      fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка создания модуля")
     }
   }
 
@@ -203,10 +177,13 @@ export default function TeacherContentPage() {
         method: "DELETE",
       })
 
-      if (!res.ok) throw new Error("Failed to delete trail")
-      fetchTrails()
-    } catch {
-      setError("Ошибка удаления trail")
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to delete trail")
+      }
+      fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка удаления trail")
     }
   }
 
@@ -218,10 +195,13 @@ export default function TeacherContentPage() {
         method: "DELETE",
       })
 
-      if (!res.ok) throw new Error("Failed to delete module")
-      fetchTrails()
-    } catch {
-      setError("Ошибка удаления модуля")
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to delete module")
+      }
+      fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка удаления модуля")
     }
   }
 
@@ -243,18 +223,12 @@ export default function TeacherContentPage() {
                 Управление контентом
               </h1>
               <p className="text-gray-600 mt-1">
-                Создание и редактирование trails и модулей
+                Редактирование назначенных trails и модулей
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setShowTrailModal(true)} className="bg-green-600 hover:bg-green-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Новый Trail
-              </Button>
-              <Button onClick={fetchTrails} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button onClick={fetchData} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
@@ -262,7 +236,10 @@ export default function TeacherContentPage() {
       <div className="container mx-auto px-4 py-8">
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between text-red-700">
-            <span>{error}</span>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              {error}
+            </div>
             <button onClick={() => setError("")}>
               <X className="h-4 w-4" />
             </button>
@@ -270,18 +247,18 @@ export default function TeacherContentPage() {
         )}
 
         <div className="space-y-8">
-          {trails.length === 0 ? (
+          {assignedTrails.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <p className="text-gray-500 mb-4">Нет trails</p>
-                <Button onClick={() => setShowTrailModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Создать первый Trail
-                </Button>
+                <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-500 mb-2">Нет назначенных trails</p>
+                <p className="text-sm text-gray-400">
+                  Обратитесь к администратору для назначения trails
+                </p>
               </CardContent>
             </Card>
           ) : (
-            trails.map((trail) => {
+            assignedTrails.map((trail) => {
               const Icon = iconMap[trail.icon] || Code
 
               return (
@@ -411,107 +388,6 @@ export default function TeacherContentPage() {
           )}
         </div>
       </div>
-
-      {/* Create Trail Modal */}
-      {showTrailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-lg mx-4">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Создать Trail</CardTitle>
-                <button onClick={() => setShowTrailModal(false)}>
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title">Название</Label>
-                <Input
-                  id="title"
-                  value={trailForm.title}
-                  onChange={(e) =>
-                    setTrailForm({ ...trailForm, title: e.target.value })
-                  }
-                  placeholder="Например: Frontend Development"
-                />
-              </div>
-              <div>
-                <Label htmlFor="subtitle">Подзаголовок</Label>
-                <Input
-                  id="subtitle"
-                  value={trailForm.subtitle}
-                  onChange={(e) =>
-                    setTrailForm({ ...trailForm, subtitle: e.target.value })
-                  }
-                  placeholder="Краткое описание"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Описание</Label>
-                <Textarea
-                  id="description"
-                  value={trailForm.description}
-                  onChange={(e) =>
-                    setTrailForm({ ...trailForm, description: e.target.value })
-                  }
-                  placeholder="Полное описание trail"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="icon">Иконка</Label>
-                  <select
-                    id="icon"
-                    value={trailForm.icon}
-                    onChange={(e) =>
-                      setTrailForm({ ...trailForm, icon: e.target.value })
-                    }
-                    className="w-full p-2 border rounded-lg"
-                  >
-                    <option value="Code">Code</option>
-                    <option value="Target">Target</option>
-                    <option value="Palette">Palette</option>
-                    <option value="Lightbulb">Lightbulb</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="color">Цвет</Label>
-                  <Input
-                    id="color"
-                    type="color"
-                    value={trailForm.color}
-                    onChange={(e) =>
-                      setTrailForm({ ...trailForm, color: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="duration">Длительность</Label>
-                <Input
-                  id="duration"
-                  value={trailForm.duration}
-                  onChange={(e) =>
-                    setTrailForm({ ...trailForm, duration: e.target.value })
-                  }
-                  placeholder="2-4 недели"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowTrailModal(false)}>
-                  Отмена
-                </Button>
-                <Button onClick={createTrail}>
-                  <Check className="h-4 w-4 mr-2" />
-                  Создать
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Create Module Modal */}
       {showModuleModal && (

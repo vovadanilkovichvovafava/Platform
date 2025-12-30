@@ -16,7 +16,17 @@ const moduleSchema = z.object({
   duration: z.string().default("15 мин"),
 })
 
-// POST - Create new module
+// Helper to check if teacher is assigned to trail
+async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Promise<boolean> {
+  const assignment = await prisma.trailTeacher.findUnique({
+    where: {
+      trailId_teacherId: { trailId, teacherId },
+    },
+  })
+  return !!assignment
+}
+
+// POST - Create new module (Admin: any trail, Teacher: only assigned trails)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -27,6 +37,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const data = moduleSchema.parse(body)
+
+    // Teachers can only create modules in trails they are assigned to
+    if (session.user.role === "TEACHER") {
+      const isAssigned = await isTeacherAssignedToTrail(session.user.id, data.trailId)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
+    }
 
     // Generate slug from title
     const slug = data.title
