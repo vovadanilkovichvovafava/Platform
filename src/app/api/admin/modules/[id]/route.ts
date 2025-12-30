@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -56,7 +56,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -84,7 +84,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
