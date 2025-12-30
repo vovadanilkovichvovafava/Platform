@@ -8,7 +8,17 @@ export const dynamic = "force-dynamic"
 export default async function TrailsPage() {
   const session = await getServerSession(authOptions)
 
-  const trails = await prisma.trail.findMany({
+  // Get user's trail access if logged in
+  let accessibleTrailIds: string[] = []
+  if (session) {
+    const userAccess = await prisma.studentTrailAccess.findMany({
+      where: { studentId: session.user.id },
+      select: { trailId: true },
+    })
+    accessibleTrailIds = userAccess.map((a) => a.trailId)
+  }
+
+  const allTrails = await prisma.trail.findMany({
     where: { isPublished: true },
     orderBy: { order: "asc" },
     include: {
@@ -16,6 +26,16 @@ export default async function TrailsPage() {
         select: { id: true },
       },
     },
+  })
+
+  // Filter out restricted trails user doesn't have access to
+  // Admins and teachers can see all trails
+  const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER"
+  const trails = allTrails.filter((trail) => {
+    if (!trail.isRestricted) return true // Public trail
+    if (isPrivileged) return true // Admin/Teacher can see all
+    if (!session) return false // Not logged in, can't see restricted
+    return accessibleTrailIds.includes(trail.id) // Check access
   })
 
   let enrolledTrailIds: string[] = []

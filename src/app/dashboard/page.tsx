@@ -82,8 +82,15 @@ export default async function DashboardPage() {
 
   const rank = getRank(user.totalXP)
 
-  // Get all trails for enrollment
-  const allTrails = await prisma.trail.findMany({
+  // Get user's trail access
+  const userAccess = await prisma.studentTrailAccess.findMany({
+    where: { studentId: session.user.id },
+    select: { trailId: true },
+  })
+  const accessibleTrailIds = userAccess.map((a) => a.trailId)
+
+  // Get all published trails
+  const allPublishedTrails = await prisma.trail.findMany({
     where: { isPublished: true },
     orderBy: { order: "asc" },
     include: {
@@ -91,6 +98,14 @@ export default async function DashboardPage() {
         select: { id: true },
       },
     },
+  })
+
+  // Filter out restricted trails user doesn't have access to
+  const isPrivileged = user.role === "ADMIN" || user.role === "TEACHER"
+  const allTrails = allPublishedTrails.filter((trail) => {
+    if (!trail.isRestricted) return true // Public trail
+    if (isPrivileged) return true // Admin/Teacher can see all
+    return accessibleTrailIds.includes(trail.id) // Check access
   })
 
   // Calculate progress for enrolled trails

@@ -29,6 +29,7 @@ model User {
   taskProgress     TaskProgress[]
   invitesCreated   Invite[]           @relation("InviteCreator")
   teacherModules   ModuleTeacher[]    @relation("TeacherModules")
+  trailAccess      StudentTrailAccess[]
 }
 
 // Invite system for registration
@@ -60,12 +61,14 @@ model Trail {
   duration    String
   order       Int      @default(0)
   isPublished Boolean  @default(true)
+  isRestricted Boolean @default(false) // If true, only specific students can access
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  modules      Module[]
-  enrollments  Enrollment[]
-  taskProgress TaskProgress[]
+  modules       Module[]
+  enrollments   Enrollment[]
+  taskProgress  TaskProgress[]
+  studentAccess StudentTrailAccess[]
 }
 
 model Module {
@@ -107,6 +110,21 @@ model ModuleTeacher {
   @@unique([moduleId, teacherId])
   @@index([moduleId])
   @@index([teacherId])
+}
+
+// Grant specific students access to restricted trails
+model StudentTrailAccess {
+  id        String   @id @default(cuid())
+  studentId String
+  trailId   String
+  createdAt DateTime @default(now())
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  trail   Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, trailId])
+  @@index([studentId])
+  @@index([trailId])
 }
 
 model Unit {

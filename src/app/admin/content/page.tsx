@@ -27,6 +27,7 @@ import {
   CheckCircle,
   Trash2,
   Users,
+  Lock,
 } from "lucide-react"
 
 interface Module {
@@ -348,6 +349,12 @@ slug: prompting-practice
                 <Link href="/admin/teachers">
                   <Users className="h-4 w-4 mr-2" />
                   Учителя
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/admin/access">
+                  <Lock className="h-4 w-4 mr-2" />
+                  Доступ
                 </Link>
               </Button>
               <Button onClick={() => setShowImportModal(true)} variant="outline">

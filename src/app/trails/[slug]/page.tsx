@@ -70,6 +70,30 @@ export default async function TrailPage({ params }: Props) {
     notFound()
   }
 
+  // Check access for restricted trails
+  if (trail.isRestricted) {
+    const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER"
+
+    if (!session) {
+      redirect("/login")
+    }
+
+    if (!isPrivileged) {
+      const hasAccess = await prisma.studentTrailAccess.findUnique({
+        where: {
+          studentId_trailId: {
+            studentId: session.user.id,
+            trailId: trail.id,
+          },
+        },
+      })
+
+      if (!hasAccess) {
+        redirect("/trails") // Redirect to trails list if no access
+      }
+    }
+  }
+
   let isEnrolled = false
   let moduleProgressMap: Record<string, string> = {}
   let taskProgress: { currentLevel: string; middleStatus: string; juniorStatus: string; seniorStatus: string } | null = null
