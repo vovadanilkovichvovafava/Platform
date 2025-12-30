@@ -408,14 +408,14 @@ export default async function TrailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Project Section - Level-based Projects */}
+        {/* Project Section - Show only current available project */}
         {projectModules.length > 0 && (
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Практическое задание</h2>
             <p className="text-gray-500 mb-6">
               {allAssessmentsCompleted
-                ? "Выберите уровень сложности и выполните задание"
-                : "Завершите оценку знаний для доступа к заданиям"
+                ? "Выполните задание и отправьте на проверку"
+                : "Завершите оценку знаний для доступа к заданию"
               }
             </p>
 
@@ -423,95 +423,76 @@ export default async function TrailPage({ params }: Props) {
               <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-orange-500" />
                 <span className="text-orange-700">
-                  Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданиям
+                  Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданию
                 </span>
               </div>
             )}
 
-            {/* Show current level indicator */}
-            {allAssessmentsCompleted && taskProgress && (
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-blue-700">
-                  Текущий уровень: <strong>{levelLabels[taskProgress.currentLevel] || taskProgress.currentLevel}</strong>
-                </span>
-              </div>
-            )}
+            {(() => {
+              // Find the current available project based on taskProgress
+              // Priority: PENDING status, then by level order
+              const levelOrder = ["Middle", "Junior", "Senior"]
+              let currentProject = null
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Render projects by level: Junior, Middle, Senior */}
-              {["Junior", "Middle", "Senior"].map((level) => {
-                const project = projectModules.find(m => m.level === level)
-                if (!project) return null
+              if (taskProgress) {
+                // Find project with PENDING status
+                for (const level of levelOrder) {
+                  const status = getProjectStatus(level)
+                  if (status === "PENDING") {
+                    currentProject = projectModules.find(m => m.level === level)
+                    if (currentProject) break
+                  }
+                }
+              }
 
-                const projectStatus = getProjectStatus(level)
-                const isLocked = projectStatus === "LOCKED"
-                const isPassed = projectStatus === "PASSED"
-                const isFailed = projectStatus === "FAILED"
-                const isPending = projectStatus === "PENDING"
-                const isProjectCompleted = moduleProgressMap[project.id] === "COMPLETED"
-                const canAccess = allAssessmentsCompleted && !isLocked
+              // Fallback to Middle project if no pending found
+              if (!currentProject) {
+                currentProject = projectModules.find(m => m.level === "Middle") || projectModules[0]
+              }
 
-                return (
-                  <Card
-                    key={project.id}
-                    className={`transition-all ${
-                      isLocked || !allAssessmentsCompleted
-                        ? "opacity-60"
-                        : "hover:shadow-md"
-                    } ${isPending ? "ring-2 ring-blue-400" : ""}`}
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <Badge className={`${levelColors[level]} border-0`}>
-                          {levelLabels[level]}
+              if (!currentProject) return null
+
+              const isProjectCompleted = moduleProgressMap[currentProject.id] === "COMPLETED"
+
+              return (
+                <Card className={`max-w-2xl transition-all ${!allAssessmentsCompleted ? "opacity-60" : "hover:shadow-md"}`}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <Badge className="bg-blue-100 text-blue-700 border-0">
+                        <FolderGit2 className="h-3 w-3 mr-1" />
+                        Проект
+                      </Badge>
+                      {isProjectCompleted && (
+                        <Badge className="bg-green-100 text-green-700 border-0">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Сдано
                         </Badge>
-                        {isPassed && (
-                          <Badge className="bg-green-100 text-green-700 border-0">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Сдано
-                          </Badge>
-                        )}
-                        {isFailed && (
-                          <Badge className="bg-red-100 text-red-700 border-0">
-                            Не сдано
-                          </Badge>
-                        )}
-                        {isLocked && (
-                          <Badge className="bg-gray-100 text-gray-500 border-0">
-                            <Lock className="h-3 w-3 mr-1" />
-                            Закрыт
-                          </Badge>
-                        )}
-                      </div>
-                      <CardTitle className="text-lg">{project.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-500 mb-4 line-clamp-2">{project.description}</p>
-                      <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                        <span>{project.duration}</span>
-                        <span className="font-medium">{project.points} XP</span>
-                      </div>
-                      {canAccess ? (
-                        <Button
-                          asChild
-                          className="w-full"
-                          variant={isProjectCompleted || isPassed ? "outline" : "default"}
-                        >
-                          <Link href={`/module/${project.slug}`}>
-                            {isPassed || isProjectCompleted ? "Просмотреть" : isPending ? "Выполнить" : "Открыть"}
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button disabled className="w-full" variant="outline">
-                          <Lock className="h-4 w-4 mr-2" />
-                          Недоступно
-                        </Button>
                       )}
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                    </div>
+                    <CardTitle className="text-lg">{currentProject.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500 mb-4">{currentProject.description}</p>
+                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                      <span>{currentProject.duration}</span>
+                      <span className="font-medium">{currentProject.points} XP</span>
+                    </div>
+                    {allAssessmentsCompleted ? (
+                      <Button asChild className="w-full" variant={isProjectCompleted ? "outline" : "default"}>
+                        <Link href={`/module/${currentProject.slug}`}>
+                          {isProjectCompleted ? "Просмотреть" : "Начать задание"}
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button disabled className="w-full" variant="outline">
+                        <Lock className="h-4 w-4 mr-2" />
+                        Недоступно
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })()}
           </div>
         )}
       </div>
