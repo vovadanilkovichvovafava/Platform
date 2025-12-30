@@ -200,7 +200,7 @@ model Submission {
   deployUrl String?
   comment   String?
   fileUrl   String?
-  status    String   @default("PENDING") // PENDING, APPROVED, REVISION
+  status    String   @default("PENDING") // PENDING, APPROVED, REVISION, FAILED
   userId    String
   moduleId  String
   createdAt DateTime @default(now())

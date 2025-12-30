@@ -9,7 +9,7 @@ const reviewSchema = z.object({
   moduleId: z.string().min(1),
   userId: z.string().min(1),
   score: z.number().min(0).max(10),
-  status: z.enum(["APPROVED", "REVISION"]),
+  status: z.enum(["APPROVED", "REVISION", "FAILED"]),
   strengths: z.string().optional(),
   improvements: z.string().optional(),
   comment: z.string().optional(),
@@ -27,12 +27,16 @@ async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Pro
 }
 
 // Helper to update TaskProgress based on project level and result
+// status: APPROVED = go up, REVISION = stay (retry), FAILED = go down
 async function updateTaskProgress(
   userId: string,
   trailId: string,
   level: string,
-  isApproved: boolean
+  status: "APPROVED" | "REVISION" | "FAILED"
 ) {
+  // REVISION means retry - no level change
+  if (status === "REVISION") return
+
   const taskProgress = await prisma.taskProgress.findUnique({
     where: { userId_trailId: { userId, trailId } },
   })
@@ -50,15 +54,15 @@ async function updateTaskProgress(
   let updateData: Record<string, string> = {}
 
   if (normalizedLevel === "MIDDLE") {
-    if (isApproved) {
+    if (status === "APPROVED") {
       // Middle passed → unlock Senior
       updateData = {
         middleStatus: "PASSED",
         seniorStatus: "PENDING",
         currentLevel: "SENIOR",
       }
-    } else {
-      // Middle failed → unlock Junior
+    } else if (status === "FAILED") {
+      // Middle failed → fall to Junior
       updateData = {
         middleStatus: "FAILED",
         juniorStatus: "PENDING",
@@ -66,12 +70,21 @@ async function updateTaskProgress(
       }
     }
   } else if (normalizedLevel === "JUNIOR") {
-    updateData = {
-      juniorStatus: isApproved ? "PASSED" : "FAILED",
+    if (status === "APPROVED") {
+      updateData = { juniorStatus: "PASSED" }
+    } else if (status === "FAILED") {
+      updateData = { juniorStatus: "FAILED" }
     }
   } else if (normalizedLevel === "SENIOR") {
-    updateData = {
-      seniorStatus: isApproved ? "PASSED" : "FAILED",
+    if (status === "APPROVED") {
+      updateData = { seniorStatus: "PASSED" }
+    } else if (status === "FAILED") {
+      // Senior failed → fall back to Middle
+      updateData = {
+        seniorStatus: "FAILED",
+        middleStatus: "PENDING",
+        currentLevel: "MIDDLE",
+      }
     }
   }
 
@@ -136,12 +149,13 @@ export async function POST(request: Request) {
     })
 
     // Update TaskProgress for project modules (level progression)
+    // APPROVED = go up, FAILED = go down, REVISION = stay and retry
     if (currentModule && currentModule.type === "PROJECT") {
       await updateTaskProgress(
         data.userId,
         currentModule.trailId,
         currentModule.level,
-        data.status === "APPROVED"
+        data.status as "APPROVED" | "REVISION" | "FAILED"
       )
     }
 

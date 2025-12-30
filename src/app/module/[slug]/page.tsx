@@ -261,6 +261,8 @@ export default async function ModulePage({ params }: Props) {
                               ? "bg-green-100 text-green-700 border-0"
                               : submission.status === "REVISION"
                               ? "bg-orange-100 text-orange-700 border-0"
+                              : submission.status === "FAILED"
+                              ? "bg-red-100 text-red-700 border-0"
                               : "bg-blue-100 text-blue-700 border-0"
                           }
                         >
@@ -268,6 +270,8 @@ export default async function ModulePage({ params }: Props) {
                             ? "Принято"
                             : submission.status === "REVISION"
                             ? "На доработку"
+                            : submission.status === "FAILED"
+                            ? "Провал"
                             : "На проверке"}
                         </Badge>
                       </div>

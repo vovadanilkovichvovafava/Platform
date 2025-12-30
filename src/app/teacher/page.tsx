@@ -12,7 +12,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  ExternalLink,
+  XCircle,
   Github,
   Globe,
   Eye,
@@ -55,10 +55,10 @@ export default async function TeacherDashboard() {
     },
   })
 
-  // Get all reviewed submissions (approved + revision) for history
+  // Get all reviewed submissions (approved, revision, failed) for history
   const reviewedSubmissions = await prisma.submission.findMany({
     where: {
-      status: { in: ["APPROVED", "REVISION"] },
+      status: { in: ["APPROVED", "REVISION", "FAILED"] },
       ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
     },
     orderBy: { updatedAt: "desc" },
@@ -92,6 +92,7 @@ export default async function TeacherDashboard() {
   const pendingCount = stats.find((s) => s.status === "PENDING")?._count || 0
   const approvedCount = stats.find((s) => s.status === "APPROVED")?._count || 0
   const revisionCount = stats.find((s) => s.status === "REVISION")?._count || 0
+  const failedCount = stats.find((s) => s.status === "FAILED")?._count || 0
 
   return (
     <div className="p-8">
@@ -105,7 +106,7 @@ export default async function TeacherDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
@@ -143,6 +144,20 @@ export default async function TeacherDashboard() {
               <div>
                 <div className="text-2xl font-bold">{revisionCount}</div>
                 <div className="text-sm text-gray-500">На доработку</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-xl">
+                <XCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{failedCount}</div>
+                <div className="text-sm text-gray-500">Провал</div>
               </div>
             </div>
           </CardContent>
@@ -272,6 +287,8 @@ export default async function TeacherDashboard() {
                         className={
                           submission.status === "APPROVED"
                             ? "bg-green-100 text-green-700 border-0"
+                            : submission.status === "FAILED"
+                            ? "bg-red-100 text-red-700 border-0"
                             : "bg-orange-100 text-orange-700 border-0"
                         }
                       >
@@ -279,6 +296,11 @@ export default async function TeacherDashboard() {
                           <>
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Принято
+                          </>
+                        ) : submission.status === "FAILED" ? (
+                          <>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Провал
                           </>
                         ) : (
                           <>

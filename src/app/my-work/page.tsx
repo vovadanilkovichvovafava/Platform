@@ -12,6 +12,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  XCircle,
   ExternalLink,
   Github,
   Globe,
@@ -33,6 +34,11 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
     label: "На доработку",
     color: "bg-orange-100 text-orange-700",
     icon: AlertCircle,
+  },
+  FAILED: {
+    label: "Провал",
+    color: "bg-red-100 text-red-700",
+    icon: XCircle,
   },
 }
 
