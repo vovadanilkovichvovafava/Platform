@@ -21,6 +21,8 @@ enum ModuleType {
 }
 
 enum ModuleLevel {
+  Beginner
+  Intermediate
   Junior
   Middle
   Senior

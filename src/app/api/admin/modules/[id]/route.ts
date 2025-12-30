@@ -3,14 +3,15 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { ModuleType, ModuleLevel } from "@prisma/client"
 
 const moduleUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
   content: z.string().optional(),
   requirements: z.string().optional(),
-  type: z.enum(["THEORY", "PRACTICE", "PROJECT"]).optional(),
-  level: z.string().optional(),
+  type: z.nativeEnum(ModuleType).optional(),
+  level: z.nativeEnum(ModuleLevel).optional(),
   points: z.number().optional(),
   duration: z.string().optional(),
 })
