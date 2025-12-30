@@ -4,8 +4,9 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { TrailCard } from "@/components/trail-card"
 import {
@@ -14,17 +15,19 @@ import {
   Trophy,
   BookOpen,
   Clock,
-  Rocket,
-  Zap,
-  Sparkles,
+  TrendingUp,
+  Code,
+  Target,
+  Palette,
+  Lightbulb
 } from "lucide-react"
 import Link from "next/link"
 
 function getRank(xp: number) {
-  if (xp >= 1000) return { name: "Titan", icon: "🪐", color: "text-purple-400", bg: "bg-purple-500/20" }
-  if (xp >= 500) return { name: "Космонавт", icon: "🚀", color: "text-blue-400", bg: "bg-blue-500/20" }
-  if (xp >= 200) return { name: "Исследователь", icon: "🌟", color: "text-amber-400", bg: "bg-amber-500/20" }
-  return { name: "Новичок", icon: "✨", color: "text-slate-400", bg: "bg-slate-500/20" }
+  if (xp >= 1000) return { name: "Master", color: "text-purple-600", bg: "bg-purple-100" }
+  if (xp >= 500) return { name: "Expert", color: "text-blue-600", bg: "bg-blue-100" }
+  if (xp >= 200) return { name: "Intermediate", color: "text-green-600", bg: "bg-green-100" }
+  return { name: "Beginner", color: "text-gray-600", bg: "bg-gray-100" }
 }
 
 function getInitials(name: string) {
@@ -109,165 +112,106 @@ export default async function DashboardPage() {
   const enrolledTrails = trailsWithProgress.filter((t) => t.enrolled)
   const availableTrails = trailsWithProgress.filter((t) => !t.enrolled)
 
-  // Calculate next rank progress
-  const nextRankXP = user.totalXP < 200 ? 200 : user.totalXP < 500 ? 500 : user.totalXP < 1000 ? 1000 : 2000
-  const prevRankXP = user.totalXP < 200 ? 0 : user.totalXP < 500 ? 200 : user.totalXP < 1000 ? 500 : 1000
-  const rankProgress = Math.round(((user.totalXP - prevRankXP) / (nextRankXP - prevRankXP)) * 100)
-
   return (
-    <div className="min-h-screen bg-slate-950">
-      {/* Space Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Animated stars background */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950" />
-          {/* Stars */}
-          <div className="absolute top-10 left-[10%] w-1 h-1 bg-white rounded-full animate-pulse" />
-          <div className="absolute top-20 left-[25%] w-1.5 h-1.5 bg-yellow-200 rounded-full animate-pulse delay-100" />
-          <div className="absolute top-16 left-[45%] w-1 h-1 bg-white rounded-full animate-pulse delay-200" />
-          <div className="absolute top-8 left-[60%] w-2 h-2 bg-orange-300 rounded-full animate-pulse delay-300" />
-          <div className="absolute top-24 left-[75%] w-1 h-1 bg-white rounded-full animate-pulse" />
-          <div className="absolute top-12 left-[85%] w-1.5 h-1.5 bg-amber-200 rounded-full animate-pulse delay-150" />
-          <div className="absolute top-28 left-[15%] w-1 h-1 bg-white rounded-full animate-pulse delay-75" />
-          <div className="absolute top-6 left-[35%] w-1 h-1 bg-orange-200 rounded-full animate-pulse delay-250" />
-          <div className="absolute top-32 left-[55%] w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-          <div className="absolute top-4 left-[90%] w-1 h-1 bg-yellow-100 rounded-full animate-pulse delay-200" />
-          {/* Nebula glow */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section with Mountains */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white py-8">
+        <div className="absolute inset-0 pointer-events-none opacity-50">
+          <svg
+            className="absolute bottom-0 left-0 w-full"
+            viewBox="0 0 1440 200"
+            fill="none"
+            preserveAspectRatio="xMidYMax slice"
+          >
+            <path
+              d="M0 200L200 140L400 180L600 120L800 160L1000 100L1200 150L1440 80V200H0Z"
+              fill="#E0ECFF"
+              fillOpacity="0.5"
+            />
+            <path
+              d="M0 200L150 160L350 190L550 150L750 180L950 130L1150 170L1350 140L1440 160V200H0Z"
+              fill="#C5D9E8"
+              fillOpacity="0.6"
+            />
+          </svg>
         </div>
 
-        <div className="container mx-auto px-4 py-10 relative z-10">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Profile Card - Saturn inspired */}
-            <Card className="w-full lg:w-96 shrink-0 bg-slate-900/80 backdrop-blur-sm border-slate-800">
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            {/* Profile Card */}
+            <Card className="w-full md:w-80 shrink-0">
               <CardContent className="p-6">
-                {/* Profile header */}
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="relative">
-                    <Avatar className="h-20 w-20 ring-4 ring-orange-500/30">
-                      <AvatarFallback className="bg-gradient-to-br from-orange-500 to-amber-600 text-white text-2xl font-bold">
-                        {getInitials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    {/* Orbital ring */}
-                    <div className="absolute -inset-2 border border-orange-500/20 rounded-full" />
-                  </div>
+                  <Avatar className="h-16 w-16">
+                    <AvatarFallback className="bg-[#0176D3] text-white text-xl">
+                      {getInitials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
-                    <h2 className="font-bold text-xl text-white">{user.name}</h2>
-                    <Badge className={`${rank.bg} ${rank.color} border-0 mt-1`}>
-                      <span className="mr-1">{rank.icon}</span>
+                    <h2 className="font-semibold text-lg">{user.name}</h2>
+                    <Badge className={`${rank.bg} ${rank.color} border-0`}>
                       {rank.name}
                     </Badge>
                   </div>
                 </div>
 
-                {/* XP Progress to next rank */}
-                <div className="mb-6">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-slate-400">До следующего ранга</span>
-                    <span className="text-orange-400 font-medium">{user.totalXP} / {nextRankXP} XP</span>
-                  </div>
-                  <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all"
-                      style={{ width: `${Math.min(rankProgress, 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Stats grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 bg-gradient-to-br from-orange-500/20 to-amber-500/10 rounded-xl border border-orange-500/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Zap className="h-4 w-4 text-orange-400" />
-                      <span className="text-xs text-slate-400">Энергия XP</span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                      <span className="text-sm font-medium">Total XP</span>
                     </div>
-                    <span className="text-2xl font-bold text-white">{user.totalXP}</span>
+                    <span className="font-bold text-lg">{user.totalXP}</span>
                   </div>
 
-                  <div className="p-4 bg-gradient-to-br from-red-500/20 to-orange-500/10 rounded-xl border border-red-500/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Flame className="h-4 w-4 text-red-400" />
-                      <span className="text-xs text-slate-400">Streak</span>
+                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Flame className="h-5 w-5 text-orange-500" />
+                      <span className="text-sm font-medium">Streak</span>
                     </div>
-                    <span className="text-2xl font-bold text-white">{user.currentStreak}</span>
-                    <span className="text-sm text-slate-500 ml-1">дн.</span>
+                    <span className="font-bold text-lg">
+                      {user.currentStreak} дней
+                    </span>
                   </div>
 
-                  <div className="p-4 bg-gradient-to-br from-emerald-500/20 to-green-500/10 rounded-xl border border-emerald-500/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Trophy className="h-4 w-4 text-emerald-400" />
-                      <span className="text-xs text-slate-400">Модули</span>
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-green-500" />
+                      <span className="text-sm font-medium">Модулей пройдено</span>
                     </div>
-                    <span className="text-2xl font-bold text-white">{user.moduleProgress.length}</span>
-                  </div>
-
-                  <div className="p-4 bg-gradient-to-br from-purple-500/20 to-violet-500/10 rounded-xl border border-purple-500/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Rocket className="h-4 w-4 text-purple-400" />
-                      <span className="text-xs text-slate-400">Trails</span>
-                    </div>
-                    <span className="text-2xl font-bold text-white">{enrolledTrails.length}</span>
+                    <span className="font-bold text-lg">
+                      {user.moduleProgress.length}
+                    </span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Welcome Section */}
+            {/* Welcome Message */}
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <Sparkles className="h-6 w-6 text-orange-400" />
-                <span className="text-orange-400 font-medium">Космическая Академия</span>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
-                Привет, {user.name.split(" ")[0]}!
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                Добро пожаловать, {user.name.split(" ")[0]}!
               </h1>
-              <p className="text-slate-400 text-lg mb-6 max-w-xl">
-                Продолжай своё путешествие к звёздам. Каждый пройденный модуль приближает тебя к мастерству.
+              <p className="text-gray-600 mb-6">
+                Продолжайте обучение и развивайте свои навыки
               </p>
 
-              {/* Mission status */}
               {user.submissions.length > 0 && (
-                <Card className="bg-orange-500/10 border-orange-500/30 backdrop-blur-sm">
+                <Card className="bg-orange-50 border-orange-200">
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 text-orange-400 mb-3">
-                      <Clock className="h-5 w-5" />
-                      <span className="font-semibold">Миссии на проверке</span>
+                    <div className="flex items-center gap-2 text-orange-700 mb-2">
+                      <Clock className="h-4 w-4" />
+                      <span className="font-medium">На проверке</span>
                     </div>
                     <div className="space-y-2">
                       {user.submissions.map((sub) => (
                         <div
                           key={sub.id}
-                          className="flex items-center gap-2 text-slate-300"
+                          className="text-sm text-orange-600"
                         >
-                          <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
-                          <span>{sub.module.title}</span>
+                          {sub.module.title}
                         </div>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Quick actions */}
-              {enrolledTrails.length === 0 && (
-                <Card className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-orange-500/30 backdrop-blur-sm mt-4">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-orange-500/20 rounded-xl">
-                        <Rocket className="h-8 w-8 text-orange-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-white mb-1">Начни своё путешествие!</h3>
-                        <p className="text-slate-400 text-sm">Выбери направление и отправляйся к звёздам</p>
-                      </div>
-                      <Link
-                        href="/trails"
-                        className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors"
-                      >
-                        Выбрать Trail
-                      </Link>
                     </div>
                   </CardContent>
                 </Card>
@@ -283,19 +227,14 @@ export default async function DashboardPage() {
         {enrolledTrails.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-500/20 rounded-lg">
-                  <Star className="h-5 w-5 text-orange-400" />
-                </div>
-                <h2 className="text-xl font-bold text-white">
-                  Мои миссии
-                </h2>
-              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Мои trails
+              </h2>
               <Link
                 href="/trails"
-                className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
+                className="text-sm text-[#0176D3] hover:underline"
               >
-                Все направления →
+                Смотреть все
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -314,12 +253,9 @@ export default async function DashboardPage() {
         {/* Available Trails */}
         {availableTrails.length > 0 && (
           <section>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-purple-500/20 rounded-lg">
-                <Rocket className="h-5 w-5 text-purple-400" />
-              </div>
-              <h2 className="text-xl font-bold text-white">
-                Доступные направления
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">
+                Доступные trails
               </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -331,15 +267,13 @@ export default async function DashboardPage() {
         )}
 
         {enrolledTrails.length === 0 && availableTrails.length === 0 && (
-          <div className="text-center py-16">
-            <div className="inline-flex p-4 bg-slate-800 rounded-full mb-4">
-              <BookOpen className="h-12 w-12 text-slate-600" />
-            </div>
-            <h3 className="text-lg font-medium text-white mb-2">
+          <div className="text-center py-12">
+            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
               Trails пока не добавлены
             </h3>
-            <p className="text-slate-400">
-              Скоро здесь появятся космические миссии для обучения
+            <p className="text-gray-600">
+              Скоро здесь появятся курсы для обучения
             </p>
           </div>
         )}
