@@ -11,17 +11,41 @@ const questionSchema = z.object({
   correctAnswer: z.number().min(0),
 })
 
-// POST - Create new question
+// Helper to check if teacher is assigned to trail via module
+async function isTeacherAssignedToModule(teacherId: string, moduleId: string): Promise<boolean> {
+  const module = await prisma.module.findUnique({
+    where: { id: moduleId },
+    select: { trailId: true },
+  })
+  if (!module) return false
+
+  const assignment = await prisma.trailTeacher.findUnique({
+    where: {
+      trailId_teacherId: { trailId: module.trailId, teacherId },
+    },
+  })
+  return !!assignment
+}
+
+// POST - Create new question (Admin: any, Teacher: only in assigned trails)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     const body = await request.json()
     const data = questionSchema.parse(body)
+
+    // Teachers can only create questions in modules belonging to assigned trails
+    if (session.user.role === "TEACHER") {
+      const isAssigned = await isTeacherAssignedToModule(session.user.id, data.moduleId)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
+    }
 
     // Get max order for this module
     const maxOrder = await prisma.question.aggregate({

@@ -84,8 +84,19 @@ export default function TeacherContentPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
+  const [showTrailModal, setShowTrailModal] = useState(false)
   const [showModuleModal, setShowModuleModal] = useState(false)
   const [selectedTrailId, setSelectedTrailId] = useState<string>("")
+
+  // Trail form state
+  const [trailForm, setTrailForm] = useState({
+    title: "",
+    subtitle: "",
+    description: "",
+    icon: "Code",
+    color: "#0176D3",
+    duration: "2-4 недели",
+  })
 
   // Module form state
   const [moduleForm, setModuleForm] = useState({
@@ -124,6 +135,42 @@ export default function TeacherContentPage() {
 
   // Filter trails to show only assigned ones
   const assignedTrails = trails.filter((t) => assignedTrailIds.includes(t.id))
+
+  const createTrail = async () => {
+    try {
+      const slug = trailForm.title
+        .toLowerCase()
+        .replace(/[^a-zа-яё0-9]+/gi, "-")
+        .replace(/(^-|-$)/g, "")
+
+      const res = await fetch("/api/admin/trails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...trailForm,
+          slug,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to create trail")
+      }
+
+      setShowTrailModal(false)
+      setTrailForm({
+        title: "",
+        subtitle: "",
+        description: "",
+        icon: "Code",
+        color: "#0176D3",
+        duration: "2-4 недели",
+      })
+      fetchData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка создания trail")
+    }
+  }
 
   const createModule = async () => {
     if (!selectedTrailId) return
@@ -226,9 +273,15 @@ export default function TeacherContentPage() {
                 Редактирование назначенных trails и модулей
               </p>
             </div>
-            <Button onClick={fetchData} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setShowTrailModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Новый Trail
+              </Button>
+              <Button onClick={fetchData} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -357,7 +410,7 @@ export default function TeacherContentPage() {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Link href={`/admin/content/modules/${module.id}`}>
+                                <Link href={`/teacher/content/modules/${module.id}`}>
                                   <Button variant="ghost" size="sm">
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -388,6 +441,110 @@ export default function TeacherContentPage() {
           )}
         </div>
       </div>
+
+      {/* Create Trail Modal */}
+      {showTrailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Создать новый Trail</CardTitle>
+                <button onClick={() => setShowTrailModal(false)}>
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="trailTitle">Название</Label>
+                <Input
+                  id="trailTitle"
+                  value={trailForm.title}
+                  onChange={(e) =>
+                    setTrailForm({ ...trailForm, title: e.target.value })
+                  }
+                  placeholder="Например: Основы Python"
+                />
+              </div>
+              <div>
+                <Label htmlFor="trailSubtitle">Подзаголовок</Label>
+                <Input
+                  id="trailSubtitle"
+                  value={trailForm.subtitle}
+                  onChange={(e) =>
+                    setTrailForm({ ...trailForm, subtitle: e.target.value })
+                  }
+                  placeholder="Краткое описание"
+                />
+              </div>
+              <div>
+                <Label htmlFor="trailDescription">Описание</Label>
+                <Textarea
+                  id="trailDescription"
+                  value={trailForm.description}
+                  onChange={(e) =>
+                    setTrailForm({ ...trailForm, description: e.target.value })
+                  }
+                  placeholder="Подробное описание курса"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="trailIcon">Иконка</Label>
+                  <select
+                    id="trailIcon"
+                    value={trailForm.icon}
+                    onChange={(e) =>
+                      setTrailForm({ ...trailForm, icon: e.target.value })
+                    }
+                    className="w-full p-2 border rounded-lg"
+                  >
+                    <option value="Code">Code</option>
+                    <option value="Target">Target</option>
+                    <option value="Palette">Palette</option>
+                    <option value="Lightbulb">Lightbulb</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="trailColor">Цвет</Label>
+                  <Input
+                    id="trailColor"
+                    type="color"
+                    value={trailForm.color}
+                    onChange={(e) =>
+                      setTrailForm({ ...trailForm, color: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="trailDuration">Длительность</Label>
+                <Input
+                  id="trailDuration"
+                  value={trailForm.duration}
+                  onChange={(e) =>
+                    setTrailForm({ ...trailForm, duration: e.target.value })
+                  }
+                  placeholder="2-4 недели"
+                />
+              </div>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                Новый trail будет закрыт для учеников до подтверждения администратором.
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowTrailModal(false)}>
+                  Отмена
+                </Button>
+                <Button onClick={createTrail}>
+                  <Check className="h-4 w-4 mr-2" />
+                  Создать
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Create Module Modal */}
       {showModuleModal && (

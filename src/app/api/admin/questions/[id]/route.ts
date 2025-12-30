@@ -15,14 +15,38 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
-// PATCH - Update question
+// Helper to check if teacher is assigned to trail via question
+async function isTeacherAssignedToQuestion(teacherId: string, questionId: string): Promise<boolean> {
+  const question = await prisma.question.findUnique({
+    where: { id: questionId },
+    select: { module: { select: { trailId: true } } },
+  })
+  if (!question) return false
+
+  const assignment = await prisma.trailTeacher.findUnique({
+    where: {
+      trailId_teacherId: { trailId: question.module.trailId, teacherId },
+    },
+  })
+  return !!assignment
+}
+
+// PATCH - Update question (Admin: any, Teacher: only in assigned trails)
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    // Teachers can only update questions in modules belonging to assigned trails
+    if (session.user.role === "TEACHER") {
+      const isAssigned = await isTeacherAssignedToQuestion(session.user.id, id)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
     }
 
     const body = await request.json()
@@ -49,14 +73,22 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   }
 }
 
-// DELETE - Delete question
+// DELETE - Delete question (Admin: any, Teacher: only in assigned trails)
 export async function DELETE(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    // Teachers can only delete questions in modules belonging to assigned trails
+    if (session.user.role === "TEACHER") {
+      const isAssigned = await isTeacherAssignedToQuestion(session.user.id, id)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
     }
 
     await prisma.question.delete({

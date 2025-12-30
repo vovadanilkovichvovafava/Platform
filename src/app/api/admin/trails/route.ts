@@ -44,13 +44,12 @@ export async function GET() {
   }
 }
 
-// POST - Create new trail (ADMIN only)
+// POST - Create new trail (Admin or Teacher - teacher gets auto-assigned)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    // Only ADMIN can create new trails
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -77,6 +76,16 @@ export async function POST(request: NextRequest) {
         isRestricted: true, // By default, trails are restricted
       },
     })
+
+    // If teacher creates trail, automatically assign them to it
+    if (session.user.role === "TEACHER") {
+      await prisma.trailTeacher.create({
+        data: {
+          trailId: trail.id,
+          teacherId: session.user.id,
+        },
+      })
+    }
 
     return NextResponse.json(trail)
   } catch (error) {
