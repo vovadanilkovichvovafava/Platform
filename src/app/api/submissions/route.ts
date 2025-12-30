@@ -77,17 +77,49 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create submission
-    const submission = await prisma.submission.create({
-      data: {
+    // Check if there's an existing submission that needs revision
+    const existingSubmission = await prisma.submission.findFirst({
+      where: {
         userId: session.user.id,
         moduleId: data.moduleId,
-        githubUrl: data.githubUrl || null,
-        deployUrl: data.deployUrl || null,
-        comment: data.comment || null,
-        status: "PENDING",
+        status: "REVISION", // Only update if status is REVISION (resubmit)
       },
+      include: { review: true },
     })
+
+    let submission
+
+    if (existingSubmission) {
+      // Update existing submission (resubmit after revision)
+      // Delete old review first if exists
+      if (existingSubmission.review) {
+        await prisma.review.delete({
+          where: { id: existingSubmission.review.id },
+        })
+      }
+
+      submission = await prisma.submission.update({
+        where: { id: existingSubmission.id },
+        data: {
+          githubUrl: data.githubUrl || null,
+          deployUrl: data.deployUrl || null,
+          comment: data.comment || null,
+          status: "PENDING",
+        },
+      })
+    } else {
+      // Create new submission
+      submission = await prisma.submission.create({
+        data: {
+          userId: session.user.id,
+          moduleId: data.moduleId,
+          githubUrl: data.githubUrl || null,
+          deployUrl: data.deployUrl || null,
+          comment: data.comment || null,
+          status: "PENDING",
+        },
+      })
+    }
 
     // Update module progress to in_progress if not already
     await prisma.moduleProgress.upsert({
