@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit"
 
 // Scoring based on attempts: 1st = 100%, 2nd = 65%, 3rd = 35%
 function calculateScore(basePoints: number, attempts: number): number {
@@ -11,6 +12,17 @@ function calculateScore(basePoints: number, attempts: number): number {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting - 30 answers per minute per IP
+  const ip = getClientIp(request)
+  const rateLimit = checkRateLimit(`answer:${ip}`, RATE_LIMITS.answer)
+
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: `Слишком много запросов. Попробуйте через ${rateLimit.resetIn} секунд` },
+      { status: 429 }
+    )
+  }
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit"
 
 const registerSchema = z.object({
   email: z.string().email("Некорректный email"),
@@ -11,6 +12,17 @@ const registerSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  // Rate limiting - 3 registrations per minute per IP
+  const ip = getClientIp(request)
+  const rateLimit = checkRateLimit(`register:${ip}`, RATE_LIMITS.register)
+
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: `Слишком много попыток. Попробуйте через ${rateLimit.resetIn} секунд` },
+      { status: 429 }
+    )
+  }
+
   try {
     const body = await request.json()
     const { email, password, name, inviteCode } = registerSchema.parse(body)

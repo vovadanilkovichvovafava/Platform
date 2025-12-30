@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit"
 
 const submissionSchema = z.object({
   moduleId: z.string().min(1),
@@ -12,6 +13,17 @@ const submissionSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  // Rate limiting - 10 submissions per minute per IP
+  const ip = getClientIp(request)
+  const rateLimit = checkRateLimit(`submissions:${ip}`, RATE_LIMITS.submissions)
+
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: `Слишком много отправок. Попробуйте через ${rateLimit.resetIn} секунд` },
+      { status: 429 }
+    )
+  }
+
   try {
     const session = await getServerSession(authOptions)
 
