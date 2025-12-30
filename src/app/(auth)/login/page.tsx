@@ -136,12 +136,6 @@ export default function LoginPage() {
               Зарегистрироваться
             </Link>
           </div>
-
-          <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-            <p className="font-medium mb-2 text-slate-600">Тестовые аккаунты:</p>
-            <p>Кандидат: student@rnd.academy / password123</p>
-            <p>Эксперт: teacher@rnd.academy / password123</p>
-          </div>
         </div>
       </div>
     </div>
