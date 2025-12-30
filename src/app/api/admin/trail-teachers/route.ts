@@ -5,11 +5,11 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
 const assignSchema = z.object({
-  moduleId: z.string(),
+  trailId: z.string(),
   teacherId: z.string(),
 })
 
-// GET - List all module-teacher assignments
+// GET - List all trail-teacher assignments
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -18,21 +18,18 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const moduleId = searchParams.get("moduleId")
+    const trailId = searchParams.get("trailId")
 
-    const where = moduleId ? { moduleId } : {}
+    const where = trailId ? { trailId } : {}
 
-    const assignments = await prisma.moduleTeacher.findMany({
+    const assignments = await prisma.trailTeacher.findMany({
       where,
       include: {
-        module: {
+        trail: {
           select: {
             id: true,
             title: true,
             slug: true,
-            trail: {
-              select: { title: true },
-            },
           },
         },
         teacher: {
@@ -48,12 +45,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(assignments)
   } catch (error) {
-    console.error("Error fetching module teachers:", error)
+    console.error("Error fetching trail teachers:", error)
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 })
   }
 }
 
-// POST - Assign teacher to module
+// POST - Assign teacher to trail
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -62,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { moduleId, teacherId } = assignSchema.parse(body)
+    const { trailId, teacherId } = assignSchema.parse(body)
 
     // Verify teacher exists and has TEACHER role
     const teacher = await prisma.user.findUnique({
@@ -74,9 +71,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if assignment already exists
-    const existing = await prisma.moduleTeacher.findUnique({
+    const existing = await prisma.trailTeacher.findUnique({
       where: {
-        moduleId_teacherId: { moduleId, teacherId },
+        trailId_teacherId: { trailId, teacherId },
       },
     })
 
@@ -84,10 +81,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Already assigned" }, { status: 400 })
     }
 
-    const assignment = await prisma.moduleTeacher.create({
-      data: { moduleId, teacherId },
+    const assignment = await prisma.trailTeacher.create({
+      data: { trailId, teacherId },
       include: {
-        module: {
+        trail: {
           select: { title: true },
         },
         teacher: {
@@ -106,7 +103,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE - Remove teacher from module
+// DELETE - Remove teacher from trail
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -115,16 +112,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const moduleId = searchParams.get("moduleId")
+    const trailId = searchParams.get("trailId")
     const teacherId = searchParams.get("teacherId")
 
-    if (!moduleId || !teacherId) {
-      return NextResponse.json({ error: "Missing moduleId or teacherId" }, { status: 400 })
+    if (!trailId || !teacherId) {
+      return NextResponse.json({ error: "Missing trailId or teacherId" }, { status: 400 })
     }
 
-    await prisma.moduleTeacher.delete({
+    await prisma.trailTeacher.delete({
       where: {
-        moduleId_teacherId: { moduleId, teacherId },
+        trailId_teacherId: { trailId, teacherId },
       },
     })
 

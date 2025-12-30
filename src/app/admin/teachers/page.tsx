@@ -22,32 +22,29 @@ interface Teacher {
   email: string
 }
 
-interface Module {
+interface Trail {
   id: string
   title: string
   slug: string
-  trail: {
-    title: string
-  }
 }
 
 interface Assignment {
   id: string
-  moduleId: string
+  trailId: string
   teacherId: string
-  module: Module
+  trail: Trail
   teacher: Teacher
 }
 
 export default function TeacherAssignmentsPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([])
-  const [modules, setModules] = useState<Module[]>([])
+  const [trails, setTrails] = useState<Trail[]>([])
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   const [selectedTeacher, setSelectedTeacher] = useState<string>("")
-  const [selectedModule, setSelectedModule] = useState<string>("")
+  const [selectedTrail, setSelectedTrail] = useState<string>("")
   const [assigning, setAssigning] = useState(false)
 
   const fetchData = async () => {
@@ -60,24 +57,17 @@ export default function TeacherAssignmentsPage() {
       const allUsers = await teachersRes.json()
       setTeachers(allUsers.filter((u: { role: string }) => u.role === "TEACHER"))
 
-      // Fetch modules
+      // Fetch trails
       const trailsRes = await fetch("/api/admin/trails")
-      const trails = await trailsRes.json()
-      const allModules: Module[] = []
-      trails.forEach((trail: { id: string; title: string; modules: { id: string; title: string; slug: string }[] }) => {
-        trail.modules.forEach((m) => {
-          allModules.push({
-            id: m.id,
-            title: m.title,
-            slug: m.slug,
-            trail: { title: trail.title },
-          })
-        })
-      })
-      setModules(allModules)
+      const trailsData = await trailsRes.json()
+      setTrails(trailsData.map((t: { id: string; title: string; slug: string }) => ({
+        id: t.id,
+        title: t.title,
+        slug: t.slug,
+      })))
 
       // Fetch assignments
-      const assignmentsRes = await fetch("/api/admin/module-teachers")
+      const assignmentsRes = await fetch("/api/admin/trail-teachers")
       const assignmentsData = await assignmentsRes.json()
       setAssignments(assignmentsData)
     } catch {
@@ -92,16 +82,16 @@ export default function TeacherAssignmentsPage() {
   }, [])
 
   const assignTeacher = async () => {
-    if (!selectedTeacher || !selectedModule) return
+    if (!selectedTeacher || !selectedTrail) return
 
     try {
       setAssigning(true)
-      const res = await fetch("/api/admin/module-teachers", {
+      const res = await fetch("/api/admin/trail-teachers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           teacherId: selectedTeacher,
-          moduleId: selectedModule,
+          trailId: selectedTrail,
         }),
       })
 
@@ -111,7 +101,7 @@ export default function TeacherAssignmentsPage() {
       }
 
       setSelectedTeacher("")
-      setSelectedModule("")
+      setSelectedTrail("")
       fetchData()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка назначения")
@@ -120,10 +110,10 @@ export default function TeacherAssignmentsPage() {
     }
   }
 
-  const removeAssignment = async (moduleId: string, teacherId: string) => {
+  const removeAssignment = async (trailId: string, teacherId: string) => {
     try {
       const res = await fetch(
-        `/api/admin/module-teachers?moduleId=${moduleId}&teacherId=${teacherId}`,
+        `/api/admin/trail-teachers?trailId=${trailId}&teacherId=${teacherId}`,
         { method: "DELETE" }
       )
 
@@ -137,9 +127,9 @@ export default function TeacherAssignmentsPage() {
   // Group assignments by teacher
   const assignmentsByTeacher = teachers.map((teacher) => ({
     teacher,
-    modules: assignments
+    trails: assignments
       .filter((a) => a.teacherId === teacher.id)
-      .map((a) => a.module),
+      .map((a) => a.trail),
   }))
 
   if (loading) {
@@ -167,7 +157,7 @@ export default function TeacherAssignmentsPage() {
                 Назначение учителей
               </h1>
               <p className="text-gray-600 mt-1">
-                Назначайте учителей на модули для проверки работ
+                Назначайте учителей на trails для проверки работ
               </p>
             </div>
             <Button onClick={fetchData} variant="outline" size="sm">
@@ -194,7 +184,7 @@ export default function TeacherAssignmentsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
-              Назначить учителя на модуль
+              Назначить учителя на Trail
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -219,17 +209,17 @@ export default function TeacherAssignmentsPage() {
 
               <div className="flex-1">
                 <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Модуль
+                  Trail
                 </label>
                 <select
-                  value={selectedModule}
-                  onChange={(e) => setSelectedModule(e.target.value)}
+                  value={selectedTrail}
+                  onChange={(e) => setSelectedTrail(e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Выберите модуль...</option>
-                  {modules.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      [{m.trail.title}] {m.title}
+                  <option value="">Выберите trail...</option>
+                  {trails.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
                     </option>
                   ))}
                 </select>
@@ -238,7 +228,7 @@ export default function TeacherAssignmentsPage() {
               <div className="flex items-end">
                 <Button
                   onClick={assignTeacher}
-                  disabled={!selectedTeacher || !selectedModule || assigning}
+                  disabled={!selectedTeacher || !selectedTrail || assigning}
                 >
                   {assigning ? (
                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -254,7 +244,7 @@ export default function TeacherAssignmentsPage() {
           </CardContent>
         </Card>
 
-        {/* Teachers and their modules */}
+        {/* Teachers and their trails */}
         <div className="space-y-6">
           {teachers.length === 0 ? (
             <Card>
@@ -270,7 +260,7 @@ export default function TeacherAssignmentsPage() {
               </CardContent>
             </Card>
           ) : (
-            assignmentsByTeacher.map(({ teacher, modules: assignedModules }) => (
+            assignmentsByTeacher.map(({ teacher, trails: assignedTrails }) => (
               <Card key={teacher.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -284,29 +274,26 @@ export default function TeacherAssignmentsPage() {
                       </div>
                     </div>
                     <Badge variant="secondary">
-                      {assignedModules.length} модулей
+                      {assignedTrails.length} trails
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {assignedModules.length === 0 ? (
+                  {assignedTrails.length === 0 ? (
                     <p className="text-gray-500 text-sm py-4 text-center">
-                      Нет назначенных модулей — учитель видит все работы
+                      Нет назначенных trails — учитель видит все работы
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {assignedModules.map((module) => (
+                      {assignedTrails.map((trail) => (
                         <div
-                          key={module.id}
+                          key={trail.id}
                           className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg"
                         >
                           <BookOpen className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm">
-                            <span className="text-gray-400">[{module.trail.title}]</span>{" "}
-                            {module.title}
-                          </span>
+                          <span className="text-sm">{trail.title}</span>
                           <button
-                            onClick={() => removeAssignment(module.id, teacher.id)}
+                            onClick={() => removeAssignment(trail.id, teacher.id)}
                             className="ml-1 p-1 hover:bg-gray-200 rounded"
                           >
                             <X className="h-3 w-3 text-gray-500" />
