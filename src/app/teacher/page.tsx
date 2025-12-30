@@ -17,6 +17,7 @@ import {
   Globe,
   Eye,
   ClipboardList,
+  History,
 } from "lucide-react"
 
 export default async function TeacherDashboard() {
@@ -54,15 +55,28 @@ export default async function TeacherDashboard() {
     },
   })
 
-  const recentReviews = await prisma.review.findMany({
-    where: { reviewerId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    take: 5,
+  // Get all reviewed submissions (approved + revision) for history
+  const reviewedSubmissions = await prisma.submission.findMany({
+    where: {
+      status: { in: ["APPROVED", "REVISION"] },
+      ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+    },
+    orderBy: { updatedAt: "desc" },
     include: {
-      submission: {
+      user: {
+        select: { id: true, name: true, email: true },
+      },
+      module: {
         include: {
-          user: { select: { name: true } },
-          module: { select: { title: true } },
+          trail: { select: { title: true } },
+        },
+      },
+      review: {
+        select: {
+          score: true,
+          comment: true,
+          createdAt: true,
+          reviewer: { select: { name: true } },
         },
       },
     },
@@ -136,7 +150,7 @@ export default async function TeacherDashboard() {
       </div>
 
       {/* Pending Submissions */}
-      <Card>
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" />
@@ -219,6 +233,106 @@ export default async function TeacherDashboard() {
                       <Link href={`/teacher/reviews/${submission.id}`}>
                         <Eye className="h-4 w-4 mr-2" />
                         Проверить
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* History of reviewed submissions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            История проверок
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {reviewedSubmissions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Пока нет проверенных работ
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reviewedSubmissions.map((submission) => (
+                <div
+                  key={submission.id}
+                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {submission.module.trail.title}
+                      </Badge>
+                      <Badge
+                        className={
+                          submission.status === "APPROVED"
+                            ? "bg-green-100 text-green-700 border-0"
+                            : "bg-orange-100 text-orange-700 border-0"
+                        }
+                      >
+                        {submission.status === "APPROVED" ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Принято
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            На доработку
+                          </>
+                        )}
+                      </Badge>
+                    </div>
+                    <h3 className="font-medium text-gray-900">
+                      {submission.module.title}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {submission.user.name}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {submission.review && (
+                      <div className="text-center px-4">
+                        <div className="text-2xl font-bold text-[#0176D3]">
+                          {submission.review.score}/10
+                        </div>
+                        <div className="text-xs text-gray-500">Оценка</div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      {submission.githubUrl && (
+                        <a
+                          href={submission.githubUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                        >
+                          <Github className="h-4 w-4" />
+                        </a>
+                      )}
+                      {submission.deployUrl && (
+                        <a
+                          href={submission.deployUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                        >
+                          <Globe className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/teacher/reviews/${submission.id}`}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        Детали
                       </Link>
                     </Button>
                   </div>
