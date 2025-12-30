@@ -26,8 +26,21 @@ export default async function TeacherDashboard() {
     redirect("/dashboard")
   }
 
+  // Get teacher's assigned modules
+  const teacherAssignments = await prisma.moduleTeacher.findMany({
+    where: { teacherId: session.user.id },
+    select: { moduleId: true },
+  })
+
+  const assignedModuleIds = teacherAssignments.map((a) => a.moduleId)
+  const hasAssignments = assignedModuleIds.length > 0
+
+  // Only show submissions for assigned modules (or all if no assignments)
   const pendingSubmissions = await prisma.submission.findMany({
-    where: { status: "PENDING" },
+    where: {
+      status: "PENDING",
+      ...(hasAssignments ? { moduleId: { in: assignedModuleIds } } : {}),
+    },
     orderBy: { createdAt: "asc" },
     include: {
       user: {
@@ -55,9 +68,10 @@ export default async function TeacherDashboard() {
     },
   })
 
-  // Stats
+  // Stats - only for assigned modules
   const stats = await prisma.submission.groupBy({
     by: ["status"],
+    where: hasAssignments ? { moduleId: { in: assignedModuleIds } } : {},
     _count: true,
   })
 

@@ -25,6 +25,8 @@ import {
   FileText,
   Download,
   CheckCircle,
+  Trash2,
+  Users,
 } from "lucide-react"
 
 interface Module {
@@ -277,6 +279,34 @@ slug: prompting-practice
     URL.revokeObjectURL(url)
   }
 
+  const deleteTrail = async (trailId: string, title: string) => {
+    if (!confirm(`Удалить trail "${title}" и все его модули?`)) return
+
+    try {
+      const res = await fetch(`/api/admin/trails/${trailId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to delete")
+      fetchTrails()
+    } catch {
+      setError("Ошибка при удалении trail")
+    }
+  }
+
+  const deleteModule = async (moduleId: string, title: string) => {
+    if (!confirm(`Удалить модуль "${title}"?`)) return
+
+    try {
+      const res = await fetch(`/api/admin/modules/${moduleId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to delete")
+      fetchTrails()
+    } catch {
+      setError("Ошибка при удалении модуля")
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -314,17 +344,22 @@ slug: prompting-practice
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button asChild variant="outline">
+                <Link href="/admin/teachers">
+                  <Users className="h-4 w-4 mr-2" />
+                  Учителя
+                </Link>
+              </Button>
               <Button onClick={() => setShowImportModal(true)} variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
-                Импорт из файла
+                Импорт
               </Button>
               <Button onClick={() => setShowTrailModal(true)} className="bg-green-600 hover:bg-green-700">
                 <Plus className="h-4 w-4 mr-2" />
                 Новый Trail
               </Button>
               <Button onClick={fetchTrails} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Обновить
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -380,6 +415,14 @@ slug: prompting-practice
                           <Plus className="h-4 w-4 mr-1" />
                           Модуль
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => deleteTrail(trail.id, trail.title)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardHeader>
@@ -408,36 +451,43 @@ slug: prompting-practice
                               {assessmentModules.map((module) => {
                                 const TypeIcon = typeIcons[module.type]
                                 return (
-                                  <Link
+                                  <div
                                     key={module.id}
-                                    href={`/admin/content/modules/${module.id}`}
                                     className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
                                   >
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
-                                      <TypeIcon className="h-5 w-5 text-gray-600" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-gray-900 truncate">
-                                          {module.title}
-                                        </span>
-                                        <Badge variant="outline" className="text-xs shrink-0">
-                                          {typeLabels[module.type]}
-                                        </Badge>
+                                    <Link href={`/admin/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 shrink-0">
+                                        <TypeIcon className="h-5 w-5 text-gray-600" />
                                       </div>
-                                      <p className="text-sm text-gray-500 truncate">
-                                        {module.description}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
-                                      <div className="flex items-center gap-1">
-                                        <HelpCircle className="h-4 w-4" />
-                                        {module._count.questions}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-gray-900 truncate">
+                                            {module.title}
+                                          </span>
+                                          <Badge variant="outline" className="text-xs shrink-0">
+                                            {typeLabels[module.type]}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-sm text-gray-500 truncate">
+                                          {module.description}
+                                        </p>
                                       </div>
-                                      <span>{module.points} XP</span>
-                                      <ChevronRight className="h-4 w-4" />
-                                    </div>
-                                  </Link>
+                                      <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
+                                        <div className="flex items-center gap-1">
+                                          <HelpCircle className="h-4 w-4" />
+                                          {module._count.questions}
+                                        </div>
+                                        <span>{module.points} XP</span>
+                                        <ChevronRight className="h-4 w-4" />
+                                      </div>
+                                    </Link>
+                                    <button
+                                      onClick={() => deleteModule(module.id, module.title)}
+                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded shrink-0"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
                                 )
                               })}
                             </div>
@@ -452,33 +502,40 @@ slug: prompting-practice
                             </h3>
                             <div className="space-y-2">
                               {projectModules.map((module) => (
-                                <Link
+                                <div
                                   key={module.id}
-                                  href={`/admin/content/modules/${module.id}`}
                                   className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
                                 >
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                                    <FolderGit2 className="h-5 w-5 text-blue-600" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-gray-900 truncate">
-                                        {module.title}
-                                      </span>
-                                      <Badge className="bg-blue-100 text-blue-700 border-0 text-xs shrink-0">
-                                        {module.level}
-                                      </Badge>
+                                  <Link href={`/admin/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 shrink-0">
+                                      <FolderGit2 className="h-5 w-5 text-blue-600" />
                                     </div>
-                                    <p className="text-sm text-gray-500 truncate">
-                                      {module.description}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
-                                    <span>{module.duration}</span>
-                                    <span>{module.points} XP</span>
-                                    <ChevronRight className="h-4 w-4" />
-                                  </div>
-                                </Link>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-900 truncate">
+                                          {module.title}
+                                        </span>
+                                        <Badge className="bg-blue-100 text-blue-700 border-0 text-xs shrink-0">
+                                          {module.level}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-sm text-gray-500 truncate">
+                                        {module.description}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
+                                      <span>{module.duration}</span>
+                                      <span>{module.points} XP</span>
+                                      <ChevronRight className="h-4 w-4" />
+                                    </div>
+                                  </Link>
+                                  <button
+                                    onClick={() => deleteModule(module.id, module.title)}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded shrink-0"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
                               ))}
                             </div>
                           </div>

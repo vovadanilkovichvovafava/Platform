@@ -28,6 +28,7 @@ model User {
   questionAttempts QuestionAttempt[]
   taskProgress     TaskProgress[]
   invitesCreated   Invite[]           @relation("InviteCreator")
+  teacherModules   ModuleTeacher[]    @relation("TeacherModules")
 }
 
 // Invite system for registration
@@ -88,8 +89,24 @@ model Module {
   progress    ModuleProgress[]
   submissions Submission[]
   questions   Question[]
+  teachers    ModuleTeacher[]
 
   @@index([trailId])
+}
+
+// Assign teachers to specific modules they can review
+model ModuleTeacher {
+  id        String   @id @default(cuid())
+  moduleId  String
+  teacherId String
+  createdAt DateTime @default(now())
+
+  module  Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  teacher User   @relation("TeacherModules", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, teacherId])
+  @@index([moduleId])
+  @@index([teacherId])
 }
 
 model Unit {
