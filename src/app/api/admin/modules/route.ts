@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { ModuleType, ModuleLevel } from "@prisma/client"
 
 const moduleSchema = z.object({
   trailId: z.string().min(1),
@@ -11,8 +10,8 @@ const moduleSchema = z.object({
   description: z.string().default(""),
   content: z.string().default(""),
   requirements: z.string().default(""),
-  type: z.nativeEnum(ModuleType).default(ModuleType.THEORY),
-  level: z.nativeEnum(ModuleLevel).default(ModuleLevel.Beginner),
+  type: z.enum(["THEORY", "PRACTICE", "PROJECT"]).default("THEORY"),
+  level: z.enum(["Beginner", "Intermediate", "Junior", "Middle", "Senior"]).default("Beginner"),
   points: z.number().default(50),
   duration: z.string().default("15 мин"),
 })

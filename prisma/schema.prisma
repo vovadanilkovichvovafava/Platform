@@ -7,58 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enum types for type safety
-enum UserRole {
-  STUDENT
-  TEACHER
-  ADMIN
-}
-
-enum ModuleType {
-  THEORY
-  PRACTICE
-  PROJECT
-}
-
-enum ModuleLevel {
-  Beginner
-  Intermediate
-  Junior
-  Middle
-  Senior
-}
-
-enum ProgressStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
-}
-
-enum SubmissionStatus {
-  PENDING
-  APPROVED
-  REVISION
-}
-
-enum TaskLevel {
-  JUNIOR
-  MIDDLE
-  SENIOR
-}
-
-enum TaskLevelStatus {
-  LOCKED
-  PENDING
-  PASSED
-  FAILED
-}
-
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   password      String
   name          String
-  role          UserRole  @default(STUDENT)
+  role          String    @default("STUDENT") // STUDENT, TEACHER, ADMIN
   totalXP       Int       @default(0)
   currentStreak Int       @default(0)
   avatarUrl     String?
@@ -123,8 +77,8 @@ model Module {
   slug         String   @unique
   title        String
   description  String
-  type         ModuleType  @default(THEORY)
-  level        ModuleLevel @default(Junior)
+  type         String   @default("THEORY") // THEORY, PRACTICE, PROJECT
+  level        String   @default("Beginner") // Beginner, Intermediate, Junior, Middle, Senior
   points       Int      @default(50)
   duration     String
   content      String?
@@ -206,10 +160,10 @@ model Enrollment {
 }
 
 model ModuleProgress {
-  id          String         @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   moduleId    String
-  status      ProgressStatus @default(NOT_STARTED)
+  status      String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
   startedAt   DateTime?
   completedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -241,12 +195,12 @@ model UnitProgress {
 }
 
 model Submission {
-  id        String           @id @default(cuid())
+  id        String   @id @default(cuid())
   githubUrl String?
   deployUrl String?
   comment   String?
   fileUrl   String?
-  status    SubmissionStatus @default(PENDING)
+  status    String   @default("PENDING") // PENDING, APPROVED, REVISION
   userId    String
   moduleId  String
   createdAt DateTime @default(now())
@@ -317,13 +271,13 @@ model QuestionAttempt {
 
 // Track candidate's task level progression
 model TaskProgress {
-  id           String          @id @default(cuid())
+  id           String   @id @default(cuid())
   userId       String
   trailId      String
-  currentLevel TaskLevel       @default(MIDDLE)
-  middleStatus TaskLevelStatus @default(PENDING)
-  juniorStatus TaskLevelStatus @default(LOCKED)
-  seniorStatus TaskLevelStatus @default(LOCKED)
+  currentLevel String   @default("MIDDLE")  // JUNIOR, MIDDLE, SENIOR
+  middleStatus String   @default("PENDING") // PENDING, PASSED, FAILED
+  juniorStatus String   @default("LOCKED")  // LOCKED, PENDING, PASSED, FAILED
+  seniorStatus String   @default("LOCKED")  // LOCKED, PENDING, PASSED, FAILED
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

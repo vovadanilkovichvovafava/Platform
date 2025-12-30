@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { ModuleType } from "@prisma/client"
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +39,7 @@ interface ParsedQuestion {
 interface ParsedModule {
   title: string
   slug: string
-  type: ModuleType
+  type: string
   points: number
   description: string
   content: string
@@ -113,7 +112,7 @@ async function parseAndImport(text: string) {
       currentModule = {
         title: "",
         slug: "",
-        type: ModuleType.THEORY,
+        type: "THEORY",
         points: 50,
         description: "",
         content: "",
@@ -200,19 +199,19 @@ async function parseAndImport(text: string) {
             break
           case "type":
           case "тип":
-            const typeMap: Record<string, ModuleType> = {
-              lesson: ModuleType.THEORY,
-              theory: ModuleType.THEORY,
-              quiz: ModuleType.PRACTICE,
-              practice: ModuleType.PRACTICE,
-              project: ModuleType.PROJECT,
-              урок: ModuleType.THEORY,
-              теория: ModuleType.THEORY,
-              тест: ModuleType.PRACTICE,
-              практика: ModuleType.PRACTICE,
-              проект: ModuleType.PROJECT,
+            const typeMap: Record<string, string> = {
+              lesson: "THEORY",
+              theory: "THEORY",
+              quiz: "PRACTICE",
+              practice: "PRACTICE",
+              project: "PROJECT",
+              урок: "THEORY",
+              теория: "THEORY",
+              тест: "PRACTICE",
+              практика: "PRACTICE",
+              проект: "PROJECT",
             }
-            currentModule.type = typeMap[value.toLowerCase()] || ModuleType.THEORY
+            currentModule.type = typeMap[value.toLowerCase()] || "THEORY"
             break
           case "points":
           case "очки":
