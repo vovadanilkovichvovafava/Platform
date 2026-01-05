@@ -14,6 +14,8 @@ interface MatchingExerciseProps {
   leftItems: MatchingItem[]
   rightItems: MatchingItem[]
   correctPairs: Record<string, string>
+  leftLabel?: string
+  rightLabel?: string
   onComplete: (isCorrect: boolean, attempts: number) => void
   disabled?: boolean
 }
@@ -33,6 +35,8 @@ export function MatchingExercise({
   leftItems,
   rightItems,
   correctPairs,
+  leftLabel,
+  rightLabel,
   onComplete,
   disabled = false,
 }: MatchingExerciseProps) {
@@ -117,19 +121,11 @@ export function MatchingExercise({
   const handleRightClick = useCallback((id: string) => {
     if (disabled || showResult || !selectedLeft) return
 
-    // Check if this right item is already matched
-    const existingLeft = Object.keys(matches).find(k => matches[k] === id)
-    if (existingLeft) {
-      // Remove the existing match
-      const newMatches = { ...matches }
-      delete newMatches[existingLeft]
-      setMatches(newMatches)
-    }
-
-    // Create new match
+    // Many-to-one: allow multiple left items to connect to same right item
+    // Just create new match without removing existing ones to this right item
     setMatches(prev => ({ ...prev, [selectedLeft]: id }))
     setSelectedLeft(null)
-  }, [disabled, showResult, selectedLeft, matches])
+  }, [disabled, showResult, selectedLeft])
 
   const handleCheck = useCallback(() => {
     const newAttempts = attempts + 1
@@ -235,9 +231,11 @@ export function MatchingExercise({
         <div className="grid grid-cols-2 gap-8 relative z-20">
           {/* Left column */}
           <div className="space-y-3">
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 text-center">
-              Задачи
-            </div>
+            {leftLabel && (
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 text-center">
+                {leftLabel}
+              </div>
+            )}
             {leftItems.map((item) => {
               const isMatched = !!matches[item.id]
               const isSelected = selectedLeft === item.id
@@ -300,9 +298,11 @@ export function MatchingExercise({
 
           {/* Right column */}
           <div className="space-y-3">
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 text-center">
-              Роли
-            </div>
+            {rightLabel && (
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 text-center">
+                {rightLabel}
+              </div>
+            )}
             {rightItems.map((item) => {
               const colorIndex = getRightColorIndex(item.id)
               const colors = colorIndex >= 0 ? PAIR_COLORS[colorIndex] : null

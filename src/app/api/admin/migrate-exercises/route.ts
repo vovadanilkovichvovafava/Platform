@@ -277,3 +277,66 @@ export async function GET() {
     return NextResponse.json({ error: "Ошибка проверки" }, { status: 500 })
   }
 }
+
+// PATCH - Update existing exercise data (fix emojis, etc.)
+export async function PATCH() {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Только админ" }, { status: 403 })
+    }
+
+    // Find the matching exercise module
+    const matchingModule = await prisma.module.findFirst({
+      where: { title: "Роли в Vibe Coding" },
+      include: { questions: true },
+    })
+
+    if (!matchingModule) {
+      return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
+    }
+
+    // Update question data without emojis, with labels
+    const updatedData = {
+      leftLabel: "Задачи",
+      rightLabel: "Исполнитель",
+      leftItems: [
+        { id: "l1", text: "Генерация кода по описанию" },
+        { id: "l2", text: "Проверка безопасности кода" },
+        { id: "l3", text: "Рутинный рефакторинг" },
+        { id: "l4", text: "Архитектурные решения" },
+        { id: "l5", text: "Предложение паттернов" },
+        { id: "l6", text: "Финальная ответственность" },
+      ],
+      rightItems: [
+        { id: "r1", text: "AI" },
+        { id: "r2", text: "Разработчик" },
+      ],
+      correctPairs: {
+        l1: "r1",
+        l2: "r2",
+        l3: "r1",
+        l4: "r2",
+        l5: "r1",
+        l6: "r2",
+      },
+    }
+
+    // Update the question
+    if (matchingModule.questions.length > 0) {
+      await prisma.question.update({
+        where: { id: matchingModule.questions[0].id },
+        data: { data: JSON.stringify(updatedData) },
+      })
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Данные обновлены",
+    })
+  } catch (error) {
+    console.error("Update error:", error)
+    return NextResponse.json({ error: "Ошибка обновления" }, { status: 500 })
+  }
+}

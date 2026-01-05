@@ -15,6 +15,8 @@ interface MatchingData {
   leftItems: { id: string; text: string }[]
   rightItems: { id: string; text: string }[]
   correctPairs: Record<string, string>
+  leftLabel?: string
+  rightLabel?: string
 }
 
 interface OrderingData {
@@ -274,6 +276,8 @@ export function AssessmentSection({
           leftItems={data.leftItems}
           rightItems={data.rightItems}
           correctPairs={data.correctPairs}
+          leftLabel={data.leftLabel}
+          rightLabel={data.rightLabel}
           onComplete={handleExerciseComplete}
           disabled={isQuestionFinished}
         />
