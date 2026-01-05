@@ -293,41 +293,93 @@ export async function PATCH() {
       include: { questions: true },
     })
 
-    if (!matchingModule) {
-      return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
-    }
+    if (matchingModule && matchingModule.questions.length > 0) {
+      const updatedMatchingData = {
+        leftLabel: "Задачи",
+        rightLabel: "Исполнитель",
+        leftItems: [
+          { id: "l1", text: "Генерация кода по описанию" },
+          { id: "l2", text: "Проверка безопасности кода" },
+          { id: "l3", text: "Рутинный рефакторинг" },
+          { id: "l4", text: "Архитектурные решения" },
+          { id: "l5", text: "Предложение паттернов" },
+          { id: "l6", text: "Финальная ответственность" },
+        ],
+        rightItems: [
+          { id: "r1", text: "AI" },
+          { id: "r2", text: "Разработчик" },
+        ],
+        correctPairs: {
+          l1: "r1",
+          l2: "r2",
+          l3: "r1",
+          l4: "r2",
+          l5: "r1",
+          l6: "r2",
+        },
+      }
 
-    // Update question data without emojis, with labels
-    const updatedData = {
-      leftLabel: "Задачи",
-      rightLabel: "Исполнитель",
-      leftItems: [
-        { id: "l1", text: "Генерация кода по описанию" },
-        { id: "l2", text: "Проверка безопасности кода" },
-        { id: "l3", text: "Рутинный рефакторинг" },
-        { id: "l4", text: "Архитектурные решения" },
-        { id: "l5", text: "Предложение паттернов" },
-        { id: "l6", text: "Финальная ответственность" },
-      ],
-      rightItems: [
-        { id: "r1", text: "AI" },
-        { id: "r2", text: "Разработчик" },
-      ],
-      correctPairs: {
-        l1: "r1",
-        l2: "r2",
-        l3: "r1",
-        l4: "r2",
-        l5: "r1",
-        l6: "r2",
-      },
-    }
-
-    // Update the question
-    if (matchingModule.questions.length > 0) {
       await prisma.question.update({
         where: { id: matchingModule.questions[0].id },
-        data: { data: JSON.stringify(updatedData) },
+        data: { data: JSON.stringify(updatedMatchingData) },
+      })
+    }
+
+    // Find and fix case analysis module
+    const caseModule = await prisma.module.findFirst({
+      where: { title: "Анализ промптов" },
+      include: { questions: true },
+    })
+
+    if (caseModule && caseModule.questions.length > 0) {
+      const updatedCaseData = {
+        caseContent: "напиши мне приложение",
+        caseLabel: "Промпт",
+        options: [
+          {
+            id: "o1",
+            text: "Нет контекста — непонятно, какое приложение нужно",
+            isCorrect: true,
+            explanation: "AI не знает, нужно веб, мобильное или десктоп приложение",
+          },
+          {
+            id: "o2",
+            text: "Нет указания технологий — непонятно, на чём писать",
+            isCorrect: true,
+            explanation: "React? Vue? Python? Swift? Без этого AI выберет сам",
+          },
+          {
+            id: "o3",
+            text: "Нет функциональных требований — что приложение должно делать?",
+            isCorrect: true,
+            explanation: "Калькулятор? Чат? Магазин? Нужно описать функционал",
+          },
+          {
+            id: "o4",
+            text: "Нет роли для AI — он не знает, как себя вести",
+            isCorrect: true,
+            explanation: "Роль помогает AI понять уровень ответа (джуниор vs сеньор)",
+          },
+          {
+            id: "o5",
+            text: "Слишком много деталей перегружают AI",
+            isCorrect: false,
+            explanation: "Наоборот, в этом промпте не хватает деталей",
+          },
+          {
+            id: "o6",
+            text: "Промпт написан на русском, а надо на английском",
+            isCorrect: false,
+            explanation: "Современные AI отлично понимают русский язык",
+          },
+        ],
+        // Fix: set to actual number of correct answers (4)
+        minCorrectRequired: 4,
+      }
+
+      await prisma.question.update({
+        where: { id: caseModule.questions[0].id },
+        data: { data: JSON.stringify(updatedCaseData) },
       })
     }
 
