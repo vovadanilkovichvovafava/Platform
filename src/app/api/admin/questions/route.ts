@@ -6,12 +6,21 @@ import { z } from "zod"
 
 const questionSchema = z.object({
   moduleId: z.string().min(1),
+  type: z.enum(["SINGLE_CHOICE", "MATCHING", "ORDERING", "CASE_ANALYSIS"]).default("SINGLE_CHOICE"),
   question: z.string().min(1),
-  options: z.array(z.string()).min(2).max(10),
-  correctAnswer: z.number().min(0),
+  options: z.array(z.string()).default([]),
+  correctAnswer: z.number().min(0).default(0),
+  data: z.any().optional(), // JSON data for interactive question types
 }).refine(
-  (data) => data.correctAnswer < data.options.length,
-  { message: "correctAnswer должен быть меньше количества вариантов", path: ["correctAnswer"] }
+  (data) => {
+    // For SINGLE_CHOICE, validate correctAnswer
+    if (data.type === "SINGLE_CHOICE") {
+      return data.options.length >= 2 && data.correctAnswer < data.options.length
+    }
+    // For interactive types, data is required
+    return ["MATCHING", "ORDERING", "CASE_ANALYSIS"].includes(data.type) ? !!data.data : true
+  },
+  { message: "Невалидные данные для типа вопроса", path: ["type"] }
 )
 
 // Helper to check if teacher is assigned to trail via module
@@ -59,9 +68,11 @@ export async function POST(request: NextRequest) {
     const question = await prisma.question.create({
       data: {
         moduleId: data.moduleId,
+        type: data.type,
         question: data.question,
         options: JSON.stringify(data.options),
         correctAnswer: data.correctAnswer,
+        data: data.data ? JSON.stringify(data.data) : null,
         order: (maxOrder._max.order || 0) + 1,
       },
     })
