@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
-import { AlertTriangle, Check, X } from "lucide-react"
+import { AlertTriangle, Check, X, RotateCcw, Lightbulb } from "lucide-react"
 
 interface CaseOption {
   id: string
@@ -13,10 +13,10 @@ interface CaseOption {
 
 interface CaseAnalysisExerciseProps {
   question: string
-  caseContent: string // The bad example to analyze
-  caseLabel?: string // Optional label like "Промпт" or "Код"
+  caseContent: string
+  caseLabel?: string
   options: CaseOption[]
-  minCorrectRequired?: number // Minimum correct answers to select
+  minCorrectRequired?: number
   onComplete: (isCorrect: boolean, attempts: number) => void
   disabled?: boolean
 }
@@ -38,28 +38,24 @@ export function CaseAnalysisExercise({
   const correctOptionIds = options.filter((o) => o.isCorrect).map((o) => o.id)
   const requiredCount = minCorrectRequired || correctOptionIds.length
 
-  const toggleOption = useCallback(
-    (id: string) => {
-      if (disabled || showResult) return
+  const toggleOption = useCallback((id: string) => {
+    if (disabled || showResult) return
 
-      setSelectedOptions((prev) => {
-        const newSet = new Set(prev)
-        if (newSet.has(id)) {
-          newSet.delete(id)
-        } else {
-          newSet.add(id)
-        }
-        return newSet
-      })
-    },
-    [disabled, showResult]
-  )
+    setSelectedOptions((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }, [disabled, showResult])
 
   const handleCheck = useCallback(() => {
     const newAttempts = attempts + 1
     setAttempts(newAttempts)
 
-    // Check if all correct options are selected and no incorrect ones
     const selectedCorrect = correctOptionIds.filter((id) => selectedOptions.has(id))
     const selectedIncorrect = [...selectedOptions].filter((id) => !correctOptionIds.includes(id))
 
@@ -81,50 +77,49 @@ export function CaseAnalysisExercise({
 
   const hasMinimumSelected = selectedOptions.size >= requiredCount
 
+  // Get option status for result display
+  const getOptionStatus = (option: CaseOption) => {
+    if (!showResult) return null
+    const isSelected = selectedOptions.has(option.id)
+
+    if (option.isCorrect && isSelected) return "correct"
+    if (option.isCorrect && !isSelected) return "missed"
+    if (!option.isCorrect && isSelected) return "wrong"
+    return "neutral"
+  }
+
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-white">{question}</h3>
-
-      {/* Case content box */}
-      <div className="rounded-lg border-2 border-amber-500/50 bg-amber-500/5 overflow-hidden">
-        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <span className="text-sm font-medium text-amber-400">{caseLabel}</span>
-        </div>
-        <div className="p-4">
-          <pre className="text-zinc-300 whitespace-pre-wrap font-mono text-sm">{caseContent}</pre>
-        </div>
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h3 className="text-xl font-bold text-gray-900">{question}</h3>
+        <p className="text-sm text-gray-500">
+          Выберите все проблемы в примере ниже (минимум {requiredCount})
+        </p>
       </div>
 
-      <p className="text-sm text-zinc-400">
-        Выберите все проблемы, которые вы нашли в примере выше. Нужно выбрать минимум {requiredCount}{" "}
-        {requiredCount === 1 ? "проблему" : requiredCount < 5 ? "проблемы" : "проблем"}.
-      </p>
+      {/* Case content box */}
+      <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 overflow-hidden shadow-lg">
+        <div className="px-5 py-3 bg-gradient-to-r from-amber-100 to-orange-100 border-b border-amber-200 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center">
+            <AlertTriangle className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-semibold text-amber-800">{caseLabel}</span>
+        </div>
+        <div className="p-6">
+          <div className="bg-white/80 backdrop-blur rounded-xl p-5 border border-amber-200/50">
+            <pre className="text-gray-800 whitespace-pre-wrap font-mono text-lg leading-relaxed">
+              {caseContent}
+            </pre>
+          </div>
+        </div>
+      </div>
 
       {/* Options */}
       <div className="space-y-3">
         {options.map((option) => {
           const isSelected = selectedOptions.has(option.id)
-          const showCorrectness = showResult
-
-          let borderColor = "border-zinc-700"
-          let bgColor = "bg-zinc-800/50"
-
-          if (showCorrectness) {
-            if (option.isCorrect && isSelected) {
-              borderColor = "border-green-500"
-              bgColor = "bg-green-500/10"
-            } else if (option.isCorrect && !isSelected) {
-              borderColor = "border-amber-500"
-              bgColor = "bg-amber-500/10"
-            } else if (!option.isCorrect && isSelected) {
-              borderColor = "border-red-500"
-              bgColor = "bg-red-500/10"
-            }
-          } else if (isSelected) {
-            borderColor = "border-indigo-500"
-            bgColor = "bg-indigo-500/10"
-          }
+          const status = getOptionStatus(option)
 
           return (
             <button
@@ -132,39 +127,84 @@ export function CaseAnalysisExercise({
               onClick={() => toggleOption(option.id)}
               disabled={disabled || showResult}
               className={cn(
-                "w-full p-4 rounded-lg border-2 text-left transition-all flex items-start gap-3",
-                borderColor,
-                bgColor,
-                !disabled && !showResult && "hover:border-zinc-500"
+                "w-full p-4 rounded-xl border-2 text-left transition-all duration-200",
+                "flex items-start gap-4 group",
+                // Default state
+                !showResult && !isSelected && "bg-white border-gray-200 hover:border-gray-300 hover:shadow-md",
+                !showResult && isSelected && "bg-indigo-50 border-indigo-500 shadow-md",
+                // Result states
+                status === "correct" && "bg-green-50 border-green-500",
+                status === "missed" && "bg-amber-50 border-amber-500",
+                status === "wrong" && "bg-red-50 border-red-500",
+                status === "neutral" && "bg-white border-gray-200 opacity-60",
+                // Cursor
+                !disabled && !showResult && "cursor-pointer"
               )}
             >
-              {/* Checkbox indicator */}
+              {/* Checkbox */}
               <div
                 className={cn(
-                  "w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center mt-0.5",
-                  isSelected ? "border-indigo-500 bg-indigo-500" : "border-zinc-600"
+                  "w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center mt-0.5 transition-all",
+                  // Default
+                  !showResult && !isSelected && "border-gray-300 group-hover:border-gray-400",
+                  !showResult && isSelected && "border-indigo-500 bg-indigo-500",
+                  // Result states
+                  status === "correct" && "border-green-500 bg-green-500",
+                  status === "missed" && "border-amber-500 bg-amber-500",
+                  status === "wrong" && "border-red-500 bg-red-500",
+                  status === "neutral" && "border-gray-300"
                 )}
               >
-                {isSelected && <Check className="w-3 h-3 text-white" />}
+                {(isSelected || status === "missed") && !showResult && (
+                  <Check className="w-4 h-4 text-white" />
+                )}
+                {status === "correct" && <Check className="w-4 h-4 text-white" />}
+                {status === "missed" && <Lightbulb className="w-4 h-4 text-white" />}
+                {status === "wrong" && <X className="w-4 h-4 text-white" />}
               </div>
 
-              <div className="flex-1">
-                <span className="text-white">{option.text}</span>
+              <div className="flex-1 min-w-0">
+                <span
+                  className={cn(
+                    "font-medium block",
+                    !showResult && "text-gray-700",
+                    status === "correct" && "text-green-700",
+                    status === "missed" && "text-amber-700",
+                    status === "wrong" && "text-red-700",
+                    status === "neutral" && "text-gray-500"
+                  )}
+                >
+                  {option.text}
+                </span>
 
                 {/* Show explanation on result */}
-                {showResult && option.explanation && (
-                  <p className={cn("mt-2 text-sm", option.isCorrect ? "text-green-400" : "text-zinc-400")}>
+                {showResult && option.explanation && (status === "correct" || status === "missed" || status === "wrong") && (
+                  <p
+                    className={cn(
+                      "mt-2 text-sm",
+                      status === "correct" && "text-green-600",
+                      status === "missed" && "text-amber-600",
+                      status === "wrong" && "text-red-600"
+                    )}
+                  >
                     {option.explanation}
                   </p>
                 )}
               </div>
 
-              {/* Result indicator */}
-              {showCorrectness && (
-                <div className="flex-shrink-0">
-                  {option.isCorrect && isSelected && <Check className="w-5 h-5 text-green-500" />}
-                  {option.isCorrect && !isSelected && <AlertTriangle className="w-5 h-5 text-amber-500" />}
-                  {!option.isCorrect && isSelected && <X className="w-5 h-5 text-red-500" />}
+              {/* Status badge */}
+              {showResult && status !== "neutral" && (
+                <div
+                  className={cn(
+                    "flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold",
+                    status === "correct" && "bg-green-100 text-green-700",
+                    status === "missed" && "bg-amber-100 text-amber-700",
+                    status === "wrong" && "bg-red-100 text-red-700"
+                  )}
+                >
+                  {status === "correct" && "Верно"}
+                  {status === "missed" && "Пропущено"}
+                  {status === "wrong" && "Неверно"}
                 </div>
               )}
             </button>
@@ -172,30 +212,58 @@ export function CaseAnalysisExercise({
         })}
       </div>
 
+      {/* Progress indicator */}
+      <div className="flex items-center justify-center gap-3">
+        <div className="flex gap-1">
+          {Array.from({ length: requiredCount }).map((_, idx) => (
+            <div
+              key={idx}
+              className={cn(
+                "w-3 h-3 rounded-full transition-all",
+                idx < selectedOptions.size
+                  ? showResult
+                    ? isCorrect
+                      ? "bg-green-500"
+                      : "bg-red-500"
+                    : "bg-indigo-500"
+                  : "bg-gray-300"
+              )}
+            />
+          ))}
+        </div>
+        <span className="text-sm text-gray-500">
+          {selectedOptions.size} / {requiredCount} выбрано
+        </span>
+      </div>
+
       {/* Result feedback */}
       {showResult && (
         <div
-          className={cn("p-4 rounded-lg border", isCorrect ? "bg-green-500/10 border-green-500" : "bg-red-500/10 border-red-500")}
+          className={cn(
+            "p-4 rounded-xl border-2 text-center",
+            isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+          )}
         >
-          <p className={cn("font-medium", isCorrect ? "text-green-400" : "text-red-400")}>
+          <p className={cn("font-semibold text-lg", isCorrect ? "text-green-700" : "text-red-700")}>
             {isCorrect
-              ? "Отлично! Вы правильно определили все проблемы!"
-              : "Не все проблемы найдены или выбраны лишние варианты. Посмотрите подсказки и попробуйте снова."}
+              ? "Отлично! Вы нашли все проблемы!"
+              : "Не все проблемы найдены или выбраны лишние варианты."}
           </p>
         </div>
       )}
 
       {/* Action buttons */}
-      <div className="flex gap-3">
+      <div className="flex justify-center gap-3">
         {!showResult && (
           <button
             onClick={handleCheck}
             disabled={!hasMinimumSelected || disabled}
             className={cn(
-              "px-6 py-2 rounded-lg font-medium transition-colors",
+              "px-8 py-3 rounded-xl font-semibold text-white transition-all",
+              "shadow-lg hover:shadow-xl hover:-translate-y-0.5",
               hasMinimumSelected && !disabled
-                ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-                : "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                ? "bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                : "bg-gray-300 cursor-not-allowed shadow-none"
             )}
           >
             Проверить
@@ -205,8 +273,9 @@ export function CaseAnalysisExercise({
         {showResult && !isCorrect && (
           <button
             onClick={handleRetry}
-            className="px-6 py-2 rounded-lg font-medium bg-zinc-700 hover:bg-zinc-600 text-white transition-colors"
+            className="px-8 py-3 rounded-xl font-semibold bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
           >
+            <RotateCcw className="w-4 h-4" />
             Попробовать снова
           </button>
         )}
