@@ -8,6 +8,15 @@ import { CheckCircle2, XCircle, HelpCircle, RotateCcw } from "lucide-react"
 import Link from "next/link"
 import { MatchingExercise, OrderingExercise, CaseAnalysisExercise } from "@/components/exercises"
 
+// Remove emojis from text (clean data that may have emojis)
+const stripEmojis = (text: string): string => {
+  return text
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Emoticons, symbols, etc
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Misc symbols
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Dingbats
+    .trim()
+}
+
 // Question types
 type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
 
@@ -270,11 +279,14 @@ export function AssessmentSection({
     // Interactive exercise types
     if (questionType === "MATCHING" && question.data) {
       const data = question.data as MatchingData
+      // Clean emojis from items text
+      const cleanLeftItems = data.leftItems.map(item => ({ ...item, text: stripEmojis(item.text) }))
+      const cleanRightItems = data.rightItems.map(item => ({ ...item, text: stripEmojis(item.text) }))
       return (
         <MatchingExercise
           question={question.question}
-          leftItems={data.leftItems}
-          rightItems={data.rightItems}
+          leftItems={cleanLeftItems}
+          rightItems={cleanRightItems}
           correctPairs={data.correctPairs}
           leftLabel={data.leftLabel}
           rightLabel={data.rightLabel}
