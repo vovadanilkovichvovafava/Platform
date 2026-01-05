@@ -17,6 +17,57 @@ const stripEmojis = (text: string): string => {
     .trim()
 }
 
+// Improved case analysis data (overrides old DB data)
+const IMPROVED_CASE_ANALYSIS: CaseAnalysisData = {
+  caseContent: `Привет! Мне нужно сделать приложение типа Uber, только для доставки еды. Сделай красивый современный дизайн. Нужно чтобы работало быстро и без багов. Используй лучшие практики. Бюджет небольшой, поэтому сделай попроще.`,
+  caseLabel: "Промпт от заказчика",
+  options: [
+    {
+      id: "o1",
+      text: "«Типа Uber» — слишком размытая аналогия",
+      isCorrect: true,
+      explanation: "Uber имеет сотни функций. Какие именно нужны? Карта? Рейтинги? Чат? Оплата?",
+    },
+    {
+      id: "o2",
+      text: "«Красивый дизайн» — субъективное требование",
+      isCorrect: true,
+      explanation: "Что такое «красиво»? Нужны конкретные референсы, цвета, стиль",
+    },
+    {
+      id: "o3",
+      text: "Не указана платформа — веб, iOS или Android?",
+      isCorrect: true,
+      explanation: "Разные платформы = разные технологии и подходы. Это критично",
+    },
+    {
+      id: "o4",
+      text: "Нет описания ролей — кто пользователи системы?",
+      isCorrect: true,
+      explanation: "Клиент? Курьер? Ресторан? Админ? У каждого свой интерфейс",
+    },
+    {
+      id: "o5",
+      text: "«Лучшие практики» — непонятно какие именно",
+      isCorrect: true,
+      explanation: "Лучшие практики чего? Безопасности? UX? Производительности? Нужна конкретика",
+    },
+    {
+      id: "o6",
+      text: "Промпт слишком длинный для AI",
+      isCorrect: false,
+      explanation: "Длина промпта не проблема. AI справляется с большими текстами",
+    },
+    {
+      id: "o7",
+      text: "Нельзя упоминать бюджет в промпте",
+      isCorrect: false,
+      explanation: "Бюджет можно упоминать, но это не заменяет технических требований",
+    },
+  ],
+  minCorrectRequired: 4,
+}
+
 // Question types
 type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
 
@@ -312,7 +363,8 @@ export function AssessmentSection({
     }
 
     if (questionType === "CASE_ANALYSIS" && question.data) {
-      const data = question.data as CaseAnalysisData
+      // Use improved data from code (overrides old DB data)
+      const data = IMPROVED_CASE_ANALYSIS
       return (
         <CaseAnalysisExercise
           question={question.question}
