@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import React, { useState, useCallback, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Check, RotateCcw } from "lucide-react"
 
@@ -158,7 +158,7 @@ export function MatchingExercise({
 
   // Render SVG connection lines
   const renderLines = () => {
-    const lines: JSX.Element[] = []
+    const lines: React.ReactNode[] = []
 
     Object.entries(matches).forEach(([leftId, rightId]) => {
       const leftPos = itemPositions[`left-${leftId}`]
