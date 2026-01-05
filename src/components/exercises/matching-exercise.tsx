@@ -190,11 +190,11 @@ export function MatchingExercise({
 
         {/* Right items to choose from */}
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-          Варианты ответов
+          Варианты ответов (можно использовать несколько раз)
         </div>
         <div className="flex flex-wrap gap-2">
           {rightItems.map((item) => {
-            const isUsed = Object.values(matches).includes(item.id)
+            const useCount = Object.values(matches).filter(id => id === item.id).length
             const canClick = selectedLeft && !disabled && !showResult
 
             return (
@@ -203,14 +203,18 @@ export function MatchingExercise({
                 onClick={() => handleRightClick(item.id)}
                 disabled={disabled || showResult || !selectedLeft}
                 className={cn(
-                  "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border-2",
+                  "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border-2 relative",
                   !canClick && "bg-white border-gray-200 text-gray-700",
-                  canClick && "bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer",
-                  isUsed && "opacity-50",
+                  canClick && "bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer shadow-sm hover:shadow",
                   (disabled || showResult) && "cursor-default"
                 )}
               >
                 {item.text}
+                {useCount > 0 && (
+                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    {useCount}
+                  </span>
+                )}
               </button>
             )
           })}
