@@ -29,10 +29,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { questionId, selectedAnswer } = await request.json()
+    const { questionId, selectedAnswer, isInteractive, interactiveResult, interactiveAttempts } = await request.json()
 
-    if (!questionId || selectedAnswer === undefined) {
-      return NextResponse.json({ error: "Missing questionId or selectedAnswer" }, { status: 400 })
+    if (!questionId) {
+      return NextResponse.json({ error: "Missing questionId" }, { status: 400 })
+    }
+
+    // For non-interactive questions, selectedAnswer is required
+    if (!isInteractive && selectedAnswer === undefined) {
+      return NextResponse.json({ error: "Missing selectedAnswer" }, { status: 400 })
     }
 
     // Get question with module info
@@ -55,7 +60,10 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const isCorrect = selectedAnswer === question.correctAnswer
+    // For interactive exercises, use the result from client
+    // For single choice, compare with correctAnswer
+    const isCorrect = isInteractive ? interactiveResult : selectedAnswer === question.correctAnswer
+    const attemptCount = isInteractive ? interactiveAttempts : undefined
 
     if (attempt) {
       // Already answered correctly - no more attempts allowed
@@ -114,14 +122,15 @@ export async function POST(request: NextRequest) {
           : `Неправильно. Осталось попыток: ${3 - newAttempts}`,
       })
     } else {
-      // First attempt
-      const earnedScore = isCorrect ? calculateScore(question.module.points / 3, 1) : 0
+      // First attempt (or interactive exercises which track their own attempts)
+      const finalAttempts = attemptCount || 1
+      const earnedScore = isCorrect ? calculateScore(question.module.points / 3, finalAttempts) : 0
 
       attempt = await prisma.questionAttempt.create({
         data: {
           userId: session.user.id,
           questionId: questionId,
-          attempts: 1,
+          attempts: finalAttempts,
           isCorrect: isCorrect,
           earnedScore: earnedScore,
         },
@@ -135,13 +144,17 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      const scorePercent = finalAttempts === 1 ? "100%" : finalAttempts === 2 ? "65%" : "35%"
+
       return NextResponse.json({
         success: true,
         isCorrect,
-        attempts: 1,
+        attempts: finalAttempts,
         earnedScore,
         message: isCorrect
-          ? `Правильно! +${earnedScore} XP (100% за первую попытку)`
+          ? `Правильно! +${earnedScore} XP (${scorePercent})`
+          : isInteractive
+          ? "Попробуйте ещё раз"
           : "Неправильно. Осталось попыток: 2",
       })
     }

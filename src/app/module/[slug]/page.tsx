@@ -317,8 +317,10 @@ export default async function ModulePage({ params }: Props) {
               <AssessmentSection
                 questions={module.questions.map((q) => ({
                   id: q.id,
+                  type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
                   question: q.question,
                   options: safeJsonParse<string[]>(q.options, []),
+                  data: q.data ? safeJsonParse(q.data, null) : null,
                   order: q.order,
                 }))}
                 initialAttempts={questionAttempts.map((a) => ({

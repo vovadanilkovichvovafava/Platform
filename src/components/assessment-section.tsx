@@ -1,16 +1,40 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, XCircle, HelpCircle, RotateCcw } from "lucide-react"
 import Link from "next/link"
+import { MatchingExercise, OrderingExercise, CaseAnalysisExercise } from "@/components/exercises"
+
+// Question types
+type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+
+interface MatchingData {
+  leftItems: { id: string; text: string }[]
+  rightItems: { id: string; text: string }[]
+  correctPairs: Record<string, string>
+}
+
+interface OrderingData {
+  items: { id: string; text: string }[]
+  correctOrder: string[]
+}
+
+interface CaseAnalysisData {
+  caseContent: string
+  caseLabel?: string
+  options: { id: string; text: string; isCorrect: boolean; explanation?: string }[]
+  minCorrectRequired?: number
+}
 
 interface Question {
   id: string
+  type: QuestionType
   question: string
   options: string[]
+  data?: MatchingData | OrderingData | CaseAnalysisData | null
   order: number
 }
 
@@ -197,6 +221,138 @@ export function AssessmentSection({
     return "text-orange-600"
   }
 
+  // Handle completion of interactive exercises (matching, ordering, case analysis)
+  const handleExerciseComplete = useCallback(async (isCorrect: boolean, attemptCount: number) => {
+    if (!question) return
+
+    try {
+      const response = await fetch("/api/questions/answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionId: question.id,
+          selectedAnswer: 0, // Placeholder for non-single-choice
+          isInteractive: true,
+          interactiveResult: isCorrect,
+          interactiveAttempts: attemptCount,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setLastResult(data)
+        setShowResult(true)
+
+        // Update local attempt data
+        setAttemptData((prev) => ({
+          ...prev,
+          [question.id]: {
+            questionId: question.id,
+            isCorrect: data.isCorrect,
+            attempts: data.attempts || attemptCount,
+            earnedScore: data.earnedScore || 0,
+          },
+        }))
+      }
+    } catch (error) {
+      console.error("Error saving exercise result:", error)
+    }
+  }, [question])
+
+  // Render question content based on type
+  const renderQuestionContent = () => {
+    if (!question) return null
+
+    const questionType = question.type || "SINGLE_CHOICE"
+
+    // Interactive exercise types
+    if (questionType === "MATCHING" && question.data) {
+      const data = question.data as MatchingData
+      return (
+        <MatchingExercise
+          question={question.question}
+          leftItems={data.leftItems}
+          rightItems={data.rightItems}
+          correctPairs={data.correctPairs}
+          onComplete={handleExerciseComplete}
+          disabled={isQuestionFinished}
+        />
+      )
+    }
+
+    if (questionType === "ORDERING" && question.data) {
+      const data = question.data as OrderingData
+      // Shuffle items for initial display
+      const shuffledItems = [...data.items].sort(() => Math.random() - 0.5)
+      return (
+        <OrderingExercise
+          question={question.question}
+          items={shuffledItems}
+          correctOrder={data.correctOrder}
+          onComplete={handleExerciseComplete}
+          disabled={isQuestionFinished}
+        />
+      )
+    }
+
+    if (questionType === "CASE_ANALYSIS" && question.data) {
+      const data = question.data as CaseAnalysisData
+      return (
+        <CaseAnalysisExercise
+          question={question.question}
+          caseContent={data.caseContent}
+          caseLabel={data.caseLabel}
+          options={data.options}
+          minCorrectRequired={data.minCorrectRequired}
+          onComplete={handleExerciseComplete}
+          disabled={isQuestionFinished}
+        />
+      )
+    }
+
+    // Default: SINGLE_CHOICE - original rendering
+    return (
+      <div className="space-y-3">
+        {question.options.map((option, idx) => {
+          // Determine button styling
+          let buttonClass = "w-full justify-start text-left h-auto py-3 px-4 whitespace-normal transition-all"
+          let isDisabled = isQuestionFinished || isSubmitting
+
+          // Show correct/incorrect after submit
+          if (showResult && lastResult) {
+            isDisabled = true
+            if (lastResult.correctAnswer !== undefined && idx === lastResult.correctAnswer) {
+              buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
+            } else if (idx === selectedAnswer && !lastResult.isCorrect) {
+              buttonClass += " bg-red-100 border-red-500 border-2 text-red-700"
+            } else if (idx === selectedAnswer && lastResult.isCorrect) {
+              buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
+            }
+          } else if (selectedAnswer === idx) {
+            // Selected but not yet submitted - prominent highlight
+            buttonClass += " border-blue-600 border-2 bg-blue-100 ring-2 ring-blue-300 ring-offset-1"
+          }
+
+          return (
+            <Button
+              key={idx}
+              variant="outline"
+              className={buttonClass}
+              onClick={() => !isDisabled && setSelectedAnswer(idx)}
+              disabled={isDisabled}
+            >
+              <span className="font-medium mr-2 shrink-0">{String.fromCharCode(65 + idx)}.</span>
+              <span className="text-left">{option}</span>
+            </Button>
+          )
+        })}
+      </div>
+    )
+  }
+
+  // Check if current question is interactive type
+  const isInteractiveQuestion = question && ["MATCHING", "ORDERING", "CASE_ANALYSIS"].includes(question.type || "")
+
   if (isCompleted) {
     return (
       <Card>
@@ -303,42 +459,8 @@ export function AssessmentSection({
               </div>
             )}
 
-            {/* Options */}
-            <div className="space-y-3">
-              {question?.options.map((option, idx) => {
-                // Determine button styling
-                let buttonClass = "w-full justify-start text-left h-auto py-3 px-4 whitespace-normal transition-all"
-                let isDisabled = isQuestionFinished || isSubmitting
-
-                // Show correct/incorrect after submit
-                if (showResult && lastResult) {
-                  isDisabled = true
-                  if (lastResult.correctAnswer !== undefined && idx === lastResult.correctAnswer) {
-                    buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
-                  } else if (idx === selectedAnswer && !lastResult.isCorrect) {
-                    buttonClass += " bg-red-100 border-red-500 border-2 text-red-700"
-                  } else if (idx === selectedAnswer && lastResult.isCorrect) {
-                    buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
-                  }
-                } else if (selectedAnswer === idx) {
-                  // Selected but not yet submitted - prominent highlight
-                  buttonClass += " border-blue-600 border-2 bg-blue-100 ring-2 ring-blue-300 ring-offset-1"
-                }
-
-                return (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    className={buttonClass}
-                    onClick={() => !isDisabled && setSelectedAnswer(idx)}
-                    disabled={isDisabled}
-                  >
-                    <span className="font-medium mr-2 shrink-0">{String.fromCharCode(65 + idx)}.</span>
-                    <span className="text-left">{option}</span>
-                  </Button>
-                )
-              })}
-            </div>
+            {/* Question Content based on type */}
+            {renderQuestionContent()}
           </div>
 
           {/* Result message */}
@@ -381,8 +503,8 @@ export function AssessmentSection({
                 </Button>
               )}
 
-              {/* Submit button - when not finished and not showing result */}
-              {!isQuestionFinished && !showResult && (
+              {/* Submit button - when not finished and not showing result (only for single choice) */}
+              {!isQuestionFinished && !showResult && !isInteractiveQuestion && (
                 <Button
                   onClick={handleSubmit}
                   disabled={selectedAnswer === null || isSubmitting}

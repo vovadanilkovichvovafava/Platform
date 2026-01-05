@@ -237,9 +237,11 @@ model Review {
 model Question {
   id            String   @id @default(cuid())
   moduleId      String
+  type          String   @default("SINGLE_CHOICE") // SINGLE_CHOICE, MATCHING, ORDERING, CASE_ANALYSIS
   question      String
   options       String   // JSON array of options
-  correctAnswer Int      // Index of correct option (0-3)
+  correctAnswer Int      @default(0) // Index of correct option (for SINGLE_CHOICE)
+  data          String?  // JSON data for complex question types
   order         Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
