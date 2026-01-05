@@ -262,7 +262,7 @@ export function CaseAnalysisExercise({
               "px-8 py-3 rounded-xl font-semibold text-white transition-all",
               "shadow-lg hover:shadow-xl hover:-translate-y-0.5",
               hasMinimumSelected && !disabled
-                ? "bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                ? "bg-[#0176D3] hover:bg-[#0161B3]"
                 : "bg-gray-300 cursor-not-allowed shadow-none"
             )}
           >
