@@ -36,7 +36,9 @@ export function CaseAnalysisExercise({
   const [isCorrect, setIsCorrect] = useState(false)
 
   const correctOptionIds = options.filter((o) => o.isCorrect).map((o) => o.id)
-  const requiredCount = minCorrectRequired || correctOptionIds.length
+  const correctCount = correctOptionIds.length
+  const requiredCount = minCorrectRequired || correctCount
+  const maxSelections = correctCount // Cannot select more than correct answers exist
 
   const toggleOption = useCallback((id: string) => {
     if (disabled || showResult) return
@@ -46,11 +48,14 @@ export function CaseAnalysisExercise({
       if (newSet.has(id)) {
         newSet.delete(id)
       } else {
-        newSet.add(id)
+        // Only allow adding if under max limit
+        if (newSet.size < maxSelections) {
+          newSet.add(id)
+        }
       }
       return newSet
     })
-  }, [disabled, showResult])
+  }, [disabled, showResult, maxSelections])
 
   const handleCheck = useCallback(() => {
     const newAttempts = attempts + 1
@@ -75,7 +80,7 @@ export function CaseAnalysisExercise({
     setSelectedOptions(new Set())
   }, [])
 
-  const hasMinimumSelected = selectedOptions.size >= requiredCount
+  const hasExactCount = selectedOptions.size === correctCount
 
   // Get option status for result display
   const getOptionStatus = (option: CaseOption) => {
@@ -94,7 +99,7 @@ export function CaseAnalysisExercise({
       <div className="text-center space-y-2">
         <h3 className="text-xl font-bold text-gray-900">{question}</h3>
         <p className="text-sm text-gray-500">
-          Выберите все проблемы в примере ниже (минимум {requiredCount})
+          Выберите ровно {correctCount} проблем в примере ниже
         </p>
       </div>
 
@@ -120,17 +125,19 @@ export function CaseAnalysisExercise({
         {options.map((option) => {
           const isSelected = selectedOptions.has(option.id)
           const status = getOptionStatus(option)
+          const atMaxLimit = selectedOptions.size >= maxSelections && !isSelected
 
           return (
             <button
               key={option.id}
               onClick={() => toggleOption(option.id)}
-              disabled={disabled || showResult}
+              disabled={disabled || showResult || atMaxLimit}
               className={cn(
                 "w-full p-4 rounded-xl border-2 text-left transition-all duration-200",
                 "flex items-start gap-4 group",
                 // Default state
-                !showResult && !isSelected && "bg-white border-gray-200 hover:border-gray-300 hover:shadow-md",
+                !showResult && !isSelected && !atMaxLimit && "bg-white border-gray-200 hover:border-gray-300 hover:shadow-md",
+                !showResult && !isSelected && atMaxLimit && "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed",
                 !showResult && isSelected && "bg-indigo-50 border-indigo-500 shadow-md",
                 // Result states
                 status === "correct" && "bg-green-50 border-green-500",
@@ -215,7 +222,7 @@ export function CaseAnalysisExercise({
       {/* Progress indicator */}
       <div className="flex items-center justify-center gap-3">
         <div className="flex gap-1">
-          {Array.from({ length: requiredCount }).map((_, idx) => (
+          {Array.from({ length: correctCount }).map((_, idx) => (
             <div
               key={idx}
               className={cn(
@@ -232,7 +239,7 @@ export function CaseAnalysisExercise({
           ))}
         </div>
         <span className="text-sm text-gray-500">
-          {selectedOptions.size} / {requiredCount} выбрано
+          {selectedOptions.size} / {correctCount} выбрано
         </span>
       </div>
 
@@ -257,11 +264,11 @@ export function CaseAnalysisExercise({
         {!showResult && (
           <button
             onClick={handleCheck}
-            disabled={!hasMinimumSelected || disabled}
+            disabled={!hasExactCount || disabled}
             className={cn(
               "px-8 py-3 rounded-xl font-semibold text-white transition-all",
               "shadow-lg hover:shadow-xl hover:-translate-y-0.5",
-              hasMinimumSelected && !disabled
+              hasExactCount && !disabled
                 ? "bg-[#0176D3] hover:bg-[#0161B3]"
                 : "bg-gray-300 cursor-not-allowed shadow-none"
             )}
