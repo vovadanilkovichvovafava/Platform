@@ -333,6 +333,7 @@ export default async function ModulePage({ params }: Props) {
                 moduleSlug={module.slug}
                 trailSlug={module.trail.slug}
                 modulePoints={module.points}
+                moduleType={module.type}
                 isCompleted={isCompleted}
               />
             )}

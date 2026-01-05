@@ -51,14 +51,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate earned XP from quiz
-    const quizAttempts = await prisma.questionAttempt.findMany({
+    // Check if user already earned XP for this module
+    const existingProgress = await prisma.moduleProgress.findUnique({
       where: {
-        userId: session.user.id,
-        questionId: { in: questions.map((q) => q.id) },
+        userId_moduleId: {
+          userId: session.user.id,
+          moduleId: moduleId,
+        },
       },
     })
-    const earnedXP = quizAttempts.reduce((sum, a) => sum + a.earnedScore, 0)
+    const alreadyEarnedXP = existingProgress?.hasEarnedXP || false
+
+    // Calculate earned XP from quiz (only if not already earned)
+    let earnedXP = 0
+    if (!alreadyEarnedXP) {
+      const quizAttempts = await prisma.questionAttempt.findMany({
+        where: {
+          userId: session.user.id,
+          questionId: { in: questions.map((q) => q.id) },
+        },
+      })
+      earnedXP = quizAttempts.reduce((sum, a) => sum + a.earnedScore, 0)
+    }
 
     // Update or create progress
     await prisma.moduleProgress.upsert({
@@ -71,6 +85,7 @@ export async function POST(request: NextRequest) {
       update: {
         status: "COMPLETED",
         completedAt: new Date(),
+        hasEarnedXP: true,
       },
       create: {
         userId: session.user.id,
@@ -78,6 +93,7 @@ export async function POST(request: NextRequest) {
         status: "COMPLETED",
         startedAt: new Date(),
         completedAt: new Date(),
+        hasEarnedXP: true,
       },
     })
 

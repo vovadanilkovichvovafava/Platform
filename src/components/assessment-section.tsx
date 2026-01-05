@@ -114,6 +114,7 @@ interface AssessmentSectionProps {
   moduleSlug: string
   trailSlug: string
   modulePoints: number
+  moduleType: string
   isCompleted: boolean
 }
 
@@ -124,6 +125,7 @@ export function AssessmentSection({
   moduleSlug,
   trailSlug,
   modulePoints,
+  moduleType,
   isCompleted: initialCompleted,
 }: AssessmentSectionProps) {
   const router = useRouter()
@@ -421,6 +423,39 @@ export function AssessmentSection({
   // Check if current question is interactive type
   const isInteractiveQuestion = question && ["MATCHING", "ORDERING", "CASE_ANALYSIS"].includes(question.type || "")
 
+  const [isResetting, setIsResetting] = useState(false)
+
+  const handleReset = async () => {
+    if (isResetting) return
+
+    setIsResetting(true)
+    try {
+      const response = await fetch("/api/modules/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleId }),
+      })
+
+      if (response.ok) {
+        // Reset local state
+        setIsCompleted(false)
+        setAttemptData({})
+        setCurrentQuestion(0)
+        setSelectedAnswer(null)
+        setShowResult(false)
+        setLastResult(null)
+        router.refresh()
+      }
+    } catch (error) {
+      console.error("Error resetting module:", error)
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
+  // Only allow reset for THEORY and PRACTICE modules
+  const canReset = moduleType !== "PROJECT"
+
   if (isCompleted) {
     return (
       <Card>
@@ -430,9 +465,22 @@ export function AssessmentSection({
           <p className="text-gray-600 text-sm mb-4">
             Вы набрали {totalScore} XP
           </p>
-          <Button asChild variant="outline" className="w-full">
-            <Link href={`/trails/${trailSlug}`}>К заданиям</Link>
-          </Button>
+          <div className="space-y-2">
+            <Button asChild variant="outline" className="w-full">
+              <Link href={`/trails/${trailSlug}`}>К заданиям</Link>
+            </Button>
+            {canReset && (
+              <Button
+                variant="ghost"
+                className="w-full text-gray-500 hover:text-gray-700"
+                onClick={handleReset}
+                disabled={isResetting}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                {isResetting ? "Сброс..." : "Пройти заново (без XP)"}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     )
