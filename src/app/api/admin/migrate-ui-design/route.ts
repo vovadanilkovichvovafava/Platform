@@ -323,44 +323,7 @@ export async function PUT() {
     // Create PROJECT modules
     const maxOrder = modules.length > 0 ? Math.max(...modules.map(m => m.order)) : 6
 
-    // Project 1: Medium (accessible first)
-    const existingMediumProject = await prisma.module.findFirst({
-      where: { trailId: trail.id, title: { contains: "доставки еды" } }
-    })
-
-    if (!existingMediumProject) {
-      await prisma.module.create({
-        data: {
-          trailId: trail.id,
-          slug: `ui-project-food-delivery-${Date.now()}`,
-          title: "Проект: Приложение доставки еды",
-          description: "Мобильное приложение — основной флоу от выбора ресторана до оформления заказа",
-          content: getMediumProjectContent(),
-          type: "PROJECT",
-          level: "Intermediate",
-          order: maxOrder + 1,
-          duration: "2 дня",
-          points: 500,
-        }
-      })
-      results.push("Project 1: Приложение доставки еды (MEDIUM) - создан")
-    } else {
-      await prisma.module.update({
-        where: { id: existingMediumProject.id },
-        data: {
-          title: "Проект: Приложение доставки еды",
-          description: "Мобильное приложение — основной флоу от выбора ресторана до оформления заказа",
-          content: getMediumProjectContent(),
-          type: "PROJECT",
-          level: "Intermediate",
-          duration: "2 дня",
-          points: 500,
-        }
-      })
-      results.push("Project 1: Приложение доставки еды (MEDIUM) - обновлён")
-    }
-
-    // Project 2: Easy
+    // Project 1: Junior (Easy)
     const existingEasyProject = await prisma.module.findFirst({
       where: { trailId: trail.id, title: { contains: "карточки товара" } }
     })
@@ -370,34 +333,71 @@ export async function PUT() {
         data: {
           trailId: trail.id,
           slug: `ui-project-product-card-${Date.now()}`,
-          title: "Проект: Редизайн карточки товара",
+          title: "Редизайн карточки товара",
           description: "Дизайн экрана карточки товара для интернет-магазина электроники",
           content: getEasyProjectContent(),
           type: "PROJECT",
-          level: "Beginner",
-          order: maxOrder + 2,
+          level: "Junior",
+          order: maxOrder + 1,
           duration: "1 день",
-          points: 300,
+          points: 200,
         }
       })
-      results.push("Project 2: Редизайн карточки товара (EASY) - создан")
+      results.push("Project 1: Редизайн карточки товара (Junior) - создан")
     } else {
       await prisma.module.update({
         where: { id: existingEasyProject.id },
         data: {
-          title: "Проект: Редизайн карточки товара",
+          title: "Редизайн карточки товара",
           description: "Дизайн экрана карточки товара для интернет-магазина электроники",
           content: getEasyProjectContent(),
           type: "PROJECT",
-          level: "Beginner",
+          level: "Junior",
           duration: "1 день",
+          points: 200,
+        }
+      })
+      results.push("Project 1: Редизайн карточки товара (Junior) - обновлён")
+    }
+
+    // Project 2: Middle (Medium - entry point)
+    const existingMediumProject = await prisma.module.findFirst({
+      where: { trailId: trail.id, title: { contains: "доставки еды" } }
+    })
+
+    if (!existingMediumProject) {
+      await prisma.module.create({
+        data: {
+          trailId: trail.id,
+          slug: `ui-project-food-delivery-${Date.now()}`,
+          title: "Приложение доставки еды",
+          description: "Мобильное приложение — основной флоу от выбора ресторана до оформления заказа",
+          content: getMediumProjectContent(),
+          type: "PROJECT",
+          level: "Middle",
+          order: maxOrder + 2,
+          duration: "2 дня",
           points: 300,
         }
       })
-      results.push("Project 2: Редизайн карточки товара (EASY) - обновлён")
+      results.push("Project 2: Приложение доставки еды (Middle) - создан")
+    } else {
+      await prisma.module.update({
+        where: { id: existingMediumProject.id },
+        data: {
+          title: "Приложение доставки еды",
+          description: "Мобильное приложение — основной флоу от выбора ресторана до оформления заказа",
+          content: getMediumProjectContent(),
+          type: "PROJECT",
+          level: "Middle",
+          duration: "2 дня",
+          points: 300,
+        }
+      })
+      results.push("Project 2: Приложение доставки еды (Middle) - обновлён")
     }
 
-    // Project 3: Hard
+    // Project 3: Senior (Hard)
     const existingHardProject = await prisma.module.findFirst({
       where: { trailId: trail.id, title: { contains: "Дизайн-система" } }
     })
@@ -407,31 +407,31 @@ export async function PUT() {
         data: {
           trailId: trail.id,
           slug: `ui-project-design-system-${Date.now()}`,
-          title: "Проект: Дизайн-система для банка",
+          title: "Дизайн-система для банка",
           description: "Полноценная дизайн-система для мобильного банковского приложения",
           content: getHardProjectContent(),
           type: "PROJECT",
-          level: "Middle",
+          level: "Senior",
           order: maxOrder + 3,
           duration: "2 дня",
-          points: 800,
+          points: 500,
         }
       })
-      results.push("Project 3: Дизайн-система для банка (HARD) - создан")
+      results.push("Project 3: Дизайн-система для банка (Senior) - создан")
     } else {
       await prisma.module.update({
         where: { id: existingHardProject.id },
         data: {
-          title: "Проект: Дизайн-система для банка",
+          title: "Дизайн-система для банка",
           description: "Полноценная дизайн-система для мобильного банковского приложения",
           content: getHardProjectContent(),
           type: "PROJECT",
-          level: "Middle",
+          level: "Senior",
           duration: "2 дня",
-          points: 800,
+          points: 500,
         }
       })
-      results.push("Project 3: Дизайн-система для банка (HARD) - обновлён")
+      results.push("Project 3: Дизайн-система для банка (Senior) - обновлён")
     }
 
     return NextResponse.json({
