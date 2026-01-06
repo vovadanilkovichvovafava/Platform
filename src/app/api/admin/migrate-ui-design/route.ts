@@ -172,7 +172,7 @@ export async function PUT() {
       results.push("Module 2: Типографика (CASE_ANALYSIS)")
     }
 
-    // Module 3: Цвет и цветовые системы (THEORY)
+    // Module 3: Цвет и цветовые системы + MATCHING exercise
     if (modules[2]) {
       await prisma.module.update({
         where: { id: modules[2].id },
@@ -180,13 +180,44 @@ export async function PUT() {
           title: "Цвет и цветовые системы",
           description: "Теория цвета, контраст, доступность, тёмная тема",
           content: getModule3Content(),
-          type: "THEORY",
+          type: "PRACTICE",
           duration: "40 мин",
-          points: 80,
+          points: 100,
         },
       })
       await prisma.question.deleteMany({ where: { moduleId: modules[2].id } })
-      results.push("Module 3: Цвет (THEORY)")
+      await prisma.question.create({
+        data: {
+          moduleId: modules[2].id,
+          type: "MATCHING",
+          question: "Сопоставьте цветовые термины с их определениями",
+          options: JSON.stringify([]),
+          correctAnswer: 0,
+          data: JSON.stringify({
+            leftLabel: "Термин",
+            rightLabel: "Определение",
+            leftItems: [
+              { id: "l1", text: "Комплементарная гармония" },
+              { id: "l2", text: "WCAG AA для текста" },
+              { id: "l3", text: "Semantic color: Success" },
+              { id: "l4", text: "Elevation в тёмной теме" },
+              { id: "l5", text: "HSL модель" },
+              { id: "l6", text: "Primary palette" },
+            ],
+            rightItems: [
+              { id: "r1", text: "Противоположные цвета на круге" },
+              { id: "r2", text: "Контраст минимум 4.5:1" },
+              { id: "r3", text: "Зелёный цвет для позитивных действий" },
+              { id: "r4", text: "Чем выше — тем светлее фон" },
+              { id: "r5", text: "Hue, Saturation, Lightness" },
+              { id: "r6", text: "Главный цвет бренда с оттенками" },
+            ],
+            correctPairs: { l1: "r1", l2: "r2", l3: "r3", l4: "r4", l5: "r5", l6: "r6" },
+          }),
+          order: 1,
+        },
+      })
+      results.push("Module 3: Цвет (MATCHING)")
     }
 
     // Module 4: Сетки и композиция + ORDERING exercise
