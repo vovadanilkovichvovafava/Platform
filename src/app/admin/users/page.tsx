@@ -109,7 +109,7 @@ export default function AdminUsersPage() {
 
       if (!res.ok) {
         const data = await res.json()
-        alert(data.error || "Ошибка при удалении")
+        alert(data.error + (data.details ? `\n${data.details}` : "") || "Ошибка при удалении")
         return
       }
 

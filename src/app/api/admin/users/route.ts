@@ -84,7 +84,11 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting user:", error)
-    return NextResponse.json({ error: "Ошибка при удалении пользователя" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json({
+      error: "Ошибка при удалении пользователя",
+      details: errorMessage
+    }, { status: 500 })
   }
 }
 
