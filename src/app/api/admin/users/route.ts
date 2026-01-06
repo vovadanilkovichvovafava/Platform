@@ -42,6 +42,39 @@ export async function GET() {
   }
 }
 
+// DELETE - Delete user
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("id")
+
+    if (!userId) {
+      return NextResponse.json({ error: "ID пользователя не указан" }, { status: 400 })
+    }
+
+    // Don't allow deleting yourself
+    if (userId === session.user.id) {
+      return NextResponse.json({ error: "Нельзя удалить свой аккаунт" }, { status: 400 })
+    }
+
+    // Delete user and all related data (cascade)
+    await prisma.user.delete({
+      where: { id: userId },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting user:", error)
+    return NextResponse.json({ error: "Ошибка при удалении пользователя" }, { status: 500 })
+  }
+}
+
 // PATCH - Update user (change role)
 export async function PATCH(request: NextRequest) {
   try {

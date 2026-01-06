@@ -11,6 +11,7 @@ import {
   GraduationCap,
   Shield,
   BookOpen,
+  Trash2,
 } from "lucide-react"
 
 interface User {
@@ -49,6 +50,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const fetchUsers = async () => {
     try {
@@ -91,6 +93,32 @@ export default function AdminUsersPage() {
       alert("Ошибка при обновлении роли")
     } finally {
       setUpdatingId(null)
+    }
+  }
+
+  const deleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Удалить пользователя "${userName}"? Это действие нельзя отменить.`)) {
+      return
+    }
+
+    try {
+      setDeletingId(userId)
+      const res = await fetch(`/api/admin/users?id=${userId}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.error || "Ошибка при удалении")
+        return
+      }
+
+      // Remove from local state
+      setUsers(users.filter(u => u.id !== userId))
+    } catch {
+      alert("Ошибка при удалении пользователя")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -199,6 +227,7 @@ export default function AdminUsersPage() {
                 const config = roleConfig[user.role]
                 const RoleIcon = config.icon
                 const isUpdating = updatingId === user.id
+                const isDeleting = deletingId === user.id
 
                 return (
                   <div key={user.id} className="p-4 hover:bg-gray-50">
@@ -228,13 +257,23 @@ export default function AdminUsersPage() {
                         <select
                           value={user.role}
                           onChange={(e) => updateRole(user.id, e.target.value as "STUDENT" | "TEACHER" | "ADMIN")}
-                          disabled={isUpdating}
+                          disabled={isUpdating || isDeleting}
                           className="px-3 py-1.5 border rounded-lg text-sm bg-white disabled:opacity-50"
                         >
                           <option value="STUDENT">Студент</option>
                           <option value="TEACHER">Учитель</option>
                           <option value="ADMIN">Админ</option>
                         </select>
+
+                        {/* Delete button */}
+                        <button
+                          onClick={() => deleteUser(user.id, user.name)}
+                          disabled={isDeleting}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Удалить пользователя"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
