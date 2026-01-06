@@ -16,6 +16,7 @@ import {
   FolderGit2,
 } from "lucide-react"
 import { SubmitProjectForm } from "@/components/submit-project-form"
+import { SubmitPracticeForm } from "@/components/submit-practice-form"
 import { AssessmentSection } from "@/components/assessment-section"
 
 const typeIcons: Record<string, typeof BookOpen> = {
@@ -80,9 +81,9 @@ export default async function ModulePage({ params }: Props) {
     },
   })
 
-  // Get submission if project
+  // Get submission if project OR practice with requiresSubmission
   let submission = null
-  if (courseModule.type === "PROJECT") {
+  if (courseModule.type === "PROJECT" || courseModule.requiresSubmission) {
     submission = await prisma.submission.findFirst({
       where: {
         userId: session.user.id,
@@ -94,6 +95,8 @@ export default async function ModulePage({ params }: Props) {
       },
     })
   }
+
+  const requiresSubmission = courseModule.requiresSubmission
 
   // Get question attempts for quiz
   const questionAttempts = await prisma.questionAttempt.findMany({
@@ -242,7 +245,7 @@ export default async function ModulePage({ params }: Props) {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             {isProject ? (
               <Card>
                 <CardHeader>
@@ -311,27 +314,109 @@ export default async function ModulePage({ params }: Props) {
                 </CardContent>
               </Card>
             ) : (
-              /* Assessment Section - handles quiz + completion */
-              <AssessmentSection
-                questions={courseModule.questions.map((q) => ({
-                  id: q.id,
-                  type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
-                  question: q.question,
-                  options: safeJsonParse<string[]>(q.options, []),
-                  data: q.data ? safeJsonParse(q.data, null) : null,
-                  order: q.order,
-                }))}
-                initialAttempts={questionAttempts.map((a) => ({
-                  questionId: a.questionId,
-                  isCorrect: a.isCorrect,
-                  attempts: a.attempts,
-                  earnedScore: a.earnedScore,
-                }))}
-                moduleId={courseModule.id}
-                trailSlug={courseModule.trail.slug}
-                moduleType={courseModule.type}
-                isCompleted={isCompleted}
-              />
+              <>
+                {/* Assessment Section - handles quiz + completion */}
+                <AssessmentSection
+                  questions={courseModule.questions.map((q) => ({
+                    id: q.id,
+                    type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
+                    question: q.question,
+                    options: safeJsonParse<string[]>(q.options, []),
+                    data: q.data ? safeJsonParse(q.data, null) : null,
+                    order: q.order,
+                  }))}
+                  initialAttempts={questionAttempts.map((a) => ({
+                    questionId: a.questionId,
+                    isCorrect: a.isCorrect,
+                    attempts: a.attempts,
+                    earnedScore: a.earnedScore,
+                  }))}
+                  moduleId={courseModule.id}
+                  trailSlug={courseModule.trail.slug}
+                  moduleType={courseModule.type}
+                  isCompleted={isCompleted}
+                />
+
+                {/* Practice submission form */}
+                {requiresSubmission && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Сдать практическую работу</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {submission ? (
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <div className="text-sm font-medium text-gray-600 mb-2">
+                              Статус работы
+                            </div>
+                            <Badge
+                              className={
+                                submission.status === "APPROVED"
+                                  ? "bg-green-100 text-green-700 border-0"
+                                  : submission.status === "REVISION"
+                                  ? "bg-orange-100 text-orange-700 border-0"
+                                  : submission.status === "FAILED"
+                                  ? "bg-red-100 text-red-700 border-0"
+                                  : "bg-purple-100 text-purple-700 border-0"
+                              }
+                            >
+                              {submission.status === "APPROVED"
+                                ? "Принято"
+                                : submission.status === "REVISION"
+                                ? "На доработку"
+                                : submission.status === "FAILED"
+                                ? "Провал"
+                                : "На проверке"}
+                            </Badge>
+                            {submission.fileUrl && (
+                              <a
+                                href={submission.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-purple-600 hover:underline block mt-2"
+                              >
+                                Посмотреть отправленный файл
+                              </a>
+                            )}
+                          </div>
+
+                          {submission.review && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Оценка</span>
+                                <span className="text-2xl font-bold text-purple-600">
+                                  {submission.review.score}/10
+                                </span>
+                              </div>
+                              {submission.review.comment && (
+                                <div>
+                                  <div className="text-sm font-medium mb-1">
+                                    Комментарий
+                                  </div>
+                                  <p className="text-sm text-gray-600">
+                                    {submission.review.comment}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {submission.status === "REVISION" && (
+                            <SubmitPracticeForm
+                              moduleId={courseModule.id}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <SubmitPracticeForm
+                          moduleId={courseModule.id}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         </div>
