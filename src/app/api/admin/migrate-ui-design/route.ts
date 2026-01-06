@@ -332,15 +332,15 @@ export async function PUT() {
       await prisma.module.create({
         data: {
           trailId: trail.id,
+          slug: `ui-project-food-delivery-${Date.now()}`,
           title: "Проект: Приложение доставки еды",
           description: "Мобильное приложение — основной флоу от выбора ресторана до оформления заказа",
           content: getMediumProjectContent(),
           type: "PROJECT",
-          difficulty: "MEDIUM",
+          level: "Intermediate",
           order: maxOrder + 1,
           duration: "2 дня",
           points: 500,
-          isLocked: false,
         }
       })
       results.push("Project 1: Приложение доставки еды (MEDIUM) - создан")
@@ -352,16 +352,15 @@ export async function PUT() {
           description: "Мобильное приложение — основной флоу от выбора ресторана до оформления заказа",
           content: getMediumProjectContent(),
           type: "PROJECT",
-          difficulty: "MEDIUM",
+          level: "Intermediate",
           duration: "2 дня",
           points: 500,
-          isLocked: false,
         }
       })
       results.push("Project 1: Приложение доставки еды (MEDIUM) - обновлён")
     }
 
-    // Project 2: Easy (locked)
+    // Project 2: Easy
     const existingEasyProject = await prisma.module.findFirst({
       where: { trailId: trail.id, title: { contains: "карточки товара" } }
     })
@@ -370,15 +369,15 @@ export async function PUT() {
       await prisma.module.create({
         data: {
           trailId: trail.id,
+          slug: `ui-project-product-card-${Date.now()}`,
           title: "Проект: Редизайн карточки товара",
           description: "Дизайн экрана карточки товара для интернет-магазина электроники",
           content: getEasyProjectContent(),
           type: "PROJECT",
-          difficulty: "EASY",
+          level: "Beginner",
           order: maxOrder + 2,
           duration: "1 день",
           points: 300,
-          isLocked: true,
         }
       })
       results.push("Project 2: Редизайн карточки товара (EASY) - создан")
@@ -390,16 +389,15 @@ export async function PUT() {
           description: "Дизайн экрана карточки товара для интернет-магазина электроники",
           content: getEasyProjectContent(),
           type: "PROJECT",
-          difficulty: "EASY",
+          level: "Beginner",
           duration: "1 день",
           points: 300,
-          isLocked: true,
         }
       })
       results.push("Project 2: Редизайн карточки товара (EASY) - обновлён")
     }
 
-    // Project 3: Hard (locked)
+    // Project 3: Hard
     const existingHardProject = await prisma.module.findFirst({
       where: { trailId: trail.id, title: { contains: "Дизайн-система" } }
     })
@@ -408,15 +406,15 @@ export async function PUT() {
       await prisma.module.create({
         data: {
           trailId: trail.id,
+          slug: `ui-project-design-system-${Date.now()}`,
           title: "Проект: Дизайн-система для банка",
           description: "Полноценная дизайн-система для мобильного банковского приложения",
           content: getHardProjectContent(),
           type: "PROJECT",
-          difficulty: "HARD",
+          level: "Middle",
           order: maxOrder + 3,
           duration: "2 дня",
           points: 800,
-          isLocked: true,
         }
       })
       results.push("Project 3: Дизайн-система для банка (HARD) - создан")
@@ -428,10 +426,9 @@ export async function PUT() {
           description: "Полноценная дизайн-система для мобильного банковского приложения",
           content: getHardProjectContent(),
           type: "PROJECT",
-          difficulty: "HARD",
+          level: "Middle",
           duration: "2 дня",
           points: 800,
-          isLocked: true,
         }
       })
       results.push("Project 3: Дизайн-система для банка (HARD) - обновлён")
