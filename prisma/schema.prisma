@@ -73,20 +73,21 @@ model Trail {
 }
 
 model Module {
-  id           String   @id @default(cuid())
-  slug         String   @unique
-  title        String
-  description  String
-  type         String   @default("THEORY") // THEORY, PRACTICE, PROJECT
-  level        String   @default("Beginner") // Beginner, Intermediate, Junior, Middle, Senior
-  points       Int      @default(50)
-  duration     String
-  content      String?
-  requirements String?
-  order        Int      @default(0)
-  trailId      String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  title              String
+  description        String
+  type               String   @default("THEORY") // THEORY, PRACTICE, PROJECT
+  level              String   @default("Beginner") // Beginner, Intermediate, Junior, Middle, Senior
+  points             Int      @default(50)
+  duration           String
+  content            String?
+  requirements       String?
+  requiresSubmission Boolean  @default(false) // If true, students must upload file for review
+  order              Int      @default(0)
+  trailId            String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   trail       Trail            @relation(fields: [trailId], references: [id], onDelete: Cascade)
   units       Unit[]

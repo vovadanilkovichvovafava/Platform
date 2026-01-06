@@ -748,6 +748,7 @@ export async function POST() {
           points: mod.id === 0 ? 50 : 100,
           duration: mod.id === 0 ? "15 мин" : "2-3 часа",
           order: mod.id,
+          requiresSubmission: moduleType === "PRACTICE", // PRACTICE modules require file submission
         },
       })
 
