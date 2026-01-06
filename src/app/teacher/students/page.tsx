@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -140,8 +141,9 @@ export default async function TeacherStudentsPage() {
             const progressPercent = maxXP > 0 ? Math.round((student.totalXP / maxXP) * 100) : 0
 
             return (
-              <Card key={student.id}>
-                <CardContent className="p-6">
+              <Link key={student.id} href={`/teacher/students/${student.id}`}>
+                <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer">
+                  <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row md:items-center gap-4">
                     {/* Avatar & Info */}
                     <div className="flex items-center gap-4 flex-1">
@@ -258,8 +260,9 @@ export default async function TeacherStudentsPage() {
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             )
           })}
         </div>
