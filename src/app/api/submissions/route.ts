@@ -25,6 +25,15 @@ const submissionSchema = z.object({
     )
     .optional()
     .or(z.literal("")),
+  fileUrl: z
+    .string()
+    .url("Некорректная ссылка на файл")
+    .refine(
+      (url) => url.startsWith("https://"),
+      "Ссылка должна использовать HTTPS"
+    )
+    .optional()
+    .or(z.literal("")),
   comment: z.string().max(2000, "Комментарий слишком длинный").optional(),
 })
 
@@ -45,9 +54,9 @@ export async function POST(request: Request) {
     const body = await request.json()
     const data = submissionSchema.parse(body)
 
-    if (!data.githubUrl && !data.deployUrl) {
+    if (!data.githubUrl && !data.deployUrl && !data.fileUrl) {
       return NextResponse.json(
-        { error: "Укажите хотя бы GitHub или ссылку на деплой" },
+        { error: "Укажите хотя бы одну ссылку (GitHub, деплой или файл)" },
         { status: 400 }
       )
     }
@@ -64,9 +73,10 @@ export async function POST(request: Request) {
       )
     }
 
-    if (courseModule.type !== "PROJECT") {
+    // Разрешаем отправку для проектов и модулей с requiresSubmission
+    if (courseModule.type !== "PROJECT" && !courseModule.requiresSubmission) {
       return NextResponse.json(
-        { error: "Можно отправлять только проекты" },
+        { error: "Этот модуль не требует отправки работы" },
         { status: 400 }
       )
     }
@@ -95,6 +105,7 @@ export async function POST(request: Request) {
         moduleId: data.moduleId,
         githubUrl: data.githubUrl || null,
         deployUrl: data.deployUrl || null,
+        fileUrl: data.fileUrl || null,
         comment: data.comment || null,
         status: "PENDING",
       },
