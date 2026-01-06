@@ -13,6 +13,7 @@ const moduleUpdateSchema = z.object({
   level: z.enum(["Beginner", "Intermediate", "Junior", "Middle", "Senior"]).optional(),
   points: z.number().optional(),
   duration: z.string().optional(),
+  requiresSubmission: z.boolean().optional(),
 })
 
 interface Props {
