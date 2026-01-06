@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// Обновляет практические модули Digital Marketing чтобы требовали отправку файла
+// Обновляет модули Digital Marketing чтобы требовали отправку файла
 export async function POST() {
   try {
     const session = await getServerSession(authOptions)
@@ -12,12 +12,17 @@ export async function POST() {
       return NextResponse.json({ error: "Только для админов" }, { status: 403 })
     }
 
-    // Обновляем практики Digital Marketing
+    // Обновляем ВСЕ модули Digital Marketing (кроме проектов - у них своя форма)
     const result = await prisma.module.updateMany({
       where: {
         slug: {
-          in: ["marketing-audience", "marketing-copywriting"]
-        }
+          in: [
+            "marketing-intro",      // Теория с заданиями
+            "marketing-audience",   // Практика
+            "marketing-copywriting" // Практика
+          ]
+        },
+        type: { not: "PROJECT" }
       },
       data: {
         requiresSubmission: true
