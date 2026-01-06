@@ -42,18 +42,18 @@ export async function POST(request: Request) {
     }
 
     // Check if module exists and is a project
-    const module = await prisma.module.findUnique({
+    const courseModule = await prisma.module.findUnique({
       where: { id: data.moduleId },
     })
 
-    if (!module) {
+    if (!courseModule) {
       return NextResponse.json(
         { error: "Модуль не найден" },
         { status: 404 }
       )
     }
 
-    if (module.type !== "PROJECT") {
+    if (courseModule.type !== "PROJECT") {
       return NextResponse.json(
         { error: "Можно отправлять только проекты" },
         { status: 400 }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       where: {
         userId_trailId: {
           userId: session.user.id,
-          trailId: module.trailId,
+          trailId: courseModule.trailId,
         },
       },
     })

@@ -116,6 +116,7 @@ export default function TeacherModuleEditorPage({ params }: Props) {
 
   useEffect(() => {
     fetchModule()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const saveModule = async () => {

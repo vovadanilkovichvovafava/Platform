@@ -11,7 +11,6 @@ import {
   GraduationCap,
   Shield,
   BookOpen,
-  FileText,
 } from "lucide-react"
 
 interface User {

@@ -39,7 +39,7 @@ export default async function TrailsPage() {
   })
 
   let enrolledTrailIds: string[] = []
-  let progressMap: Record<string, number> = {}
+  const progressMap: Record<string, number> = {}
 
   if (session) {
     const enrollments = await prisma.enrollment.findMany({

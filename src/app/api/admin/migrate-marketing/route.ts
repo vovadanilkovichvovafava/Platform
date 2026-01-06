@@ -148,7 +148,7 @@ export async function POST() {
         .replace(/(^-|-$)/g, "")
         .slice(0, 30)}`
 
-      const module = await prisma.module.create({
+      await prisma.module.create({
         data: {
           trailId: trail.id,
           slug,

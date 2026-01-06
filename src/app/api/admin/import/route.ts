@@ -297,7 +297,7 @@ async function parseAndImport(text: string) {
     for (let order = 0; order < trailData.modules.length; order++) {
       const moduleData = trailData.modules[order]
 
-      const module = await prisma.module.upsert({
+      const createdModule = await prisma.module.upsert({
         where: { slug: moduleData.slug },
         update: {
           title: moduleData.title,
@@ -325,7 +325,7 @@ async function parseAndImport(text: string) {
 
       // Delete existing questions for this module and create new ones
       await prisma.question.deleteMany({
-        where: { moduleId: module.id },
+        where: { moduleId: createdModule.id },
       })
 
       for (let qOrder = 0; qOrder < moduleData.questions.length; qOrder++) {

@@ -140,7 +140,6 @@ export default function StudentAccessPage() {
 
   // Group access by trail
   const restrictedTrails = trails.filter((t) => t.isRestricted)
-  const publicTrails = trails.filter((t) => !t.isRestricted)
 
   const accessByTrail = restrictedTrails.map((trail) => ({
     trail,

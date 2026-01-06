@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, use } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { safeJsonParse } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -84,19 +83,12 @@ const typeIcons: Record<string, typeof BookOpen> = {
   PROJECT: FolderGit2,
 }
 
-const typeLabels: Record<string, string> = {
-  THEORY: "Теория",
-  PRACTICE: "Практика",
-  PROJECT: "Проект",
-}
-
 interface Props {
   params: Promise<{ id: string }>
 }
 
 export default function ModuleEditorPage({ params }: Props) {
   const { id } = use(params)
-  const router = useRouter()
   const [module, setModule] = useState<Module | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -154,6 +146,7 @@ export default function ModuleEditorPage({ params }: Props) {
 
   useEffect(() => {
     fetchModule()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const saveModule = async () => {

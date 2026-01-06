@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback, useRef, useEffect } from "react"
+import React, { useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Check, RotateCcw } from "lucide-react"
 

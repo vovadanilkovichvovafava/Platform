@@ -559,11 +559,11 @@ Vibe Coding — **контроль результата**. Если AI пред�
     },
   }
 
-  for (const module of vibeCoderModules) {
-    const createdModule = await prisma.module.create({ data: { ...module, trailId: vibeCoder.id } })
+  for (const mod of vibeCoderModules) {
+    const createdModule = await prisma.module.create({ data: { ...mod, trailId: vibeCoder.id } })
 
     // Add regular single-choice questions
-    const questions = vibeCoderQuestions[module.slug]
+    const questions = vibeCoderQuestions[mod.slug]
     if (questions) {
       for (let i = 0; i < questions.length; i++) {
         await prisma.question.create({
@@ -580,7 +580,7 @@ Vibe Coding — **контроль результата**. Если AI пред�
     }
 
     // Add interactive exercises for new practice modules
-    const interactiveExercise = vibeCoderInteractiveExercises[module.slug]
+    const interactiveExercise = vibeCoderInteractiveExercises[mod.slug]
     if (interactiveExercise) {
       await prisma.question.create({
         data: {
@@ -814,10 +814,10 @@ Vibe Coding — **контроль результата**. Если AI пред�
     ],
   }
 
-  for (const module of marketerModules) {
-    const createdModule = await prisma.module.create({ data: { ...module, trailId: marketer.id } })
+  for (const mod of marketerModules) {
+    const createdModule = await prisma.module.create({ data: { ...mod, trailId: marketer.id } })
 
-    const questions = marketerQuestions[module.slug]
+    const questions = marketerQuestions[mod.slug]
     if (questions) {
       for (let i = 0; i < questions.length; i++) {
         await prisma.question.create({
@@ -1057,10 +1057,10 @@ Atoms → Molecules → Organisms → Templates → Pages`,
     ],
   }
 
-  for (const module of uiDesignerModules) {
-    const createdModule = await prisma.module.create({ data: { ...module, trailId: uiDesigner.id } })
+  for (const mod of uiDesignerModules) {
+    const createdModule = await prisma.module.create({ data: { ...mod, trailId: uiDesigner.id } })
 
-    const questions = uiDesignerQuestions[module.slug]
+    const questions = uiDesignerQuestions[mod.slug]
     if (questions) {
       for (let i = 0; i < questions.length; i++) {
         await prisma.question.create({
@@ -1322,10 +1322,10 @@ AI для HR / маркетинга / продаж / образования / ф
     ],
   }
 
-  for (const module of rndCreatorModules) {
-    const createdModule = await prisma.module.create({ data: { ...module, trailId: rndCreator.id } })
+  for (const mod of rndCreatorModules) {
+    const createdModule = await prisma.module.create({ data: { ...mod, trailId: rndCreator.id } })
 
-    const questions = rndCreatorQuestions[module.slug]
+    const questions = rndCreatorQuestions[mod.slug]
     if (questions) {
       for (let i = 0; i < questions.length; i++) {
         await prisma.question.create({

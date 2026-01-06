@@ -10,10 +10,9 @@ import { Loader2, Upload, Github, Globe } from "lucide-react"
 
 interface SubmitProjectFormProps {
   moduleId: string
-  moduleSlug: string
 }
 
-export function SubmitProjectForm({ moduleId, moduleSlug }: SubmitProjectFormProps) {
+export function SubmitProjectForm({ moduleId }: SubmitProjectFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

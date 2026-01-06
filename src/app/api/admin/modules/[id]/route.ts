@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
-    const module = await prisma.module.findUnique({
+    const courseModule = await prisma.module.findUnique({
       where: { id },
       include: {
         trail: true,
@@ -39,11 +39,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       },
     })
 
-    if (!module) {
+    if (!courseModule) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    return NextResponse.json(module)
+    return NextResponse.json(courseModule)
   } catch (error) {
     console.error("Error fetching module:", error)
     return NextResponse.json({ error: "Ошибка при получении модуля" }, { status: 500 })
@@ -91,12 +91,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const body = await request.json()
     const data = moduleUpdateSchema.parse(body)
 
-    const module = await prisma.module.update({
+    const updatedModule = await prisma.module.update({
       where: { id },
       data,
     })
 
-    return NextResponse.json(module)
+    return NextResponse.json(updatedModule)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors[0].message }, { status: 400 })

@@ -164,12 +164,12 @@ export default function AdminContentPage() {
 
       if (!res.ok) throw new Error("Failed to create")
 
-      const module = await res.json()
+      const newModule = await res.json()
       setNewModuleTitle("")
       setNewModuleType("THEORY")
       setShowModuleModal(false)
       // Navigate to edit the new module
-      router.push(`/admin/content/modules/${module.id}`)
+      router.push(`/admin/content/modules/${newModule.id}`)
     } catch {
       setError("Ошибка создания модуля")
     } finally {

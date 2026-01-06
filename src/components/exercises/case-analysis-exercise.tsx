@@ -16,7 +16,6 @@ interface CaseAnalysisExerciseProps {
   caseContent: string
   caseLabel?: string
   options: CaseOption[]
-  minCorrectRequired?: number
   onComplete: (isCorrect: boolean, attempts: number) => void
   disabled?: boolean
 }
@@ -26,7 +25,6 @@ export function CaseAnalysisExercise({
   caseContent,
   caseLabel = "Пример",
   options,
-  minCorrectRequired,
   onComplete,
   disabled = false,
 }: CaseAnalysisExerciseProps) {
@@ -37,7 +35,6 @@ export function CaseAnalysisExercise({
 
   const correctOptionIds = options.filter((o) => o.isCorrect).map((o) => o.id)
   const correctCount = correctOptionIds.length
-  const requiredCount = minCorrectRequired || correctCount
   const maxSelections = correctCount // Cannot select more than correct answers exist
 
   const toggleOption = useCallback((id: string) => {

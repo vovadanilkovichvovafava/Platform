@@ -37,21 +37,6 @@ const typeIcons: Record<string, LucideIcon> = {
   PROJECT: FolderGit2,
 }
 
-const levelLabels: Record<string, string> = {
-  Junior: "Начальный",
-  Middle: "Средний",
-  Senior: "Продвинутый",
-  JUNIOR: "Начальный",
-  MIDDLE: "Средний",
-  SENIOR: "Продвинутый",
-}
-
-const levelColors: Record<string, string> = {
-  Junior: "bg-green-100 text-green-700",
-  Middle: "bg-blue-100 text-blue-700",
-  Senior: "bg-purple-100 text-purple-700",
-}
-
 interface Props {
   params: Promise<{ slug: string }>
 }
@@ -98,7 +83,7 @@ export default async function TrailPage({ params }: Props) {
   }
 
   let isEnrolled = false
-  let moduleProgressMap: Record<string, string> = {}
+  const moduleProgressMap: Record<string, string> = {}
   let taskProgress: { currentLevel: string; middleStatus: string; juniorStatus: string; seniorStatus: string } | null = null
 
   if (session) {
@@ -243,11 +228,6 @@ export default async function TrailPage({ params }: Props) {
       return taskProgress.seniorStatus
     }
     return "LOCKED"
-  }
-
-  const isProjectAvailable = (level: string) => {
-    const status = getProjectStatus(level)
-    return status !== "LOCKED"
   }
 
   return (

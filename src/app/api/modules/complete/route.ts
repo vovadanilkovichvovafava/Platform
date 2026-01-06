@@ -17,12 +17,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get module with trail info
-    const module = await prisma.module.findUnique({
+    const courseModule = await prisma.module.findUnique({
       where: { id: moduleId },
       include: { trail: true },
     })
 
-    if (!module) {
+    if (!courseModule) {
       return NextResponse.json({ error: "Module not found" }, { status: 404 })
     }
 
@@ -100,8 +100,8 @@ export async function POST(request: NextRequest) {
     // Find next module and start it
     const nextModule = await prisma.module.findFirst({
       where: {
-        trailId: module.trailId,
-        order: { gt: module.order },
+        trailId: courseModule.trailId,
+        order: { gt: courseModule.order },
         type: { not: "PROJECT" }, // Only auto-start non-project modules
       },
       orderBy: { order: "asc" },

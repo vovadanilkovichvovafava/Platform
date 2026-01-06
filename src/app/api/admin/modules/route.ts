@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       _max: { order: true },
     })
 
-    const module = await prisma.module.create({
+    const createdModule = await prisma.module.create({
       data: {
         ...data,
         slug: `${slug}-${Date.now()}`, // Ensure unique slug
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(module)
+    return NextResponse.json(createdModule)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors[0].message }, { status: 400 })

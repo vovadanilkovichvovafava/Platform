@@ -111,9 +111,7 @@ interface AssessmentSectionProps {
   questions: Question[]
   initialAttempts: QuestionAttempt[]
   moduleId: string
-  moduleSlug: string
   trailSlug: string
-  modulePoints: number
   moduleType: string
   isCompleted: boolean
 }
@@ -122,9 +120,7 @@ export function AssessmentSection({
   questions,
   initialAttempts,
   moduleId,
-  moduleSlug,
   trailSlug,
-  modulePoints,
   moduleType,
   isCompleted: initialCompleted,
 }: AssessmentSectionProps) {
@@ -146,6 +142,51 @@ export function AssessmentSection({
   const [attemptData, setAttemptData] = useState<Record<string, QuestionAttempt>>(
     Object.fromEntries((initialAttempts || []).map((a) => [a.questionId, a]))
   )
+  const [isResetting, setIsResetting] = useState(false)
+
+  // Get current question safely (needed for hooks that depend on it)
+  const question = questions[currentQuestion] || null
+  const existingAttempt = question ? attemptData[question.id] : undefined
+  const currentAttempts = existingAttempt?.attempts || 0
+  const isQuestionFinished = existingAttempt?.isCorrect || currentAttempts >= 3
+
+  // Handle completion of interactive exercises (matching, ordering, case analysis)
+  const handleExerciseComplete = useCallback(async (isCorrect: boolean, attemptCount: number) => {
+    if (!question) return
+
+    try {
+      const response = await fetch("/api/questions/answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionId: question.id,
+          selectedAnswer: 0, // Placeholder for non-single-choice
+          isInteractive: true,
+          interactiveResult: isCorrect,
+          interactiveAttempts: attemptCount,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setLastResult(data)
+        setShowResult(true)
+
+        // Update local attempt data
+        setAttemptData((prev) => ({
+          ...prev,
+          [question.id]: {
+            questionId: question.id,
+            isCorrect: data.isCorrect,
+            attempts: data.attempts,
+            earnedScore: data.earnedScore || 0,
+          },
+        }))
+      }
+    } catch (error) {
+      console.error("Error saving exercise result:", error)
+    }
+  }, [question])
 
   // Sync with props on mount and when initialAttempts change
   useEffect(() => {
@@ -153,6 +194,8 @@ export function AssessmentSection({
       Object.fromEntries((initialAttempts || []).map((a) => [a.questionId, a]))
     )
   }, [initialAttempts])
+
+  const remainingAttempts = 3 - currentAttempts
 
   if (questions.length === 0) {
     return (
@@ -163,12 +206,6 @@ export function AssessmentSection({
       </Card>
     )
   }
-
-  const question = questions[currentQuestion]
-  const existingAttempt = attemptData[question?.id]
-  const currentAttempts = existingAttempt?.attempts || 0
-  const remainingAttempts = 3 - currentAttempts
-  const isQuestionFinished = existingAttempt?.isCorrect || currentAttempts >= 3
 
   // Calculate progress
   const totalQuestions = questions.length
@@ -285,44 +322,6 @@ export function AssessmentSection({
     return "text-orange-600"
   }
 
-  // Handle completion of interactive exercises (matching, ordering, case analysis)
-  const handleExerciseComplete = useCallback(async (isCorrect: boolean, attemptCount: number) => {
-    if (!question) return
-
-    try {
-      const response = await fetch("/api/questions/answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId: question.id,
-          selectedAnswer: 0, // Placeholder for non-single-choice
-          isInteractive: true,
-          interactiveResult: isCorrect,
-          interactiveAttempts: attemptCount,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setLastResult(data)
-        setShowResult(true)
-
-        // Update local attempt data
-        setAttemptData((prev) => ({
-          ...prev,
-          [question.id]: {
-            questionId: question.id,
-            isCorrect: data.isCorrect,
-            attempts: data.attempts || attemptCount,
-            earnedScore: data.earnedScore || 0,
-          },
-        }))
-      }
-    } catch (error) {
-      console.error("Error saving exercise result:", error)
-    }
-  }, [question])
-
   // Render question content based on type
   const renderQuestionContent = () => {
     if (!question) return null
@@ -373,7 +372,6 @@ export function AssessmentSection({
           caseContent={data.caseContent}
           caseLabel={data.caseLabel}
           options={data.options}
-          minCorrectRequired={data.minCorrectRequired}
           onComplete={handleExerciseComplete}
           disabled={isQuestionFinished}
         />
@@ -422,8 +420,6 @@ export function AssessmentSection({
 
   // Check if current question is interactive type
   const isInteractiveQuestion = question && ["MATCHING", "ORDERING", "CASE_ANALYSIS"].includes(question.type || "")
-
-  const [isResetting, setIsResetting] = useState(false)
 
   const handleReset = async () => {
     if (isResetting) return

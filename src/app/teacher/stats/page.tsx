@@ -10,8 +10,6 @@ import {
   Users,
   FileText,
   CheckCircle2,
-  Clock,
-  AlertCircle,
   Trophy,
   TrendingUp,
   BookOpen,
