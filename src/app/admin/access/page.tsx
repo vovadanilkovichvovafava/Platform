@@ -294,7 +294,7 @@ export default function StudentAccessPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex flex-col md:flex-row md:items-end gap-4">
                 {/* Student search */}
                 <div className="flex-1" ref={studentSearchRef}>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
