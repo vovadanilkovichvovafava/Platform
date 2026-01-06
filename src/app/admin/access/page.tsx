@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import {
   Check,
   AlertCircle,
   BookOpen,
+  Search,
 } from "lucide-react"
 
 interface Student {
@@ -49,6 +50,40 @@ export default function StudentAccessPage() {
   const [selectedStudent, setSelectedStudent] = useState<string>("")
   const [selectedTrail, setSelectedTrail] = useState<string>("")
   const [assigning, setAssigning] = useState(false)
+
+  // Search states
+  const [studentSearch, setStudentSearch] = useState("")
+  const [trailSearch, setTrailSearch] = useState("")
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false)
+  const [showTrailDropdown, setShowTrailDropdown] = useState(false)
+  const studentSearchRef = useRef<HTMLDivElement>(null)
+  const trailSearchRef = useRef<HTMLDivElement>(null)
+
+  // Filter students by email search
+  const filteredStudents = students.filter(
+    (s) =>
+      s.email.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      s.name.toLowerCase().includes(studentSearch.toLowerCase())
+  )
+
+  // Filter trails by title search
+  const filteredRestrictedTrails = trails
+    .filter((t) => t.isRestricted)
+    .filter((t) => t.title.toLowerCase().includes(trailSearch.toLowerCase()))
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (studentSearchRef.current && !studentSearchRef.current.contains(event.target as Node)) {
+        setShowStudentDropdown(false)
+      }
+      if (trailSearchRef.current && !trailSearchRef.current.contains(event.target as Node)) {
+        setShowTrailDropdown(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const fetchData = async () => {
     try {
@@ -116,6 +151,8 @@ export default function StudentAccessPage() {
 
       setSelectedStudent("")
       setSelectedTrail("")
+      setStudentSearch("")
+      setTrailSearch("")
       fetchData()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка выдачи доступа")
@@ -258,40 +295,114 @@ export default function StudentAccessPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
+                {/* Student search */}
+                <div className="flex-1" ref={studentSearchRef}>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
                     Студент
                   </label>
-                  <select
-                    value={selectedStudent}
-                    onChange={(e) => setSelectedStudent(e.target.value)}
-                    className="w-full p-2 border rounded-lg"
-                  >
-                    <option value="">Выберите студента...</option>
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.email})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={studentSearch}
+                        onChange={(e) => {
+                          setStudentSearch(e.target.value)
+                          setShowStudentDropdown(true)
+                          if (!e.target.value) setSelectedStudent("")
+                        }}
+                        onFocus={() => setShowStudentDropdown(true)}
+                        placeholder="Поиск по email..."
+                        className="w-full p-2 pl-10 border rounded-lg"
+                      />
+                    </div>
+                    {showStudentDropdown && studentSearch && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
+                        {filteredStudents.length === 0 ? (
+                          <div className="p-3 text-gray-500 text-sm">Не найдено</div>
+                        ) : (
+                          filteredStudents.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedStudent(s.id)
+                                setStudentSearch(s.email)
+                                setShowStudentDropdown(false)
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                                selectedStudent === s.id ? "bg-blue-50" : ""
+                              }`}
+                            >
+                              <div className="font-medium">{s.name}</div>
+                              <div className="text-sm text-gray-500">{s.email}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {selectedStudent && (
+                    <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      Выбран: {students.find(s => s.id === selectedStudent)?.name}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex-1">
+                {/* Trail search */}
+                <div className="flex-1" ref={trailSearchRef}>
                   <label className="text-sm font-medium text-gray-700 block mb-2">
                     Trail (ограниченный)
                   </label>
-                  <select
-                    value={selectedTrail}
-                    onChange={(e) => setSelectedTrail(e.target.value)}
-                    className="w-full p-2 border rounded-lg"
-                  >
-                    <option value="">Выберите trail...</option>
-                    {restrictedTrails.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={trailSearch}
+                        onChange={(e) => {
+                          setTrailSearch(e.target.value)
+                          setShowTrailDropdown(true)
+                          if (!e.target.value) setSelectedTrail("")
+                        }}
+                        onFocus={() => setShowTrailDropdown(true)}
+                        placeholder="Поиск по названию..."
+                        className="w-full p-2 pl-10 border rounded-lg"
+                      />
+                    </div>
+                    {showTrailDropdown && trailSearch && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
+                        {filteredRestrictedTrails.length === 0 ? (
+                          <div className="p-3 text-gray-500 text-sm">Не найдено</div>
+                        ) : (
+                          filteredRestrictedTrails.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTrail(t.id)
+                                setTrailSearch(t.title)
+                                setShowTrailDropdown(false)
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                                selectedTrail === t.id ? "bg-blue-50" : ""
+                              }`}
+                            >
+                              <div className="font-medium">{t.title}</div>
+                              <div className="text-sm text-gray-500">/{t.slug}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {selectedTrail && (
+                    <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      Выбран: {trails.find(t => t.id === selectedTrail)?.title}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-end">
