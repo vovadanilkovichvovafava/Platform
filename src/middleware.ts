@@ -41,8 +41,8 @@ const authMiddleware = withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
-    // Protect teacher routes
-    if (path.startsWith("/teacher") && token?.role !== "TEACHER") {
+    // Protect teacher routes (allow both TEACHER and ADMIN)
+    if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
