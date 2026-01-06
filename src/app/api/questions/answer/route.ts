@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { z } from "zod"
+import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
+
+const answerSchema = z.object({
+  questionId: z.string().min(1, "ID вопроса обязателен"),
+  selectedAnswer: z.number().min(0, "Ответ должен быть числом"),
+})
 
 // Scoring based on attempts: 1st = 100%, 2nd = 65%, 3rd = 35%
 function calculateScore(basePoints: number, attempts: number): number {
@@ -14,14 +21,17 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    const { questionId, selectedAnswer } = await request.json()
-
-    if (!questionId || selectedAnswer === undefined) {
-      return NextResponse.json({ error: "Missing questionId or selectedAnswer" }, { status: 400 })
+    // Rate limiting - 60 ответов в минуту
+    const rateLimit = checkRateLimit(`answers:${session.user.id}`, RATE_LIMITS.api)
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetIn)
     }
+
+    const body = await request.json()
+    const { questionId, selectedAnswer } = answerSchema.parse(body)
 
     // Get question with module info
     const question = await prisma.question.findUnique({
@@ -134,7 +144,13 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
     console.error("Error answering question:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Внутренняя ошибка сервера" }, { status: 500 })
   }
 }

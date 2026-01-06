@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
 
 const submissionSchema = z.object({
   moduleId: z.string().min(1),
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
 
     if (!session) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
+    }
+
+    // Rate limiting - 10 отправок в час
+    const rateLimit = checkRateLimit(`submissions:${session.user.id}`, RATE_LIMITS.submissions)
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetIn)
     }
 
     const body = await request.json()
