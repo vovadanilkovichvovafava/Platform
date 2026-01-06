@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
-import { ClipboardList, Users, BarChart3 } from "lucide-react"
+import { ClipboardList, Users, BarChart3, BookOpen } from "lucide-react"
 
 export default async function TeacherLayout({
   children,
@@ -11,7 +11,8 @@ export default async function TeacherLayout({
 }) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "TEACHER") {
+  // Allow both TEACHER and ADMIN roles
+  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
     redirect("/dashboard")
   }
 
@@ -51,6 +52,13 @@ export default async function TeacherLayout({
               >
                 <BarChart3 className="h-5 w-5" />
                 Статистика
+              </Link>
+              <Link
+                href="/teacher/content"
+                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                <BookOpen className="h-5 w-5" />
+                Контент
               </Link>
             </nav>
           </div>

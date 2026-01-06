@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Button } from "@/components/ui/button"
+import { safeJsonParse } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -16,7 +16,8 @@ import {
   FolderGit2,
 } from "lucide-react"
 import { SubmitProjectForm } from "@/components/submit-project-form"
-import { QuizSection } from "@/components/quiz-section"
+import { SubmitPracticeForm } from "@/components/submit-practice-form"
+import { AssessmentSection } from "@/components/assessment-section"
 
 const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
@@ -38,7 +39,7 @@ export default async function ModulePage({ params }: Props) {
   const { slug } = await params
   const session = await getServerSession(authOptions)
 
-  if (!session) {
+  if (!session || !session.user?.id) {
     redirect("/login")
   }
 
@@ -80,9 +81,9 @@ export default async function ModulePage({ params }: Props) {
     },
   })
 
-  // Get submission if project
+  // Get submission if project OR practice with requiresSubmission
   let submission = null
-  if (courseModule.type === "PROJECT") {
+  if (courseModule.type === "PROJECT" || courseModule.requiresSubmission) {
     submission = await prisma.submission.findFirst({
       where: {
         userId: session.user.id,
@@ -94,6 +95,8 @@ export default async function ModulePage({ params }: Props) {
       },
     })
   }
+
+  const requiresSubmission = courseModule.requiresSubmission
 
   // Get question attempts for quiz
   const questionAttempts = await prisma.questionAttempt.findMany({
@@ -107,93 +110,15 @@ export default async function ModulePage({ params }: Props) {
   const isProject = courseModule.type === "PROJECT"
   const TypeIcon = typeIcons[courseModule.type]
 
-  // Capture values for server action closure
-  const moduleId = courseModule.id
-  const modulePoints = courseModule.points
-  const moduleTrailId = courseModule.trailId
-  const moduleOrder = courseModule.order
-  const trailSlug = courseModule.trail.slug
-
-  async function handleComplete() {
-    "use server"
-
-    const session = await getServerSession(authOptions)
-    if (!session) return
-
-    // Check if already completed to prevent double XP
-    const existingProgress = await prisma.moduleProgress.findUnique({
-      where: {
-        userId_moduleId: {
-          userId: session.user.id,
-          moduleId: moduleId,
-        },
-      },
+  // Parse inline markdown (bold)
+  const parseInlineMarkdown = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g)
+    return parts.map((part, idx) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={idx}>{part.slice(2, -2)}</strong>
+      }
+      return part
     })
-
-    const wasAlreadyCompleted = existingProgress?.status === "COMPLETED"
-
-    // Update progress
-    await prisma.moduleProgress.upsert({
-      where: {
-        userId_moduleId: {
-          userId: session.user.id,
-          moduleId: moduleId,
-        },
-      },
-      update: {
-        status: "COMPLETED",
-        completedAt: new Date(),
-      },
-      create: {
-        userId: session.user.id,
-        moduleId: moduleId,
-        status: "COMPLETED",
-        startedAt: new Date(),
-        completedAt: new Date(),
-      },
-    })
-
-    // Add XP only if not already completed
-    if (!wasAlreadyCompleted) {
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: {
-          totalXP: { increment: modulePoints },
-        },
-      })
-    }
-
-    // Start next module if exists
-    const nextModule = await prisma.module.findFirst({
-      where: {
-        trailId: moduleTrailId,
-        order: { gt: moduleOrder },
-      },
-      orderBy: { order: "asc" },
-    })
-
-    if (nextModule) {
-      await prisma.moduleProgress.upsert({
-        where: {
-          userId_moduleId: {
-            userId: session.user.id,
-            moduleId: nextModule.id,
-          },
-        },
-        update: {
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
-        },
-        create: {
-          userId: session.user.id,
-          moduleId: nextModule.id,
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
-        },
-      })
-    }
-
-    redirect(`/trails/${trailSlug}`)
   }
 
   // Simple markdown-like rendering
@@ -203,51 +128,44 @@ export default async function ModulePage({ params }: Props) {
       if (line.startsWith("# ")) {
         return (
           <h1 key={i} className="text-2xl font-bold mt-8 mb-4">
-            {line.slice(2)}
+            {parseInlineMarkdown(line.slice(2))}
           </h1>
         )
       }
       if (line.startsWith("## ")) {
         return (
           <h2 key={i} className="text-xl font-semibold mt-6 mb-3">
-            {line.slice(3)}
+            {parseInlineMarkdown(line.slice(3))}
           </h2>
         )
       }
       if (line.startsWith("### ")) {
         return (
           <h3 key={i} className="text-lg font-medium mt-4 mb-2">
-            {line.slice(4)}
+            {parseInlineMarkdown(line.slice(4))}
           </h3>
         )
       }
       if (line.startsWith("- ")) {
         return (
           <li key={i} className="ml-4 mb-1">
-            {line.slice(2)}
+            {parseInlineMarkdown(line.slice(2))}
           </li>
         )
       }
-      if (line.startsWith("1. ") || line.startsWith("2. ") || line.startsWith("3. ") || line.startsWith("4. ")) {
+      if (/^\d+\. /.test(line)) {
         return (
           <li key={i} className="ml-4 mb-1 list-decimal">
-            {line.slice(3)}
+            {parseInlineMarkdown(line.slice(line.indexOf(" ") + 1))}
           </li>
         )
       }
       if (line.trim() === "") {
         return <br key={i} />
       }
-      if (line.startsWith("**") && line.endsWith("**")) {
-        return (
-          <p key={i} className="font-semibold mb-2">
-            {line.slice(2, -2)}
-          </p>
-        )
-      }
       return (
         <p key={i} className="mb-2">
-          {line}
+          {parseInlineMarkdown(line)}
         </p>
       )
     })
@@ -269,10 +187,7 @@ export default async function ModulePage({ params }: Props) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Badge
-                  variant="secondary"
-                  className="bg-gray-100"
-                >
+                <Badge variant="secondary" className="bg-gray-100">
                   <TypeIcon className="h-3 w-3 mr-1" />
                   {typeLabels[courseModule.type]}
                 </Badge>
@@ -283,9 +198,7 @@ export default async function ModulePage({ params }: Props) {
                   </Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {courseModule.title}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">{courseModule.title}</h1>
               <p className="text-gray-600 mt-1">{courseModule.description}</p>
             </div>
 
@@ -329,28 +242,10 @@ export default async function ModulePage({ params }: Props) {
                 </CardContent>
               </Card>
             )}
-
-            {/* Quiz section for theory/practice modules */}
-            {!isProject && courseModule.questions.length > 0 && (
-              <QuizSection
-                questions={courseModule.questions.map((q) => ({
-                  id: q.id,
-                  question: q.question,
-                  options: JSON.parse(q.options) as string[],
-                  order: q.order,
-                }))}
-                attempts={questionAttempts.map((a) => ({
-                  questionId: a.questionId,
-                  isCorrect: a.isCorrect,
-                  attempts: a.attempts,
-                  earnedScore: a.earnedScore,
-                }))}
-              />
-            )}
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             {isProject ? (
               <Card>
                 <CardHeader>
@@ -369,6 +264,8 @@ export default async function ModulePage({ params }: Props) {
                               ? "bg-green-100 text-green-700 border-0"
                               : submission.status === "REVISION"
                               ? "bg-orange-100 text-orange-700 border-0"
+                              : submission.status === "FAILED"
+                              ? "bg-red-100 text-red-700 border-0"
                               : "bg-blue-100 text-blue-700 border-0"
                           }
                         >
@@ -376,6 +273,8 @@ export default async function ModulePage({ params }: Props) {
                             ? "Принято"
                             : submission.status === "REVISION"
                             ? "На доработку"
+                            : submission.status === "FAILED"
+                            ? "Провал"
                             : "На проверке"}
                         </Badge>
                       </div>
@@ -415,39 +314,109 @@ export default async function ModulePage({ params }: Props) {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardContent className="p-6">
-                  {isCompleted ? (
-                    <div className="text-center">
-                      <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                      <h3 className="font-semibold text-lg mb-2">
-                        Модуль завершен!
-                      </h3>
-                      <p className="text-gray-600 text-sm mb-4">
-                        Вы получили {courseModule.points} XP
-                      </p>
-                      <Button asChild variant="outline" className="w-full">
-                        <Link href={`/trails/${courseModule.trail.slug}`}>
-                          Вернуться к trail
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <form action={handleComplete}>
-                      <Button
-                        type="submit"
-                        className="w-full bg-[#2E844A] hover:bg-[#256E3D]"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Завершить модуль
-                      </Button>
-                      <p className="text-xs text-gray-500 text-center mt-3">
-                        Вы получите {courseModule.points} XP
-                      </p>
-                    </form>
-                  )}
-                </CardContent>
-              </Card>
+              <>
+                {/* Assessment Section - handles quiz + completion */}
+                <AssessmentSection
+                  questions={courseModule.questions.map((q) => ({
+                    id: q.id,
+                    type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
+                    question: q.question,
+                    options: safeJsonParse<string[]>(q.options, []),
+                    data: q.data ? safeJsonParse(q.data, null) : null,
+                    order: q.order,
+                  }))}
+                  initialAttempts={questionAttempts.map((a) => ({
+                    questionId: a.questionId,
+                    isCorrect: a.isCorrect,
+                    attempts: a.attempts,
+                    earnedScore: a.earnedScore,
+                  }))}
+                  moduleId={courseModule.id}
+                  trailSlug={courseModule.trail.slug}
+                  moduleType={courseModule.type}
+                  isCompleted={isCompleted}
+                />
+
+                {/* Practice submission form */}
+                {requiresSubmission && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Сдать практическую работу</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {submission ? (
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <div className="text-sm font-medium text-gray-600 mb-2">
+                              Статус работы
+                            </div>
+                            <Badge
+                              className={
+                                submission.status === "APPROVED"
+                                  ? "bg-green-100 text-green-700 border-0"
+                                  : submission.status === "REVISION"
+                                  ? "bg-orange-100 text-orange-700 border-0"
+                                  : submission.status === "FAILED"
+                                  ? "bg-red-100 text-red-700 border-0"
+                                  : "bg-purple-100 text-purple-700 border-0"
+                              }
+                            >
+                              {submission.status === "APPROVED"
+                                ? "Принято"
+                                : submission.status === "REVISION"
+                                ? "На доработку"
+                                : submission.status === "FAILED"
+                                ? "Провал"
+                                : "На проверке"}
+                            </Badge>
+                            {submission.fileUrl && (
+                              <a
+                                href={submission.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-purple-600 hover:underline block mt-2"
+                              >
+                                Посмотреть отправленный файл
+                              </a>
+                            )}
+                          </div>
+
+                          {submission.review && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Оценка</span>
+                                <span className="text-2xl font-bold text-purple-600">
+                                  {submission.review.score}/10
+                                </span>
+                              </div>
+                              {submission.review.comment && (
+                                <div>
+                                  <div className="text-sm font-medium mb-1">
+                                    Комментарий
+                                  </div>
+                                  <p className="text-sm text-gray-600">
+                                    {submission.review.comment}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {submission.status === "REVISION" && (
+                            <SubmitPracticeForm
+                              moduleId={courseModule.id}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <SubmitPracticeForm
+                          moduleId={courseModule.id}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         </div>

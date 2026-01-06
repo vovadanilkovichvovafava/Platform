@@ -1,0 +1,259 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  ArrowLeft,
+  RefreshCw,
+  Users,
+  GraduationCap,
+  Shield,
+  BookOpen,
+} from "lucide-react"
+
+interface User {
+  id: string
+  email: string
+  name: string
+  role: "STUDENT" | "TEACHER" | "ADMIN"
+  totalXP: number
+  createdAt: string
+  _count: {
+    enrollments: number
+    submissions: number
+  }
+}
+
+const roleConfig = {
+  STUDENT: {
+    label: "Студент",
+    color: "bg-blue-100 text-blue-700",
+    icon: GraduationCap,
+  },
+  TEACHER: {
+    label: "Учитель",
+    color: "bg-green-100 text-green-700",
+    icon: BookOpen,
+  },
+  ADMIN: {
+    label: "Админ",
+    color: "bg-purple-100 text-purple-700",
+    icon: Shield,
+  },
+}
+
+export default function AdminUsersPage() {
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch("/api/admin/users")
+      if (!res.ok) throw new Error("Failed to fetch")
+      const data = await res.json()
+      setUsers(data)
+    } catch {
+      setError("Ошибка загрузки пользователей")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const updateRole = async (userId: string, newRole: "STUDENT" | "TEACHER" | "ADMIN") => {
+    try {
+      setUpdatingId(userId)
+      const res = await fetch(`/api/admin/users?id=${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.error || "Ошибка")
+        return
+      }
+
+      // Update local state
+      setUsers(users.map(u =>
+        u.id === userId ? { ...u, role: newRole } : u
+      ))
+    } catch {
+      alert("Ошибка при обновлении роли")
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
+  const students = users.filter(u => u.role === "STUDENT")
+  const teachers = users.filter(u => u.role === "TEACHER")
+  const admins = users.filter(u => u.role === "ADMIN")
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 py-6">
+          <Link
+            href="/admin/invites"
+            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            К инвайтам
+          </Link>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Управление пользователями
+                </h1>
+                <p className="text-gray-600 text-sm">
+                  {users.length} пользователей • {teachers.length} учителей
+                </p>
+              </div>
+            </div>
+            <Button onClick={fetchUsers} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Обновить
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-xl border p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <GraduationCap className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{students.length}</p>
+                <p className="text-sm text-gray-500">Студентов</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <BookOpen className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{teachers.length}</p>
+                <p className="text-sm text-gray-500">Учителей</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Shield className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{admins.length}</p>
+                <p className="text-sm text-gray-500">Админов</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Users List */}
+        <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="p-4 border-b bg-gray-50">
+            <h2 className="font-semibold">Все пользователи</h2>
+          </div>
+
+          {users.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              Нет пользователей
+            </div>
+          ) : (
+            <div className="divide-y">
+              {users.map((user) => {
+                const config = roleConfig[user.role]
+                const RoleIcon = config.icon
+                const isUpdating = updatingId === user.id
+
+                return (
+                  <div key={user.id} className="p-4 hover:bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${config.color.replace('text-', 'bg-').replace('700', '100')}`}>
+                          <RoleIcon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{user.name}</span>
+                            <Badge className={`${config.color} border-0 text-xs`}>
+                              {config.label}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-500">{user.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-right text-sm text-gray-500">
+                          <p>{user.totalXP} XP</p>
+                          <p>{user._count.submissions} работ</p>
+                        </div>
+
+                        {/* Role selector */}
+                        <select
+                          value={user.role}
+                          onChange={(e) => updateRole(user.id, e.target.value as "STUDENT" | "TEACHER" | "ADMIN")}
+                          disabled={isUpdating}
+                          className="px-3 py-1.5 border rounded-lg text-sm bg-white disabled:opacity-50"
+                        >
+                          <option value="STUDENT">Студент</option>
+                          <option value="TEACHER">Учитель</option>
+                          <option value="ADMIN">Админ</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Help text */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <h3 className="font-medium text-blue-900 mb-2">Как это работает:</h3>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• <strong>Студент</strong> — может проходить тесты и сдавать проекты</li>
+            <li>• <strong>Учитель</strong> — может проверять работы на /teacher</li>
+            <li>• <strong>Админ</strong> — полный доступ к админке</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}

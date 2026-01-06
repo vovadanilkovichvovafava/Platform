@@ -12,21 +12,39 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  XCircle,
   Github,
   Globe,
   Eye,
   ClipboardList,
+  History,
 } from "lucide-react"
 
 export default async function TeacherDashboard() {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "TEACHER") {
+  // Allow both TEACHER and ADMIN roles
+  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
     redirect("/dashboard")
   }
 
+  const isAdmin = session.user.role === "ADMIN"
+
+  // Get teacher's assigned trails (ADMIN sees all)
+  const teacherAssignments = isAdmin ? [] : await prisma.trailTeacher.findMany({
+    where: { teacherId: session.user.id },
+    select: { trailId: true },
+  })
+
+  const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
+  const hasAssignments = !isAdmin && assignedTrailIds.length > 0
+
+  // ADMIN sees all submissions, TEACHER only sees assigned trails
   const pendingSubmissions = await prisma.submission.findMany({
-    where: { status: "PENDING" },
+    where: {
+      status: "PENDING",
+      ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+    },
     orderBy: { createdAt: "asc" },
     include: {
       user: {
@@ -40,15 +58,44 @@ export default async function TeacherDashboard() {
     },
   })
 
-  // Stats
+  // Get all reviewed submissions (approved, revision, failed) for history
+  const reviewedSubmissions = await prisma.submission.findMany({
+    where: {
+      status: { in: ["APPROVED", "REVISION", "FAILED"] },
+      ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      user: {
+        select: { id: true, name: true, email: true },
+      },
+      module: {
+        include: {
+          trail: { select: { title: true } },
+        },
+      },
+      review: {
+        select: {
+          score: true,
+          comment: true,
+          createdAt: true,
+          reviewer: { select: { name: true } },
+        },
+      },
+    },
+  })
+
+  // Stats - only for assigned trails
   const stats = await prisma.submission.groupBy({
     by: ["status"],
+    where: hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {},
     _count: true,
   })
 
   const pendingCount = stats.find((s) => s.status === "PENDING")?._count || 0
   const approvedCount = stats.find((s) => s.status === "APPROVED")?._count || 0
   const revisionCount = stats.find((s) => s.status === "REVISION")?._count || 0
+  const failedCount = stats.find((s) => s.status === "FAILED")?._count || 0
 
   return (
     <div className="p-8">
@@ -62,7 +109,7 @@ export default async function TeacherDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
@@ -104,10 +151,24 @@ export default async function TeacherDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-xl">
+                <XCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{failedCount}</div>
+                <div className="text-sm text-gray-500">Провал</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Pending Submissions */}
-      <Card>
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" />
@@ -190,6 +251,113 @@ export default async function TeacherDashboard() {
                       <Link href={`/teacher/reviews/${submission.id}`}>
                         <Eye className="h-4 w-4 mr-2" />
                         Проверить
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* History of reviewed submissions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            История проверок
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {reviewedSubmissions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Пока нет проверенных работ
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reviewedSubmissions.map((submission) => (
+                <div
+                  key={submission.id}
+                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {submission.module.trail.title}
+                      </Badge>
+                      <Badge
+                        className={
+                          submission.status === "APPROVED"
+                            ? "bg-green-100 text-green-700 border-0"
+                            : submission.status === "FAILED"
+                            ? "bg-red-100 text-red-700 border-0"
+                            : "bg-orange-100 text-orange-700 border-0"
+                        }
+                      >
+                        {submission.status === "APPROVED" ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Принято
+                          </>
+                        ) : submission.status === "FAILED" ? (
+                          <>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Провал
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            На доработку
+                          </>
+                        )}
+                      </Badge>
+                    </div>
+                    <h3 className="font-medium text-gray-900">
+                      {submission.module.title}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {submission.user.name}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {submission.review && (
+                      <div className="text-center px-4">
+                        <div className="text-2xl font-bold text-[#0176D3]">
+                          {submission.review.score}/10
+                        </div>
+                        <div className="text-xs text-gray-500">Оценка</div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      {submission.githubUrl && (
+                        <a
+                          href={submission.githubUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                        >
+                          <Github className="h-4 w-4" />
+                        </a>
+                      )}
+                      {submission.deployUrl && (
+                        <a
+                          href={submission.deployUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                        >
+                          <Globe className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/teacher/reviews/${submission.id}`}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        Детали
                       </Link>
                     </Button>
                   </div>
