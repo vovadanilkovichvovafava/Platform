@@ -63,7 +63,7 @@ export default async function TrailPage({ params }: Props) {
   }
 
   let isEnrolled = false
-  let moduleProgressMap: Record<string, string> = {}
+  const moduleProgressMap: Record<string, string> = {}
 
   if (session) {
     const enrollment = await prisma.enrollment.findUnique({

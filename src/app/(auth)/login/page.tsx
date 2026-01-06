@@ -133,11 +133,13 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
-            <p className="font-medium mb-1">Тестовые аккаунты:</p>
-            <p>Ученик: student@rnd.academy / password123</p>
-            <p>Учитель: teacher@rnd.academy / password123</p>
-          </div>
+          {process.env.NODE_ENV === "development" && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
+              <p className="font-medium mb-1">Тестовые аккаунты:</p>
+              <p>Ученик: student@rnd.academy / password123</p>
+              <p>Учитель: teacher@rnd.academy / password123</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

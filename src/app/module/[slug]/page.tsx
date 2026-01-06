@@ -42,7 +42,7 @@ export default async function ModulePage({ params }: Props) {
     redirect("/login")
   }
 
-  const module = await prisma.module.findUnique({
+  const courseModule = await prisma.module.findUnique({
     where: { slug },
     include: {
       trail: true,
@@ -52,7 +52,7 @@ export default async function ModulePage({ params }: Props) {
     },
   })
 
-  if (!module) {
+  if (!courseModule) {
     notFound()
   }
 
@@ -61,13 +61,13 @@ export default async function ModulePage({ params }: Props) {
     where: {
       userId_trailId: {
         userId: session.user.id,
-        trailId: module.trailId,
+        trailId: courseModule.trailId,
       },
     },
   })
 
   if (!enrollment) {
-    redirect(`/trails/${module.trail.slug}`)
+    redirect(`/trails/${courseModule.trail.slug}`)
   }
 
   // Get progress
@@ -75,18 +75,18 @@ export default async function ModulePage({ params }: Props) {
     where: {
       userId_moduleId: {
         userId: session.user.id,
-        moduleId: module.id,
+        moduleId: courseModule.id,
       },
     },
   })
 
   // Get submission if project
   let submission = null
-  if (module.type === "PROJECT") {
+  if (courseModule.type === "PROJECT") {
     submission = await prisma.submission.findFirst({
       where: {
         userId: session.user.id,
-        moduleId: module.id,
+        moduleId: courseModule.id,
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -99,26 +99,38 @@ export default async function ModulePage({ params }: Props) {
   const questionAttempts = await prisma.questionAttempt.findMany({
     where: {
       userId: session.user.id,
-      questionId: { in: module.questions.map((q) => q.id) },
+      questionId: { in: courseModule.questions.map((q) => q.id) },
     },
   })
 
   const isCompleted = progress?.status === "COMPLETED"
-  const isProject = module.type === "PROJECT"
-  const TypeIcon = typeIcons[module.type]
+  const isProject = courseModule.type === "PROJECT"
+  const TypeIcon = typeIcons[courseModule.type]
 
   // Capture values for server action closure
-  const moduleId = module.id
-  const modulePoints = module.points
-  const moduleTrailId = module.trailId
-  const moduleOrder = module.order
-  const trailSlug = module.trail.slug
+  const moduleId = courseModule.id
+  const modulePoints = courseModule.points
+  const moduleTrailId = courseModule.trailId
+  const moduleOrder = courseModule.order
+  const trailSlug = courseModule.trail.slug
 
   async function handleComplete() {
     "use server"
 
     const session = await getServerSession(authOptions)
     if (!session) return
+
+    // Check if already completed to prevent double XP
+    const existingProgress = await prisma.moduleProgress.findUnique({
+      where: {
+        userId_moduleId: {
+          userId: session.user.id,
+          moduleId: moduleId,
+        },
+      },
+    })
+
+    const wasAlreadyCompleted = existingProgress?.status === "COMPLETED"
 
     // Update progress
     await prisma.moduleProgress.upsert({
@@ -141,13 +153,15 @@ export default async function ModulePage({ params }: Props) {
       },
     })
 
-    // Add XP
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        totalXP: { increment: modulePoints },
-      },
-    })
+    // Add XP only if not already completed
+    if (!wasAlreadyCompleted) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: {
+          totalXP: { increment: modulePoints },
+        },
+      })
+    }
 
     // Start next module if exists
     const nextModule = await prisma.module.findFirst({
@@ -245,11 +259,11 @@ export default async function ModulePage({ params }: Props) {
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
           <Link
-            href={`/trails/${module.trail.slug}`}
+            href={`/trails/${courseModule.trail.slug}`}
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Назад к {module.trail.title}
+            Назад к {courseModule.trail.title}
           </Link>
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -260,7 +274,7 @@ export default async function ModulePage({ params }: Props) {
                   className="bg-gray-100"
                 >
                   <TypeIcon className="h-3 w-3 mr-1" />
-                  {typeLabels[module.type]}
+                  {typeLabels[courseModule.type]}
                 </Badge>
                 {isCompleted && (
                   <Badge className="bg-green-100 text-green-700 border-0">
@@ -270,19 +284,19 @@ export default async function ModulePage({ params }: Props) {
                 )}
               </div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {module.title}
+                {courseModule.title}
               </h1>
-              <p className="text-gray-600 mt-1">{module.description}</p>
+              <p className="text-gray-600 mt-1">{courseModule.description}</p>
             </div>
 
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {module.duration}
+                {courseModule.duration}
               </div>
               <div className="flex items-center gap-1">
                 <Star className="h-4 w-4" />
-                {module.points} XP
+                {courseModule.points} XP
               </div>
             </div>
           </div>
@@ -296,8 +310,8 @@ export default async function ModulePage({ params }: Props) {
           <div className="lg:col-span-2">
             <Card>
               <CardContent className="p-6 prose prose-gray max-w-none">
-                {module.content ? (
-                  renderContent(module.content)
+                {courseModule.content ? (
+                  renderContent(courseModule.content)
                 ) : (
                   <p className="text-gray-500">Контент модуля скоро появится</p>
                 )}
@@ -305,21 +319,21 @@ export default async function ModulePage({ params }: Props) {
             </Card>
 
             {/* Requirements for projects */}
-            {isProject && module.requirements && (
+            {isProject && courseModule.requirements && (
               <Card className="mt-6">
                 <CardHeader>
                   <CardTitle>Требования к проекту</CardTitle>
                 </CardHeader>
                 <CardContent className="prose prose-gray max-w-none">
-                  {renderContent(module.requirements)}
+                  {renderContent(courseModule.requirements)}
                 </CardContent>
               </Card>
             )}
 
             {/* Quiz section for theory/practice modules */}
-            {!isProject && module.questions.length > 0 && (
+            {!isProject && courseModule.questions.length > 0 && (
               <QuizSection
-                questions={module.questions.map((q) => ({
+                questions={courseModule.questions.map((q) => ({
                   id: q.id,
                   question: q.question,
                   options: JSON.parse(q.options) as string[],
@@ -331,7 +345,6 @@ export default async function ModulePage({ params }: Props) {
                   attempts: a.attempts,
                   earnedScore: a.earnedScore,
                 }))}
-                moduleSlug={module.slug}
               />
             )}
           </div>
@@ -390,15 +403,13 @@ export default async function ModulePage({ params }: Props) {
 
                       {submission.status === "REVISION" && (
                         <SubmitProjectForm
-                          moduleId={module.id}
-                          moduleSlug={module.slug}
+                          moduleId={courseModule.id}
                         />
                       )}
                     </div>
                   ) : (
                     <SubmitProjectForm
-                      moduleId={module.id}
-                      moduleSlug={module.slug}
+                      moduleId={courseModule.id}
                     />
                   )}
                 </CardContent>
@@ -413,10 +424,10 @@ export default async function ModulePage({ params }: Props) {
                         Модуль завершен!
                       </h3>
                       <p className="text-gray-600 text-sm mb-4">
-                        Вы получили {module.points} XP
+                        Вы получили {courseModule.points} XP
                       </p>
                       <Button asChild variant="outline" className="w-full">
-                        <Link href={`/trails/${module.trail.slug}`}>
+                        <Link href={`/trails/${courseModule.trail.slug}`}>
                           Вернуться к trail
                         </Link>
                       </Button>
@@ -431,7 +442,7 @@ export default async function ModulePage({ params }: Props) {
                         Завершить модуль
                       </Button>
                       <p className="text-xs text-gray-500 text-center mt-3">
-                        Вы получите {module.points} XP
+                        Вы получите {courseModule.points} XP
                       </p>
                     </form>
                   )}

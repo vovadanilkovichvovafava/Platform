@@ -12,7 +12,6 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  ExternalLink,
   Github,
   Globe,
   Eye,
@@ -36,20 +35,6 @@ export default async function TeacherDashboard() {
       module: {
         include: {
           trail: true,
-        },
-      },
-    },
-  })
-
-  const recentReviews = await prisma.review.findMany({
-    where: { reviewerId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-    include: {
-      submission: {
-        include: {
-          user: { select: { name: true } },
-          module: { select: { title: true } },
         },
       },
     },

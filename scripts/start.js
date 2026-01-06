@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { execSync } = require('child_process');
 const { PrismaClient } = require('@prisma/client');
 
@@ -16,7 +17,7 @@ async function main() {
       execSync('npm run db:seed', { stdio: 'inherit' });
       console.log('Seed completed!');
     }
-  } catch (error) {
+  } catch {
     console.log('Could not check trails, running seed...');
     execSync('npm run db:seed', { stdio: 'inherit' });
   } finally {

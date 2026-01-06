@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
-import { ClipboardList, Users, BarChart3, Settings } from "lucide-react"
+import { ClipboardList, Users, BarChart3 } from "lucide-react"
 
 export default async function TeacherLayout({
   children,
