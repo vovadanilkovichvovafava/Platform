@@ -4,6 +4,11 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 // Обновляет модули Digital Marketing чтобы требовали отправку файла
+// GET для удобства вызова из браузера
+export async function GET() {
+  return POST()
+}
+
 export async function POST() {
   try {
     const session = await getServerSession(authOptions)
