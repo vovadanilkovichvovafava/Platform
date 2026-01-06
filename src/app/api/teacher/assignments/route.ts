@@ -8,8 +8,17 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "TEACHER") {
+    // Allow both TEACHER and ADMIN roles
+    if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // ADMIN sees all trails, TEACHER sees only assigned trails
+    if (session.user.role === "ADMIN") {
+      const allTrails = await prisma.trail.findMany({
+        select: { id: true },
+      })
+      return NextResponse.json(allTrails.map(t => ({ trailId: t.id })))
     }
 
     const assignments = await prisma.trailTeacher.findMany({

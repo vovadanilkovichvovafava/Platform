@@ -100,10 +100,12 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "TEACHER") {
+    // Allow both TEACHER and ADMIN roles
+    if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
+    const isAdmin = session.user.role === "ADMIN"
     const body = await request.json()
     const data = reviewSchema.parse(body)
 
@@ -117,10 +119,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    // Verify teacher is assigned to this trail
-    const isAssigned = await isTeacherAssignedToTrail(session.user.id, moduleForCheck.trailId)
-    if (!isAssigned) {
-      return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+    // Verify teacher is assigned to this trail (ADMIN can review any trail)
+    if (!isAdmin) {
+      const isAssigned = await isTeacherAssignedToTrail(session.user.id, moduleForCheck.trailId)
+      if (!isAssigned) {
+        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
     }
 
     // Create review

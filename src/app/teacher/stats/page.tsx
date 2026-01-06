@@ -20,7 +20,8 @@ import {
 export default async function TeacherStatsPage() {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "TEACHER") {
+  // Allow both TEACHER and ADMIN roles
+  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
     redirect("/dashboard")
   }
 

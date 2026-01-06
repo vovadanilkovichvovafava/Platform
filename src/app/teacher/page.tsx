@@ -23,20 +23,23 @@ import {
 export default async function TeacherDashboard() {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "TEACHER") {
+  // Allow both TEACHER and ADMIN roles
+  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
     redirect("/dashboard")
   }
 
-  // Get teacher's assigned trails
-  const teacherAssignments = await prisma.trailTeacher.findMany({
+  const isAdmin = session.user.role === "ADMIN"
+
+  // Get teacher's assigned trails (ADMIN sees all)
+  const teacherAssignments = isAdmin ? [] : await prisma.trailTeacher.findMany({
     where: { teacherId: session.user.id },
     select: { trailId: true },
   })
 
   const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
-  const hasAssignments = assignedTrailIds.length > 0
+  const hasAssignments = !isAdmin && assignedTrailIds.length > 0
 
-  // Only show submissions for modules in assigned trails (or all if no assignments)
+  // ADMIN sees all submissions, TEACHER only sees assigned trails
   const pendingSubmissions = await prisma.submission.findMany({
     where: {
       status: "PENDING",
