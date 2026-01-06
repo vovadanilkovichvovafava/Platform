@@ -26,6 +26,8 @@ interface Question {
   options: string
   correctAnswer: number
   order: number
+  type?: string
+  data?: string
 }
 
 interface Module {
@@ -82,8 +84,20 @@ export default function TeacherModuleEditorPage({ params }: Props) {
     question: string
     options: string[]
     correctAnswer: number
+    type: string
+    data?: Record<string, unknown>
     isNew?: boolean
   }>>([])
+
+  // Dropdown state for adding questions
+  const [showAddMenu, setShowAddMenu] = useState(false)
+
+  const questionTypes = [
+    { value: "SINGLE_CHOICE", label: "Выбор ответа", icon: "📝" },
+    { value: "MATCHING", label: "Сопоставление", icon: "🔗" },
+    { value: "ORDERING", label: "Упорядочивание", icon: "📊" },
+    { value: "CASE_ANALYSIS", label: "Анализ кейса", icon: "📋" },
+  ]
 
   const fetchModule = async () => {
     try {
@@ -108,6 +122,8 @@ export default function TeacherModuleEditorPage({ params }: Props) {
           question: q.question,
           options: safeJsonParse<string[]>(q.options, []),
           correctAnswer: q.correctAnswer,
+          type: q.type || "SINGLE_CHOICE",
+          data: q.data ? safeJsonParse(q.data, {}) : undefined,
         }))
       )
     } catch (err) {
@@ -160,6 +176,8 @@ export default function TeacherModuleEditorPage({ params }: Props) {
               question: q.question,
               options: q.options,
               correctAnswer: q.correctAnswer,
+              type: q.type,
+              data: q.data,
             }),
           })
         } else if (q.id) {
@@ -171,6 +189,8 @@ export default function TeacherModuleEditorPage({ params }: Props) {
               question: q.question,
               options: q.options,
               correctAnswer: q.correctAnswer,
+              type: q.type,
+              data: q.data,
             }),
           })
         }
@@ -186,13 +206,23 @@ export default function TeacherModuleEditorPage({ params }: Props) {
     }
   }
 
-  const addQuestion = () => {
+  const addQuestion = (type: string) => {
+    setShowAddMenu(false)
+
+    const defaultOptions: Record<string, string[]> = {
+      SINGLE_CHOICE: ["", "", "", ""],
+      MATCHING: ["", ""],
+      ORDERING: ["", "", "", ""],
+      CASE_ANALYSIS: ["", "", "", ""],
+    }
+
     setQuestions([
       ...questions,
       {
         question: "",
-        options: ["", "", "", ""],
+        options: defaultOptions[type] || ["", "", "", ""],
         correctAnswer: 0,
+        type,
         isNew: true,
       },
     ])
@@ -420,10 +450,33 @@ export default function TeacherModuleEditorPage({ params }: Props) {
                     <CardTitle className="text-lg">
                       Вопросы ({questions.length})
                     </CardTitle>
-                    <Button size="sm" variant="outline" onClick={addQuestion}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Добавить
-                    </Button>
+                    <div className="relative">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowAddMenu(!showAddMenu)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Добавить
+                      </Button>
+                      {showAddMenu && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border z-50">
+                          <div className="p-2">
+                            <p className="text-xs text-gray-500 px-2 py-1">Выберите тип вопроса</p>
+                            {questionTypes.map((type) => (
+                              <button
+                                key={type.value}
+                                onClick={() => addQuestion(type.value)}
+                                className="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <span>{type.icon}</span>
+                                {type.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -441,9 +494,14 @@ export default function TeacherModuleEditorPage({ params }: Props) {
                           <GripVertical className="h-5 w-5 text-gray-400 mt-2 shrink-0" />
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-gray-700">
-                                Вопрос {qIndex + 1}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Вопрос {qIndex + 1}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {questionTypes.find(t => t.value === q.type)?.label || "Выбор ответа"}
+                                </Badge>
+                              </div>
                               {q.isNew && (
                                 <Badge variant="secondary" className="text-xs">
                                   Новый
