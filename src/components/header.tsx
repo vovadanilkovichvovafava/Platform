@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame } from "lucide-react"
+import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield } from "lucide-react"
 
 export function Header() {
   const { data: session } = useSession()
@@ -63,7 +63,7 @@ export function Header() {
               >
                 Мои работы
               </Link>
-              {session.user.role === "TEACHER" && (
+              {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
                 <Link
                   href="/teacher"
                   className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
@@ -123,7 +123,7 @@ export function Header() {
                     Мои работы
                   </Link>
                 </DropdownMenuItem>
-                {session.user.role === "TEACHER" && (
+                {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
                   <>
                     <DropdownMenuSeparator className="bg-slate-100" />
                     <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
@@ -133,6 +133,14 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                   </>
+                )}
+                {session.user.role === "ADMIN" && (
+                  <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
+                    <Link href="/admin/invites" className="cursor-pointer">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Админ панель
+                    </Link>
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator className="bg-slate-100" />
                 <DropdownMenuItem
