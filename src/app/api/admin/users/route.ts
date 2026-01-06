@@ -63,9 +63,22 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Нельзя удалить свой аккаунт" }, { status: 400 })
     }
 
-    // Delete user and all related data (cascade)
-    await prisma.user.delete({
-      where: { id: userId },
+    // Delete in transaction to ensure consistency
+    await prisma.$transaction(async (tx) => {
+      // First delete invites created by this user (no cascade)
+      await tx.invite.deleteMany({
+        where: { createdById: userId },
+      })
+
+      // Delete reviews made by this user (reviewer relation)
+      await tx.review.deleteMany({
+        where: { reviewerId: userId },
+      })
+
+      // Now delete the user (other relations have cascade)
+      await tx.user.delete({
+        where: { id: userId },
+      })
     })
 
     return NextResponse.json({ success: true })
