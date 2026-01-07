@@ -710,7 +710,7 @@ Taboola, Outbrain, MGID, Revcontent
 // Вопросы для каждого модуля
 const moduleQuestions: Record<string, Array<{
   question: string
-  options: string[]
+  options: string
   correctAnswer: number
   type: string
 }>> = {
@@ -781,57 +781,57 @@ const moduleQuestions: Record<string, Array<{
   "push-pops-ads": [
     {
       question: "Какой тип push-рекламы работает на iOS, где классические browser push заблокированы?",
-      options: ["Classic Push", "In-Page Push", "Native Push", "Direct Push"],
+      options: JSON.stringify(["Classic Push", "In-Page Push", "Native Push", "Direct Push"]),
       correctAnswer: 1,
       type: "SINGLE_CHOICE"
     },
     {
       question: "Что означает \"subscription age\" в контексте push-трафика?",
-      options: [
+      options: JSON.stringify([
         "Возраст пользователя",
         "Время с момента подписки пользователя на push-уведомления",
         "Длительность рекламной кампании",
         "Возраст рекламной сети"
-      ],
+      ]),
       correctAnswer: 1,
       type: "SINGLE_CHOICE"
     },
     {
       question: "Какая модель оплаты безопаснее для начинающего арбитражника?",
-      options: [
+      options: JSON.stringify([
         "CPM — платить за показы",
         "CPC — платить за клики",
         "Не имеет значения",
         "Всегда выбирать самую дешёвую"
-      ],
+      ]),
       correctAnswer: 1,
       type: "SINGLE_CHOICE"
     },
     {
       question: "Чем Popunder отличается от Popup?",
-      options: [
+      options: JSON.stringify([
         "Popunder дороже",
         "Popunder открывается под основным окном, Popup — поверх",
         "Popup работает только на мобильных",
         "Это одно и то же"
-      ],
+      ]),
       correctAnswer: 1,
       type: "SINGLE_CHOICE"
     },
     {
       question: "Какой минимальный бюджет рекомендуется для теста push-кампании?",
-      options: ["$10", "Равный одной выплате оффера", "3-5 выплат оффера", "$1000"],
+      options: JSON.stringify(["$10", "Равный одной выплате оффера", "3-5 выплат оффера", "$1000"]),
       correctAnswer: 2,
       type: "SINGLE_CHOICE"
     },
     {
       question: "Почему для Pops-трафика критически важен первый экран лендинга?",
-      options: [
+      options: JSON.stringify([
         "Потому что Pops — дорогой трафик",
         "Потому что нет креатива — пользователь сразу видит лендинг",
         "Потому что Pops показывается только 1 секунду",
         "Это не важно для Pops"
-      ],
+      ]),
       correctAnswer: 1,
       type: "SINGLE_CHOICE"
     }
