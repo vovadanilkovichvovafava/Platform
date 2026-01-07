@@ -26,6 +26,7 @@ import {
   Check,
   AlertCircle,
 } from "lucide-react"
+import { CreateModuleModal } from "@/components/create-module-modal"
 
 interface Module {
   id: string
@@ -98,15 +99,6 @@ export default function TeacherContentPage() {
     duration: "2-4 недели",
   })
 
-  // Module form state
-  const [moduleForm, setModuleForm] = useState({
-    title: "",
-    description: "",
-    type: "THEORY",
-    level: "Middle",
-    points: 50,
-    duration: "15 мин",
-  })
 
   const fetchData = async () => {
     try {
@@ -172,48 +164,43 @@ export default function TeacherContentPage() {
     }
   }
 
-  const createModule = async () => {
+  const createModule = async (data: {
+    title: string
+    description: string
+    type: "THEORY" | "PRACTICE" | "PROJECT"
+    level: string
+    points: number
+    duration: string
+  }) => {
     if (!selectedTrailId) return
 
-    try {
-      const slug = moduleForm.title
-        .toLowerCase()
-        .replace(/[^a-zа-яё0-9]+/gi, "-")
-        .replace(/(^-|-$)/g, "")
+    const slug = data.title
+      .toLowerCase()
+      .replace(/[^a-zа-яё0-9]+/gi, "-")
+      .replace(/(^-|-$)/g, "")
 
-      const trail = assignedTrails.find((t) => t.id === selectedTrailId)
-      const order = trail ? trail.modules.length : 0
+    const trail = assignedTrails.find((t) => t.id === selectedTrailId)
+    const order = trail ? trail.modules.length : 0
 
-      const res = await fetch("/api/admin/modules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...moduleForm,
-          slug,
-          trailId: selectedTrailId,
-          order,
-        }),
-      })
+    const res = await fetch("/api/admin/modules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...data,
+        slug,
+        trailId: selectedTrailId,
+        order,
+      }),
+    })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to create module")
-      }
-
-      setShowModuleModal(false)
-      setSelectedTrailId("")
-      setModuleForm({
-        title: "",
-        description: "",
-        type: "THEORY",
-        level: "Middle",
-        points: 50,
-        duration: "15 мин",
-      })
-      fetchData()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка создания модуля")
+    if (!res.ok) {
+      const resData = await res.json()
+      throw new Error(resData.error || "Failed to create module")
     }
+
+    setShowModuleModal(false)
+    setSelectedTrailId("")
+    fetchData()
   }
 
   const deleteTrail = async (trailId: string, title: string) => {
@@ -547,110 +534,12 @@ export default function TeacherContentPage() {
       )}
 
       {/* Create Module Modal */}
-      {showModuleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-lg mx-4">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Добавить модуль</CardTitle>
-                <button onClick={() => setShowModuleModal(false)}>
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="moduleTitle">Название</Label>
-                <Input
-                  id="moduleTitle"
-                  value={moduleForm.title}
-                  onChange={(e) =>
-                    setModuleForm({ ...moduleForm, title: e.target.value })
-                  }
-                  placeholder="Например: Основы JavaScript"
-                />
-              </div>
-              <div>
-                <Label htmlFor="moduleDescription">Описание</Label>
-                <Textarea
-                  id="moduleDescription"
-                  value={moduleForm.description}
-                  onChange={(e) =>
-                    setModuleForm({ ...moduleForm, description: e.target.value })
-                  }
-                  placeholder="Описание модуля"
-                  rows={2}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="moduleType">Тип</Label>
-                  <select
-                    id="moduleType"
-                    value={moduleForm.type}
-                    onChange={(e) =>
-                      setModuleForm({ ...moduleForm, type: e.target.value })
-                    }
-                    className="w-full p-2 border rounded-lg"
-                  >
-                    <option value="THEORY">Теория</option>
-                    <option value="PRACTICE">Практика</option>
-                    <option value="PROJECT">Проект</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="moduleLevel">Уровень</Label>
-                  <select
-                    id="moduleLevel"
-                    value={moduleForm.level}
-                    onChange={(e) =>
-                      setModuleForm({ ...moduleForm, level: e.target.value })
-                    }
-                    className="w-full p-2 border rounded-lg"
-                  >
-                    <option value="Junior">Junior</option>
-                    <option value="Middle">Middle</option>
-                    <option value="Senior">Senior</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="modulePoints">Очки XP</Label>
-                  <Input
-                    id="modulePoints"
-                    type="number"
-                    value={moduleForm.points}
-                    onChange={(e) =>
-                      setModuleForm({ ...moduleForm, points: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="moduleDuration">Длительность</Label>
-                  <Input
-                    id="moduleDuration"
-                    value={moduleForm.duration}
-                    onChange={(e) =>
-                      setModuleForm({ ...moduleForm, duration: e.target.value })
-                    }
-                    placeholder="15 мин"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowModuleModal(false)}>
-                  Отмена
-                </Button>
-                <Button onClick={createModule}>
-                  <Check className="h-4 w-4 mr-2" />
-                  Создать
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <CreateModuleModal
+        open={showModuleModal}
+        onClose={() => setShowModuleModal(false)}
+        onSubmit={createModule}
+        trailId={selectedTrailId}
+      />
     </div>
   )
 }

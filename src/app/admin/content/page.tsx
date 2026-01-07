@@ -29,6 +29,7 @@ import {
   Users,
   Lock,
 } from "lucide-react"
+import { CreateModuleModal } from "@/components/create-module-modal"
 
 interface Module {
   id: string
@@ -92,9 +93,6 @@ export default function AdminContentPage() {
   // Create module modal
   const [showModuleModal, setShowModuleModal] = useState(false)
   const [selectedTrailId, setSelectedTrailId] = useState("")
-  const [newModuleTitle, setNewModuleTitle] = useState("")
-  const [newModuleType, setNewModuleType] = useState<"THEORY" | "PRACTICE" | "PROJECT">("THEORY")
-  const [creatingModule, setCreatingModule] = useState(false)
 
   // Import modal
   const [showImportModal, setShowImportModal] = useState(false)
@@ -146,35 +144,31 @@ export default function AdminContentPage() {
     }
   }
 
-  const createModule = async () => {
-    if (!newModuleTitle.trim() || !selectedTrailId) return
+  const createModule = async (data: {
+    title: string
+    description: string
+    type: "THEORY" | "PRACTICE" | "PROJECT"
+    level: string
+    points: number
+    duration: string
+  }) => {
+    if (!selectedTrailId) return
 
-    try {
-      setCreatingModule(true)
-      const res = await fetch("/api/admin/modules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          trailId: selectedTrailId,
-          title: newModuleTitle,
-          type: newModuleType,
-          level: newModuleType === "PROJECT" ? "Middle" : "Beginner",
-        }),
-      })
+    const res = await fetch("/api/admin/modules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        trailId: selectedTrailId,
+        ...data,
+      }),
+    })
 
-      if (!res.ok) throw new Error("Failed to create")
+    if (!res.ok) throw new Error("Failed to create")
 
-      const newModule = await res.json()
-      setNewModuleTitle("")
-      setNewModuleType("THEORY")
-      setShowModuleModal(false)
-      // Navigate to edit the new module
-      router.push(`/admin/content/modules/${newModule.id}`)
-    } catch {
-      setError("Ошибка создания модуля")
-    } finally {
-      setCreatingModule(false)
-    }
+    const newModule = await res.json()
+    setShowModuleModal(false)
+    // Navigate to edit the new module
+    router.push(`/admin/content/modules/${newModule.id}`)
   }
 
   const openModuleModal = (trailId: string) => {
@@ -614,80 +608,12 @@ slug: prompting-practice
       )}
 
       {/* Create Module Modal */}
-      {showModuleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Добавить модуль</h2>
-              <button onClick={() => setShowModuleModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Название *
-                </label>
-                <Input
-                  value={newModuleTitle}
-                  onChange={(e) => setNewModuleTitle(e.target.value)}
-                  placeholder="Например: Основы промптинга"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Тип модуля
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["THEORY", "PRACTICE", "PROJECT"] as const).map((type) => {
-                    const TypeIcon = typeIcons[type]
-                    return (
-                      <button
-                        key={type}
-                        onClick={() => setNewModuleType(type)}
-                        className={`p-3 rounded-lg border text-center transition-colors ${
-                          newModuleType === type
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <TypeIcon className={`h-5 w-5 mx-auto mb-1 ${
-                          newModuleType === type ? "text-blue-600" : "text-gray-500"
-                        }`} />
-                        <span className={`text-xs font-medium ${
-                          newModuleType === type ? "text-blue-700" : "text-gray-600"
-                        }`}>
-                          {typeLabels[type]}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowModuleModal(false)}
-                  className="flex-1"
-                >
-                  Отмена
-                </Button>
-                <Button
-                  onClick={createModule}
-                  disabled={!newModuleTitle.trim() || creatingModule}
-                  className="flex-1"
-                >
-                  {creatingModule ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Создать"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateModuleModal
+        open={showModuleModal}
+        onClose={() => setShowModuleModal(false)}
+        onSubmit={createModule}
+        trailId={selectedTrailId}
+      />
 
       {/* Import Modal */}
       {showImportModal && (
