@@ -364,8 +364,14 @@ export function AssessmentSection({
     }
 
     if (questionType === "CASE_ANALYSIS" && question.data) {
-      // Use improved data from code (overrides old DB data)
-      const data = IMPROVED_CASE_ANALYSIS
+      // Use actual data from database, fall back to improved data only if missing
+      const dbData = question.data as CaseAnalysisData
+      const data: CaseAnalysisData = {
+        caseContent: dbData.caseContent || IMPROVED_CASE_ANALYSIS.caseContent,
+        caseLabel: dbData.caseLabel || IMPROVED_CASE_ANALYSIS.caseLabel,
+        options: dbData.options && dbData.options.length > 0 ? dbData.options : IMPROVED_CASE_ANALYSIS.options,
+        minCorrectRequired: dbData.minCorrectRequired || IMPROVED_CASE_ANALYSIS.minCorrectRequired,
+      }
       return (
         <CaseAnalysisExercise
           question={question.question}
