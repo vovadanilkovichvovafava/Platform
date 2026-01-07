@@ -69,6 +69,7 @@ interface Module {
   points: number
   duration: string
   order: number
+  requiresSubmission: boolean
   trail: {
     id: string
     title: string
@@ -102,6 +103,7 @@ export default function ModuleEditorPage({ params }: Props) {
   const [requirements, setRequirements] = useState("")
   const [points, setPoints] = useState(0)
   const [duration, setDuration] = useState("")
+  const [requiresSubmission, setRequiresSubmission] = useState(false)
 
   // Questions state
   const [questions, setQuestions] = useState<Array<{
@@ -127,6 +129,7 @@ export default function ModuleEditorPage({ params }: Props) {
       setRequirements(data.requirements || "")
       setPoints(data.points)
       setDuration(data.duration || "")
+      setRequiresSubmission(data.requiresSubmission || false)
       setQuestions(
         data.questions.map((q) => ({
           id: q.id,
@@ -166,6 +169,7 @@ export default function ModuleEditorPage({ params }: Props) {
           requirements,
           points,
           duration,
+          requiresSubmission,
         }),
       })
 
@@ -422,6 +426,27 @@ export default function ModuleEditorPage({ params }: Props) {
                     />
                   </div>
                 </div>
+
+                {/* Требует отправки работы */}
+                {!isProject && (
+                  <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <input
+                      type="checkbox"
+                      id="requiresSubmission"
+                      checked={requiresSubmission}
+                      onChange={(e) => setRequiresSubmission(e.target.checked)}
+                      className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <div>
+                      <label htmlFor="requiresSubmission" className="text-sm font-medium text-purple-900 cursor-pointer">
+                        Требует отправки практической работы
+                      </label>
+                      <p className="text-xs text-purple-700">
+                        Студенты смогут отправить ссылку на файл (Google Drive, Notion и т.д.)
+                      </p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
