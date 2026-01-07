@@ -435,6 +435,7 @@ async function main() {
         content: mod.content,
         points: mod.points,
         order: mod.order,
+        duration: "30 мин",
         requiresSubmission: mod.requiresSubmission,
         trailId: trail.id
       }
