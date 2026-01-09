@@ -233,18 +233,6 @@ export default async function StudentDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Activity Calendar */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-          <CalendarDays className="h-5 w-5" />
-          Календарь активности
-          <Badge variant="secondary" className="ml-2">
-            {student.activityDays.length} акт. дней всего
-          </Badge>
-        </h2>
-        <ActivityCalendar activityDays={activityDaysWithDetails} />
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Enrolled Trails & Progress */}
         <div className="space-y-6">
@@ -345,12 +333,26 @@ export default async function StudentDetailPage({ params }: Props) {
           )}
         </div>
 
-        {/* Submissions History */}
+        {/* Right column: Calendar + History */}
         <div className="space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            История работ
-          </h2>
+          {/* Activity Calendar */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <CalendarDays className="h-5 w-5" />
+              Активность
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {student.activityDays.length} дн.
+              </Badge>
+            </h2>
+            <ActivityCalendar activityDays={activityDaysWithDetails} />
+          </div>
+
+          {/* Submissions History */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <FileText className="h-5 w-5" />
+              История работ
+            </h2>
 
           {student.submissions.length === 0 ? (
             <Card>
@@ -424,6 +426,7 @@ export default async function StudentDetailPage({ params }: Props) {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
