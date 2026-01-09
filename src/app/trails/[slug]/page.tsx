@@ -143,6 +143,9 @@ export default async function TrailPage({ params }: Props) {
   const totalXP = trail.modules.reduce((sum, m) => sum + m.points, 0)
   const Icon = iconMap[trail.icon] || Code
 
+  // Check if user is admin or teacher (to show level badges)
+  const isPrivileged = session?.user?.role === "ADMIN" || session?.user?.role === "TEACHER"
+
   // Capture values for server action closure
   const trailId = trail.id
   const firstModuleId = assessmentModules.length > 0 ? assessmentModules[0].id : null
@@ -456,9 +459,11 @@ export default async function TrailPage({ params }: Props) {
                               <FolderGit2 className="h-3 w-3 mr-1" />
                               Проект
                             </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {project.level}
-                            </Badge>
+                            {isPrivileged && (
+                              <Badge variant="outline" className="text-xs">
+                                {project.level}
+                              </Badge>
+                            )}
                           </div>
                           {isProjectCompleted && (
                             <Badge className="bg-green-100 text-green-700 border-0">
