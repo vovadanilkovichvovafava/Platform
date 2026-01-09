@@ -13,8 +13,8 @@ interface ActivityCalendarProps {
 }
 
 const MONTHS_RU = [
-  "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-  "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+  "Янв", "Фев", "Мар", "Апр", "Май", "Июн",
+  "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"
 ]
 
 const WEEKDAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
@@ -103,50 +103,50 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
   const today = new Date().getDate()
 
   return (
-    <div className="bg-white rounded-xl border p-4">
+    <div className="bg-white rounded-lg border p-3 max-w-[280px]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <button
           onClick={goToPrevMonth}
-          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-1 hover:bg-gray-100 rounded transition-colors"
         >
-          <ChevronLeft className="h-5 w-5 text-gray-600" />
+          <ChevronLeft className="h-4 w-4 text-gray-600" />
         </button>
 
         <div className="text-center">
           <button
             onClick={goToCurrentMonth}
-            className="font-semibold text-gray-900 hover:text-purple-600 transition-colors"
+            className="text-sm font-semibold text-gray-900 hover:text-purple-600 transition-colors"
           >
             {MONTHS_RU[month]} {year}
           </button>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {monthlyActiveDays} акт. {monthlyActiveDays === 1 ? "день" : monthlyActiveDays < 5 ? "дня" : "дней"} • {monthlyActions} действий
+          <p className="text-[10px] text-gray-500">
+            {monthlyActiveDays} дн. • {monthlyActions} действ.
           </p>
         </div>
 
         <button
           onClick={goToNextMonth}
-          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-1 hover:bg-gray-100 rounded transition-colors"
         >
-          <ChevronRight className="h-5 w-5 text-gray-600" />
+          <ChevronRight className="h-4 w-4 text-gray-600" />
         </button>
       </div>
 
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className="grid grid-cols-7 gap-0.5 mb-0.5">
         {WEEKDAYS_RU.map((day) => (
-          <div key={day} className="text-center text-xs text-gray-400 font-medium py-1">
+          <div key={day} className="text-center text-[9px] text-gray-400 font-medium">
             {day}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5">
         {calendarDays.map((cell, idx) => {
           if (cell.day === null) {
-            return <div key={`empty-${idx}`} className="aspect-square" />
+            return <div key={`empty-${idx}`} className="w-[34px] h-[34px]" />
           }
 
           const level = getActivityLevel(cell.actions)
@@ -156,11 +156,11 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
             <div
               key={cell.dateStr}
               className={`
-                aspect-square rounded-md flex items-center justify-center text-xs
+                w-[34px] h-[34px] rounded flex items-center justify-center text-[10px]
                 ${getActivityColor(level)}
-                ${isToday ? "ring-2 ring-purple-500 ring-offset-1" : ""}
+                ${isToday ? "ring-1 ring-purple-500" : ""}
                 ${level > 0 ? "text-white font-medium" : "text-gray-400"}
-                transition-colors cursor-default
+                cursor-default
               `}
               title={`${cell.day} ${MONTHS_RU[month]}: ${cell.actions} действий`}
             >
@@ -171,14 +171,14 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-2 mt-4 text-xs text-gray-500">
-        <span>Меньше</span>
-        <div className={`w-3 h-3 rounded ${getActivityColor(0)}`} />
-        <div className={`w-3 h-3 rounded ${getActivityColor(1)}`} />
-        <div className={`w-3 h-3 rounded ${getActivityColor(2)}`} />
-        <div className={`w-3 h-3 rounded ${getActivityColor(3)}`} />
-        <div className={`w-3 h-3 rounded ${getActivityColor(4)}`} />
-        <span>Больше</span>
+      <div className="flex items-center justify-center gap-1 mt-2 text-[9px] text-gray-500">
+        <span>Мало</span>
+        <div className={`w-2 h-2 rounded-sm ${getActivityColor(0)}`} />
+        <div className={`w-2 h-2 rounded-sm ${getActivityColor(1)}`} />
+        <div className={`w-2 h-2 rounded-sm ${getActivityColor(2)}`} />
+        <div className={`w-2 h-2 rounded-sm ${getActivityColor(3)}`} />
+        <div className={`w-2 h-2 rounded-sm ${getActivityColor(4)}`} />
+        <span>Много</span>
       </div>
     </div>
   )
