@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
+import { recordActivity } from "@/lib/activity"
 
 const submissionSchema = z.object({
   moduleId: z.string().min(1),
@@ -50,6 +51,9 @@ export async function POST(request: Request) {
     if (!rateLimit.allowed) {
       return rateLimitResponse(rateLimit.resetIn)
     }
+
+    // Record daily activity
+    await recordActivity(session.user.id)
 
     const body = await request.json()
     const data = submissionSchema.parse(body)

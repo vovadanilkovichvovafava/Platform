@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  CalendarDays,
 } from "lucide-react"
 
 function getInitials(name: string) {
@@ -65,6 +66,7 @@ export default async function TeacherStudentsPage() {
       _count: {
         select: {
           submissions: true,
+          activityDays: true,
         },
       },
     },
@@ -173,6 +175,16 @@ export default async function TeacherStudentsPage() {
 
                     {/* Stats */}
                     <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <div className="flex items-center gap-1 text-purple-600">
+                          <CalendarDays className="h-4 w-4" />
+                          <span className="font-bold">
+                            {student._count.activityDays}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500">Актив. дней</p>
+                      </div>
+
                       <div className="text-center">
                         <div className="flex items-center gap-1 text-blue-600">
                           <BookOpen className="h-4 w-4" />

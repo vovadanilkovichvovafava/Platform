@@ -30,6 +30,23 @@ model User {
   invitesCreated   Invite[]           @relation("InviteCreator")
   teacherTrails    TrailTeacher[]     @relation("TeacherTrails")
   trailAccess      StudentTrailAccess[]
+  activityDays     UserActivity[]
+}
+
+// Track daily user activity (one record per day per user)
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date // Only date part, no time
+  actions   Int      @default(1) // Count of actions on this day
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
 }
 
 // Invite system for registration
