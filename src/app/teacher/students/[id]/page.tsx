@@ -76,6 +76,7 @@ export default async function StudentDetailPage({ params }: Props) {
             },
           },
         },
+        where: { status: "COMPLETED" },
       },
       submissions: {
         orderBy: { createdAt: "desc" },
@@ -123,6 +124,36 @@ export default async function StudentDetailPage({ params }: Props) {
     approved: student.submissions.filter((s) => s.status === "APPROVED").length,
     revision: student.submissions.filter((s) => s.status === "REVISION").length,
   }
+
+  // Build activity details by date
+  type ActivityDetail = { type: "module" | "submission"; title: string }
+  const activityDetailsMap = new Map<string, ActivityDetail[]>()
+
+  // Add submissions to activity details
+  student.submissions.forEach((sub) => {
+    const dateKey = new Date(sub.createdAt).toISOString().split("T")[0]
+    const details = activityDetailsMap.get(dateKey) || []
+    details.push({ type: "submission", title: sub.module.title })
+    activityDetailsMap.set(dateKey, details)
+  })
+
+  // Add module completions to activity details
+  student.moduleProgress.forEach((mp) => {
+    const dateKey = new Date(mp.updatedAt).toISOString().split("T")[0]
+    const details = activityDetailsMap.get(dateKey) || []
+    details.push({ type: "module", title: mp.module.title })
+    activityDetailsMap.set(dateKey, details)
+  })
+
+  // Build activity days with details
+  const activityDaysWithDetails = student.activityDays.map((d) => {
+    const dateKey = d.date.toISOString().split("T")[0]
+    return {
+      date: d.date.toISOString(),
+      actions: d.actions,
+      details: activityDetailsMap.get(dateKey) || [],
+    }
+  })
 
   return (
     <div className="p-8">
@@ -211,12 +242,7 @@ export default async function StudentDetailPage({ params }: Props) {
             {student.activityDays.length} акт. дней всего
           </Badge>
         </h2>
-        <ActivityCalendar
-          activityDays={student.activityDays.map(d => ({
-            date: d.date.toISOString(),
-            actions: d.actions,
-          }))}
-        />
+        <ActivityCalendar activityDays={activityDaysWithDetails} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
