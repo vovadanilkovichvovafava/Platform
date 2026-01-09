@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ActivityCalendar } from "@/components/activity-calendar"
 import {
   ArrowLeft,
   Trophy,
@@ -18,6 +19,7 @@ import {
   Target,
   FileText,
   ExternalLink,
+  CalendarDays,
 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -88,6 +90,13 @@ export default async function StudentDetailPage({ params }: Props) {
             },
           },
           review: true,
+        },
+      },
+      activityDays: {
+        orderBy: { date: "asc" },
+        select: {
+          date: true,
+          actions: true,
         },
       },
     },
@@ -191,6 +200,23 @@ export default async function StudentDetailPage({ params }: Props) {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Activity Calendar */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
+          <CalendarDays className="h-5 w-5" />
+          Календарь активности
+          <Badge variant="secondary" className="ml-2">
+            {student.activityDays.length} акт. дней всего
+          </Badge>
+        </h2>
+        <ActivityCalendar
+          activityDays={student.activityDays.map(d => ({
+            date: d.date.toISOString(),
+            actions: d.actions,
+          }))}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
