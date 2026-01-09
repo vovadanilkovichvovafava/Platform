@@ -4,7 +4,7 @@ import { useState } from "react"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 interface ActivityDetail {
-  type: "module" | "submission" | "question"
+  type: "module" | "submission"
   title: string
 }
 
@@ -125,16 +125,16 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
               <div key={idx} className="flex items-start gap-2 text-[11px]">
                 <span className={`
                   px-1.5 py-0.5 rounded text-white flex-shrink-0
-                  ${detail.type === "module" ? "bg-blue-500" : detail.type === "submission" ? "bg-green-500" : "bg-purple-500"}
+                  ${detail.type === "module" ? "bg-blue-500" : "bg-green-500"}
                 `}>
-                  {detail.type === "module" ? "М" : detail.type === "submission" ? "Р" : "В"}
+                  {detail.type === "module" ? "М" : "Р"}
                 </span>
                 <span className="text-gray-700 leading-tight">{detail.title}</span>
               </div>
             ))}
           </div>
           <div className="mt-2 pt-2 border-t text-[9px] text-gray-400">
-            М — модуль • Р — работа • В — вопрос
+            М — модуль • Р — работа
           </div>
         </div>
       )}
