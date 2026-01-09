@@ -17,14 +17,14 @@ export function ExportStatsButton() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `students-stats-${new Date().toISOString().split("T")[0]}.csv`
+      a.download = `students-works-${new Date().toISOString().split("T")[0]}.csv`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
     } catch (error) {
       console.error("Export error:", error)
-      alert("Ошибка экспорта статистики")
+      alert("Ошибка экспорта")
     } finally {
       setLoading(false)
     }
@@ -37,7 +37,7 @@ export function ExportStatsButton() {
       ) : (
         <Download className="h-4 w-4 mr-2" />
       )}
-      Экспорт CSV
+      Экспорт работ
     </Button>
   )
 }

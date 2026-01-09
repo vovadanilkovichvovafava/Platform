@@ -11,10 +11,10 @@ export async function GET() {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    // Get all students with their stats
+    // Get all students with their submissions and details
     const students = await prisma.user.findMany({
       where: { role: "STUDENT" },
-      orderBy: { totalXP: "desc" },
+      orderBy: { name: "asc" },
       include: {
         enrollments: {
           include: {
@@ -23,73 +23,120 @@ export async function GET() {
             },
           },
         },
+        submissions: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            module: {
+              include: {
+                trail: { select: { title: true } },
+              },
+            },
+            review: {
+              select: {
+                score: true,
+                comment: true,
+                createdAt: true,
+                reviewer: { select: { name: true } },
+              },
+            },
+          },
+        },
         moduleProgress: {
           where: { status: "COMPLETED" },
         },
         _count: {
           select: {
-            submissions: true,
             activityDays: true,
           },
         },
       },
     })
 
-    // Get submission stats per student
-    const submissionStats = await prisma.submission.groupBy({
-      by: ["userId", "status"],
-      _count: true,
-    })
-
-    const getStudentStats = (userId: string) => {
-      const stats = submissionStats.filter((s) => s.userId === userId)
-      return {
-        pending: stats.find((s) => s.status === "PENDING")?._count || 0,
-        approved: stats.find((s) => s.status === "APPROVED")?._count || 0,
-        revision: stats.find((s) => s.status === "REVISION")?._count || 0,
-        failed: stats.find((s) => s.status === "FAILED")?._count || 0,
-      }
-    }
-
-    // Build CSV
+    // Build CSV with detailed submissions per student
     const headers = [
-      "Имя",
+      "Ученик",
       "Email",
-      "Trails",
-      "XP",
-      "Модулей пройдено",
+      "Trail",
+      "Модуль",
+      "Статус",
+      "Оценка",
+      "Комментарий",
+      "Дата отправки",
+      "Дата проверки",
+      "Проверяющий",
+      "XP ученика",
       "Дней активности",
-      "Работ сдано",
-      "Принято",
-      "Ожидает",
-      "На доработку",
-      "Провал",
-      "Дата регистрации",
+      "Модулей пройдено",
     ]
 
-    const rows = students.map((student) => {
-      const stats = getStudentStats(student.id)
-      return [
-        student.name,
-        student.email,
-        student.enrollments.map((e) => e.trail.title).join("; "),
-        student.totalXP,
-        student.moduleProgress.length,
-        student._count.activityDays,
-        student._count.submissions,
-        stats.approved,
-        stats.pending,
-        stats.revision,
-        stats.failed,
-        new Date(student.createdAt).toLocaleDateString("ru-RU"),
-      ]
-    })
+    const rows: (string | number)[][] = []
+
+    for (const student of students) {
+      if (student.submissions.length === 0) {
+        // Student without submissions - add one row with basic info
+        rows.push([
+          student.name,
+          student.email,
+          student.enrollments.map((e) => e.trail.title).join("; ") || "-",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-",
+          student.totalXP,
+          student._count.activityDays,
+          student.moduleProgress.length,
+        ])
+      } else {
+        // Add row for each submission
+        for (const submission of student.submissions) {
+          const statusMap: Record<string, string> = {
+            PENDING: "Ожидает проверки",
+            APPROVED: "Принято",
+            REVISION: "На доработку",
+            FAILED: "Провал",
+          }
+
+          rows.push([
+            student.name,
+            student.email,
+            submission.module.trail.title,
+            submission.module.title,
+            statusMap[submission.status] || submission.status,
+            submission.review?.score ? `${submission.review.score}/10` : "-",
+            submission.review?.comment || "-",
+            new Date(submission.createdAt).toLocaleDateString("ru-RU", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            submission.review?.createdAt
+              ? new Date(submission.review.createdAt).toLocaleDateString("ru-RU", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "-",
+            submission.review?.reviewer?.name || "-",
+            student.totalXP,
+            student._count.activityDays,
+            student.moduleProgress.length,
+          ])
+        }
+      }
+    }
 
     // Create CSV content
     const csvContent = [
       headers.join(","),
       ...rows.map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+        row.map((cell) => `"${String(cell).replace(/"/g, '""').replace(/\n/g, " ")}"`).join(",")
       ),
     ].join("\n")
 
@@ -100,7 +147,7 @@ export async function GET() {
     return new NextResponse(csvWithBom, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="students-stats-${new Date().toISOString().split("T")[0]}.csv"`,
+        "Content-Disposition": `attachment; filename="students-works-${new Date().toISOString().split("T")[0]}.csv"`,
       },
     })
   } catch (error) {
