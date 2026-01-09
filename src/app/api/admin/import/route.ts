@@ -332,7 +332,7 @@ async function parseAndImport(text: string) {
         const q = moduleData.questions[qOrder]
         await prisma.question.create({
           data: {
-            moduleId: module.id,
+            moduleId: createdModule.id,
             question: q.question,
             options: JSON.stringify(q.options),
             correctAnswer: q.correctAnswer,
