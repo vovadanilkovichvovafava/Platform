@@ -233,9 +233,9 @@ export default async function StudentDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Enrolled Trails & Progress */}
-        <div className="space-y-6">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left: Trails & Progress */}
+        <div className="flex-1 space-y-6">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Target className="h-5 w-5" />
             Trails и прогресс
@@ -333,8 +333,8 @@ export default async function StudentDetailPage({ params }: Props) {
           )}
         </div>
 
-        {/* Right column: Calendar + History */}
-        <div className="space-y-6">
+        {/* Right: Calendar + History */}
+        <div className="lg:w-[300px] space-y-6">
           {/* Activity Calendar */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-3">
