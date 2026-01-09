@@ -30,6 +30,7 @@ export async function GET() {
           select: {
             enrollments: true,
             submissions: true,
+            activityDays: true,
           },
         },
       },

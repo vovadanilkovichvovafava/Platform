@@ -12,6 +12,7 @@ import {
   Shield,
   BookOpen,
   Trash2,
+  CalendarDays,
 } from "lucide-react"
 
 interface User {
@@ -24,6 +25,7 @@ interface User {
   _count: {
     enrollments: number
     submissions: number
+    activityDays: number
   }
 }
 
@@ -248,9 +250,15 @@ export default function AdminUsersPage() {
                       </div>
 
                       <div className="flex items-center gap-4">
-                        <div className="text-right text-sm text-gray-500">
-                          <p>{user.totalXP} XP</p>
-                          <p>{user._count.submissions} работ</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <div className="flex items-center gap-1 text-purple-600" title="Активных дней">
+                            <CalendarDays className="h-4 w-4" />
+                            <span className="font-medium">{user._count.activityDays}</span>
+                          </div>
+                          <span>•</span>
+                          <span>{user.totalXP} XP</span>
+                          <span>•</span>
+                          <span>{user._count.submissions} работ</span>
                         </div>
 
                         {/* Role selector */}
