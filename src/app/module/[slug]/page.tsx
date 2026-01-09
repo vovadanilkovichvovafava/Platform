@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft,
+  ArrowRight,
   Clock,
   Star,
   CheckCircle2,
@@ -15,6 +16,7 @@ import {
   Wrench,
   FolderGit2,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { SubmitProjectForm } from "@/components/submit-project-form"
 import { SubmitPracticeForm } from "@/components/submit-practice-form"
 import { AssessmentSection } from "@/components/assessment-section"
@@ -46,7 +48,14 @@ export default async function ModulePage({ params }: Props) {
   const courseModule = await prisma.module.findUnique({
     where: { slug },
     include: {
-      trail: true,
+      trail: {
+        include: {
+          modules: {
+            orderBy: { order: "asc" },
+            select: { id: true, slug: true, title: true, order: true },
+          },
+        },
+      },
       questions: {
         orderBy: { order: "asc" },
       },
@@ -109,6 +118,11 @@ export default async function ModulePage({ params }: Props) {
   const isCompleted = progress?.status === "COMPLETED"
   const isProject = courseModule.type === "PROJECT"
   const TypeIcon = typeIcons[courseModule.type]
+
+  // Find next module in the trail
+  const trailModules = courseModule.trail.modules
+  const currentIndex = trailModules.findIndex((m) => m.id === courseModule.id)
+  const nextModule = currentIndex < trailModules.length - 1 ? trailModules[currentIndex + 1] : null
 
   // Parse inline markdown (bold)
   const parseInlineMarkdown = (text: string) => {
@@ -420,6 +434,36 @@ export default async function ModulePage({ params }: Props) {
             )}
           </div>
         </div>
+
+        {/* Next Module Button */}
+        {isCompleted && nextModule && (
+          <div className="mt-8 flex justify-center">
+            <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-600 text-white">
+              <Link href={`/module/${nextModule.slug}`}>
+                Следующий модуль: {nextModule.title}
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        )}
+
+        {/* Trail completion message */}
+        {isCompleted && !nextModule && (
+          <div className="mt-8 text-center">
+            <div className="inline-flex flex-col items-center p-6 bg-green-50 rounded-xl border border-green-200">
+              <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
+              <h3 className="text-lg font-semibold text-green-800">Trail завершён!</h3>
+              <p className="text-green-600 text-sm mt-1">
+                Вы прошли все модули в этом направлении
+              </p>
+              <Button asChild variant="outline" className="mt-4">
+                <Link href={`/trails/${courseModule.trail.slug}`}>
+                  Вернуться к Trail
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

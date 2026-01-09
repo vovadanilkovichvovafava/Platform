@@ -31,6 +31,8 @@ model User {
   teacherTrails    TrailTeacher[]     @relation("TeacherTrails")
   trailAccess      StudentTrailAccess[]
   activityDays     UserActivity[]
+  notifications    Notification[]
+  certificates     Certificate[]
 }
 
 // Track daily user activity (one record per day per user)
@@ -87,6 +89,7 @@ model Trail {
   taskProgress  TaskProgress[]
   studentAccess StudentTrailAccess[]
   teachers      TrailTeacher[]
+  certificates  Certificate[]
 }
 
 model Module {
@@ -308,4 +311,41 @@ model TaskProgress {
   @@unique([userId, trailId])
   @@index([userId])
   @@index([trailId])
+}
+
+// Notifications for users
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // REVIEW_RECEIVED, MODULE_COMPLETED, etc.
+  title     String
+  message   String
+  link      String?  // URL to navigate to when clicked
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// Certificates for completed trails
+model Certificate {
+  id         String   @id @default(cuid())
+  userId     String
+  trailId    String
+  code       String   @unique // Unique verification code
+  issuedAt   DateTime @default(now())
+  totalXP    Int      // XP earned at time of issue
+  level      String   // Level achieved (Junior, Middle, Senior)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trailId])
+  @@index([userId])
+  @@index([trailId])
+  @@index([code])
 }
