@@ -3,7 +3,11 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export function HeroSection() {
+interface HeroSectionProps {
+  isLoggedIn?: boolean
+}
+
+export function HeroSection({ isLoggedIn = false }: HeroSectionProps) {
   return (
     <section
       className="relative min-h-[90vh] flex items-center overflow-hidden bg-slate-900 bg-cover bg-center bg-no-repeat"
@@ -32,13 +36,23 @@ export function HeroSection() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button
-              asChild
-              size="lg"
-              className="h-12 px-8 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/30"
-            >
-              <Link href="/login">Войти в систему</Link>
-            </Button>
+            {isLoggedIn ? (
+              <Button
+                asChild
+                size="lg"
+                className="h-12 px-8 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/30"
+              >
+                <Link href="/dashboard">Перейти в Dashboard</Link>
+              </Button>
+            ) : (
+              <Button
+                asChild
+                size="lg"
+                className="h-12 px-8 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/30"
+              >
+                <Link href="/login">Войти в систему</Link>
+              </Button>
+            )}
             <Button
               asChild
               size="lg"
