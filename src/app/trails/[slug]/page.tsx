@@ -388,7 +388,7 @@ export default async function TrailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Project Section - Show only current available project */}
+        {/* Project Section - Show completed and current available projects */}
         {projectModules.length > 0 && (
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Практическое задание</h2>
@@ -408,71 +408,91 @@ export default async function TrailPage({ params }: Props) {
               </div>
             )}
 
-            {(() => {
-              // Find the current available project based on taskProgress
-              // Priority: PENDING status, then by level order
-              const levelOrder = ["Middle", "Junior", "Senior"]
-              let currentProject = null
+            <div className="grid gap-4 max-w-4xl">
+              {(() => {
+                // Show projects based on their status in taskProgress
+                // PASSED = completed, PENDING = current, LOCKED = hidden
+                const levelOrder = ["Junior", "Middle", "Senior"]
+                const projectsToShow: Array<{ project: typeof projectModules[0], status: string }> = []
 
-              if (taskProgress) {
-                // Find project with PENDING status
-                for (const level of levelOrder) {
-                  const status = getProjectStatus(level)
-                  if (status === "PENDING") {
-                    currentProject = projectModules.find(m => m.level === level)
-                    if (currentProject) break
+                // Collect all projects that are not LOCKED
+                for (const project of projectModules) {
+                  const status = getProjectStatus(project.level)
+                  if (status === "PASSED" || status === "PENDING") {
+                    projectsToShow.push({ project, status })
                   }
                 }
-              }
 
-              // Fallback to Middle project if no pending found
-              if (!currentProject) {
-                currentProject = projectModules.find(m => m.level === "Middle") || projectModules[0]
-              }
+                // If no projects found based on taskProgress, show the first project as PENDING
+                if (projectsToShow.length === 0 && projectModules.length > 0) {
+                  // Fallback: find Middle or first project
+                  const fallbackProject = projectModules.find(m => m.level === "Middle") || projectModules[0]
+                  if (fallbackProject) {
+                    projectsToShow.push({ project: fallbackProject, status: "PENDING" })
+                  }
+                }
 
-              if (!currentProject) return null
+                // Sort: PENDING first, then PASSED
+                projectsToShow.sort((a, b) => {
+                  if (a.status === "PENDING" && b.status !== "PENDING") return -1
+                  if (b.status === "PENDING" && a.status !== "PENDING") return 1
+                  // By level order
+                  return levelOrder.indexOf(a.project.level) - levelOrder.indexOf(b.project.level)
+                })
 
-              const isProjectCompleted = moduleProgressMap[currentProject.id] === "COMPLETED"
+                return projectsToShow.map(({ project, status }) => {
+                  const isProjectCompleted = status === "PASSED" || moduleProgressMap[project.id] === "COMPLETED"
+                  const isPending = status === "PENDING" && !isProjectCompleted
 
-              return (
-                <Card className={`max-w-2xl transition-all ${!allAssessmentsCompleted ? "opacity-60" : "hover:shadow-md"}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <Badge className="bg-blue-100 text-blue-700 border-0">
-                        <FolderGit2 className="h-3 w-3 mr-1" />
-                        Проект
-                      </Badge>
-                      {isProjectCompleted && (
-                        <Badge className="bg-green-100 text-green-700 border-0">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Сдано
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="text-lg">{currentProject.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">{currentProject.description}</p>
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                      <span>{currentProject.duration}</span>
-                      <span className="font-medium">{currentProject.points} XP</span>
-                    </div>
-                    {allAssessmentsCompleted ? (
-                      <Button asChild className="w-full" variant={isProjectCompleted ? "outline" : "default"}>
-                        <Link href={`/module/${currentProject.slug}`}>
-                          {isProjectCompleted ? "Просмотреть" : "Начать задание"}
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button disabled className="w-full" variant="outline">
-                        <Lock className="h-4 w-4 mr-2" />
-                        Недоступно
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              )
-            })()}
+                  return (
+                    <Card
+                      key={project.id}
+                      className={`transition-all ${!allAssessmentsCompleted ? "opacity-60" : "hover:shadow-md"}`}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-blue-100 text-blue-700 border-0">
+                              <FolderGit2 className="h-3 w-3 mr-1" />
+                              Проект
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {project.level}
+                            </Badge>
+                          </div>
+                          {isProjectCompleted && (
+                            <Badge className="bg-green-100 text-green-700 border-0">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Сдано
+                            </Badge>
+                          )}
+                        </div>
+                        <CardTitle className="text-lg">{project.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-gray-500 mb-4">{project.description}</p>
+                        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                          <span>{project.duration}</span>
+                          <span className="font-medium">{project.points} XP</span>
+                        </div>
+                        {allAssessmentsCompleted ? (
+                          <Button asChild className="w-full" variant={isProjectCompleted ? "outline" : "default"}>
+                            <Link href={`/module/${project.slug}`}>
+                              {isProjectCompleted ? "Просмотреть" : "Начать задание"}
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button disabled className="w-full" variant="outline">
+                            <Lock className="h-4 w-4 mr-2" />
+                            Недоступно
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })
+              })()}
+            </div>
           </div>
         )}
       </div>
