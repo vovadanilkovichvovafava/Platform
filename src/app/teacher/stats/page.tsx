@@ -14,7 +14,6 @@ import {
   TrendingUp,
   BookOpen,
 } from "lucide-react"
-import { ExportStatsButton } from "@/components/export-stats-button"
 
 export default async function TeacherStatsPage() {
   const session = await getServerSession(authOptions)
@@ -102,17 +101,14 @@ export default async function TeacherStatsPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <BarChart3 className="h-6 w-6" />
-            Статистика
-          </h1>
-          <p className="text-gray-600">
-            Общая статистика платформы и прогресс обучения
-          </p>
-        </div>
-        <ExportStatsButton />
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+          <BarChart3 className="h-6 w-6" />
+          Статистика
+        </h1>
+        <p className="text-gray-600">
+          Общая статистика платформы и прогресс обучения
+        </p>
       </div>
 
       {/* Main Stats */}
