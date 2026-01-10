@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma"
 export const dynamic = "force-dynamic"
 import { Users } from "lucide-react"
 import { StudentsSearch } from "@/components/students-search"
-import { ExportStatsButton } from "@/components/export-stats-button"
 
 export default async function TeacherStudentsPage() {
   const session = await getServerSession(authOptions)
@@ -111,17 +110,14 @@ export default async function TeacherStudentsPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <Users className="h-6 w-6" />
-            Ученики
-          </h1>
-          <p className="text-gray-600">
-            {students.length} студентов на платформе
-          </p>
-        </div>
-        <ExportStatsButton />
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+          <Users className="h-6 w-6" />
+          Ученики
+        </h1>
+        <p className="text-gray-600">
+          {students.length} студентов на платформе
+        </p>
       </div>
 
       <StudentsSearch students={serializedStudents} trails={trailNames} />

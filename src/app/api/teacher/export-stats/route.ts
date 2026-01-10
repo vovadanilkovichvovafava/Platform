@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -11,9 +11,15 @@ export async function GET() {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    // Get all students with their submissions and details
+    // Check if exporting for a specific student
+    const { searchParams } = new URL(request.url)
+    const studentId = searchParams.get("studentId")
+
+    // Get students with their submissions and details
     const students = await prisma.user.findMany({
-      where: { role: "STUDENT" },
+      where: studentId
+        ? { id: studentId, role: "STUDENT" }
+        : { role: "STUDENT" },
       orderBy: { name: "asc" },
       include: {
         enrollments: {

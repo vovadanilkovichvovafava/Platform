@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ActivityCalendar } from "@/components/activity-calendar"
+import { ExportStatsButton } from "@/components/export-stats-button"
 import {
   ArrowLeft,
   Trophy,
@@ -177,7 +178,10 @@ export default async function StudentDetailPage({ params }: Props) {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
+                <div className="flex items-center justify-between">
+                  <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
+                  <ExportStatsButton studentId={student.id} studentName={student.name} />
+                </div>
                 <div className="flex items-center gap-2 text-gray-500 mt-1">
                   <Mail className="h-4 w-4" />
                   <span>{student.email}</span>
