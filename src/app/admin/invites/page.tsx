@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users } from "lucide-react"
+import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3 } from "lucide-react"
 import Link from "next/link"
 
 interface Invite {
@@ -171,6 +171,13 @@ export default function AdminInvitesPage() {
             >
               <FileText className="h-4 w-4" />
               Контент
+            </Link>
+            <Link
+              href="/admin/analytics"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Аналитика
             </Link>
           </div>
         </div>

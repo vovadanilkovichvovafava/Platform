@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award } from "lucide-react"
+import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award, Trophy, BarChart3 } from "lucide-react"
 import { NotificationBell } from "@/components/notification-bell"
 
 export function Header() {
@@ -63,6 +63,12 @@ export function Header() {
                 className="text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors"
               >
                 Мои работы
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors"
+              >
+                Лидерборд
               </Link>
               {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
                 <Link
@@ -139,6 +145,12 @@ export function Header() {
                     Сертификаты
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
+                  <Link href="/leaderboard" className="cursor-pointer">
+                    <Trophy className="mr-2 h-4 w-4" />
+                    Лидерборд
+                  </Link>
+                </DropdownMenuItem>
                 {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
                   <>
                     <DropdownMenuSeparator className="bg-slate-100" />
@@ -151,12 +163,20 @@ export function Header() {
                   </>
                 )}
                 {session.user.role === "ADMIN" && (
-                  <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                    <Link href="/admin/invites" className="cursor-pointer">
-                      <Shield className="mr-2 h-4 w-4" />
-                      Админ панель
-                    </Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
+                      <Link href="/admin/invites" className="cursor-pointer">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Админ панель
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
+                      <Link href="/admin/analytics" className="cursor-pointer">
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        Аналитика
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuSeparator className="bg-slate-100" />
                 <DropdownMenuItem

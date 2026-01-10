@@ -3,11 +3,11 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   try {
-    // Get top 50 students by XP
+    // Get top 10 students by XP
     const students = await prisma.user.findMany({
       where: { role: "STUDENT" },
       orderBy: { totalXP: "desc" },
-      take: 50,
+      take: 10,
       select: {
         id: true,
         name: true,
