@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { AuthProvider } from "@/components/providers/session-provider"
 import { Header } from "@/components/header"
+import { ToastProvider } from "@/components/ui/toast"
+import { ConfirmProvider } from "@/components/ui/confirm-dialog"
 
 export const metadata: Metadata = {
   title: "R&D Academy - Обучающая платформа",
@@ -20,8 +22,12 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <AuthProvider>
-          <Header />
-          <main>{children}</main>
+          <ToastProvider>
+            <ConfirmProvider>
+              <Header />
+              <main>{children}</main>
+            </ConfirmProvider>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

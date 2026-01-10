@@ -33,6 +33,7 @@ model User {
   activityDays     UserActivity[]
   notifications    Notification[]
   certificates     Certificate[]
+  achievements     UserAchievement[]
 }
 
 // Track daily user activity (one record per day per user)
@@ -365,4 +366,17 @@ model AuditLog {
   @@index([userId])
   @@index([entityType])
   @@index([createdAt])
+}
+
+// User achievements/badges
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String   // FIRST_MODULE, STREAK_7, etc.
+  earnedAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
 }

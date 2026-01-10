@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useToast } from "@/components/ui/toast"
+import { useConfirm } from "@/components/ui/confirm-dialog"
+import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import {
   BookOpen,
   Wrench,
@@ -95,6 +98,8 @@ export default function AdminContentPage() {
   const [trails, setTrails] = useState<Trail[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
 
   // Create trail modal
   const [showTrailModal, setShowTrailModal] = useState(false)
@@ -312,7 +317,14 @@ slug: prompting-practice
   }
 
   const deleteTrail = async (trailId: string, title: string) => {
-    if (!confirm(`Удалить trail "${title}" и все его модули?`)) return
+    const confirmed = await confirm({
+      title: "Удалить trail?",
+      message: `Вы уверены, что хотите удалить "${title}" и все его модули?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       const res = await fetch(`/api/admin/trails/${trailId}`, {
@@ -320,13 +332,21 @@ slug: prompting-practice
       })
       if (!res.ok) throw new Error("Failed to delete")
       fetchTrails()
+      showToast("Trail удалён", "success")
     } catch {
-      setError("Ошибка при удалении trail")
+      showToast("Ошибка при удалении trail", "error")
     }
   }
 
   const deleteModule = async (moduleId: string, title: string) => {
-    if (!confirm(`Удалить модуль "${title}"?`)) return
+    const confirmed = await confirm({
+      title: "Удалить модуль?",
+      message: `Вы уверены, что хотите удалить "${title}"?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       const res = await fetch(`/api/admin/modules/${moduleId}`, {
@@ -334,8 +354,9 @@ slug: prompting-practice
       })
       if (!res.ok) throw new Error("Failed to delete")
       fetchTrails()
+      showToast("Модуль удалён", "success")
     } catch {
-      setError("Ошибка при удалении модуля")
+      showToast("Ошибка при удалении модуля", "error")
     }
   }
 
@@ -434,7 +455,15 @@ slug: prompting-practice
 
   const bulkDeleteModules = async () => {
     if (selectedModules.size === 0) return
-    if (!confirm(`Удалить ${selectedModules.size} модулей?`)) return
+
+    const confirmed = await confirm({
+      title: "Удалить модули?",
+      message: `Вы уверены, что хотите удалить ${selectedModules.size} модулей?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       setBulkDeleting(true)
@@ -448,8 +477,9 @@ slug: prompting-practice
 
       setSelectedModules(new Set())
       fetchTrails()
+      showToast(`Удалено ${selectedModules.size} модулей`, "success")
     } catch {
-      setError("Ошибка при массовом удалении")
+      showToast("Ошибка при массовом удалении", "error")
     } finally {
       setBulkDeleting(false)
     }
@@ -537,13 +567,13 @@ slug: prompting-practice
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
-          <Link
-            href="/admin/invites"
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            К инвайтам
-          </Link>
+          <Breadcrumbs
+            items={[
+              { label: "Админ", href: "/admin/invites" },
+              { label: "Контент" },
+            ]}
+            className="mb-4"
+          />
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useToast } from "@/components/ui/toast"
+import { useConfirm } from "@/components/ui/confirm-dialog"
 import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users } from "lucide-react"
 import Link from "next/link"
 
@@ -27,6 +29,8 @@ export default function AdminInvitesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
 
   const [newInvite, setNewInvite] = useState({
     code: "",
@@ -77,27 +81,38 @@ export default function AdminInvitesPage() {
       if (res.ok) {
         setNewInvite({ code: "", email: "", maxUses: 1, expiresAt: "" })
         fetchInvites()
+        showToast("Приглашение создано", "success")
       } else {
         const data = await res.json()
-        alert(data.error)
+        showToast(data.error, "error")
       }
     } catch (error) {
       console.error("Error creating invite:", error)
+      showToast("Ошибка создания приглашения", "error")
     } finally {
       setIsCreating(false)
     }
   }
 
   const deleteInvite = async (id: string) => {
-    if (!confirm("Удалить это приглашение?")) return
+    const confirmed = await confirm({
+      title: "Удалить приглашение?",
+      message: "Это действие нельзя отменить.",
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       const res = await fetch(`/api/invites?id=${id}`, { method: "DELETE" })
       if (res.ok) {
         fetchInvites()
+        showToast("Приглашение удалено", "success")
       }
     } catch (error) {
       console.error("Error deleting invite:", error)
+      showToast("Ошибка удаления", "error")
     }
   }
 

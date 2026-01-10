@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
+import { useToast } from "@/components/ui/toast"
 
 interface ExportStatsButtonProps {
   studentId?: string
@@ -11,6 +12,7 @@ interface ExportStatsButtonProps {
 
 export function ExportStatsButton({ studentId, studentName }: ExportStatsButtonProps) {
   const [loading, setLoading] = useState(false)
+  const { showToast } = useToast()
 
   const handleExport = async () => {
     setLoading(true)
@@ -33,9 +35,10 @@ export function ExportStatsButton({ studentId, studentName }: ExportStatsButtonP
       a.click()
       window.URL.revokeObjectURL(blobUrl)
       document.body.removeChild(a)
+      showToast("Экспорт завершён", "success")
     } catch (error) {
       console.error("Export error:", error)
-      alert("Ошибка экспорта")
+      showToast("Ошибка экспорта", "error")
     } finally {
       setLoading(false)
     }

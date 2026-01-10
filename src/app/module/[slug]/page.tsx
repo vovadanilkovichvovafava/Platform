@@ -6,8 +6,8 @@ import { prisma } from "@/lib/prisma"
 import { safeJsonParse } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import {
-  ArrowLeft,
   ArrowRight,
   Clock,
   Star,
@@ -190,13 +190,14 @@ export default async function ModulePage({ params }: Props) {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
-          <Link
-            href={`/trails/${courseModule.trail.slug}`}
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Назад к {courseModule.trail.title}
-          </Link>
+          <Breadcrumbs
+            items={[
+              { label: "Trails", href: "/trails" },
+              { label: courseModule.trail.title, href: `/trails/${courseModule.trail.slug}` },
+              { label: courseModule.title },
+            ]}
+            className="mb-4"
+          />
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>

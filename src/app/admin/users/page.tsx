@@ -4,8 +4,10 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/components/ui/toast"
+import { useConfirm } from "@/components/ui/confirm-dialog"
+import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import {
-  ArrowLeft,
   RefreshCw,
   Users,
   GraduationCap,
@@ -53,6 +55,8 @@ export default function AdminUsersPage() {
   const [error, setError] = useState("")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
 
   const fetchUsers = async () => {
     try {
@@ -83,7 +87,7 @@ export default function AdminUsersPage() {
 
       if (!res.ok) {
         const data = await res.json()
-        alert(data.error || "Ошибка")
+        showToast(data.error || "Ошибка", "error")
         return
       }
 
@@ -91,17 +95,23 @@ export default function AdminUsersPage() {
       setUsers(users.map(u =>
         u.id === userId ? { ...u, role: newRole } : u
       ))
+      showToast("Роль обновлена", "success")
     } catch {
-      alert("Ошибка при обновлении роли")
+      showToast("Ошибка при обновлении роли", "error")
     } finally {
       setUpdatingId(null)
     }
   }
 
   const deleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Удалить пользователя "${userName}"? Это действие нельзя отменить.`)) {
-      return
-    }
+    const confirmed = await confirm({
+      title: "Удалить пользователя?",
+      message: `Вы уверены, что хотите удалить "${userName}"? Это действие нельзя отменить.`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       setDeletingId(userId)
@@ -111,14 +121,15 @@ export default function AdminUsersPage() {
 
       if (!res.ok) {
         const data = await res.json()
-        alert(data.error + (data.details ? `\n${data.details}` : "") || "Ошибка при удалении")
+        showToast(data.error + (data.details ? ` ${data.details}` : "") || "Ошибка при удалении", "error")
         return
       }
 
       // Remove from local state
       setUsers(users.filter(u => u.id !== userId))
+      showToast("Пользователь удалён", "success")
     } catch {
-      alert("Ошибка при удалении пользователя")
+      showToast("Ошибка при удалении пользователя", "error")
     } finally {
       setDeletingId(null)
     }
@@ -140,13 +151,13 @@ export default function AdminUsersPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
-          <Link
-            href="/admin/invites"
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            К инвайтам
-          </Link>
+          <Breadcrumbs
+            items={[
+              { label: "Админ", href: "/admin/invites" },
+              { label: "Пользователи" },
+            ]}
+            className="mb-4"
+          />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500">

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Award, Download, ExternalLink, Loader2, Calendar, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/toast"
 
 interface Certificate {
   id: string
@@ -27,6 +28,7 @@ export default function CertificatesPage() {
   const router = useRouter()
   const [certificates, setCertificates] = useState<Certificate[]>([])
   const [loading, setLoading] = useState(true)
+  const { showToast } = useToast()
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -181,7 +183,7 @@ export default function CertificatesPage() {
                           navigator.clipboard.writeText(
                             `${window.location.origin}/certificates/verify/${cert.code}`
                           )
-                          alert("Ссылка скопирована!")
+                          showToast("Ссылка скопирована!", "success")
                         }}
                       >
                         <Download className="h-4 w-4 mr-1" />

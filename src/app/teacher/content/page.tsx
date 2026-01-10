@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/components/ui/toast"
+import { useConfirm } from "@/components/ui/confirm-dialog"
 import {
   BookOpen,
   Wrench,
@@ -84,6 +86,8 @@ export default function TeacherContentPage() {
   const [assignedTrailIds, setAssignedTrailIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
 
   const [showTrailModal, setShowTrailModal] = useState(false)
   const [showModuleModal, setShowModuleModal] = useState(false)
@@ -204,7 +208,14 @@ export default function TeacherContentPage() {
   }
 
   const deleteTrail = async (trailId: string, title: string) => {
-    if (!confirm(`Удалить trail "${title}" и все его модули?`)) return
+    const confirmed = await confirm({
+      title: "Удалить trail?",
+      message: `Вы уверены, что хотите удалить "${title}" и все его модули?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       const res = await fetch(`/api/admin/trails/${trailId}`, {
@@ -216,13 +227,21 @@ export default function TeacherContentPage() {
         throw new Error(data.error || "Failed to delete trail")
       }
       fetchData()
+      showToast("Trail удалён", "success")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка удаления trail")
+      showToast(err instanceof Error ? err.message : "Ошибка удаления trail", "error")
     }
   }
 
   const deleteModule = async (moduleId: string, title: string) => {
-    if (!confirm(`Удалить модуль "${title}"?`)) return
+    const confirmed = await confirm({
+      title: "Удалить модуль?",
+      message: `Вы уверены, что хотите удалить "${title}"?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       const res = await fetch(`/api/admin/modules/${moduleId}`, {
@@ -234,8 +253,9 @@ export default function TeacherContentPage() {
         throw new Error(data.error || "Failed to delete module")
       }
       fetchData()
+      showToast("Модуль удалён", "success")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка удаления модуля")
+      showToast(err instanceof Error ? err.message : "Ошибка удаления модуля", "error")
     }
   }
 

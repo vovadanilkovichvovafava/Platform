@@ -6,10 +6,10 @@ import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import { ActivityCalendar } from "@/components/activity-calendar"
 import { ExportStatsButton } from "@/components/export-stats-button"
 import {
-  ArrowLeft,
   Trophy,
   BookOpen,
   CheckCircle2,
@@ -158,14 +158,15 @@ export default async function StudentDetailPage({ params }: Props) {
 
   return (
     <div className="p-8">
-      {/* Back button */}
-      <Link
-        href="/teacher/students"
-        className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
-      >
-        <ArrowLeft className="h-4 w-4 mr-1" />
-        Назад к списку учеников
-      </Link>
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: "Учитель", href: "/teacher" },
+          { label: "Ученики", href: "/teacher/students" },
+          { label: student.name },
+        ]}
+        className="mb-6"
+      />
 
       {/* Header with student info */}
       <div className="flex flex-col md:flex-row gap-6 mb-8">
