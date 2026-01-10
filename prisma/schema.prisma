@@ -349,3 +349,20 @@ model Certificate {
   @@index([trailId])
   @@index([code])
 }
+
+// Audit log for tracking changes
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  userName   String
+  action     String   // CREATE, UPDATE, DELETE, REORDER
+  entityType String   // TRAIL, MODULE, USER, etc.
+  entityId   String
+  entityName String
+  details    String?  // JSON with additional details
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([createdAt])
+}

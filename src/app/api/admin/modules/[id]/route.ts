@@ -120,7 +120,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     // Get module to check trail
     const existingModule = await prisma.module.findUnique({
       where: { id },
-      select: { trailId: true },
+      select: { trailId: true, title: true },
     })
 
     if (!existingModule) {
@@ -137,6 +137,18 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
     await prisma.module.delete({
       where: { id },
+    })
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        userName: session.user.name || session.user.email || "Unknown",
+        action: "DELETE",
+        entityType: "MODULE",
+        entityId: id,
+        entityName: existingModule.title,
+      },
     })
 
     return NextResponse.json({ success: true })

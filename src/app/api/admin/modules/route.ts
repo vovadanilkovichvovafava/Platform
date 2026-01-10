@@ -66,6 +66,18 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        userName: session.user.name || session.user.email || "Unknown",
+        action: "CREATE",
+        entityType: "MODULE",
+        entityId: createdModule.id,
+        entityName: createdModule.title,
+      },
+    })
+
     return NextResponse.json(createdModule)
   } catch (error) {
     if (error instanceof z.ZodError) {
