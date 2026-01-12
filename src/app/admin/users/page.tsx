@@ -15,6 +15,8 @@ import {
   BookOpen,
   Trash2,
   CalendarDays,
+  Search,
+  X,
 } from "lucide-react"
 
 interface User {
@@ -55,6 +57,8 @@ export default function AdminUsersPage() {
   const [error, setError] = useState("")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [roleFilter, setRoleFilter] = useState<"ALL" | "STUDENT" | "TEACHER" | "ADMIN">("ALL")
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
@@ -147,6 +151,15 @@ export default function AdminUsersPage() {
   const teachers = users.filter(u => u.role === "TEACHER")
   const admins = users.filter(u => u.role === "ADMIN")
 
+  // Filter users by search and role
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = searchQuery === "" ||
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesRole = roleFilter === "ALL" || user.role === roleFilter
+    return matchesSearch && matchesRole
+  })
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
@@ -227,16 +240,56 @@ export default function AdminUsersPage() {
         {/* Users List */}
         <div className="bg-white rounded-xl border overflow-hidden">
           <div className="p-4 border-b bg-gray-50">
-            <h2 className="font-semibold">Все пользователи</h2>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="font-semibold">Все пользователи</h2>
+              <div className="flex items-center gap-2">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Поиск по имени или email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-8 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                {/* Role filter */}
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
+                  className="px-3 py-1.5 border rounded-lg text-sm bg-white"
+                >
+                  <option value="ALL">Все роли</option>
+                  <option value="STUDENT">Студенты</option>
+                  <option value="TEACHER">Учителя</option>
+                  <option value="ADMIN">Админы</option>
+                </select>
+              </div>
+            </div>
+            {/* Results count */}
+            {(searchQuery || roleFilter !== "ALL") && (
+              <p className="text-sm text-gray-500 mt-2">
+                Найдено: {filteredUsers.length} из {users.length}
+              </p>
+            )}
           </div>
 
-          {users.length === 0 ? (
+          {filteredUsers.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              Нет пользователей
+              {users.length === 0 ? "Нет пользователей" : "Никого не найдено"}
             </div>
           ) : (
             <div className="divide-y">
-              {users.map((user) => {
+              {filteredUsers.map((user) => {
                 const config = roleConfig[user.role]
                 const RoleIcon = config.icon
                 const isUpdating = updatingId === user.id
