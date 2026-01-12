@@ -438,15 +438,31 @@ slug: prompting-practice
     })
   }
 
-  const selectAllInTrail = (trailId: string) => {
+  const toggleSelectAllInTrail = (trailId: string) => {
     const trail = trails.find((t) => t.id === trailId)
     if (!trail) return
 
+    // Check if all modules in trail are already selected
+    const allSelected = trail.modules.every((m) => selectedModules.has(m.id))
+
     setSelectedModules((prev) => {
       const next = new Set(prev)
-      trail.modules.forEach((m) => next.add(m.id))
+      if (allSelected) {
+        // Deselect all in this trail
+        trail.modules.forEach((m) => next.delete(m.id))
+      } else {
+        // Select all in this trail
+        trail.modules.forEach((m) => next.add(m.id))
+      }
       return next
     })
+  }
+
+  // Check if all modules in a trail are selected
+  const isAllSelectedInTrail = (trailId: string) => {
+    const trail = trails.find((t) => t.id === trailId)
+    if (!trail || trail.modules.length === 0) return false
+    return trail.modules.every((m) => selectedModules.has(m.id))
   }
 
   const clearSelection = () => {
@@ -700,9 +716,10 @@ slug: prompting-practice
                         </span>
                         <Button
                           size="sm"
-                          variant="ghost"
-                          onClick={() => selectAllInTrail(trail.id)}
-                          title="Выбрать все модули"
+                          variant={isAllSelectedInTrail(trail.id) ? "default" : "ghost"}
+                          onClick={() => toggleSelectAllInTrail(trail.id)}
+                          title={isAllSelectedInTrail(trail.id) ? "Снять выделение" : "Выбрать все модули"}
+                          className={isAllSelectedInTrail(trail.id) ? "bg-blue-600 hover:bg-blue-700" : ""}
                         >
                           <CheckCircle className="h-4 w-4" />
                         </Button>
@@ -778,7 +795,6 @@ slug: prompting-practice
                                     <Checkbox
                                       checked={selectedModules.has(module.id)}
                                       onCheckedChange={() => toggleModuleSelection(module.id)}
-                                      onClick={(e) => e.stopPropagation()}
                                     />
                                     <Link href={`/admin/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 shrink-0">
@@ -856,7 +872,6 @@ slug: prompting-practice
                                     <Checkbox
                                       checked={selectedModules.has(module.id)}
                                       onCheckedChange={() => toggleModuleSelection(module.id)}
-                                      onClick={(e) => e.stopPropagation()}
                                     />
                                     <Link href={`/admin/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 shrink-0">
