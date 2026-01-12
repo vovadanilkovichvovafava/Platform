@@ -268,9 +268,9 @@ export default function TeacherContentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-hidden">
       <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4 sm:py-6">
+        <div className="px-4 lg:px-6 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -294,7 +294,7 @@ export default function TeacherContentPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="px-4 lg:px-6 py-6 overflow-x-hidden">
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between text-red-700">
             <div className="flex items-center gap-2">
