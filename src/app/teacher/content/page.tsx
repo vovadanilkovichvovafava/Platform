@@ -270,20 +270,21 @@ export default function TeacherContentPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+        <div className="container mx-auto px-4 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                 Управление контентом
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 text-sm sm:text-base mt-1">
                 Редактирование назначенных trails и модулей
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setShowTrailModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Новый Trail
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button onClick={() => setShowTrailModal(true)} size="sm">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Новый Trail</span>
+                <span className="sm:hidden">Trail</span>
               </Button>
               <Button onClick={fetchData} variant="outline" size="sm">
                 <RefreshCw className="h-4 w-4" />
@@ -329,27 +330,27 @@ export default function TeacherContentPage() {
                       background: `linear-gradient(135deg, ${trail.color}10 0%, ${trail.color}05 100%)`,
                     }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
+                    <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                         <div
-                          className="flex h-12 w-12 items-center justify-center rounded-xl"
+                          className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl flex-shrink-0"
                           style={{
                             background: `linear-gradient(135deg, ${trail.color} 0%, ${trail.color}99 100%)`,
                           }}
                         >
-                          <Icon className="h-6 w-6 text-white" />
+                          <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                         </div>
-                        <div>
-                          <CardTitle className="text-lg">
+                        <div className="min-w-0">
+                          <CardTitle className="text-base sm:text-lg truncate">
                             {trail.title}
                           </CardTitle>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 truncate">
                             {trail.subtitle}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={trail.isPublished ? "default" : "secondary"}>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge variant={trail.isPublished ? "default" : "secondary"} className="hidden sm:inline-flex">
                           {trail.isPublished ? "Опубликован" : "Черновик"}
                         </Badge>
                         <Button
@@ -360,8 +361,8 @@ export default function TeacherContentPage() {
                             setShowModuleModal(true)
                           }}
                         >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Модуль
+                          <Plus className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Модуль</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -387,54 +388,51 @@ export default function TeacherContentPage() {
                           return (
                             <div
                               key={module.id}
-                              className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 group"
+                              className="flex items-center gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50 group overflow-hidden"
                             >
-                              <div className="flex items-center gap-3 flex-1">
-                                <span className="text-gray-400 text-sm w-6">
-                                  {index + 1}.
-                                </span>
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
-                                  <TypeIcon className="h-4 w-4 text-gray-500" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900 truncate">
-                                      {module.title}
-                                    </span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {typeLabels[module.type]}
-                                    </Badge>
-                                    {module.type === "THEORY" && (
-                                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                                        <HelpCircle className="h-3 w-3" />
-                                        {module._count?.questions || 0} вопросов
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-500 truncate">
-                                    {module.description}
-                                  </p>
-                                </div>
+                              <span className="text-gray-400 text-sm w-5 flex-shrink-0">
+                                {index + 1}.
+                              </span>
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 flex-shrink-0">
+                                <TypeIcon className="h-4 w-4 text-gray-500" />
                               </div>
-                              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex-1 min-w-0 overflow-hidden">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-gray-900 truncate max-w-[200px] sm:max-w-none">
+                                    {module.title}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs flex-shrink-0">
+                                    {typeLabels[module.type]}
+                                  </Badge>
+                                  {module.type === "THEORY" && (
+                                    <span className="text-xs text-gray-400 flex items-center gap-1 flex-shrink-0">
+                                      <HelpCircle className="h-3 w-3" />
+                                      {module._count?.questions || 0}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-500 truncate">
+                                  {module.description}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className="text-xs text-gray-400 hidden sm:inline">{module.duration}</span>
+                                <span className="text-xs font-medium text-gray-500">{module.points} XP</span>
+                              </div>
+                              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Link href={`/teacher/content/modules/${module.id}`}>
-                                  <Button variant="ghost" size="sm">
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                 </Link>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-red-600 hover:text-red-700"
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                                   onClick={() => deleteModule(module.id, module.title)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-gray-400">
-                                <span>{module.duration}</span>
-                                <span>{module.points} XP</span>
-                                <ChevronRight className="h-4 w-4" />
                               </div>
                             </div>
                           )
