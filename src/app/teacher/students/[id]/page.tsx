@@ -3,18 +3,18 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import { ActivityCalendar } from "@/components/activity-calendar"
 import { ExportStatsButton } from "@/components/export-stats-button"
+import { StudentModuleList } from "@/components/student-module-list"
 import {
   Trophy,
   BookOpen,
   CheckCircle2,
   Clock,
-  XCircle,
   Calendar,
   Mail,
   Target,
@@ -77,7 +77,6 @@ export default async function StudentDetailPage({ params }: Props) {
             },
           },
         },
-        where: { status: "COMPLETED" },
       },
       submissions: {
         orderBy: { createdAt: "desc" },
@@ -110,7 +109,11 @@ export default async function StudentDetailPage({ params }: Props) {
 
   // Create a map of module progress for quick lookup
   const progressMap = new Map(
-    student.moduleProgress.map((p) => [p.moduleId, p])
+    student.moduleProgress.map((p) => [p.moduleId, {
+      moduleId: p.moduleId,
+      status: p.status,
+      skippedByTeacher: p.skippedByTeacher,
+    }])
   )
 
   // Calculate total max XP
@@ -246,96 +249,17 @@ export default async function StudentDetailPage({ params }: Props) {
             Trails и прогресс
           </h2>
 
-          {student.enrollments.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-gray-500">
-                Студент не записан ни на один trail
-              </CardContent>
-            </Card>
-          ) : (
-            student.enrollments.map((enrollment) => {
-              const trailModules = enrollment.trail.modules
-              const completedModules = trailModules.filter(
-                (m) => progressMap.get(m.id)?.status === "COMPLETED"
-              )
-              const trailMaxXP = trailModules.reduce((s, m) => s + m.points, 0)
-              const trailProgress = trailModules.length > 0
-                ? Math.round((completedModules.length / trailModules.length) * 100)
-                : 0
-
-              return (
-                <Card key={enrollment.trailId}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center justify-between">
-                      <span>{enrollment.trail.title}</span>
-                      <Badge variant="secondary">
-                        {completedModules.length}/{trailModules.length} модулей
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Progress bar */}
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>{trailProgress}% завершено</span>
-                        <span>{trailMaxXP} XP макс.</span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
-                          style={{ width: `${trailProgress}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Module list */}
-                    <div className="space-y-2">
-                      {trailModules.map((module) => {
-                        const progress = progressMap.get(module.id)
-                        const isCompleted = progress?.status === "COMPLETED"
-                        const isInProgress = progress?.status === "IN_PROGRESS"
-
-                        return (
-                          <div
-                            key={module.id}
-                            className={`flex items-center justify-between p-2 rounded-lg ${
-                              isCompleted
-                                ? "bg-green-50"
-                                : isInProgress
-                                ? "bg-blue-50"
-                                : "bg-gray-50"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              {isCompleted ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              ) : isInProgress ? (
-                                <Clock className="h-4 w-4 text-blue-500" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-gray-300" />
-                              )}
-                              <span
-                                className={`text-sm ${
-                                  isCompleted
-                                    ? "text-green-700"
-                                    : isInProgress
-                                    ? "text-blue-700"
-                                    : "text-gray-500"
-                                }`}
-                              >
-                                {module.title}
-                              </span>
-                            </div>
-                            <span className="text-xs text-gray-400">{module.points} XP</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })
-          )}
+          <StudentModuleList
+            studentId={student.id}
+            enrollments={student.enrollments.map((e) => ({
+              trailId: e.trailId,
+              trail: {
+                title: e.trail.title,
+                modules: e.trail.modules,
+              },
+            }))}
+            progressMap={progressMap}
+          />
         </div>
 
         {/* Right: Calendar + History */}
