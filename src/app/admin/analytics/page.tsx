@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
+import { useToast } from "@/components/ui/toast"
 import {
   TrendingDown,
   TrendingUp,
@@ -16,6 +17,8 @@ import {
   ChevronDown,
   ChevronUp,
   Mail,
+  Award,
+  Loader2,
 } from "lucide-react"
 
 interface ChurnRiskStudent {
@@ -66,7 +69,9 @@ interface AnalyticsData {
 export default function AdvancedAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [syncingAchievements, setSyncingAchievements] = useState(false)
   const [expandedRisk, setExpandedRisk] = useState<"high" | "medium" | null>("high")
+  const { showToast } = useToast()
 
   useEffect(() => {
     fetchAnalytics()
@@ -84,6 +89,30 @@ export default function AdvancedAnalyticsPage() {
       console.error("Failed to fetch analytics:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const syncAchievements = async () => {
+    try {
+      setSyncingAchievements(true)
+      const res = await fetch("/api/admin/sync-achievements", { method: "POST" })
+      const result = await res.json()
+
+      if (res.ok) {
+        showToast(
+          `Синхронизировано! Выдано ${result.totalAchievementsAwarded} достижений для ${result.usersWithNewAchievements} пользователей`,
+          "success"
+        )
+      } else {
+        throw new Error(result.error || "Ошибка синхронизации")
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Ошибка синхронизации",
+        "error"
+      )
+    } finally {
+      setSyncingAchievements(false)
     }
   }
 
@@ -126,10 +155,25 @@ export default function AdvancedAnalyticsPage() {
               </p>
             </div>
           </div>
-          <Button onClick={fetchAnalytics} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Обновить
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={syncAchievements}
+              variant="outline"
+              size="sm"
+              disabled={syncingAchievements}
+            >
+              {syncingAchievements ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Award className="h-4 w-4 mr-2" />
+              )}
+              Синхронизировать достижения
+            </Button>
+            <Button onClick={fetchAnalytics} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Обновить
+            </Button>
+          </div>
         </div>
 
         {/* Summary Cards */}
