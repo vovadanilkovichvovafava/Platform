@@ -22,7 +22,9 @@ import {
   FolderGit2,
   LucideIcon,
   AlertCircle,
+  Award,
 } from "lucide-react"
+import { ClaimCertificateButton } from "@/components/claim-certificate-button"
 
 const iconMap: Record<string, LucideIcon> = {
   Code,
@@ -85,6 +87,7 @@ export default async function TrailPage({ params }: Props) {
   let isEnrolled = false
   const moduleProgressMap: Record<string, string> = {}
   let taskProgress: { currentLevel: string; middleStatus: string; juniorStatus: string; seniorStatus: string } | null = null
+  let hasCertificate = false
 
   if (session) {
     const enrollment = await prisma.enrollment.findUnique({
@@ -123,6 +126,17 @@ export default async function TrailPage({ params }: Props) {
         juniorStatus: "LOCKED",
         seniorStatus: "LOCKED",
       }
+
+      // Check if certificate already exists
+      const certificate = await prisma.certificate.findUnique({
+        where: {
+          userId_trailId: {
+            userId: session.user.id,
+            trailId: trail.id,
+          },
+        },
+      })
+      hasCertificate = !!certificate
     }
   }
 
@@ -135,6 +149,15 @@ export default async function TrailPage({ params }: Props) {
     m => moduleProgressMap[m.id] === "COMPLETED"
   ).length
   const allAssessmentsCompleted = assessmentModules.length > 0 && assessmentCompletedCount === assessmentModules.length
+
+  // Check if at least one project is completed
+  const completedProjectCount = projectModules.filter(
+    m => moduleProgressMap[m.id] === "COMPLETED"
+  ).length
+  const hasCompletedProject = completedProjectCount > 0
+
+  // Check if all modules are completed (eligible for certificate)
+  const allModulesCompleted = allAssessmentsCompleted && hasCompletedProject
 
   const progressPercent = assessmentModules.length > 0
     ? Math.round((assessmentCompletedCount / assessmentModules.length) * 100)
@@ -498,6 +521,44 @@ export default async function TrailPage({ params }: Props) {
                 })
               })()}
             </div>
+          </div>
+        )}
+
+        {/* Certificate Section */}
+        {isEnrolled && allModulesCompleted && (
+          <div className="mt-12">
+            <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                    <Award className="h-8 w-8 text-amber-600" />
+                  </div>
+                  <div className="flex-1 text-center md:text-left">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">
+                      {hasCertificate ? "Сертификат получен!" : "Trail завершён!"}
+                    </h3>
+                    <p className="text-gray-600">
+                      {hasCertificate
+                        ? "Вы уже получили сертификат за этот trail"
+                        : "Поздравляем! Вы прошли все модули и можете получить сертификат"
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    {hasCertificate ? (
+                      <Button asChild variant="outline" className="gap-2">
+                        <Link href="/certificates">
+                          <Award className="h-4 w-4" />
+                          Мои сертификаты
+                        </Link>
+                      </Button>
+                    ) : (
+                      <ClaimCertificateButton trailId={trail.id} />
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

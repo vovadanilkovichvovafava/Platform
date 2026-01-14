@@ -20,6 +20,8 @@ import {
   Save,
   Key,
   Loader2,
+  Award,
+  Lock,
 } from "lucide-react"
 
 interface UserProfile {
@@ -37,10 +39,23 @@ interface UserProfile {
   }
 }
 
+interface Achievement {
+  id: string
+  name: string
+  description: string
+  icon: string
+  color: string
+  rarity: string
+  earned: boolean
+  earnedAt: string | null
+}
+
 export default function ProfilePage() {
   const { data: session, update: updateSession } = useSession()
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [achievementStats, setAchievementStats] = useState({ count: 0, total: 0 })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
@@ -58,6 +73,7 @@ export default function ProfilePage() {
       return
     }
     fetchProfile()
+    fetchAchievements()
   }, [session, router])
 
   const fetchProfile = async () => {
@@ -71,6 +87,41 @@ export default function ProfilePage() {
       setError("Не удалось загрузить профиль")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAchievements = async () => {
+    try {
+      const res = await fetch("/api/achievements")
+      if (res.ok) {
+        const data = await res.json()
+        setAchievements(data.all || [])
+        setAchievementStats({ count: data.count || 0, total: data.total || 0 })
+      }
+    } catch (err) {
+      console.error("Error fetching achievements:", err)
+    }
+  }
+
+  const getRarityLabel = (rarity: string) => {
+    switch (rarity) {
+      case "common": return "Обычное"
+      case "uncommon": return "Необычное"
+      case "rare": return "Редкое"
+      case "epic": return "Эпическое"
+      case "legendary": return "Легендарное"
+      default: return rarity
+    }
+  }
+
+  const getRarityBorder = (rarity: string) => {
+    switch (rarity) {
+      case "common": return "border-gray-200"
+      case "uncommon": return "border-green-300"
+      case "rare": return "border-blue-400"
+      case "epic": return "border-purple-500"
+      case "legendary": return "border-yellow-500"
+      default: return "border-gray-200"
     }
   }
 
@@ -365,6 +416,68 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Achievements Section */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Award className="h-6 w-6 text-orange-500" />
+            Достижения
+          </h2>
+          <Badge variant="secondary">
+            {achievementStats.count} / {achievementStats.total}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {achievements.map((achievement) => (
+            <Card
+              key={achievement.id}
+              className={`relative overflow-hidden transition-all ${
+                achievement.earned
+                  ? `border-2 ${getRarityBorder(achievement.rarity)} hover:shadow-lg`
+                  : "opacity-50 grayscale"
+              }`}
+            >
+              <CardContent className="p-4 text-center">
+                <div className="text-3xl mb-2">{achievement.icon}</div>
+                <h3 className="font-semibold text-sm text-gray-900 mb-1">
+                  {achievement.name}
+                </h3>
+                <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                  {achievement.description}
+                </p>
+                <Badge
+                  className={`text-[10px] ${
+                    achievement.earned ? achievement.color : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {getRarityLabel(achievement.rarity)}
+                </Badge>
+                {achievement.earned && achievement.earnedAt && (
+                  <p className="text-[10px] text-gray-400 mt-2">
+                    {new Date(achievement.earnedAt).toLocaleDateString("ru-RU")}
+                  </p>
+                )}
+                {!achievement.earned && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                    <Lock className="h-6 w-6 text-gray-400" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {achievements.length === 0 && (
+          <Card>
+            <CardContent className="py-8 text-center text-gray-500">
+              <Award className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p>Загрузка достижений...</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
