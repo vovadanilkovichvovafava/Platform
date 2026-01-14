@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { checkAndAwardAchievements } from "@/lib/check-achievements"
 import crypto from "crypto"
 
 // GET - Get user's certificates
@@ -154,6 +155,9 @@ export async function POST(request: Request) {
         link: "/certificates",
       },
     })
+
+    // Check and award achievements (for FIRST_CERTIFICATE, etc.)
+    await checkAndAwardAchievements(session.user.id)
 
     return NextResponse.json(certificate)
   } catch (error) {
