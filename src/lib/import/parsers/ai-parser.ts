@@ -82,7 +82,7 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
       body: JSON.stringify({
         model: config.model || "gpt-5-nano",
         messages: [{ role: "user", content: "test" }],
-        max_tokens: 5,
+        max_completion_tokens: 5,
       }),
     })
 
@@ -134,7 +134,7 @@ export async function parseWithAI(
           { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
         ],
         temperature: 0.3,
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
       }),
     })
 
