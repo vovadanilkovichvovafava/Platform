@@ -18,6 +18,7 @@ import {
   FileText,
 } from "lucide-react"
 import { ReviewForm } from "@/components/review-form"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
 
 interface Props {
   params: Promise<{ id: string }>
@@ -56,42 +57,6 @@ export default async function ReviewPage({ params }: Props) {
       .join("")
       .toUpperCase()
       .slice(0, 2)
-  }
-
-  // Simple markdown-like rendering
-  const renderContent = (content: string) => {
-    const lines = content.split("\n")
-    return lines.map((line, i) => {
-      if (line.startsWith("## ")) {
-        return (
-          <h3 key={i} className="text-lg font-semibold mt-4 mb-2">
-            {line.slice(3)}
-          </h3>
-        )
-      }
-      if (line.startsWith("### ")) {
-        return (
-          <h4 key={i} className="text-base font-medium mt-3 mb-1">
-            {line.slice(4)}
-          </h4>
-        )
-      }
-      if (line.startsWith("- ")) {
-        return (
-          <li key={i} className="ml-4 mb-1">
-            {line.slice(2)}
-          </li>
-        )
-      }
-      if (line.trim() === "") {
-        return <br key={i} />
-      }
-      return (
-        <p key={i} className="mb-1">
-          {line}
-        </p>
-      )
-    })
   }
 
   return (
@@ -197,8 +162,8 @@ export default async function ReviewPage({ params }: Props) {
                   Требования к проекту
                 </CardTitle>
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
-                {renderContent(submission.module.requirements)}
+              <CardContent>
+                <MarkdownRenderer content={submission.module.requirements} />
               </CardContent>
             </Card>
           )}
