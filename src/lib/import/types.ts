@@ -17,6 +17,7 @@ export interface ParsedModule {
   questions: ParsedQuestion[]
   level?: string
   duration?: string
+  requiresSubmission?: boolean // Требуется ли сдача работы (загрузка файлов)
 }
 
 export interface ParsedTrail {
@@ -171,15 +172,100 @@ export function generateSlug(text: string): string {
 }
 
 // Определение типа модуля
-export function detectModuleType(text: string): "THEORY" | "PRACTICE" | "PROJECT" {
-  const lowerText = text.toLowerCase()
+export function detectModuleType(title: string, content: string = ""): "THEORY" | "PRACTICE" | "PROJECT" {
+  const lowerTitle = title.toLowerCase()
+  const lowerContent = content.toLowerCase()
+  const fullText = lowerTitle + " " + lowerContent
 
+  // PROJECT - создание чего-то большого
   const projectKeywords = ["проект", "project", "создай", "разработай", "построй", "build", "create", "develop"]
-  const practiceKeywords = ["тест", "quiz", "практика", "practice", "упражнен", "exercise", "задан", "task"]
+  if (projectKeywords.some(k => lowerTitle.includes(k))) return "PROJECT"
 
-  if (projectKeywords.some(k => lowerText.includes(k))) return "PROJECT"
-  if (practiceKeywords.some(k => lowerText.includes(k))) return "PRACTICE"
+  // PRACTICE - занятия с домашкой, уроки с практикой
+  const practiceKeywords = [
+    // Явные маркеры практики
+    "тест", "quiz", "практика", "practice", "упражнен", "exercise", "задан", "task",
+    // Занятия и уроки обычно практические
+    "занятие", "lesson", "урок",
+    // Лабораторные и семинары
+    "лаборатор", "семинар", "workshop", "воркшоп",
+  ]
+
+  // Проверяем заголовок на практические ключевые слова
+  if (practiceKeywords.some(k => lowerTitle.includes(k))) {
+    return "PRACTICE"
+  }
+
+  // Проверяем содержимое на наличие домашки/практических заданий
+  const homeworkMarkers = [
+    "домашка", "домашнее задание", "homework", "задание на дом",
+    "что делаем:", "практика на уроке:", "на уроке:",
+    "сделай", "выполни", "реализуй", "implement",
+  ]
+  if (homeworkMarkers.some(k => lowerContent.includes(k))) {
+    return "PRACTICE"
+  }
+
+  // THEORY - теоретические материалы, справочники, приложения
+  const theoryKeywords = [
+    "шаблон", "чеклист", "template", "checklist",
+    "приложение", "appendix", "справочник", "reference",
+    "контакт", "contact", "введение", "introduction",
+    "обзор", "overview", "теория", "theory",
+  ]
+  if (theoryKeywords.some(k => lowerTitle.includes(k))) {
+    return "THEORY"
+  }
+
+  // По умолчанию - теория
   return "THEORY"
+}
+
+// Определение, требуется ли сдача работы для модуля
+export function detectRequiresSubmission(
+  type: "THEORY" | "PRACTICE" | "PROJECT",
+  title: string,
+  content: string = ""
+): boolean {
+  // PROJECT всегда требует сдачу
+  if (type === "PROJECT") return true
+
+  // THEORY никогда не требует сдачу
+  if (type === "THEORY") return false
+
+  // PRACTICE - анализируем содержимое
+  const lowerTitle = title.toLowerCase()
+  const lowerContent = content.toLowerCase()
+
+  // Явные маркеры домашки/практики требующей сдачи
+  const submissionMarkers = [
+    "домашка", "домашнее задание", "homework",
+    "сдать", "загрузить", "прикрепить", "submit", "upload",
+    "сделай", "собери", "реализуй", "создай",
+    "практика на уроке", "что делаем",
+    "выполни задание", "задание:",
+  ]
+
+  // Проверяем наличие маркеров сдачи в контенте
+  if (submissionMarkers.some(m => lowerContent.includes(m))) {
+    return true
+  }
+
+  // Занятия/уроки по умолчанию требуют сдачу если это PRACTICE
+  const lessonPatterns = ["занятие", "lesson", "урок", "workshop", "воркшоп", "лаборатор", "семинар"]
+  if (lessonPatterns.some(p => lowerTitle.includes(p))) {
+    return true
+  }
+
+  // Маркеры которые НЕ требуют сдачи (только тесты/квизы)
+  const noSubmissionMarkers = ["тест", "quiz", "викторина", "опрос"]
+  if (noSubmissionMarkers.some(m => lowerTitle.includes(m)) &&
+      !submissionMarkers.some(m => lowerContent.includes(m))) {
+    return false
+  }
+
+  // По умолчанию для PRACTICE - требуется сдача
+  return true
 }
 
 // Определение цвета по тематике

@@ -7,6 +7,7 @@ import {
   ParseResult,
   generateSlug,
   detectModuleType,
+  detectRequiresSubmission,
   detectColor,
   detectIcon,
 } from "../types"
@@ -278,21 +279,25 @@ function convertXmlModule(node: XmlNode, warnings: string[]): ParsedModule | nul
   }
 
   const type = typeMap[typeStr.toLowerCase()] ||
-    (questions.length > 0 ? "PRACTICE" : detectModuleType(title + " " + content))
+    (questions.length > 0 ? "PRACTICE" : detectModuleType(title, content))
 
   const pointsStr = getElementText(node, "points") || getElementText(node, "очки") ||
     getElementText(node, "баллы") || node.attributes.points
+
+  // Определяем, требуется ли сдача работы
+  const requiresSubmission = detectRequiresSubmission(type, title, content)
 
   return {
     title,
     slug: node.attributes.slug || getElementText(node, "slug") || generateSlug(title),
     type,
-    points: pointsStr ? parseInt(pointsStr) : (type === "PROJECT" ? 100 : 50),
+    points: pointsStr ? parseInt(pointsStr) : (type === "PROJECT" ? 100 : type === "PRACTICE" ? 75 : 50),
     description: getElementText(node, "description") || getElementText(node, "описание") || "",
     content,
     questions,
     level: getElementText(node, "level") || getElementText(node, "уровень") || node.attributes.level,
     duration: getElementText(node, "duration") || getElementText(node, "длительность") || node.attributes.duration,
+    requiresSubmission,
   }
 }
 

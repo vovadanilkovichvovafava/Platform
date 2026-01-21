@@ -8,6 +8,7 @@ import {
   DEFAULT_PATTERNS,
   generateSlug,
   detectModuleType,
+  detectRequiresSubmission,
   detectColor,
   detectIcon,
   ConfidenceCriterion,
@@ -147,10 +148,12 @@ function detectFreeFormStructure(text: string): { modules: number; questions: nu
   const modulePatterns = [
     /модуль\s*(первый|второй|третий|четвёртый|пятый|\d+|один|два|три)/i,
     /урок\s*(первый|второй|третий|четвёртый|пятый|\d+|один|два|три|№\s*\d+)/i,
+    /занятие\s*(первое|второе|третье|четвёртое|пятое|\d+)/i,
     /глава\s*(первая|вторая|третья|\d+)/i,
     /тема\s*(первая|вторая|третья|\d+)/i,
     /часть\s*(первая|вторая|третья|\d+)/i,
     /раздел\s*(первый|второй|третий|\d+)/i,
+    /приложение\s*[A-ZА-Яа-я]/i,
   ]
 
   // Паттерны для inline вопросов
@@ -405,7 +408,7 @@ function extractSubtitle(line: string, trailTitle: string, currentSubtitle: stri
 function isModuleLine(line: string): boolean {
   const modulePatterns = [
     /^#{2,3}\s+/,
-    /^(?:модуль|module|урок|lesson|глава|chapter|тема|topic|часть|раздел)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|\d+|один|два|три|четыре|пять|№\s*\d+)?[:\s]/i,
+    /^(?:модуль|module|урок|lesson|глава|chapter|тема|topic|часть|раздел|занятие|class|session|приложение|appendix)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|первое|второе|третье|четвёртое|пятое|\d+|один|два|три|четыре|пять|№\s*\d+|[A-ZА-Яа-я])?[:\s—\-]/i,
     /^\d+[\.\)]\s+[A-ZА-ЯЁ]/,
   ]
   return modulePatterns.some(p => p.test(line))
@@ -429,15 +432,20 @@ function extractModuleTitle(line: string): string | null {
     return headerMatch[1].trim()
   }
 
-  // "Модуль первый: Название" или "Модуль 1: Название"
+  // "Модуль первый: Название" или "Модуль 1: Название" или "Занятие 1 — Название"
   const modulePatterns = [
     /^(?:модуль|module)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|\d+|один|два|три|четыре|пять)[:\s]+(.+)$/i,
     /^(?:модуль|module)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|\d+|один|два|три|четыре|пять)$/i,
-    /^(?:урок|lesson)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|\d+|один|два|три|четыре|пять|№\s*\d+)[:\s]*(.*)$/i,
-    /^(?:глава|chapter)\s*(?:первая|вторая|третья|четвёртая|пятая|\d+)[:\s]*(.*)$/i,
-    /^(?:тема|topic)\s*(?:первая|вторая|третья|четвёртая|пятая|\d+)[:\s]*(.*)$/i,
-    /^(?:часть|part)\s*(?:первая|вторая|третья|четвёртая|пятая|\d+)[:\s]*(.*)$/i,
-    /^(?:раздел|section)\s*(?:первый|второй|третий|четвёртый|пятый|\d+)[:\s]*(.*)$/i,
+    /^(?:урок|lesson)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|\d+|один|два|три|четыре|пять|№\s*\d+)[:\s—\-]*(.*)$/i,
+    /^(?:занятие|class|session)\s*(?:первое|второе|третье|четвёртое|пятое|\d+)[:\s—\-]+(.+)$/i,
+    /^(?:занятие|class|session)\s*(?:первое|второе|третье|четвёртое|пятое|\d+)$/i,
+    /^(?:глава|chapter)\s*(?:первая|вторая|третья|четвёртая|пятая|\d+)[:\s—\-]*(.*)$/i,
+    /^(?:тема|topic)\s*(?:первая|вторая|третья|четвёртая|пятая|\d+)[:\s—\-]*(.*)$/i,
+    /^(?:часть|part)\s*(?:первая|вторая|третья|четвёртая|пятая|\d+)[:\s—\-]*(.*)$/i,
+    /^(?:раздел|section)\s*(?:первый|второй|третий|четвёртый|пятый|\d+)[:\s—\-]*(.*)$/i,
+    // Приложение A, Приложение B и т.д.
+    /^(?:приложение|appendix)\s*[A-ZА-Яа-я][:\s—\-]+(.+)$/i,
+    /^(?:приложение|appendix)\s*[A-ZА-Яа-я]$/i,
   ]
 
   for (const pattern of modulePatterns) {
@@ -547,13 +555,19 @@ function createModule(
   questions: ParsedQuestion[]
 ): ParsedModule {
   const content = contentLines.join("\n").trim()
-  const type = questions.length > 0 ? "PRACTICE" : detectModuleType(title + " " + content)
 
-  // Очистка заголовка от маркеров
+  // Очистка заголовка от маркеров (нужна для detectModuleType)
   const cleanTitle = title
     .replace(/^\d+[\.\)]\s*/, "")
     .replace(/^(?:модуль|module|урок|lesson|глава|chapter|тема|topic)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|\d+|один|два|три|четыре|пять|№\s*\d+)?[:\s]*/i, "")
     .trim() || title.trim()
+
+  // Определяем тип модуля на основе заголовка и содержимого
+  // Если есть вопросы - это PRACTICE (тест), иначе анализируем содержимое
+  const type = questions.length > 0 ? "PRACTICE" : detectModuleType(cleanTitle, content)
+
+  // Определяем, требуется ли сдача работы
+  const requiresSubmission = detectRequiresSubmission(type, cleanTitle, content)
 
   return {
     title: cleanTitle,
@@ -565,6 +579,7 @@ function createModule(
     questions,
     level: type === "PROJECT" ? "Middle" : "Beginner",
     duration: type === "PROJECT" ? "1-2 дня" : "20 мин",
+    requiresSubmission,
   }
 }
 
