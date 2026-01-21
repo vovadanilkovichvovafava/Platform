@@ -134,6 +134,9 @@ export const DEFAULT_PATTERNS: ContentPatterns = {
     /^#{1,3}\s*(Module|Модуль|Урок|Lesson|Тема)/i,
     /^\*{3,}\s*(Module|Модуль|Урок)\s*\*{3,}$/i,
     /^---\s*(Модуль|Module|Урок|Lesson)/i,
+    // Теоретический материал / Теоретические материалы
+    /^#{1,3}\s*(?:теоретическ(?:ий|ие)\s+материал(?:ы)?|theoretical\s+materials?)/i,
+    /^(?:теоретическ(?:ий|ие)\s+материал(?:ы)?|theoretical\s+materials?)[:\s—\-]*/i,
   ],
   questionMarkers: [
     /^={3,}\s*(QUESTIONS?|ВОПРОС[ЫА]?|QUIZ|ТЕСТ)\s*={3,}$/i,

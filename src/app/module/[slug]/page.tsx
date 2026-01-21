@@ -118,6 +118,8 @@ export default async function ModulePage({ params }: Props) {
 
   const isCompleted = progress?.status === "COMPLETED"
   const isProject = courseModule.type === "PROJECT"
+  const isPractice = courseModule.type === "PRACTICE"
+  const hasQuestions = courseModule.questions.length > 0
   const TypeIcon = typeIcons[courseModule.type]
 
   // Find next module in the trail
@@ -202,6 +204,7 @@ export default async function ModulePage({ params }: Props) {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {isProject ? (
+              /* PROJECT: только форма сдачи проекта */
               <Card>
                 <CardHeader>
                   <CardTitle>Сдать проект</CardTitle>
@@ -268,9 +271,88 @@ export default async function ModulePage({ params }: Props) {
                   )}
                 </CardContent>
               </Card>
-            ) : (
+            ) : isPractice && !hasQuestions ? (
+              /* PRACTICE БЕЗ вопросов: только форма сдачи практики (PRACTICE всегда требует сдачу) */
+              <Card>
+                <CardHeader>
+                  <CardTitle>Сдать практическую работу</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {submission ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <div className="text-sm font-medium text-gray-600 mb-2">
+                          Статус работы
+                        </div>
+                        <Badge
+                          className={
+                            submission.status === "APPROVED"
+                              ? "bg-green-100 text-green-700 border-0"
+                              : submission.status === "REVISION"
+                              ? "bg-orange-100 text-orange-700 border-0"
+                              : submission.status === "FAILED"
+                              ? "bg-red-100 text-red-700 border-0"
+                              : "bg-purple-100 text-purple-700 border-0"
+                          }
+                        >
+                          {submission.status === "APPROVED"
+                            ? "Принято"
+                            : submission.status === "REVISION"
+                            ? "На доработку"
+                            : submission.status === "FAILED"
+                            ? "Провал"
+                            : "На проверке"}
+                        </Badge>
+                        {submission.fileUrl && (
+                          <a
+                            href={submission.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-purple-600 hover:underline block mt-2"
+                          >
+                            Посмотреть отправленный файл
+                          </a>
+                        )}
+                      </div>
+
+                      {submission.review && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Оценка</span>
+                            <span className="text-2xl font-bold text-purple-600">
+                              {submission.review.score}/10
+                            </span>
+                          </div>
+                          {submission.review.comment && (
+                            <div>
+                              <div className="text-sm font-medium mb-1">
+                                Комментарий
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                {submission.review.comment}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {submission.status === "REVISION" && (
+                        <SubmitPracticeForm
+                          moduleId={courseModule.id}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <SubmitPracticeForm
+                      moduleId={courseModule.id}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            ) : isPractice ? (
+              /* PRACTICE с вопросами: Квиз + форма сдачи (PRACTICE всегда требует сдачу) */
               <>
-                {/* Assessment Section - handles quiz + completion */}
+                {/* Assessment Section - handles quiz */}
                 <AssessmentSection
                   questions={courseModule.questions.map((q) => ({
                     id: q.id,
@@ -292,9 +374,8 @@ export default async function ModulePage({ params }: Props) {
                   isCompleted={isCompleted}
                 />
 
-                {/* Practice submission form */}
-                {requiresSubmission && (
-                  <Card>
+                {/* Practice submission form - PRACTICE всегда требует сдачу */}
+                <Card>
                     <CardHeader>
                       <CardTitle>Сдать практическую работу</CardTitle>
                     </CardHeader>
@@ -369,9 +450,30 @@ export default async function ModulePage({ params }: Props) {
                         />
                       )}
                     </CardContent>
-                  </Card>
-                )}
+                </Card>
               </>
+            ) : (
+              /* THEORY: AssessmentSection (квиз или "Теоретический материал") */
+              <AssessmentSection
+                questions={courseModule.questions.map((q) => ({
+                  id: q.id,
+                  type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
+                  question: q.question,
+                  options: safeJsonParse<string[]>(q.options, []),
+                  data: q.data ? safeJsonParse(q.data, null) : null,
+                  order: q.order,
+                }))}
+                initialAttempts={questionAttempts.map((a) => ({
+                  questionId: a.questionId,
+                  isCorrect: a.isCorrect,
+                  attempts: a.attempts,
+                  earnedScore: a.earnedScore,
+                }))}
+                moduleId={courseModule.id}
+                trailSlug={courseModule.trail.slug}
+                moduleType={courseModule.type}
+                isCompleted={isCompleted}
+              />
             )}
           </div>
         </div>
