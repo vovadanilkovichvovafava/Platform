@@ -6,7 +6,6 @@ import {
   smartImport,
   hybridImport,
   ParsedTrail,
-  ParsedModule,
   ImportResult,
   getAIConfig,
   checkAIAvailability,
