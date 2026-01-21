@@ -257,8 +257,18 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
     // Parse questions
     if (currentSection === "questions" && currentModule) {
       if (trimmedLine.startsWith("Q:") || trimmedLine.startsWith("В:")) {
-        const questionText = trimmedLine.slice(2).trim()
-        const questionType = detectQuestionType(questionText)
+        let questionText = trimmedLine.slice(2).trim()
+
+        // Проверяем маркеры типа вопроса [MATCHING], [ORDERING], [CASE_ANALYSIS]
+        let explicitType: "MATCHING" | "ORDERING" | "CASE_ANALYSIS" | null = null
+        const typeMarkerMatch = questionText.match(/\s*\[(MATCHING|ORDERING|CASE_ANALYSIS)\]\s*$/i)
+        if (typeMarkerMatch) {
+          explicitType = typeMarkerMatch[1].toUpperCase() as "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+          questionText = questionText.replace(typeMarkerMatch[0], "").trim()
+        }
+
+        // Определяем тип: явный маркер или детекция по ключевым словам
+        const questionType = explicitType || detectQuestionType(questionText)
 
         const newQuestion: ParsedQuestion = {
           question: questionText,
@@ -279,7 +289,13 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
             optionText = optionText.slice(0, -1).trim()
             currentQuestion.correctAnswer = currentQuestion.options.length
           }
-          currentQuestion.options.push(optionText)
+          // Пропускаем placeholder'ы типа [Термин 1], [Шаг 1], [Вариант]
+          if (!optionText.match(/^\[.+\]$/)) {
+            currentQuestion.options.push(optionText)
+          } else {
+            // Если это placeholder, добавляем пустую строку чтобы сохранить порядок
+            currentQuestion.options.push("")
+          }
         }
       }
     }
@@ -324,11 +340,16 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
       }
 
       // Заполнение data для MATCHING и ORDERING вопросов из опций
+      // ВАЖНО: Для этих типов data создаётся ВСЕГДА, даже если опций нет
       for (const question of module.questions) {
-        if (question.type === "MATCHING" && question.options.length > 0) {
-          question.data = parseMatchingOptions(question.options)
-        } else if (question.type === "ORDERING" && question.options.length > 0) {
-          question.data = parseOrderingOptions(question.options)
+        if (question.type === "MATCHING") {
+          // Фильтруем пустые опции
+          const nonEmptyOptions = question.options.filter(opt => opt.trim() !== "")
+          question.data = parseMatchingOptions(nonEmptyOptions)
+        } else if (question.type === "ORDERING") {
+          // Фильтруем пустые опции
+          const nonEmptyOptions = question.options.filter(opt => opt.trim() !== "")
+          question.data = parseOrderingOptions(nonEmptyOptions)
         }
       }
     }

@@ -491,8 +491,18 @@ function extractQuestion(line: string): ParsedQuestion | null {
   for (const pattern of patterns) {
     const match = line.match(pattern)
     if (match) {
-      const questionText = match[1].trim()
-      const questionType = detectQuestionType(questionText)
+      let questionText = match[1].trim()
+
+      // Проверяем маркеры типа вопроса [MATCHING], [ORDERING], [CASE_ANALYSIS]
+      let explicitType: "MATCHING" | "ORDERING" | "CASE_ANALYSIS" | null = null
+      const typeMarkerMatch = questionText.match(/\s*\[(MATCHING|ORDERING|CASE_ANALYSIS)\]\s*$/i)
+      if (typeMarkerMatch) {
+        explicitType = typeMarkerMatch[1].toUpperCase() as "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+        questionText = questionText.replace(typeMarkerMatch[0], "").trim()
+      }
+
+      // Определяем тип: явный маркер или детекция по ключевым словам
+      const questionType = explicitType || detectQuestionType(questionText)
 
       const question: ParsedQuestion = {
         question: questionText,
@@ -509,8 +519,17 @@ function extractQuestion(line: string): ParsedQuestion | null {
 
   // Строка заканчивающаяся на ? (но не слишком короткая)
   if (line.endsWith("?") && line.length > 10 && !line.startsWith("-") && !line.startsWith("•")) {
-    const questionText = line.trim()
-    const questionType = detectQuestionType(questionText)
+    let questionText = line.trim()
+
+    // Проверяем маркеры типа вопроса [MATCHING], [ORDERING], [CASE_ANALYSIS]
+    let explicitType: "MATCHING" | "ORDERING" | "CASE_ANALYSIS" | null = null
+    const typeMarkerMatch = questionText.match(/\s*\[(MATCHING|ORDERING|CASE_ANALYSIS)\]\s*$/i)
+    if (typeMarkerMatch) {
+      explicitType = typeMarkerMatch[1].toUpperCase() as "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+      questionText = questionText.replace(typeMarkerMatch[0], "").trim()
+    }
+
+    const questionType = explicitType || detectQuestionType(questionText)
 
     const question: ParsedQuestion = {
       question: questionText,
@@ -596,11 +615,16 @@ function createModule(
   const requiresSubmission = detectRequiresSubmission(type, cleanTitle, content)
 
   // Заполнение data для MATCHING и ORDERING вопросов из опций
+  // ВАЖНО: Для этих типов data создаётся ВСЕГДА, даже если опций нет
   for (const question of questions) {
-    if (question.type === "MATCHING" && question.options.length > 0) {
-      question.data = parseMatchingOptions(question.options)
-    } else if (question.type === "ORDERING" && question.options.length > 0) {
-      question.data = parseOrderingOptions(question.options)
+    if (question.type === "MATCHING") {
+      // Фильтруем пустые опции
+      const nonEmptyOptions = question.options.filter(opt => opt.trim() !== "")
+      question.data = parseMatchingOptions(nonEmptyOptions)
+    } else if (question.type === "ORDERING") {
+      // Фильтруем пустые опции
+      const nonEmptyOptions = question.options.filter(opt => opt.trim() !== "")
+      question.data = parseOrderingOptions(nonEmptyOptions)
     }
   }
 
