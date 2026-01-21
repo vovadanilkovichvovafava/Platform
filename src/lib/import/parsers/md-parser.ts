@@ -7,6 +7,7 @@ import {
   ParseResult,
   generateSlug,
   detectModuleType,
+  detectRequiresSubmission,
   detectColor,
   detectIcon,
 } from "../types"
@@ -220,7 +221,8 @@ function createTrailFromSection(section: MarkdownSection, warnings: string[]): P
 // Создание модуля из секции
 function createModuleFromSection(section: MarkdownSection, warnings: string[]): ParsedModule {
   const content = section.content.join("\n").trim()
-  const type = detectModuleType(section.title + " " + content)
+  const cleanTitle = section.title.replace(/^\d+[\.\)]\s*/, "")
+  const type = detectModuleType(cleanTitle, content)
 
   // Парсинг вопросов из контента
   const questions = parseQuestionsFromContent(content)
@@ -236,16 +238,23 @@ function createModuleFromSection(section: MarkdownSection, warnings: string[]): 
 
   const metadata = extractMetadata(section.content)
 
+  // Определяем итоговый тип модуля
+  const finalType = metadata.type || (questions.length > 0 ? "PRACTICE" : type)
+
+  // Определяем, требуется ли сдача работы
+  const requiresSubmission = detectRequiresSubmission(finalType, cleanTitle, content)
+
   return {
-    title: section.title.replace(/^\d+[\.\)]\s*/, ""),
+    title: cleanTitle,
     slug: metadata.slug || generateSlug(section.title),
-    type: metadata.type || (questions.length > 0 ? "PRACTICE" : type),
-    points: metadata.points || (type === "PROJECT" ? 100 : 50),
+    type: finalType,
+    points: metadata.points || (finalType === "PROJECT" ? 100 : finalType === "PRACTICE" ? 75 : 50),
     description: metadata.description || extractDescription(section.content),
     content: cleanContent,
     questions,
     level: metadata.level,
     duration: metadata.duration,
+    requiresSubmission,
   }
 }
 

@@ -294,6 +294,7 @@ async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
           trailId: trail.id,
           level: moduleData.level || (moduleData.type === "PROJECT" ? "Middle" : "Beginner"),
           duration: moduleData.duration || (moduleData.type === "PROJECT" ? "1-2 дня" : "20 мин"),
+          requiresSubmission: moduleData.requiresSubmission ?? (moduleData.type !== "THEORY"),
         },
         create: {
           title: moduleData.title,
@@ -306,6 +307,7 @@ async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
           duration: moduleData.duration || (moduleData.type === "PROJECT" ? "1-2 дня" : "20 мин"),
           level: moduleData.level || (moduleData.type === "PROJECT" ? "Middle" : "Beginner"),
           trailId: trail.id,
+          requiresSubmission: moduleData.requiresSubmission ?? (moduleData.type !== "THEORY"),
         },
       })
       imported.modules++

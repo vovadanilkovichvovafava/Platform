@@ -7,6 +7,7 @@ import {
   ParseResult,
   generateSlug,
   detectModuleType,
+  detectRequiresSubmission,
   detectColor,
   detectIcon,
 } from "../types"
@@ -207,18 +208,22 @@ function convertJsonModule(data: JsonModule, warnings: string[]): ParsedModule |
   const questions = convertJsonQuestions(questionsData, warnings)
 
   const type = typeMap[typeStr.toLowerCase()] ||
-    (questions.length > 0 ? "PRACTICE" : detectModuleType(title + " " + content))
+    (questions.length > 0 ? "PRACTICE" : detectModuleType(title, content))
+
+  // Определяем, требуется ли сдача работы
+  const requiresSubmission = detectRequiresSubmission(type, title, content)
 
   return {
     title,
     slug: data.slug || generateSlug(title),
     type,
-    points: data.points || data.очки || data.баллы || (type === "PROJECT" ? 100 : 50),
+    points: data.points || data.очки || data.баллы || (type === "PROJECT" ? 100 : type === "PRACTICE" ? 75 : 50),
     description: data.description || data.описание || "",
     content,
     questions,
     level: data.level || data.уровень,
     duration: data.duration || data.длительность,
+    requiresSubmission,
   }
 }
 

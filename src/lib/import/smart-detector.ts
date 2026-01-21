@@ -8,6 +8,7 @@ import {
   DEFAULT_PATTERNS,
   generateSlug,
   detectModuleType,
+  detectRequiresSubmission,
   detectColor,
   detectIcon,
   ConfidenceCriterion,
@@ -547,13 +548,19 @@ function createModule(
   questions: ParsedQuestion[]
 ): ParsedModule {
   const content = contentLines.join("\n").trim()
-  const type = questions.length > 0 ? "PRACTICE" : detectModuleType(title + " " + content)
 
-  // Очистка заголовка от маркеров
+  // Очистка заголовка от маркеров (нужна для detectModuleType)
   const cleanTitle = title
     .replace(/^\d+[\.\)]\s*/, "")
     .replace(/^(?:модуль|module|урок|lesson|глава|chapter|тема|topic)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|\d+|один|два|три|четыре|пять|№\s*\d+)?[:\s]*/i, "")
     .trim() || title.trim()
+
+  // Определяем тип модуля на основе заголовка и содержимого
+  // Если есть вопросы - это PRACTICE (тест), иначе анализируем содержимое
+  const type = questions.length > 0 ? "PRACTICE" : detectModuleType(cleanTitle, content)
+
+  // Определяем, требуется ли сдача работы
+  const requiresSubmission = detectRequiresSubmission(type, cleanTitle, content)
 
   return {
     title: cleanTitle,
@@ -565,6 +572,7 @@ function createModule(
     questions,
     level: type === "PROJECT" ? "Middle" : "Beginner",
     duration: type === "PROJECT" ? "1-2 дня" : "20 мин",
+    requiresSubmission,
   }
 }
 

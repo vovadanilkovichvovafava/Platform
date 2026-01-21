@@ -7,6 +7,7 @@ import {
   ParseResult,
   DEFAULT_PATTERNS,
   generateSlug,
+  detectRequiresSubmission,
 } from "../types"
 import { analyzeStructure, smartParseUnstructured } from "../smart-detector"
 
@@ -274,7 +275,7 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
     trails.push(currentTrail)
   }
 
-  // Валидация
+  // Валидация и установка requiresSubmission
   for (const trail of trails) {
     if (!trail.title) {
       warnings.push(`Trail без названия, использован slug: ${trail.slug}`)
@@ -291,6 +292,14 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
       }
       if (!module.slug) {
         module.slug = generateSlug(module.title)
+      }
+      // Установка requiresSubmission на основе типа и содержимого
+      if (module.requiresSubmission === undefined) {
+        module.requiresSubmission = detectRequiresSubmission(
+          module.type,
+          module.title,
+          module.content
+        )
       }
     }
   }
