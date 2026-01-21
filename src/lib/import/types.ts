@@ -374,10 +374,15 @@ export function detectQuestionType(questionText: string): QuestionType {
 
 // Парсинг опций для MATCHING вопроса
 // Формат опции: "термин -> определение" или "термин | определение" или "термин : определение"
+// ВАЖНО: Поддерживает случай когда несколько терминов указывают на одно определение
+// Пример: "CTR -> AI", "CPC -> AI", "ROI -> Разработчик" - будет 3 left и 2 уникальных right
 export function parseMatchingOptions(options: string[]): MatchingData {
   const leftItems: { id: string; text: string }[] = []
-  const rightItems: { id: string; text: string }[] = []
   const correctPairs: Record<string, string> = {}
+
+  // Карта уникальных правых элементов: text -> id
+  const rightItemsMap: Map<string, string> = new Map()
+  let rightCounter = 1
 
   // Пробуем разные разделители
   const separators = [" -> ", " → ", " | ", " : ", " - "]
@@ -400,11 +405,23 @@ export function parseMatchingOptions(options: string[]): MatchingData {
 
     if (found && left && right) {
       const leftId = `l${i + 1}`
-      const rightId = `r${i + 1}`
       leftItems.push({ id: leftId, text: left })
-      rightItems.push({ id: rightId, text: right })
+
+      // Проверяем, есть ли уже такой правый элемент
+      let rightId = rightItemsMap.get(right)
+      if (!rightId) {
+        rightId = `r${rightCounter++}`
+        rightItemsMap.set(right, rightId)
+      }
+
       correctPairs[leftId] = rightId
     }
+  }
+
+  // Конвертируем Map в массив rightItems
+  const rightItems: { id: string; text: string }[] = []
+  for (const [text, id] of rightItemsMap) {
+    rightItems.push({ id, text })
   }
 
   // Если не удалось распарсить - создаем пустой шаблон
