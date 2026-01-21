@@ -372,7 +372,70 @@ export function detectQuestionType(questionText: string): QuestionType {
   return "SINGLE_CHOICE"
 }
 
-// Генерация данных для MATCHING вопроса
+// Парсинг опций для MATCHING вопроса
+// Формат опции: "термин -> определение" или "термин | определение" или "термин : определение"
+export function parseMatchingOptions(options: string[]): MatchingData {
+  const leftItems: { id: string; text: string }[] = []
+  const rightItems: { id: string; text: string }[] = []
+  const correctPairs: Record<string, string> = {}
+
+  // Пробуем разные разделители
+  const separators = [" -> ", " → ", " | ", " : ", " - "]
+
+  for (let i = 0; i < options.length; i++) {
+    const option = options[i]
+    let left = ""
+    let right = ""
+    let found = false
+
+    for (const sep of separators) {
+      const parts = option.split(sep)
+      if (parts.length === 2) {
+        left = parts[0].trim()
+        right = parts[1].trim()
+        found = true
+        break
+      }
+    }
+
+    if (found && left && right) {
+      const leftId = `l${i + 1}`
+      const rightId = `r${i + 1}`
+      leftItems.push({ id: leftId, text: left })
+      rightItems.push({ id: rightId, text: right })
+      correctPairs[leftId] = rightId
+    }
+  }
+
+  // Если не удалось распарсить - создаем пустой шаблон
+  if (leftItems.length === 0) {
+    return {
+      leftLabel: "Термин",
+      rightLabel: "Определение",
+      leftItems: [
+        { id: "l1", text: "" },
+        { id: "l2", text: "" },
+        { id: "l3", text: "" },
+      ],
+      rightItems: [
+        { id: "r1", text: "" },
+        { id: "r2", text: "" },
+        { id: "r3", text: "" },
+      ],
+      correctPairs: { l1: "r1", l2: "r2", l3: "r3" },
+    }
+  }
+
+  return {
+    leftLabel: "Термин",
+    rightLabel: "Определение",
+    leftItems,
+    rightItems,
+    correctPairs,
+  }
+}
+
+// Генерация данных для MATCHING вопроса (совместимость)
 export function generateMatchingData(questionText: string): MatchingData {
   return {
     leftLabel: "Термин",
@@ -391,7 +454,38 @@ export function generateMatchingData(questionText: string): MatchingData {
   }
 }
 
-// Генерация данных для ORDERING вопроса
+// Парсинг опций для ORDERING вопроса
+// Формат: текст элемента (порядок определяется порядком в файле)
+export function parseOrderingOptions(options: string[]): OrderingData {
+  const items: { id: string; text: string }[] = []
+  const correctOrder: string[] = []
+
+  for (let i = 0; i < options.length; i++) {
+    const text = options[i].trim()
+    if (text) {
+      const id = `s${i + 1}`
+      items.push({ id, text })
+      correctOrder.push(id)
+    }
+  }
+
+  // Если не удалось распарсить - создаем пустой шаблон
+  if (items.length === 0) {
+    return {
+      items: [
+        { id: "s1", text: "" },
+        { id: "s2", text: "" },
+        { id: "s3", text: "" },
+        { id: "s4", text: "" },
+      ],
+      correctOrder: ["s1", "s2", "s3", "s4"],
+    }
+  }
+
+  return { items, correctOrder }
+}
+
+// Генерация данных для ORDERING вопроса (совместимость)
 export function generateOrderingData(questionText: string): OrderingData {
   return {
     items: [

@@ -9,8 +9,8 @@ import {
   generateSlug,
   detectRequiresSubmission,
   detectQuestionType,
-  generateMatchingData,
-  generateOrderingData,
+  parseMatchingOptions,
+  parseOrderingOptions,
 } from "../types"
 import { analyzeStructure, smartParseUnstructured } from "../smart-detector"
 
@@ -267,12 +267,7 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
           correctAnswer: 0,
         }
 
-        // Генерируем data для специальных типов вопросов
-        if (questionType === "MATCHING") {
-          newQuestion.data = generateMatchingData(questionText)
-        } else if (questionType === "ORDERING") {
-          newQuestion.data = generateOrderingData(questionText)
-        }
+        // data будет заполнена позже после сбора всех опций
 
         currentModule.questions.push(newQuestion)
       } else if (trimmedLine.startsWith("-") || trimmedLine.startsWith("•")) {
@@ -326,6 +321,15 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
           module.title,
           module.content
         )
+      }
+
+      // Заполнение data для MATCHING и ORDERING вопросов из опций
+      for (const question of module.questions) {
+        if (question.type === "MATCHING" && question.options.length > 0) {
+          question.data = parseMatchingOptions(question.options)
+        } else if (question.type === "ORDERING" && question.options.length > 0) {
+          question.data = parseOrderingOptions(question.options)
+        }
       }
     }
   }
