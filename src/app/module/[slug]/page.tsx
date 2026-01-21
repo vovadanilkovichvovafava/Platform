@@ -271,8 +271,8 @@ export default async function ModulePage({ params }: Props) {
                   )}
                 </CardContent>
               </Card>
-            ) : isPractice && requiresSubmission && !hasQuestions ? (
-              /* PRACTICE с требованием сдачи БЕЗ вопросов: только форма сдачи практики */
+            ) : isPractice && !hasQuestions ? (
+              /* PRACTICE БЕЗ вопросов: только форма сдачи практики (PRACTICE всегда требует сдачу) */
               <Card>
                 <CardHeader>
                   <CardTitle>Сдать практическую работу</CardTitle>
@@ -349,10 +349,10 @@ export default async function ModulePage({ params }: Props) {
                   )}
                 </CardContent>
               </Card>
-            ) : (
-              /* THEORY или PRACTICE с вопросами */
+            ) : isPractice ? (
+              /* PRACTICE с вопросами: Квиз + форма сдачи (PRACTICE всегда требует сдачу) */
               <>
-                {/* Assessment Section - handles quiz + completion */}
+                {/* Assessment Section - handles quiz */}
                 <AssessmentSection
                   questions={courseModule.questions.map((q) => ({
                     id: q.id,
@@ -374,9 +374,8 @@ export default async function ModulePage({ params }: Props) {
                   isCompleted={isCompleted}
                 />
 
-                {/* Practice submission form - для PRACTICE с вопросами + требованием сдачи */}
-                {isPractice && requiresSubmission && (
-                  <Card>
+                {/* Practice submission form - PRACTICE всегда требует сдачу */}
+                <Card>
                     <CardHeader>
                       <CardTitle>Сдать практическую работу</CardTitle>
                     </CardHeader>
@@ -451,9 +450,30 @@ export default async function ModulePage({ params }: Props) {
                         />
                       )}
                     </CardContent>
-                  </Card>
-                )}
+                </Card>
               </>
+            ) : (
+              /* THEORY: AssessmentSection (квиз или "Теоретический материал") */
+              <AssessmentSection
+                questions={courseModule.questions.map((q) => ({
+                  id: q.id,
+                  type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
+                  question: q.question,
+                  options: safeJsonParse<string[]>(q.options, []),
+                  data: q.data ? safeJsonParse(q.data, null) : null,
+                  order: q.order,
+                }))}
+                initialAttempts={questionAttempts.map((a) => ({
+                  questionId: a.questionId,
+                  isCorrect: a.isCorrect,
+                  attempts: a.attempts,
+                  earnedScore: a.earnedScore,
+                }))}
+                moduleId={courseModule.id}
+                trailSlug={courseModule.trail.slug}
+                moduleType={courseModule.type}
+                isCompleted={isCompleted}
+              />
             )}
           </div>
         </div>
