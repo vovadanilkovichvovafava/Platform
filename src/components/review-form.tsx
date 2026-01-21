@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle, XCircle } from "lucide-react"
 
 interface ReviewFormProps {
   submissionId: string
@@ -21,6 +21,8 @@ interface ReviewFormProps {
   userId: string
   modulePoints: number
 }
+
+type ReviewStatus = "APPROVED" | "REVISION" | "FAILED"
 
 export function ReviewForm({
   submissionId,
@@ -31,7 +33,7 @@ export function ReviewForm({
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState<"APPROVED" | "REVISION">("APPROVED")
+  const [status, setStatus] = useState<ReviewStatus>("APPROVED")
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -72,6 +74,33 @@ export function ReviewForm({
     }
   }
 
+  const statusConfig = {
+    APPROVED: {
+      color: "bg-green-600 hover:bg-green-700",
+      icon: CheckCircle2,
+      label: "Принять работу",
+      hint: `Ученик получит ${modulePoints} XP и перейдёт на следующий уровень`,
+      hintColor: "bg-green-50 text-green-700",
+    },
+    REVISION: {
+      color: "bg-orange-600 hover:bg-orange-700",
+      icon: AlertCircle,
+      label: "На доработку",
+      hint: "Ученик исправит замечания и пересдаст. Уровень не меняется",
+      hintColor: "bg-orange-50 text-orange-700",
+    },
+    FAILED: {
+      color: "bg-red-600 hover:bg-red-700",
+      icon: XCircle,
+      label: "Провал",
+      hint: "Ученик переходит на уровень ниже",
+      hintColor: "bg-red-50 text-red-700",
+    },
+  }
+
+  const currentConfig = statusConfig[status]
+  const StatusIcon = currentConfig.icon
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -99,7 +128,7 @@ export function ReviewForm({
           <Label>Решение</Label>
           <Select
             value={status}
-            onValueChange={(v) => setStatus(v as "APPROVED" | "REVISION")}
+            onValueChange={(v) => setStatus(v as ReviewStatus)}
             disabled={isLoading}
           >
             <SelectTrigger>
@@ -109,13 +138,19 @@ export function ReviewForm({
               <SelectItem value="APPROVED">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  Принять
+                  Принять (↑ вверх)
                 </div>
               </SelectItem>
               <SelectItem value="REVISION">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-orange-600" />
-                  На доработку
+                  На доработку (→ пересдача)
+                </div>
+              </SelectItem>
+              <SelectItem value="FAILED">
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  Провал (↓ вниз)
                 </div>
               </SelectItem>
             </SelectContent>
@@ -156,11 +191,9 @@ export function ReviewForm({
         />
       </div>
 
-      {status === "APPROVED" && (
-        <div className="p-4 bg-green-50 rounded-lg text-sm text-green-700">
-          При одобрении ученик получит {modulePoints} XP
-        </div>
-      )}
+      <div className={`p-4 rounded-lg text-sm ${currentConfig.hintColor}`}>
+        {currentConfig.hint}
+      </div>
 
       <div className="flex justify-end gap-4">
         <Button
@@ -173,11 +206,7 @@ export function ReviewForm({
         </Button>
         <Button
           type="submit"
-          className={
-            status === "APPROVED"
-              ? "bg-green-600 hover:bg-green-700"
-              : "bg-orange-600 hover:bg-orange-700"
-          }
+          className={currentConfig.color}
           disabled={isLoading}
         >
           {isLoading ? (
@@ -185,15 +214,10 @@ export function ReviewForm({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Сохранение...
             </>
-          ) : status === "APPROVED" ? (
-            <>
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Принять работу
-            </>
           ) : (
             <>
-              <AlertCircle className="mr-2 h-4 w-4" />
-              Отправить на доработку
+              <StatusIcon className="mr-2 h-4 w-4" />
+              {currentConfig.label}
             </>
           )}
         </Button>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { checkRateLimit, getClientIP, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
 
 const registerSchema = z.object({
   email: z.string().email("Некорректный email"),
@@ -11,6 +12,14 @@ const registerSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting для защиты от брутфорса
+    const clientIP = getClientIP(request)
+    const rateLimit = checkRateLimit(`register:${clientIP}`, RATE_LIMITS.auth)
+
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetIn)
+    }
+
     const body = await request.json()
     const { email, password, name } = registerSchema.parse(body)
 

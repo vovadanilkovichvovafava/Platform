@@ -1,14 +1,24 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { TrailCard } from "@/components/trail-card"
+import { TrailSearch } from "@/components/trail-search"
 
 export const dynamic = "force-dynamic"
 
 export default async function TrailsPage() {
   const session = await getServerSession(authOptions)
 
-  const trails = await prisma.trail.findMany({
+  // Get user's trail access if logged in
+  let accessibleTrailIds: string[] = []
+  if (session) {
+    const userAccess = await prisma.studentTrailAccess.findMany({
+      where: { studentId: session.user.id },
+      select: { trailId: true },
+    })
+    accessibleTrailIds = userAccess.map((a) => a.trailId)
+  }
+
+  const allTrails = await prisma.trail.findMany({
     where: { isPublished: true },
     orderBy: { order: "asc" },
     include: {
@@ -18,8 +28,18 @@ export default async function TrailsPage() {
     },
   })
 
+  // Filter out restricted trails user doesn't have access to
+  // Admins and teachers can see all trails
+  const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER"
+  const trails = allTrails.filter((trail) => {
+    if (!trail.isRestricted) return true // Public trail
+    if (isPrivileged) return true // Admin/Teacher can see all
+    if (!session) return false // Not logged in, can't see restricted
+    return accessibleTrailIds.includes(trail.id) // Check access
+  })
+
   let enrolledTrailIds: string[] = []
-  let progressMap: Record<string, number> = {}
+  const progressMap: Record<string, number> = {}
 
   if (session) {
     const enrollments = await prisma.enrollment.findMany({
@@ -64,16 +84,11 @@ export default async function TrailsPage() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trails.map((trail) => (
-            <TrailCard
-              key={trail.id}
-              trail={trail}
-              enrolled={enrolledTrailIds.includes(trail.id)}
-              progress={progressMap[trail.id] || 0}
-            />
-          ))}
-        </div>
+        <TrailSearch
+          trails={trails}
+          enrolledTrailIds={enrolledTrailIds}
+          progressMap={progressMap}
+        />
       </div>
     </div>
   )

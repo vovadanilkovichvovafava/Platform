@@ -5,7 +5,6 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   ArrowLeft,
@@ -16,6 +15,7 @@ import {
   User,
   Calendar,
   BookOpen,
+  FileText,
 } from "lucide-react"
 import { ReviewForm } from "@/components/review-form"
 
@@ -27,7 +27,8 @@ export default async function ReviewPage({ params }: Props) {
   const { id } = await params
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "TEACHER") {
+  // Allow both TEACHER and ADMIN roles
+  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
     redirect("/dashboard")
   }
 
@@ -158,6 +159,18 @@ export default async function ReviewPage({ params }: Props) {
                   >
                     <Globe className="h-4 w-4" />
                     Деплой
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                {submission.fileUrl && (
+                  <a
+                    href={submission.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Файл работы
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}

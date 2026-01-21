@@ -47,8 +47,69 @@ body {
   background-clip: text;
 }
 
+/* Prometheus fire gradient */
+.prometheus-gradient {
+  background: linear-gradient(135deg, #FF6B00 0%, #FFA500 30%, #FFD700 60%, #FFFFFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.titan-gradient {
+  background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 30%, #F97316 70%, #EA580C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Floating animations */
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-12px);
+    opacity: 1;
+  }
+}
+
+@keyframes float-medium {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 0.9;
+  }
+}
+
+@keyframes float-fast {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 4s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: float-medium 3s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: float-fast 2s ease-in-out infinite;
+}
+
 .hero-gradient {
-  background: linear-gradient(180deg, #F0F5FA 0%, #FFFFFF 100%);
+  background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%);
 }
 
 .card-shadow {

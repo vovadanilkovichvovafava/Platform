@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { execSync } = require('child_process');
 const { PrismaClient } = require('@prisma/client');
 
@@ -9,15 +10,19 @@ async function main() {
 
   try {
     const trailCount = await prisma.trail.count();
-    console.log(`Found ${trailCount} trails in database`);
+    const questionCount = await prisma.question.count();
+    const inviteCount = await prisma.invite.count();
+    console.log(`Found ${trailCount} trails, ${questionCount} questions, ${inviteCount} invites in database`);
 
-    if (trailCount === 0) {
-      console.log('No trails found, running seed...');
+    // Re-seed if no data OR FORCE_SEED is set
+    const forceSeed = process.env.FORCE_SEED === 'true';
+    if (forceSeed || trailCount === 0 || questionCount === 0 || inviteCount === 0) {
+      console.log(forceSeed ? 'FORCE_SEED enabled, running seed...' : 'Database needs seeding, running seed...');
       execSync('npm run db:seed', { stdio: 'inherit' });
       console.log('Seed completed!');
     }
   } catch (error) {
-    console.log('Could not check trails, running seed...');
+    console.log('Could not check database, running seed...', error.message);
     execSync('npm run db:seed', { stdio: 'inherit' });
   } finally {
     await prisma.$disconnect();

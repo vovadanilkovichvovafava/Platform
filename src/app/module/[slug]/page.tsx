@@ -3,11 +3,12 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Button } from "@/components/ui/button"
+import { safeJsonParse } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import {
-  ArrowLeft,
+  ArrowRight,
   Clock,
   Star,
   CheckCircle2,
@@ -15,8 +16,10 @@ import {
   Wrench,
   FolderGit2,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { SubmitProjectForm } from "@/components/submit-project-form"
-import { QuizSection } from "@/components/quiz-section"
+import { SubmitPracticeForm } from "@/components/submit-practice-form"
+import { AssessmentSection } from "@/components/assessment-section"
 
 const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
@@ -38,21 +41,28 @@ export default async function ModulePage({ params }: Props) {
   const { slug } = await params
   const session = await getServerSession(authOptions)
 
-  if (!session) {
+  if (!session || !session.user?.id) {
     redirect("/login")
   }
 
-  const module = await prisma.module.findUnique({
+  const courseModule = await prisma.module.findUnique({
     where: { slug },
     include: {
-      trail: true,
+      trail: {
+        include: {
+          modules: {
+            orderBy: { order: "asc" },
+            select: { id: true, slug: true, title: true, order: true },
+          },
+        },
+      },
       questions: {
         orderBy: { order: "asc" },
       },
     },
   })
 
-  if (!module) {
+  if (!courseModule) {
     notFound()
   }
 
@@ -61,13 +71,13 @@ export default async function ModulePage({ params }: Props) {
     where: {
       userId_trailId: {
         userId: session.user.id,
-        trailId: module.trailId,
+        trailId: courseModule.trailId,
       },
     },
   })
 
   if (!enrollment) {
-    redirect(`/trails/${module.trail.slug}`)
+    redirect(`/trails/${courseModule.trail.slug}`)
   }
 
   // Get progress
@@ -75,18 +85,18 @@ export default async function ModulePage({ params }: Props) {
     where: {
       userId_moduleId: {
         userId: session.user.id,
-        moduleId: module.id,
+        moduleId: courseModule.id,
       },
     },
   })
 
-  // Get submission if project
+  // Get submission if project OR practice with requiresSubmission
   let submission = null
-  if (module.type === "PROJECT") {
+  if (courseModule.type === "PROJECT" || courseModule.requiresSubmission) {
     submission = await prisma.submission.findFirst({
       where: {
         userId: session.user.id,
-        moduleId: module.id,
+        moduleId: courseModule.id,
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -95,91 +105,34 @@ export default async function ModulePage({ params }: Props) {
     })
   }
 
+  const requiresSubmission = courseModule.requiresSubmission
+
   // Get question attempts for quiz
   const questionAttempts = await prisma.questionAttempt.findMany({
     where: {
       userId: session.user.id,
-      questionId: { in: module.questions.map((q) => q.id) },
+      questionId: { in: courseModule.questions.map((q) => q.id) },
     },
   })
 
   const isCompleted = progress?.status === "COMPLETED"
-  const isProject = module.type === "PROJECT"
-  const TypeIcon = typeIcons[module.type]
+  const isProject = courseModule.type === "PROJECT"
+  const TypeIcon = typeIcons[courseModule.type]
 
-  // Capture values for server action closure
-  const moduleId = module.id
-  const modulePoints = module.points
-  const moduleTrailId = module.trailId
-  const moduleOrder = module.order
-  const trailSlug = module.trail.slug
+  // Find next module in the trail
+  const trailModules = courseModule.trail.modules
+  const currentIndex = trailModules.findIndex((m) => m.id === courseModule.id)
+  const nextModule = currentIndex < trailModules.length - 1 ? trailModules[currentIndex + 1] : null
 
-  async function handleComplete() {
-    "use server"
-
-    const session = await getServerSession(authOptions)
-    if (!session) return
-
-    // Update progress
-    await prisma.moduleProgress.upsert({
-      where: {
-        userId_moduleId: {
-          userId: session.user.id,
-          moduleId: moduleId,
-        },
-      },
-      update: {
-        status: "COMPLETED",
-        completedAt: new Date(),
-      },
-      create: {
-        userId: session.user.id,
-        moduleId: moduleId,
-        status: "COMPLETED",
-        startedAt: new Date(),
-        completedAt: new Date(),
-      },
+  // Parse inline markdown (bold)
+  const parseInlineMarkdown = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g)
+    return parts.map((part, idx) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={idx}>{part.slice(2, -2)}</strong>
+      }
+      return part
     })
-
-    // Add XP
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        totalXP: { increment: modulePoints },
-      },
-    })
-
-    // Start next module if exists
-    const nextModule = await prisma.module.findFirst({
-      where: {
-        trailId: moduleTrailId,
-        order: { gt: moduleOrder },
-      },
-      orderBy: { order: "asc" },
-    })
-
-    if (nextModule) {
-      await prisma.moduleProgress.upsert({
-        where: {
-          userId_moduleId: {
-            userId: session.user.id,
-            moduleId: nextModule.id,
-          },
-        },
-        update: {
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
-        },
-        create: {
-          userId: session.user.id,
-          moduleId: nextModule.id,
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
-        },
-      })
-    }
-
-    redirect(`/trails/${trailSlug}`)
   }
 
   // Simple markdown-like rendering
@@ -189,51 +142,44 @@ export default async function ModulePage({ params }: Props) {
       if (line.startsWith("# ")) {
         return (
           <h1 key={i} className="text-2xl font-bold mt-8 mb-4">
-            {line.slice(2)}
+            {parseInlineMarkdown(line.slice(2))}
           </h1>
         )
       }
       if (line.startsWith("## ")) {
         return (
           <h2 key={i} className="text-xl font-semibold mt-6 mb-3">
-            {line.slice(3)}
+            {parseInlineMarkdown(line.slice(3))}
           </h2>
         )
       }
       if (line.startsWith("### ")) {
         return (
           <h3 key={i} className="text-lg font-medium mt-4 mb-2">
-            {line.slice(4)}
+            {parseInlineMarkdown(line.slice(4))}
           </h3>
         )
       }
       if (line.startsWith("- ")) {
         return (
           <li key={i} className="ml-4 mb-1">
-            {line.slice(2)}
+            {parseInlineMarkdown(line.slice(2))}
           </li>
         )
       }
-      if (line.startsWith("1. ") || line.startsWith("2. ") || line.startsWith("3. ") || line.startsWith("4. ")) {
+      if (/^\d+\. /.test(line)) {
         return (
           <li key={i} className="ml-4 mb-1 list-decimal">
-            {line.slice(3)}
+            {parseInlineMarkdown(line.slice(line.indexOf(" ") + 1))}
           </li>
         )
       }
       if (line.trim() === "") {
         return <br key={i} />
       }
-      if (line.startsWith("**") && line.endsWith("**")) {
-        return (
-          <p key={i} className="font-semibold mb-2">
-            {line.slice(2, -2)}
-          </p>
-        )
-      }
       return (
         <p key={i} className="mb-2">
-          {line}
+          {parseInlineMarkdown(line)}
         </p>
       )
     })
@@ -244,23 +190,21 @@ export default async function ModulePage({ params }: Props) {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
-          <Link
-            href={`/trails/${module.trail.slug}`}
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Назад к {module.trail.title}
-          </Link>
+          <Breadcrumbs
+            items={[
+              { label: "Trails", href: "/trails" },
+              { label: courseModule.trail.title, href: `/trails/${courseModule.trail.slug}` },
+              { label: courseModule.title },
+            ]}
+            className="mb-4"
+          />
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Badge
-                  variant="secondary"
-                  className="bg-gray-100"
-                >
+                <Badge variant="secondary" className="bg-gray-100">
                   <TypeIcon className="h-3 w-3 mr-1" />
-                  {typeLabels[module.type]}
+                  {typeLabels[courseModule.type]}
                 </Badge>
                 {isCompleted && (
                   <Badge className="bg-green-100 text-green-700 border-0">
@@ -269,20 +213,18 @@ export default async function ModulePage({ params }: Props) {
                   </Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {module.title}
-              </h1>
-              <p className="text-gray-600 mt-1">{module.description}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{courseModule.title}</h1>
+              <p className="text-gray-600 mt-1">{courseModule.description}</p>
             </div>
 
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {module.duration}
+                {courseModule.duration}
               </div>
               <div className="flex items-center gap-1">
                 <Star className="h-4 w-4" />
-                {module.points} XP
+                {courseModule.points} XP
               </div>
             </div>
           </div>
@@ -296,8 +238,8 @@ export default async function ModulePage({ params }: Props) {
           <div className="lg:col-span-2">
             <Card>
               <CardContent className="p-6 prose prose-gray max-w-none">
-                {module.content ? (
-                  renderContent(module.content)
+                {courseModule.content ? (
+                  renderContent(courseModule.content)
                 ) : (
                   <p className="text-gray-500">Контент модуля скоро появится</p>
                 )}
@@ -305,39 +247,20 @@ export default async function ModulePage({ params }: Props) {
             </Card>
 
             {/* Requirements for projects */}
-            {isProject && module.requirements && (
+            {isProject && courseModule.requirements && (
               <Card className="mt-6">
                 <CardHeader>
                   <CardTitle>Требования к проекту</CardTitle>
                 </CardHeader>
                 <CardContent className="prose prose-gray max-w-none">
-                  {renderContent(module.requirements)}
+                  {renderContent(courseModule.requirements)}
                 </CardContent>
               </Card>
-            )}
-
-            {/* Quiz section for theory/practice modules */}
-            {!isProject && module.questions.length > 0 && (
-              <QuizSection
-                questions={module.questions.map((q) => ({
-                  id: q.id,
-                  question: q.question,
-                  options: JSON.parse(q.options) as string[],
-                  order: q.order,
-                }))}
-                attempts={questionAttempts.map((a) => ({
-                  questionId: a.questionId,
-                  isCorrect: a.isCorrect,
-                  attempts: a.attempts,
-                  earnedScore: a.earnedScore,
-                }))}
-                moduleSlug={module.slug}
-              />
             )}
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             {isProject ? (
               <Card>
                 <CardHeader>
@@ -356,6 +279,8 @@ export default async function ModulePage({ params }: Props) {
                               ? "bg-green-100 text-green-700 border-0"
                               : submission.status === "REVISION"
                               ? "bg-orange-100 text-orange-700 border-0"
+                              : submission.status === "FAILED"
+                              ? "bg-red-100 text-red-700 border-0"
                               : "bg-blue-100 text-blue-700 border-0"
                           }
                         >
@@ -363,6 +288,8 @@ export default async function ModulePage({ params }: Props) {
                             ? "Принято"
                             : submission.status === "REVISION"
                             ? "На доработку"
+                            : submission.status === "FAILED"
+                            ? "Провал"
                             : "На проверке"}
                         </Badge>
                       </div>
@@ -390,56 +317,154 @@ export default async function ModulePage({ params }: Props) {
 
                       {submission.status === "REVISION" && (
                         <SubmitProjectForm
-                          moduleId={module.id}
-                          moduleSlug={module.slug}
+                          moduleId={courseModule.id}
                         />
                       )}
                     </div>
                   ) : (
                     <SubmitProjectForm
-                      moduleId={module.id}
-                      moduleSlug={module.slug}
+                      moduleId={courseModule.id}
                     />
                   )}
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardContent className="p-6">
-                  {isCompleted ? (
-                    <div className="text-center">
-                      <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                      <h3 className="font-semibold text-lg mb-2">
-                        Модуль завершен!
-                      </h3>
-                      <p className="text-gray-600 text-sm mb-4">
-                        Вы получили {module.points} XP
-                      </p>
-                      <Button asChild variant="outline" className="w-full">
-                        <Link href={`/trails/${module.trail.slug}`}>
-                          Вернуться к trail
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <form action={handleComplete}>
-                      <Button
-                        type="submit"
-                        className="w-full bg-[#2E844A] hover:bg-[#256E3D]"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Завершить модуль
-                      </Button>
-                      <p className="text-xs text-gray-500 text-center mt-3">
-                        Вы получите {module.points} XP
-                      </p>
-                    </form>
-                  )}
-                </CardContent>
-              </Card>
+              <>
+                {/* Assessment Section - handles quiz + completion */}
+                <AssessmentSection
+                  questions={courseModule.questions.map((q) => ({
+                    id: q.id,
+                    type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
+                    question: q.question,
+                    options: safeJsonParse<string[]>(q.options, []),
+                    data: q.data ? safeJsonParse(q.data, null) : null,
+                    order: q.order,
+                  }))}
+                  initialAttempts={questionAttempts.map((a) => ({
+                    questionId: a.questionId,
+                    isCorrect: a.isCorrect,
+                    attempts: a.attempts,
+                    earnedScore: a.earnedScore,
+                  }))}
+                  moduleId={courseModule.id}
+                  trailSlug={courseModule.trail.slug}
+                  moduleType={courseModule.type}
+                  isCompleted={isCompleted}
+                />
+
+                {/* Practice submission form */}
+                {requiresSubmission && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Сдать практическую работу</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {submission ? (
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <div className="text-sm font-medium text-gray-600 mb-2">
+                              Статус работы
+                            </div>
+                            <Badge
+                              className={
+                                submission.status === "APPROVED"
+                                  ? "bg-green-100 text-green-700 border-0"
+                                  : submission.status === "REVISION"
+                                  ? "bg-orange-100 text-orange-700 border-0"
+                                  : submission.status === "FAILED"
+                                  ? "bg-red-100 text-red-700 border-0"
+                                  : "bg-purple-100 text-purple-700 border-0"
+                              }
+                            >
+                              {submission.status === "APPROVED"
+                                ? "Принято"
+                                : submission.status === "REVISION"
+                                ? "На доработку"
+                                : submission.status === "FAILED"
+                                ? "Провал"
+                                : "На проверке"}
+                            </Badge>
+                            {submission.fileUrl && (
+                              <a
+                                href={submission.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-purple-600 hover:underline block mt-2"
+                              >
+                                Посмотреть отправленный файл
+                              </a>
+                            )}
+                          </div>
+
+                          {submission.review && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Оценка</span>
+                                <span className="text-2xl font-bold text-purple-600">
+                                  {submission.review.score}/10
+                                </span>
+                              </div>
+                              {submission.review.comment && (
+                                <div>
+                                  <div className="text-sm font-medium mb-1">
+                                    Комментарий
+                                  </div>
+                                  <p className="text-sm text-gray-600">
+                                    {submission.review.comment}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {submission.status === "REVISION" && (
+                            <SubmitPracticeForm
+                              moduleId={courseModule.id}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <SubmitPracticeForm
+                          moduleId={courseModule.id}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         </div>
+
+        {/* Next Module Button */}
+        {isCompleted && nextModule && (
+          <div className="mt-8 flex justify-center">
+            <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-600 text-white">
+              <Link href={`/module/${nextModule.slug}`}>
+                Следующий модуль: {nextModule.title}
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        )}
+
+        {/* Trail completion message */}
+        {isCompleted && !nextModule && (
+          <div className="mt-8 text-center">
+            <div className="inline-flex flex-col items-center p-6 bg-green-50 rounded-xl border border-green-200">
+              <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
+              <h3 className="text-lg font-semibold text-green-800">Trail завершён!</h3>
+              <p className="text-green-600 text-sm mt-1">
+                Вы прошли все модули в этом направлении
+              </p>
+              <Button asChild variant="outline" className="mt-4">
+                <Link href={`/trails/${courseModule.trail.slug}`}>
+                  Вернуться к Trail
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
