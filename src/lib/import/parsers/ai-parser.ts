@@ -133,7 +133,7 @@ export async function parseWithAI(
           { role: "system", content: AI_SYSTEM_PROMPT },
           { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
         ],
-        temperature: 0.3,
+        // temperature не поддерживается reasoning моделями (gpt-5-nano)
         max_completion_tokens: 16000, // Увеличено для больших курсов
       }),
     })
