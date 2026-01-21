@@ -11,6 +11,9 @@ import {
   detectRequiresSubmission,
   detectColor,
   detectIcon,
+  detectQuestionType,
+  generateMatchingData,
+  generateOrderingData,
   ConfidenceCriterion,
   ConfidenceDetails,
   FileFormat,
@@ -481,21 +484,46 @@ function extractQuestion(line: string): ParsedQuestion | null {
   for (const pattern of patterns) {
     const match = line.match(pattern)
     if (match) {
-      return {
-        question: match[1].trim(),
+      const questionText = match[1].trim()
+      const questionType = detectQuestionType(questionText)
+
+      const question: ParsedQuestion = {
+        question: questionText,
+        type: questionType,
         options: [],
         correctAnswer: 0,
       }
+
+      // Генерируем data для специальных типов
+      if (questionType === "MATCHING") {
+        question.data = generateMatchingData(questionText)
+      } else if (questionType === "ORDERING") {
+        question.data = generateOrderingData(questionText)
+      }
+
+      return question
     }
   }
 
   // Строка заканчивающаяся на ? (но не слишком короткая)
   if (line.endsWith("?") && line.length > 10 && !line.startsWith("-") && !line.startsWith("•")) {
-    return {
-      question: line.trim(),
+    const questionText = line.trim()
+    const questionType = detectQuestionType(questionText)
+
+    const question: ParsedQuestion = {
+      question: questionText,
+      type: questionType,
       options: [],
       correctAnswer: 0,
     }
+
+    if (questionType === "MATCHING") {
+      question.data = generateMatchingData(questionText)
+    } else if (questionType === "ORDERING") {
+      question.data = generateOrderingData(questionText)
+    }
+
+    return question
   }
 
   return null

@@ -323,9 +323,11 @@ async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
           await prisma.question.create({
             data: {
               moduleId: createdModule.id,
+              type: q.type || "SINGLE_CHOICE",
               question: q.question,
               options: JSON.stringify(q.options),
               correctAnswer: q.correctAnswer,
+              data: q.data ? JSON.stringify(q.data) : null,
               order: qOrder,
             },
           })

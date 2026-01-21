@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
@@ -166,6 +167,7 @@ export default function AdminContentPage() {
     checking: false,
   })
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [useNeuralParser, setUseNeuralParser] = useState(true) // По умолчанию используем нейронку
 
   // Drag and drop
   const [draggedModule, setDraggedModule] = useState<string | null>(null)
@@ -281,8 +283,8 @@ export default function AdminContentPage() {
 
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("useAI", "true")
-      formData.append("forceAI", "true") // Всегда используем AI парсер (по ТЗ файл должен отправляться в нейронку)
+      formData.append("useAI", useNeuralParser ? "true" : "false")
+      formData.append("forceAI", useNeuralParser ? "true" : "false") // Используем AI парсер если включен переключатель
 
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -359,8 +361,8 @@ export default function AdminContentPage() {
 
       const formData = new FormData()
       formData.append("file", uploadedFile)
-      formData.append("useAI", "true")
-      formData.append("forceAI", "true") // Принудительно AI
+      formData.append("useAI", useNeuralParser ? "true" : "false")
+      formData.append("forceAI", useNeuralParser ? "true" : "false") // AI если включен переключатель
 
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -1138,17 +1140,23 @@ export default function AdminContentPage() {
                       ) : (
                         <>
                           <span className="text-red-700 whitespace-pre-line">{parseError}</span>
-                          {uploadedFile && aiStatus.available && (
+                          {uploadedFile && (
                             <div className="mt-3">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handleRegenerate}
                                 disabled={regenerating}
-                                className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                                className={useNeuralParser
+                                  ? "text-purple-700 border-purple-300 hover:bg-purple-50"
+                                  : "text-gray-600 border-gray-300 hover:bg-gray-50"}
                               >
-                                <Sparkles className="h-4 w-4 mr-2" />
-                                Попробовать с AI ещё раз
+                                {useNeuralParser ? (
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                )}
+                                {useNeuralParser ? "Попробовать с AI ещё раз" : "Попробовать ещё раз"}
                               </Button>
                             </div>
                           )}
@@ -1206,40 +1214,59 @@ export default function AdminContentPage() {
                     />
                   </label>
 
-                  {/* AI статус */}
-                  <div className="p-3 bg-gray-50 rounded-lg">
+                  {/* Переключатель режима парсера */}
+                  <div className="p-4 bg-gray-50 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-purple-500" />
-                        <span className="text-sm text-gray-600">AI-парсер</span>
+                        <Sparkles className={`h-4 w-4 ${useNeuralParser ? "text-purple-500" : "text-gray-400"}`} />
+                        <span className="text-sm font-medium text-gray-700">Использовать нейросеть</span>
                       </div>
-                      {aiStatus.checking ? (
-                        <span className="text-sm text-gray-500 flex items-center gap-1">
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                          Проверка...
-                        </span>
-                      ) : aiStatus.available ? (
-                        <span className="text-sm text-green-600 flex items-center gap-1">
-                          <CheckCircle className="h-4 w-4" />
-                          Доступен
-                        </span>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={checkAIStatus}
-                          className="text-purple-600 hover:text-purple-700"
-                        >
-                          <Zap className="h-4 w-4 mr-1" />
-                          Проверить
-                        </Button>
-                      )}
+                      <Switch
+                        checked={useNeuralParser}
+                        onCheckedChange={setUseNeuralParser}
+                        disabled={importing}
+                      />
                     </div>
-                    {/* Отображение ошибки AI */}
-                    {aiStatus.error && !aiStatus.checking && (
-                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-start gap-2">
-                        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                        <span>{aiStatus.error}</span>
+                    <p className="text-xs text-gray-500">
+                      {useNeuralParser
+                        ? "AI-парсер лучше распознаёт сложную структуру документов"
+                        : "Кодовый парсер быстрее, но может пропустить детали"}
+                    </p>
+
+                    {/* AI статус (показываем только если нейросеть включена) */}
+                    {useNeuralParser && (
+                      <div className="pt-2 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-500">Статус AI:</span>
+                          {aiStatus.checking ? (
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                              Проверка...
+                            </span>
+                          ) : aiStatus.available ? (
+                            <span className="text-xs text-green-600 flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Доступен
+                            </span>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={checkAIStatus}
+                              className="text-purple-600 hover:text-purple-700 h-6 px-2 text-xs"
+                            >
+                              <Zap className="h-3 w-3 mr-1" />
+                              Проверить
+                            </Button>
+                          )}
+                        </div>
+                        {/* Отображение ошибки AI */}
+                        {aiStatus.error && !aiStatus.checking && (
+                          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-start gap-2">
+                            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span>{aiStatus.error}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1417,7 +1444,7 @@ export default function AdminContentPage() {
                   >
                     Отмена
                   </Button>
-                  {aiStatus.available && (
+                  {useNeuralParser && aiStatus.available && (
                     <Button
                       variant="outline"
                       onClick={handleRegenerate}
@@ -1430,6 +1457,21 @@ export default function AdminContentPage() {
                         <Sparkles className="h-4 w-4 mr-2" />
                       )}
                       Перегенерировать
+                    </Button>
+                  )}
+                  {!useNeuralParser && (
+                    <Button
+                      variant="outline"
+                      onClick={handleRegenerate}
+                      disabled={regenerating || saving}
+                      className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                    >
+                      {regenerating ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Перепарсить
                     </Button>
                   )}
                   <Button
