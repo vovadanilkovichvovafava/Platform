@@ -29,25 +29,25 @@ function CodeBlock({ code, language }: CodeBlockProps) {
           onClick={handleCopy}
           className={cn(
             "p-2 rounded-md transition-all",
-            "bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white",
+            "bg-gray-200 hover:bg-gray-300 text-gray-600 hover:text-gray-900",
             "opacity-0 group-hover:opacity-100 focus:opacity-100"
           )}
           title={copied ? "Скопировано!" : "Копировать код"}
           aria-label={copied ? "Скопировано!" : "Копировать код"}
         >
           {copied ? (
-            <Check className="h-4 w-4 text-green-400" />
+            <Check className="h-4 w-4 text-green-600" />
           ) : (
             <Copy className="h-4 w-4" />
           )}
         </button>
       </div>
       {language && (
-        <div className="absolute left-3 top-0 -translate-y-1/2 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">
+        <div className="absolute left-3 top-0 -translate-y-1/2 px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">
           {language}
         </div>
       )}
-      <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto">
+      <pre className="bg-gray-100 text-black rounded-lg p-4 overflow-x-auto">
         <code className="text-sm font-mono whitespace-pre">{code}</code>
       </pre>
     </div>
