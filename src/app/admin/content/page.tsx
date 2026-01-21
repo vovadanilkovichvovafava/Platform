@@ -265,7 +265,8 @@ export default function AdminContentPage() {
 
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("useAI", "true") // Всегда пробуем умный парсинг
+      formData.append("useAI", "true")
+      formData.append("forceAI", "true") // Всегда используем AI парсер (по ТЗ файл должен отправляться в нейронку)
 
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -376,7 +377,7 @@ export default function AdminContentPage() {
     setUploadedFile(null)
   }
 
-  const checkAIStatus = async () => {
+  const checkAIStatus = useCallback(async () => {
     setAiStatus({ available: false, checking: true })
     try {
       const res = await fetch("/api/admin/import?action=check-ai")
@@ -393,8 +394,14 @@ export default function AdminContentPage() {
         checking: false,
       })
     }
-  }
+  }, [])
 
+  // Автопроверка AI статуса при открытии модалки импорта
+  useEffect(() => {
+    if (showImportModal) {
+      checkAIStatus()
+    }
+  }, [showImportModal, checkAIStatus])
 
   const deleteTrail = async (trailId: string, title: string) => {
     const confirmed = await confirm({
@@ -1151,28 +1158,40 @@ export default function AdminContentPage() {
                   </label>
 
                   {/* AI статус */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-purple-500" />
-                      <span className="text-sm text-gray-600">AI-парсер</span>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-purple-500" />
+                        <span className="text-sm text-gray-600">AI-парсер</span>
+                      </div>
+                      {aiStatus.checking ? (
+                        <span className="text-sm text-gray-500 flex items-center gap-1">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Проверка...
+                        </span>
+                      ) : aiStatus.available ? (
+                        <span className="text-sm text-green-600 flex items-center gap-1">
+                          <CheckCircle className="h-4 w-4" />
+                          Доступен
+                        </span>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={checkAIStatus}
+                          className="text-purple-600 hover:text-purple-700"
+                        >
+                          <Zap className="h-4 w-4 mr-1" />
+                          Проверить
+                        </Button>
+                      )}
                     </div>
-                    {aiStatus.checking ? (
-                      <span className="text-sm text-gray-500">Проверка...</span>
-                    ) : aiStatus.available ? (
-                      <span className="text-sm text-green-600 flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4" />
-                        Доступен
-                      </span>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={checkAIStatus}
-                        className="text-purple-600 hover:text-purple-700"
-                      >
-                        <Zap className="h-4 w-4 mr-1" />
-                        Проверить
-                      </Button>
+                    {/* Отображение ошибки AI */}
+                    {aiStatus.error && !aiStatus.checking && (
+                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-start gap-2">
+                        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                        <span>{aiStatus.error}</span>
+                      </div>
                     )}
                   </div>
                 </div>

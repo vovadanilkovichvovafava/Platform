@@ -64,9 +64,21 @@ export async function POST(request: NextRequest) {
     const aiConfig = getAIConfig()
     let parseResult
 
-    // Если forceAI - используем только AI
+    // Если forceAI - используем ТОЛЬКО AI парсер напрямую (по ТЗ файл всегда должен идти в нейронку)
     if (forceAI && aiConfig.enabled && aiConfig.apiKey) {
-      parseResult = await hybridImport(text, file.name, aiConfig)
+      const { parseWithAI } = await import("@/lib/import/parsers/ai-parser")
+      const { detectFileFormat, analyzeStructure } = await import("@/lib/import/smart-detector")
+
+      const detectedFormat = detectFileFormat(file.name, text)
+      const structureAnalysis = analyzeStructure(text)
+
+      const aiResult = await parseWithAI(text, aiConfig)
+      parseResult = {
+        ...aiResult,
+        detectedFormat,
+        structureConfidence: structureAnalysis.confidence,
+        parseMethod: "ai",
+      }
     } else if (useAI && aiConfig.enabled) {
       parseResult = await smartImport(text, file.name, {
         useAI: true,
