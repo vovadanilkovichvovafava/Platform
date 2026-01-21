@@ -134,7 +134,7 @@ export async function parseWithAI(
           { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
         ],
         temperature: 0.3,
-        max_completion_tokens: 4000,
+        max_completion_tokens: 16000, // Увеличено для больших курсов
       }),
     })
 
