@@ -21,12 +21,10 @@ import {
   Target,
   Palette,
   Lightbulb,
-  ArrowLeft,
   RefreshCw,
   Plus,
   X,
   Upload,
-  FileText,
   Download,
   CheckCircle,
   Trash2,
@@ -35,6 +33,9 @@ import {
   GripVertical,
   BarChart3,
   History,
+  Sparkles,
+  AlertTriangle,
+  Zap,
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 
@@ -114,7 +115,41 @@ export default function AdminContentPage() {
   // Import modal
   const [showImportModal, setShowImportModal] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [parsedData, setParsedData] = useState<{
+    trails: Array<{
+      title: string
+      slug: string
+      subtitle?: string
+      description?: string
+      icon?: string
+      color?: string
+      modules: Array<{
+        title: string
+        slug: string
+        type: "THEORY" | "PRACTICE" | "PROJECT"
+        points: number
+        description?: string
+        content?: string
+        questions: Array<{
+          question: string
+          options: string[]
+          correctAnswer: number
+        }>
+      }>
+    }>
+    warnings?: string[]
+    parseMethod?: string
+    detectedFormat?: string
+    structureConfidence?: number
+  } | null>(null)
+  const [parseError, setParseError] = useState<string | null>(null)
+  const [aiStatus, setAiStatus] = useState<{ available: boolean; error?: string; checking: boolean }>({
+    available: false,
+    checking: false,
+  })
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 
   // Drag and drop
   const [draggedModule, setDraggedModule] = useState<string | null>(null)
@@ -224,10 +259,13 @@ export default function AdminContentPage() {
 
     try {
       setImporting(true)
-      setImportResult(null)
+      setParsedData(null)
+      setParseError(null)
+      setUploadedFile(file)
 
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("useAI", "true") // Всегда пробуем умный парсинг
 
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -236,85 +274,127 @@ export default function AdminContentPage() {
 
       const data = await res.json()
 
-      if (!res.ok) {
-        setImportResult({ success: false, message: data.error || "Ошибка импорта" })
+      if (!data.success || !data.trails || data.trails.length === 0) {
+        setParseError(data.error || "Не удалось распознать структуру файла")
+        setParsedData(null)
       } else {
-        setImportResult({ success: true, message: data.message })
-        fetchTrails()
+        setParsedData({
+          trails: data.trails,
+          warnings: data.warnings,
+          parseMethod: data.parseMethod,
+          detectedFormat: data.detectedFormat,
+          structureConfidence: data.structureConfidence,
+        })
+        setParseError(null)
       }
     } catch {
-      setImportResult({ success: false, message: "Ошибка при загрузке файла" })
+      setParseError("Ошибка при загрузке файла")
+      setParsedData(null)
     } finally {
       setImporting(false)
-      // Reset file input
       e.target.value = ""
     }
   }
 
-  const sampleFormat = `=== TRAIL ===
-название: Vibe Coding
-slug: vibe-coding
-подзаголовок: Научись кодить с AI
-описание: Полный курс по Vibe Coding
-иконка: 💻
-цвет: #6366f1
+  const handleSaveImport = async () => {
+    if (!parsedData?.trails) return
 
-=== MODULE ===
-название: Введение в Vibe Coding
-slug: intro-vibe-coding
-тип: урок
-очки: 50
-описание: Основы работы с AI-ассистентами
----
-# Добро пожаловать в Vibe Coding!
+    try {
+      setSaving(true)
+      const res = await fetch("/api/admin/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save",
+          trails: parsedData.trails,
+        }),
+      })
 
-Vibe Coding — это современный подход к программированию...
+      const data = await res.json()
 
-## Что такое AI-ассистент?
-
-Здесь пишется контент модуля в формате Markdown.
----
-
-=== ВОПРОСЫ ===
-В: Что такое Vibe Coding?
-- Программирование без компьютера
-- Программирование с помощью AI *
-- Визуальное программирование
-- Игра
-
-В: Какой инструмент используется для Vibe Coding?
-- Excel
-- Word
-- Claude / ChatGPT *
-- Paint
-
-=== MODULE ===
-название: Практика промптинга
-slug: prompting-practice
-тип: проект
-очки: 100
-описание: Создай свой первый проект
----
-# Задание
-
-Создайте простое приложение используя AI-ассистента.
-
-## Требования
-
-1. Опишите задачу ассистенту
-2. Получите код
-3. Протестируйте результат
----`
-
-  const downloadSample = () => {
-    const blob = new Blob([sampleFormat], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "sample-import.txt"
-    a.click()
-    URL.revokeObjectURL(url)
+      if (data.success) {
+        showToast(data.message || "Контент успешно добавлен", "success")
+        setShowImportModal(false)
+        setParsedData(null)
+        setUploadedFile(null)
+        fetchTrails()
+      } else {
+        showToast(data.error || "Ошибка сохранения", "error")
+      }
+    } catch {
+      showToast("Ошибка при сохранении", "error")
+    } finally {
+      setSaving(false)
+    }
   }
+
+  const handleRegenerate = async () => {
+    if (!uploadedFile) return
+
+    try {
+      setRegenerating(true)
+      setParsedData(null)
+      setParseError(null)
+
+      const formData = new FormData()
+      formData.append("file", uploadedFile)
+      formData.append("useAI", "true")
+      formData.append("forceAI", "true") // Принудительно AI
+
+      const res = await fetch("/api/admin/import", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await res.json()
+
+      if (!data.success || !data.trails || data.trails.length === 0) {
+        setParseError(data.error || "AI не смог распознать структуру")
+        setParsedData(null)
+      } else {
+        setParsedData({
+          trails: data.trails,
+          warnings: data.warnings,
+          parseMethod: data.parseMethod,
+          detectedFormat: data.detectedFormat,
+          structureConfidence: data.structureConfidence,
+        })
+        setParseError(null)
+      }
+    } catch {
+      setParseError("Ошибка при перегенерации")
+      setParsedData(null)
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  const resetImportModal = () => {
+    setShowImportModal(false)
+    setParsedData(null)
+    setParseError(null)
+    setUploadedFile(null)
+  }
+
+  const checkAIStatus = async () => {
+    setAiStatus({ available: false, checking: true })
+    try {
+      const res = await fetch("/api/admin/import?action=check-ai")
+      const data = await res.json()
+      setAiStatus({
+        available: data.available,
+        error: data.error,
+        checking: false,
+      })
+    } catch {
+      setAiStatus({
+        available: false,
+        error: "Ошибка проверки AI",
+        checking: false,
+      })
+    }
+  }
+
 
   const deleteTrail = async (trailId: string, title: string) => {
     const confirmed = await confirm({
@@ -993,17 +1073,14 @@ slug: prompting-practice
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Импорт из текстового файла
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                Импорт контента
               </h2>
               <button
-                onClick={() => {
-                  setShowImportModal(false)
-                  setImportResult(null)
-                }}
+                onClick={resetImportModal}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -1011,86 +1088,238 @@ slug: prompting-practice
             </div>
 
             <div className="p-6 overflow-y-auto flex-1">
-              {importResult ? (
-                <div className={`p-4 rounded-lg mb-4 ${
-                  importResult.success
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-red-50 border border-red-200"
-                }`}>
-                  <div className="flex items-center gap-2">
-                    {importResult.success ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <X className="h-5 w-5 text-red-600" />
-                    )}
-                    <span className={importResult.success ? "text-green-700" : "text-red-700"}>
-                      {importResult.message}
-                    </span>
+              {/* Ошибка парсинга */}
+              {parseError && (
+                <div className="p-4 rounded-lg mb-4 bg-red-50 border border-red-200">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                    <div className="flex-1">
+                      <span className="text-red-700">{parseError}</span>
+                      {uploadedFile && aiStatus.available && (
+                        <div className="mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRegenerate}
+                            disabled={regenerating}
+                            className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                          >
+                            {regenerating ? (
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-4 w-4 mr-2" />
+                            )}
+                            Попробовать с AI
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ) : null}
+              )}
 
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Загрузить файл</h3>
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+              {/* Если нет данных - показываем загрузку файла */}
+              {!parsedData && !parseError && (
+                <div className="space-y-6">
+                  {/* Загрузка файла */}
+                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center">
                       {importing ? (
-                        <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mb-2" />
+                        <>
+                          <RefreshCw className="h-12 w-12 text-purple-500 animate-spin mb-3" />
+                          <p className="text-lg text-purple-600 font-medium">Анализируем файл...</p>
+                          <p className="text-sm text-gray-400 mt-1">Это может занять несколько секунд</p>
+                        </>
                       ) : (
-                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                        <>
+                          <Upload className="h-12 w-12 text-gray-400 mb-3" />
+                          <p className="text-lg text-gray-600 font-medium">Выберите файл для импорта</p>
+                          <p className="text-sm text-gray-400 mt-1">.txt, .md, .json, .xml</p>
+                          <p className="text-xs text-gray-400 mt-3">
+                            Система автоматически определит структуру
+                          </p>
+                        </>
                       )}
-                      <p className="text-sm text-gray-500">
-                        {importing ? "Импортируем..." : "Нажмите для выбора .txt файла"}
-                      </p>
                     </div>
                     <input
                       type="file"
-                      accept=".txt"
+                      accept=".txt,.md,.markdown,.json,.xml"
                       onChange={handleImport}
                       disabled={importing}
                       className="hidden"
                     />
                   </label>
-                </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-gray-900">Формат файла</h3>
-                    <Button variant="outline" size="sm" onClick={downloadSample}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Скачать пример
-                    </Button>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-64 overflow-y-auto">
-                    <pre className="text-gray-700 whitespace-pre-wrap">{sampleFormat}</pre>
+                  {/* AI статус */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm text-gray-600">AI-парсер</span>
+                    </div>
+                    {aiStatus.checking ? (
+                      <span className="text-sm text-gray-500">Проверка...</span>
+                    ) : aiStatus.available ? (
+                      <span className="text-sm text-green-600 flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Доступен
+                      </span>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={checkAIStatus}
+                        className="text-purple-600 hover:text-purple-700"
+                      >
+                        <Zap className="h-4 w-4 mr-1" />
+                        Проверить
+                      </Button>
+                    )}
                   </div>
                 </div>
+              )}
 
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">Подсказки:</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• Используйте <code className="bg-blue-100 px-1 rounded">=== TRAIL ===</code> для начала нового trail</li>
-                    <li>• Используйте <code className="bg-blue-100 px-1 rounded">=== MODULE ===</code> для начала нового модуля</li>
-                    <li>• Контент модуля оборачивается в <code className="bg-blue-100 px-1 rounded">---</code></li>
-                    <li>• Правильный ответ отмечается <code className="bg-blue-100 px-1 rounded">*</code> в конце</li>
-                    <li>• Типы: урок, тест, проект</li>
-                  </ul>
+              {/* Превью распарсенных данных */}
+              {parsedData && parsedData.trails.length > 0 && (
+                <div className="space-y-6">
+                  {/* Информация о парсинге */}
+                  <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div className="flex-1">
+                      <span className="text-green-700 font-medium">Контент успешно распознан</span>
+                      <span className="text-green-600 text-sm ml-2">
+                        ({parsedData.parseMethod === "ai" ? "AI" : parsedData.parseMethod === "hybrid" ? "Гибридный" : "Авто"})
+                      </span>
+                    </div>
+                    {parsedData.structureConfidence !== undefined && (
+                      <span className="text-sm text-green-600">
+                        Уверенность: {parsedData.structureConfidence}%
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Предупреждения */}
+                  {parsedData.warnings && parsedData.warnings.length > 0 && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-yellow-700 font-medium mb-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Предупреждения
+                      </div>
+                      <ul className="text-sm text-yellow-600 space-y-1">
+                        {parsedData.warnings.slice(0, 5).map((w, i) => (
+                          <li key={i}>• {w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Превью trails */}
+                  <div className="space-y-4">
+                    {parsedData.trails.map((trail, trailIndex) => (
+                      <div key={trailIndex} className="border rounded-lg overflow-hidden">
+                        <div
+                          className="p-4 flex items-center gap-3"
+                          style={{ backgroundColor: `${trail.color || "#6366f1"}15` }}
+                        >
+                          <span className="text-2xl">{trail.icon || "📚"}</span>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">{trail.title}</h3>
+                            {trail.subtitle && (
+                              <p className="text-sm text-gray-600">{trail.subtitle}</p>
+                            )}
+                          </div>
+                          <Badge variant="outline">
+                            {trail.modules.length} модулей
+                          </Badge>
+                        </div>
+
+                        <div className="divide-y">
+                          {trail.modules.map((module, moduleIndex) => {
+                            const TypeIcon = typeIcons[module.type] || BookOpen
+                            return (
+                              <div key={moduleIndex} className="p-3 flex items-center gap-3 bg-white">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
+                                  <TypeIcon className="h-4 w-4 text-gray-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900 truncate">
+                                      {module.title}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs shrink-0">
+                                      {typeLabels[module.type]}
+                                    </Badge>
+                                  </div>
+                                  {module.description && (
+                                    <p className="text-xs text-gray-500 truncate">{module.description}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0">
+                                  {module.questions.length > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <HelpCircle className="h-3 w-3" />
+                                      {module.questions.length}
+                                    </span>
+                                  )}
+                                  <span>{module.points} XP</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="p-6 border-t bg-gray-50">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowImportModal(false)
-                  setImportResult(null)
-                }}
-                className="w-full"
-              >
-                Закрыть
-              </Button>
+              {parsedData ? (
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={resetImportModal}
+                    className="flex-1"
+                  >
+                    Отмена
+                  </Button>
+                  {aiStatus.available && (
+                    <Button
+                      variant="outline"
+                      onClick={handleRegenerate}
+                      disabled={regenerating || saving}
+                      className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                    >
+                      {regenerating ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      Перегенерировать
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleSaveImport}
+                    disabled={saving || regenerating}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {saving ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Добавить
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={resetImportModal}
+                  className="w-full"
+                >
+                  Закрыть
+                </Button>
+              )}
             </div>
           </div>
         </div>

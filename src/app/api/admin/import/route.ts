@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import {
+  smartImport,
+  hybridImport,
+  ParsedTrail,
+  ImportResult,
+  getAIConfig,
+  checkAIAvailability,
+} from "@/lib/import"
 
+// POST - парсинг файла (без сохранения) или сохранение
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -10,17 +19,88 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const contentType = request.headers.get("content-type") || ""
+
+    // Если JSON - это запрос на сохранение уже распарсенных данных
+    if (contentType.includes("application/json")) {
+      const body = await request.json()
+
+      if (body.action === "save" && body.trails) {
+        const result = await importToDatabase(body.trails)
+        return NextResponse.json(result)
+      }
+
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    }
+
+    // Если FormData - это запрос на парсинг файла
     const formData = await request.formData()
     const file = formData.get("file") as File
+    const useAI = formData.get("useAI") === "true"
+    const forceAI = formData.get("forceAI") === "true" // Для перегенерации
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    const text = await file.text()
-    const result = await parseAndImport(text)
+    // Проверка расширения файла
+    const filename = file.name.toLowerCase()
+    const supportedExtensions = [".txt", ".md", ".json", ".xml", ".markdown"]
+    const hasValidExtension = supportedExtensions.some(ext => filename.endsWith(ext))
 
-    return NextResponse.json(result)
+    if (!hasValidExtension) {
+      return NextResponse.json({
+        error: `Неподдерживаемый формат файла. Поддерживаются: ${supportedExtensions.join(", ")}`,
+      }, { status: 400 })
+    }
+
+    const text = await file.text()
+
+    if (!text.trim()) {
+      return NextResponse.json({ error: "Файл пуст" }, { status: 400 })
+    }
+
+    // Парсинг файла (БЕЗ сохранения в БД)
+    const aiConfig = getAIConfig()
+    let parseResult
+
+    // Если forceAI - используем только AI
+    if (forceAI && aiConfig.enabled && aiConfig.apiKey) {
+      parseResult = await hybridImport(text, file.name, aiConfig)
+    } else if (useAI && aiConfig.enabled) {
+      parseResult = await smartImport(text, file.name, {
+        useAI: true,
+        aiConfig,
+      })
+    } else {
+      parseResult = await smartImport(text, file.name, {
+        useAI: false,
+      })
+    }
+
+    if (!parseResult.success || parseResult.trails.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: "Не удалось распарсить файл",
+        details: parseResult.errors,
+        warnings: parseResult.warnings,
+        parseMethod: parseResult.parseMethod,
+        detectedFormat: parseResult.detectedFormat,
+        structureConfidence: parseResult.structureConfidence,
+        // Возвращаем пустой результат для отображения
+        trails: [],
+      }, { status: 200 }) // 200 чтобы клиент мог показать ошибку
+    }
+
+    // Возвращаем распарсенные данные БЕЗ сохранения
+    return NextResponse.json({
+      success: true,
+      trails: parseResult.trails,
+      warnings: parseResult.warnings,
+      parseMethod: parseResult.parseMethod,
+      detectedFormat: parseResult.detectedFormat,
+      structureConfidence: parseResult.structureConfidence,
+    })
   } catch (error) {
     console.error("Import error:", error)
     return NextResponse.json(
@@ -30,239 +110,43 @@ export async function POST(request: NextRequest) {
   }
 }
 
-interface ParsedQuestion {
-  question: string
-  options: string[]
-  correctAnswer: number
-}
-
-interface ParsedModule {
-  title: string
-  slug: string
-  type: string
-  points: number
-  description: string
-  content: string
-  questions: ParsedQuestion[]
-}
-
-interface ParsedTrail {
-  title: string
-  slug: string
-  subtitle: string
-  description: string
-  icon: string
-  color: string
-  modules: ParsedModule[]
-}
-
-async function parseAndImport(text: string) {
-  const lines = text.split("\n")
-  const trails: ParsedTrail[] = []
-
-  let currentTrail: ParsedTrail | null = null
-  let currentModule: ParsedModule | null = null
-  let currentSection: "trail" | "module" | "questions" | "content" | null = null
-  let contentBuffer: string[] = []
-  let inContentBlock = false
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const trimmedLine = line.trim()
-
-    // Section markers
-    if (trimmedLine === "=== TRAIL ===" || trimmedLine === "=== ТРЕЙЛ ===") {
-      // Save previous module if exists
-      if (currentModule && currentTrail) {
-        if (inContentBlock) {
-          currentModule.content = contentBuffer.join("\n").trim()
-        }
-        currentTrail.modules.push(currentModule)
-      }
-      // Save previous trail if exists
-      if (currentTrail) {
-        trails.push(currentTrail)
-      }
-
-      currentTrail = {
-        title: "",
-        slug: "",
-        subtitle: "",
-        description: "",
-        icon: "📚",
-        color: "#6366f1",
-        modules: [],
-      }
-      currentModule = null
-      currentSection = "trail"
-      inContentBlock = false
-      contentBuffer = []
-      continue
+// GET - проверка статуса AI
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (trimmedLine === "=== MODULE ===" || trimmedLine === "=== МОДУЛЬ ===") {
-      // Save previous module if exists
-      if (currentModule && currentTrail) {
-        if (inContentBlock) {
-          currentModule.content = contentBuffer.join("\n").trim()
-        }
-        currentTrail.modules.push(currentModule)
-      }
+    const { searchParams } = new URL(request.url)
+    const action = searchParams.get("action")
 
-      currentModule = {
-        title: "",
-        slug: "",
-        type: "THEORY",
-        points: 50,
-        description: "",
-        content: "",
-        questions: [],
-      }
-      currentSection = "module"
-      inContentBlock = false
-      contentBuffer = []
-      continue
-    }
-
-    if (trimmedLine === "=== QUESTIONS ===" || trimmedLine === "=== ВОПРОСЫ ===") {
-      if (inContentBlock && currentModule) {
-        currentModule.content = contentBuffer.join("\n").trim()
-      }
-      currentSection = "questions"
-      inContentBlock = false
-      contentBuffer = []
-      continue
-    }
-
-    // Content block markers
-    if (trimmedLine === "---" && currentSection === "module") {
-      if (!inContentBlock) {
-        inContentBlock = true
-        contentBuffer = []
-      } else {
-        if (currentModule) {
-          currentModule.content = contentBuffer.join("\n").trim()
-        }
-        inContentBlock = false
-      }
-      continue
-    }
-
-    // Inside content block
-    if (inContentBlock) {
-      contentBuffer.push(line)
-      continue
-    }
-
-    // Parse key-value pairs
-    if (trimmedLine.includes(":") && !trimmedLine.startsWith("Q:") && !trimmedLine.startsWith("В:")) {
-      const colonIndex = trimmedLine.indexOf(":")
-      const key = trimmedLine.slice(0, colonIndex).trim().toLowerCase()
-      const value = trimmedLine.slice(colonIndex + 1).trim()
-
-      if (currentSection === "trail" && currentTrail) {
-        switch (key) {
-          case "title":
-          case "название":
-            currentTrail.title = value
-            break
-          case "slug":
-          case "слаг":
-            currentTrail.slug = value
-            break
-          case "subtitle":
-          case "подзаголовок":
-            currentTrail.subtitle = value
-            break
-          case "description":
-          case "описание":
-            currentTrail.description = value
-            break
-          case "icon":
-          case "иконка":
-            currentTrail.icon = value
-            break
-          case "color":
-          case "цвет":
-            currentTrail.color = value
-            break
-        }
-      } else if (currentSection === "module" && currentModule) {
-        switch (key) {
-          case "title":
-          case "название":
-            currentModule.title = value
-            break
-          case "slug":
-          case "слаг":
-            currentModule.slug = value
-            break
-          case "type":
-          case "тип":
-            const typeMap: Record<string, string> = {
-              lesson: "THEORY",
-              theory: "THEORY",
-              quiz: "PRACTICE",
-              practice: "PRACTICE",
-              project: "PROJECT",
-              урок: "THEORY",
-              теория: "THEORY",
-              тест: "PRACTICE",
-              практика: "PRACTICE",
-              проект: "PROJECT",
-            }
-            currentModule.type = typeMap[value.toLowerCase()] || "THEORY"
-            break
-          case "points":
-          case "очки":
-          case "баллы":
-            currentModule.points = parseInt(value) || 50
-            break
-          case "description":
-          case "описание":
-            currentModule.description = value
-            break
-        }
-      }
-      continue
-    }
-
-    // Parse questions
-    if (currentSection === "questions" && currentModule) {
-      if (trimmedLine.startsWith("Q:") || trimmedLine.startsWith("В:")) {
-        const questionText = trimmedLine.slice(2).trim()
-        currentModule.questions.push({
-          question: questionText,
-          options: [],
-          correctAnswer: 0,
+    // Проверка статуса AI
+    if (action === "check-ai") {
+      const aiConfig = getAIConfig()
+      if (!aiConfig.enabled) {
+        return NextResponse.json({
+          available: false,
+          error: "AI парсер отключен в настройках",
         })
-      } else if (trimmedLine.startsWith("-") || trimmedLine.startsWith("•")) {
-        const currentQuestion = currentModule.questions[currentModule.questions.length - 1]
-        if (currentQuestion) {
-          let optionText = trimmedLine.slice(1).trim()
-          const isCorrect = optionText.endsWith("*")
-          if (isCorrect) {
-            optionText = optionText.slice(0, -1).trim()
-            currentQuestion.correctAnswer = currentQuestion.options.length
-          }
-          currentQuestion.options.push(optionText)
-        }
       }
-    }
-  }
 
-  // Save last module and trail
-  if (currentModule && currentTrail) {
-    if (inContentBlock) {
-      currentModule.content = contentBuffer.join("\n").trim()
+      const status = await checkAIAvailability(aiConfig)
+      return NextResponse.json(status)
     }
-    currentTrail.modules.push(currentModule)
-  }
-  if (currentTrail) {
-    trails.push(currentTrail)
-  }
 
-  // Import to database
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 })
+  } catch (error) {
+    console.error("Import API error:", error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Error" },
+      { status: 500 }
+    )
+  }
+}
+
+// Импорт в базу данных
+async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
   const imported = {
     trails: 0,
     modules: 0,
@@ -270,9 +154,12 @@ async function parseAndImport(text: string) {
   }
 
   for (const trailData of trails) {
-    // Create or update trail
+    // Валидация slug
+    const slug = trailData.slug || generateSlug(trailData.title)
+
+    // Создание или обновление trail
     const trail = await prisma.trail.upsert({
-      where: { slug: trailData.slug },
+      where: { slug },
       update: {
         title: trailData.title,
         subtitle: trailData.subtitle,
@@ -282,7 +169,7 @@ async function parseAndImport(text: string) {
       },
       create: {
         title: trailData.title,
-        slug: trailData.slug,
+        slug,
         subtitle: trailData.subtitle,
         description: trailData.description,
         icon: trailData.icon,
@@ -293,12 +180,13 @@ async function parseAndImport(text: string) {
     })
     imported.trails++
 
-    // Create modules
+    // Создание модулей
     for (let order = 0; order < trailData.modules.length; order++) {
       const moduleData = trailData.modules[order]
+      const moduleSlug = moduleData.slug || generateSlug(moduleData.title)
 
       const createdModule = await prisma.module.upsert({
-        where: { slug: moduleData.slug },
+        where: { slug: moduleSlug },
         update: {
           title: moduleData.title,
           description: moduleData.description,
@@ -307,39 +195,43 @@ async function parseAndImport(text: string) {
           points: moduleData.points,
           order: order,
           trailId: trail.id,
+          level: moduleData.level || (moduleData.type === "PROJECT" ? "Middle" : "Beginner"),
+          duration: moduleData.duration || (moduleData.type === "PROJECT" ? "1-2 дня" : "20 мин"),
         },
         create: {
           title: moduleData.title,
-          slug: moduleData.slug,
+          slug: moduleSlug,
           description: moduleData.description,
           content: moduleData.content,
           type: moduleData.type,
           points: moduleData.points,
           order: order,
-          duration: moduleData.type === "PROJECT" ? "1-2 дня" : "20 мин",
-          level: moduleData.type === "PROJECT" ? "Middle" : "Beginner",
+          duration: moduleData.duration || (moduleData.type === "PROJECT" ? "1-2 дня" : "20 мин"),
+          level: moduleData.level || (moduleData.type === "PROJECT" ? "Middle" : "Beginner"),
           trailId: trail.id,
         },
       })
       imported.modules++
 
-      // Delete existing questions for this module and create new ones
-      await prisma.question.deleteMany({
-        where: { moduleId: createdModule.id },
-      })
-
-      for (let qOrder = 0; qOrder < moduleData.questions.length; qOrder++) {
-        const q = moduleData.questions[qOrder]
-        await prisma.question.create({
-          data: {
-            moduleId: createdModule.id,
-            question: q.question,
-            options: JSON.stringify(q.options),
-            correctAnswer: q.correctAnswer,
-            order: qOrder,
-          },
+      // Удаление существующих вопросов и создание новых
+      if (moduleData.questions.length > 0) {
+        await prisma.question.deleteMany({
+          where: { moduleId: createdModule.id },
         })
-        imported.questions++
+
+        for (let qOrder = 0; qOrder < moduleData.questions.length; qOrder++) {
+          const q = moduleData.questions[qOrder]
+          await prisma.question.create({
+            data: {
+              moduleId: createdModule.id,
+              question: q.question,
+              options: JSON.stringify(q.options),
+              correctAnswer: q.correctAnswer,
+              order: qOrder,
+            },
+          })
+          imported.questions++
+        }
       }
     }
   }
@@ -347,6 +239,25 @@ async function parseAndImport(text: string) {
   return {
     success: true,
     imported,
-    message: `Импортировано: ${imported.trails} трейлов, ${imported.modules} модулей, ${imported.questions} вопросов`,
+    message: `Добавлено: ${imported.trails} трейлов, ${imported.modules} модулей, ${imported.questions} вопросов`,
   }
+}
+
+// Генератор slug
+function generateSlug(text: string): string {
+  const translitMap: Record<string, string> = {
+    а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "zh",
+    з: "z", и: "i", й: "j", к: "k", л: "l", м: "m", н: "n", о: "o",
+    п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c",
+    ч: "ch", ш: "sh", щ: "sch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
+  }
+
+  return text
+    .toLowerCase()
+    .split("")
+    .map((char) => translitMap[char] || char)
+    .join("")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .substring(0, 50)
 }
