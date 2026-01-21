@@ -133,7 +133,7 @@ export default function ModuleEditorPage({ params }: Props) {
       setQuestions(
         data.questions.map((q) => {
           const questionType = (q.type as QuestionType) || "SINGLE_CHOICE"
-          let questionData = q.data ? safeJsonParse(q.data, null) : null
+          let questionData: MatchingData | OrderingData | CaseAnalysisData | null = q.data ? safeJsonParse(q.data, null) : null
 
           // Для MATCHING и ORDERING создаём дефолтные данные если их нет
           if (questionType === "MATCHING" && (!questionData || !("leftItems" in questionData))) {
