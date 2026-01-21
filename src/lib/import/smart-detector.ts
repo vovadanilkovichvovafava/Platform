@@ -10,6 +10,9 @@ import {
   detectModuleType,
   detectColor,
   detectIcon,
+  ConfidenceCriterion,
+  ConfidenceDetails,
+  FileFormat,
 } from "./types"
 
 interface DetectionResult {
@@ -21,11 +24,13 @@ interface DetectionResult {
   detectedModules: number
   detectedQuestions: number
   confidence: number // 0-100
+  confidenceDetails: ConfidenceDetails
 }
 
 // Анализ структуры текста
 export function analyzeStructure(text: string, patterns: ContentPatterns = DEFAULT_PATTERNS): DetectionResult {
   const lines = text.split("\n")
+  const criteria: ConfidenceCriterion[] = []
 
   let trailCount = 0
   let moduleCount = 0
@@ -59,9 +64,65 @@ export function analyzeStructure(text: string, patterns: ContentPatterns = DEFAU
   moduleCount += freeFormPatterns.modules
   questionCount += freeFormPatterns.questions
 
+  // Расчёт уверенности с детальными критериями
+  const trailScore = trailCount > 0 ? 20 : 0
+  criteria.push({
+    name: "Маркеры курса/трейла",
+    description: `Найдено ${trailCount} маркеров курса (=== TRAIL ===, # Course и т.д.)`,
+    score: trailScore,
+    maxScore: 20,
+    met: trailCount > 0,
+  })
+
+  const moduleScore = moduleCount > 0 ? Math.min(25, moduleCount * 5) : 0
+  criteria.push({
+    name: "Структура модулей",
+    description: `Найдено ${moduleCount} модулей/уроков (заголовки, нумерованные разделы)`,
+    score: moduleScore,
+    maxScore: 25,
+    met: moduleCount > 0,
+  })
+
+  const questionScore = questionCount > 0 ? Math.min(20, questionCount * 4) : 0
+  criteria.push({
+    name: "Вопросы и тесты",
+    description: `Найдено ${questionCount} вопросов с вариантами ответов`,
+    score: questionScore,
+    maxScore: 20,
+    met: questionCount > 0,
+  })
+
+  const structuredScore = Math.min(20, structuredElements * 5)
+  criteria.push({
+    name: "Структурированные элементы",
+    description: `${structuredElements} элементов со стандартными маркерами (===, ---, ### и др.)`,
+    score: structuredScore,
+    maxScore: 20,
+    met: structuredElements > 0,
+  })
+
+  const freeFormScore = Math.min(15, freeFormPatterns.confidence)
+  criteria.push({
+    name: "Свободный формат",
+    description: "Распознавание структуры без явных маркеров (нумерация, заголовки)",
+    score: freeFormScore,
+    maxScore: 15,
+    met: freeFormPatterns.confidence > 0,
+  })
+
+  const totalScore = trailScore + moduleScore + questionScore + structuredScore + freeFormScore
+  const maxPossibleScore = 100
+  const confidence = Math.min(100, totalScore)
+
   // Расчёт уверенности
   const hasStructuredFormat = structuredElements > 0 || freeFormPatterns.modules > 0
-  const confidence = Math.min(100, structuredElements * 15 + (trailCount > 0 ? 20 : 0) + (moduleCount > 0 ? 15 : 0) + freeFormPatterns.confidence)
+
+  const confidenceDetails: ConfidenceDetails = {
+    totalScore,
+    maxPossibleScore,
+    percentage: confidence,
+    criteria,
+  }
 
   return {
     hasStructuredFormat,
@@ -72,6 +133,7 @@ export function analyzeStructure(text: string, patterns: ContentPatterns = DEFAU
     detectedModules: moduleCount,
     detectedQuestions: questionCount,
     confidence,
+    confidenceDetails,
   }
 }
 
@@ -517,22 +579,46 @@ function extractDescription(content: string): string {
 }
 
 // Определение формата файла по расширению и содержимому
-export function detectFileFormat(filename: string, content: string): "txt" | "md" | "json" | "xml" | "docx" | "unknown" {
+export function detectFileFormat(filename: string, content: string): FileFormat {
   const ext = filename.split(".").pop()?.toLowerCase()
 
-  if (ext === "json") {
-    try {
-      JSON.parse(content)
-      return "json"
-    } catch {
-      return "txt"
-    }
+  // Форматы по расширению
+  const formatMap: Record<string, FileFormat> = {
+    json: "json",
+    xml: "xml",
+    docx: "docx",
+    doc: "doc",
+    md: "md",
+    markdown: "md",
+    txt: "txt",
+    yml: "yml",
+    yaml: "yaml",
+    kdl: "kdl",
+    csv: "csv",
+    rtf: "rtf",
+    odt: "odt",
+    pdf: "pdf",
+    html: "html",
+    htm: "html",
+    rst: "rst",
+    tex: "tex",
+    org: "org",
+    adoc: "adoc",
+    asciidoc: "adoc",
   }
 
-  if (ext === "xml") return "xml"
-  if (ext === "docx") return "docx"
-  if (ext === "md" || ext === "markdown") return "md"
-  if (ext === "txt") return "txt"
+  if (ext && formatMap[ext]) {
+    // Для JSON проверяем валидность
+    if (ext === "json") {
+      try {
+        JSON.parse(content)
+        return "json"
+      } catch {
+        return "txt" // Невалидный JSON - обрабатываем как текст
+      }
+    }
+    return formatMap[ext]
+  }
 
   // Автоопределение по содержимому
   if (content.trim().startsWith("{") || content.trim().startsWith("[")) {
@@ -548,9 +634,34 @@ export function detectFileFormat(filename: string, content: string): "txt" | "md
     return "xml"
   }
 
+  // YAML признаки
+  if (/^---\s*$/m.test(content) && /^[\w-]+:\s/m.test(content)) {
+    return "yml"
+  }
+
+  // HTML признаки
+  if (content.includes("<!DOCTYPE") || content.includes("<html") || /<[a-z]+[^>]*>/i.test(content)) {
+    return "html"
+  }
+
   // Markdown признаки
   if (content.includes("```") || /^#{1,6}\s+/m.test(content)) {
     return "md"
+  }
+
+  // reStructuredText признаки
+  if (/^={3,}$/m.test(content) && /^-{3,}$/m.test(content)) {
+    return "rst"
+  }
+
+  // LaTeX признаки
+  if (content.includes("\\documentclass") || content.includes("\\begin{")) {
+    return "tex"
+  }
+
+  // Org-mode признаки
+  if (/^\*{1,3}\s+/m.test(content) && content.includes("#+")) {
+    return "org"
   }
 
   return "txt"

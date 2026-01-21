@@ -2,18 +2,25 @@
 
 export * from "./types"
 export * from "./smart-detector"
+export type { ConfidenceDetails, ConfidenceCriterion } from "./types"
 export { parseTxt } from "./parsers/txt-parser"
 export { parseMd } from "./parsers/md-parser"
 export { parseJson } from "./parsers/json-parser"
 export { parseXml } from "./parsers/xml-parser"
+export { parseHtml } from "./parsers/html-parser"
+export { parseDocx, parseDocxFromText } from "./parsers/docx-parser"
+export { parseDoc, parseDocFromText } from "./parsers/doc-parser"
 export { parseWithAI, checkAIAvailability, getAIConfig } from "./parsers/ai-parser"
 
-import { ParseResult, ParsedTrail, FileFormat, AIParserConfig } from "./types"
+import { ParseResult, ParsedTrail, FileFormat, AIParserConfig, ConfidenceDetails } from "./types"
 import { detectFileFormat, analyzeStructure } from "./smart-detector"
 import { parseTxt } from "./parsers/txt-parser"
 import { parseMd } from "./parsers/md-parser"
 import { parseJson } from "./parsers/json-parser"
 import { parseXml } from "./parsers/xml-parser"
+import { parseHtml } from "./parsers/html-parser"
+import { parseDocxFromText } from "./parsers/docx-parser"
+import { parseDocFromText } from "./parsers/doc-parser"
 import { parseWithAI, getAIConfig } from "./parsers/ai-parser"
 
 export interface SmartImportOptions {
@@ -25,6 +32,7 @@ export interface SmartImportOptions {
 export interface SmartImportResult extends ParseResult {
   detectedFormat: FileFormat
   structureConfidence: number
+  confidenceDetails?: ConfidenceDetails
 }
 
 // Умный импорт с автоопределением формата
@@ -35,8 +43,39 @@ export async function smartImport(
 ): Promise<SmartImportResult> {
   const detectedFormat = options.preferredFormat || detectFileFormat(filename, content)
   const structureAnalysis = analyzeStructure(content)
+  const isAIOnlyFormat = requiresAIParser(filename)
 
   let result: ParseResult
+
+  // Для форматов без нативного парсера - сразу используем AI
+  if (isAIOnlyFormat) {
+    const aiConfig = options.aiConfig || getAIConfig()
+    if (aiConfig.enabled && aiConfig.apiKey) {
+      try {
+        result = await parseWithAI(content, aiConfig)
+        if (result.success) {
+          return {
+            ...result,
+            detectedFormat,
+            structureConfidence: structureAnalysis.confidence,
+            confidenceDetails: structureAnalysis.confidenceDetails,
+            parseMethod: "ai",
+          }
+        }
+      } catch (e) {
+        // Fallback to txt parser
+      }
+    }
+    // Если AI недоступен для AI-only формата, пробуем как txt
+    result = parseTxt(content)
+    result.warnings.push(`Формат ${detectedFormat} требует AI-парсер, но он недоступен. Используется текстовый парсер.`)
+    return {
+      ...result,
+      detectedFormat,
+      structureConfidence: structureAnalysis.confidence,
+      confidenceDetails: structureAnalysis.confidenceDetails,
+    }
+  }
 
   // Если включен AI и структура неясная - используем AI
   if (options.useAI && structureAnalysis.confidence < 60) {
@@ -49,6 +88,7 @@ export async function smartImport(
             ...result,
             detectedFormat,
             structureConfidence: structureAnalysis.confidence,
+            confidenceDetails: structureAnalysis.confidenceDetails,
             parseMethod: "ai",
           }
         }
@@ -71,6 +111,15 @@ export async function smartImport(
     case "md":
       result = parseMd(content)
       break
+    case "html":
+      result = parseHtml(content)
+      break
+    case "docx":
+      result = parseDocxFromText(content)
+      break
+    case "doc":
+      result = parseDocFromText(content)
+      break
     case "txt":
     default:
       result = parseTxt(content)
@@ -88,6 +137,7 @@ export async function smartImport(
             ...aiResult,
             detectedFormat,
             structureConfidence: structureAnalysis.confidence,
+            confidenceDetails: structureAnalysis.confidenceDetails,
             warnings: [...result.warnings, ...aiResult.warnings, "Кодовый парсер не справился, использован AI"],
           }
         }
@@ -101,6 +151,7 @@ export async function smartImport(
     ...result,
     detectedFormat,
     structureConfidence: structureAnalysis.confidence,
+    confidenceDetails: structureAnalysis.confidenceDetails,
   }
 }
 
@@ -112,6 +163,36 @@ export async function hybridImport(
 ): Promise<SmartImportResult> {
   const detectedFormat = detectFileFormat(filename, content)
   const structureAnalysis = analyzeStructure(content)
+  const isAIOnlyFormat = requiresAIParser(filename)
+
+  // Для AI-only форматов используем только AI
+  if (isAIOnlyFormat) {
+    const config = aiConfig || getAIConfig()
+    if (config.enabled && config.apiKey) {
+      try {
+        const aiResult = await parseWithAI(content, config)
+        if (aiResult.success) {
+          return {
+            ...aiResult,
+            detectedFormat,
+            structureConfidence: structureAnalysis.confidence,
+            confidenceDetails: structureAnalysis.confidenceDetails,
+            parseMethod: "ai",
+          }
+        }
+      } catch (e) {
+        // Fallback to txt parser
+      }
+    }
+    const txtResult = parseTxt(content)
+    txtResult.warnings.push(`Формат ${detectedFormat} требует AI-парсер, но он недоступен.`)
+    return {
+      ...txtResult,
+      detectedFormat,
+      structureConfidence: structureAnalysis.confidence,
+      confidenceDetails: structureAnalysis.confidenceDetails,
+    }
+  }
 
   // Сначала пробуем кодовый парсер
   let codeResult: ParseResult
@@ -126,6 +207,15 @@ export async function hybridImport(
     case "md":
       codeResult = parseMd(content)
       break
+    case "html":
+      codeResult = parseHtml(content)
+      break
+    case "docx":
+      codeResult = parseDocxFromText(content)
+      break
+    case "doc":
+      codeResult = parseDocFromText(content)
+      break
     default:
       codeResult = parseTxt(content)
   }
@@ -136,6 +226,7 @@ export async function hybridImport(
       ...codeResult,
       detectedFormat,
       structureConfidence: structureAnalysis.confidence,
+      confidenceDetails: structureAnalysis.confidenceDetails,
       parseMethod: "code",
     }
   }
@@ -153,6 +244,7 @@ export async function hybridImport(
             ...aiResult,
             detectedFormat,
             structureConfidence: structureAnalysis.confidence,
+            confidenceDetails: structureAnalysis.confidenceDetails,
             parseMethod: "hybrid",
             warnings: [...codeResult.warnings, ...aiResult.warnings],
           }
@@ -168,6 +260,7 @@ export async function hybridImport(
           parseMethod: "hybrid",
           detectedFormat,
           structureConfidence: structureAnalysis.confidence,
+          confidenceDetails: structureAnalysis.confidenceDetails,
         }
       }
     } catch (e) {
@@ -179,6 +272,7 @@ export async function hybridImport(
     ...codeResult,
     detectedFormat,
     structureConfidence: structureAnalysis.confidence,
+    confidenceDetails: structureAnalysis.confidenceDetails,
   }
 }
 
@@ -198,12 +292,43 @@ function mergeTrails(codeTrails: ParsedTrail[], aiTrails: ParsedTrail[]): Parsed
 }
 
 // Поддерживаемые форматы
-export const SUPPORTED_FORMATS = [
-  { ext: ".txt", name: "Текстовый файл", mime: "text/plain" },
-  { ext: ".md", name: "Markdown", mime: "text/markdown" },
-  { ext: ".json", name: "JSON", mime: "application/json" },
-  { ext: ".xml", name: "XML", mime: "application/xml" },
+// Форматы с нативным парсером (код)
+export const NATIVE_PARSER_FORMATS = [
+  { ext: ".txt", name: "Текстовый файл", mime: "text/plain", parser: "code" },
+  { ext: ".md", name: "Markdown", mime: "text/markdown", parser: "code" },
+  { ext: ".markdown", name: "Markdown", mime: "text/markdown", parser: "code" },
+  { ext: ".json", name: "JSON", mime: "application/json", parser: "code" },
+  { ext: ".xml", name: "XML", mime: "application/xml", parser: "code" },
+  { ext: ".html", name: "HTML", mime: "text/html", parser: "code" },
+  { ext: ".htm", name: "HTML", mime: "text/html", parser: "code" },
+  { ext: ".doc", name: "Word (старый)", mime: "application/msword", parser: "code" },
+  { ext: ".docx", name: "Word", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", parser: "code" },
 ] as const
+
+// Форматы, требующие AI-парсинга (нет нативного парсера)
+export const AI_ONLY_FORMATS = [
+  { ext: ".yml", name: "YAML", mime: "text/yaml", parser: "ai" },
+  { ext: ".yaml", name: "YAML", mime: "text/yaml", parser: "ai" },
+  { ext: ".kdl", name: "KDL", mime: "text/plain", parser: "ai" },
+  { ext: ".csv", name: "CSV", mime: "text/csv", parser: "ai" },
+  { ext: ".rtf", name: "Rich Text", mime: "application/rtf", parser: "ai" },
+  { ext: ".odt", name: "OpenDocument", mime: "application/vnd.oasis.opendocument.text", parser: "ai" },
+  { ext: ".pdf", name: "PDF", mime: "application/pdf", parser: "ai" },
+  { ext: ".rst", name: "reStructuredText", mime: "text/x-rst", parser: "ai" },
+  { ext: ".tex", name: "LaTeX", mime: "text/x-tex", parser: "ai" },
+  { ext: ".org", name: "Org Mode", mime: "text/x-org", parser: "ai" },
+  { ext: ".adoc", name: "AsciiDoc", mime: "text/asciidoc", parser: "ai" },
+  { ext: ".asciidoc", name: "AsciiDoc", mime: "text/asciidoc", parser: "ai" },
+] as const
+
+// Все поддерживаемые форматы
+export const SUPPORTED_FORMATS = [...NATIVE_PARSER_FORMATS, ...AI_ONLY_FORMATS] as const
+
+// Проверка - требует ли формат AI-парсинг
+export function requiresAIParser(filename: string): boolean {
+  const ext = "." + filename.split(".").pop()?.toLowerCase()
+  return AI_ONLY_FORMATS.some(f => f.ext === ext)
+}
 
 // Генерация примера формата
 export function generateSampleFormat(format: FileFormat): string {
