@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { SubmitProjectForm } from "@/components/submit-project-form"
 import { SubmitPracticeForm } from "@/components/submit-practice-form"
 import { AssessmentSection } from "@/components/assessment-section"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
 
 const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
@@ -124,67 +125,6 @@ export default async function ModulePage({ params }: Props) {
   const currentIndex = trailModules.findIndex((m) => m.id === courseModule.id)
   const nextModule = currentIndex < trailModules.length - 1 ? trailModules[currentIndex + 1] : null
 
-  // Parse inline markdown (bold)
-  const parseInlineMarkdown = (text: string) => {
-    const parts = text.split(/(\*\*[^*]+\*\*)/g)
-    return parts.map((part, idx) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={idx}>{part.slice(2, -2)}</strong>
-      }
-      return part
-    })
-  }
-
-  // Simple markdown-like rendering
-  const renderContent = (content: string) => {
-    const lines = content.split("\n")
-    return lines.map((line, i) => {
-      if (line.startsWith("# ")) {
-        return (
-          <h1 key={i} className="text-2xl font-bold mt-8 mb-4">
-            {parseInlineMarkdown(line.slice(2))}
-          </h1>
-        )
-      }
-      if (line.startsWith("## ")) {
-        return (
-          <h2 key={i} className="text-xl font-semibold mt-6 mb-3">
-            {parseInlineMarkdown(line.slice(3))}
-          </h2>
-        )
-      }
-      if (line.startsWith("### ")) {
-        return (
-          <h3 key={i} className="text-lg font-medium mt-4 mb-2">
-            {parseInlineMarkdown(line.slice(4))}
-          </h3>
-        )
-      }
-      if (line.startsWith("- ")) {
-        return (
-          <li key={i} className="ml-4 mb-1">
-            {parseInlineMarkdown(line.slice(2))}
-          </li>
-        )
-      }
-      if (/^\d+\. /.test(line)) {
-        return (
-          <li key={i} className="ml-4 mb-1 list-decimal">
-            {parseInlineMarkdown(line.slice(line.indexOf(" ") + 1))}
-          </li>
-        )
-      }
-      if (line.trim() === "") {
-        return <br key={i} />
-      }
-      return (
-        <p key={i} className="mb-2">
-          {parseInlineMarkdown(line)}
-        </p>
-      )
-    })
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -237,9 +177,9 @@ export default async function ModulePage({ params }: Props) {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <Card>
-              <CardContent className="p-6 prose prose-gray max-w-none">
+              <CardContent className="p-6">
                 {courseModule.content ? (
-                  renderContent(courseModule.content)
+                  <MarkdownRenderer content={courseModule.content} />
                 ) : (
                   <p className="text-gray-500">Контент модуля скоро появится</p>
                 )}
@@ -252,8 +192,8 @@ export default async function ModulePage({ params }: Props) {
                 <CardHeader>
                   <CardTitle>Требования к проекту</CardTitle>
                 </CardHeader>
-                <CardContent className="prose prose-gray max-w-none">
-                  {renderContent(courseModule.requirements)}
+                <CardContent>
+                  <MarkdownRenderer content={courseModule.requirements} />
                 </CardContent>
               </Card>
             )}
