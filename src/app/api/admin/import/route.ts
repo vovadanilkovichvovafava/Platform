@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const aiConfig = getAIConfig()
     let parseResult
 
-    // Если forceAI - используем ТОЛЬКО AI парсер напрямую (по ТЗ файл всегда должен идти в нейронку)
+    // Если forceAI - используем AI парсер, но с fallback на кодовый парсер при ошибке
     if (forceAI && aiConfig.enabled && aiConfig.apiKey) {
       const { parseWithAI } = await import("@/lib/import/parsers/ai-parser")
       const { detectFileFormat, analyzeStructure } = await import("@/lib/import/smart-detector")
@@ -73,11 +73,62 @@ export async function POST(request: NextRequest) {
       const structureAnalysis = analyzeStructure(text)
 
       const aiResult = await parseWithAI(text, aiConfig)
+
+      // Если AI парсер не справился, пробуем кодовый парсер как fallback
+      if (!aiResult.success || aiResult.trails.length === 0) {
+        console.log("AI парсер не справился, пробуем кодовый парсер...")
+        const codeResult = await smartImport(text, file.name, { useAI: false })
+
+        if (codeResult.success && codeResult.trails.length > 0) {
+          // Кодовый парсер справился - возвращаем его результат с пометкой
+          parseResult = {
+            ...codeResult,
+            detectedFormat,
+            structureConfidence: structureAnalysis.confidence,
+            parseMethod: "code",
+            warnings: [
+              ...(codeResult.warnings || []),
+              "AI парсер недоступен или не смог обработать файл. Использован кодовый парсер."
+            ],
+          }
+        } else {
+          // Ни один парсер не справился - возвращаем ошибку AI с деталями
+          parseResult = {
+            ...aiResult,
+            detectedFormat,
+            structureConfidence: structureAnalysis.confidence,
+            parseMethod: "ai",
+            errors: [
+              ...(aiResult.errors || []),
+              ...(codeResult.errors || []),
+            ],
+          }
+        }
+      } else {
+        parseResult = {
+          ...aiResult,
+          detectedFormat,
+          structureConfidence: structureAnalysis.confidence,
+          parseMethod: "ai",
+        }
+      }
+    } else if (forceAI && (!aiConfig.enabled || !aiConfig.apiKey)) {
+      // AI отключен, но запрошен forceAI - используем кодовый парсер
+      console.log("AI парсер отключен, используем кодовый парсер...")
+      const { detectFileFormat, analyzeStructure } = await import("@/lib/import/smart-detector")
+
+      const detectedFormat = detectFileFormat(file.name, text)
+      const structureAnalysis = analyzeStructure(text)
+
+      const codeResult = await smartImport(text, file.name, { useAI: false })
       parseResult = {
-        ...aiResult,
+        ...codeResult,
         detectedFormat,
         structureConfidence: structureAnalysis.confidence,
-        parseMethod: "ai",
+        warnings: [
+          ...(codeResult.warnings || []),
+          "AI парсер не настроен. Использован кодовый парсер."
+        ],
       }
     } else if (useAI && aiConfig.enabled) {
       parseResult = await smartImport(text, file.name, {
@@ -91,9 +142,22 @@ export async function POST(request: NextRequest) {
     }
 
     if (!parseResult.success || parseResult.trails.length === 0) {
+      // Формируем понятное сообщение об ошибке
+      let errorMessage = "Не удалось распарсить файл"
+
+      if (parseResult.errors && parseResult.errors.length > 0) {
+        // Если есть ошибки AI API - показываем их
+        const aiErrors = parseResult.errors.filter(e =>
+          e.includes("AI API") || e.includes("AI не") || e.includes("API вернул")
+        )
+        if (aiErrors.length > 0) {
+          errorMessage = aiErrors[0]
+        }
+      }
+
       return NextResponse.json({
         success: false,
-        error: "Не удалось распарсить файл",
+        error: errorMessage,
         details: parseResult.errors,
         warnings: parseResult.warnings,
         parseMethod: parseResult.parseMethod,

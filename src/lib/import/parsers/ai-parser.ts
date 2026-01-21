@@ -80,9 +80,9 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
         "Authorization": `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify({
-        model: config.model || "gpt-3.5-turbo",
+        model: config.model || "gpt-5-nano",
         messages: [{ role: "user", content: "test" }],
-        max_tokens: 5,
+        max_completion_tokens: 5,
       }),
     })
 
@@ -128,13 +128,13 @@ export async function parseWithAI(
         "Authorization": `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify({
-        model: config.model || "gpt-3.5-turbo",
+        model: config.model || "gpt-5-nano",
         messages: [
           { role: "system", content: AI_SYSTEM_PROMPT },
           { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
         ],
-        temperature: 0.3,
-        max_tokens: 4000,
+        // temperature не поддерживается reasoning моделями (gpt-5-nano)
+        max_completion_tokens: 16000, // Увеличено для больших курсов
       }),
     })
 
@@ -303,6 +303,6 @@ export function getAIConfig(): AIParserConfig {
     enabled: process.env.AI_PARSER_ENABLED === "true",
     apiEndpoint: process.env.AI_API_ENDPOINT || process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions",
     apiKey: process.env.AI_API_KEY || process.env.OPENAI_API_KEY,
-    model: process.env.AI_MODEL || "gpt-3.5-turbo",
+    model: process.env.AI_MODEL || "gpt-5-nano",
   }
 }

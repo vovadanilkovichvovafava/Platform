@@ -276,7 +276,11 @@ export default function AdminContentPage() {
       const data = await res.json()
 
       if (!data.success || !data.trails || data.trails.length === 0) {
-        setParseError(data.error || "Не удалось распознать структуру файла")
+        // Собираем детальную информацию об ошибке
+        const errorDetails = data.details?.length > 0
+          ? `\n${data.details.join("; ")}`
+          : ""
+        setParseError((data.error || "Не удалось распознать структуру файла") + errorDetails)
         setParsedData(null)
       } else {
         setParsedData({
@@ -335,7 +339,7 @@ export default function AdminContentPage() {
     try {
       setRegenerating(true)
       setParsedData(null)
-      setParseError(null)
+      // НЕ сбрасываем parseError сразу - показываем индикатор регенерации в блоке ошибки
 
       const formData = new FormData()
       formData.append("file", uploadedFile)
@@ -350,7 +354,11 @@ export default function AdminContentPage() {
       const data = await res.json()
 
       if (!data.success || !data.trails || data.trails.length === 0) {
-        setParseError(data.error || "AI не смог распознать структуру")
+        // Собираем детальную информацию об ошибке
+        const errorDetails = data.details?.length > 0
+          ? `\n${data.details.join("; ")}`
+          : ""
+        setParseError((data.error || "AI не смог распознать структуру") + errorDetails)
         setParsedData(null)
       } else {
         setParsedData({
@@ -1095,38 +1103,62 @@ export default function AdminContentPage() {
             </div>
 
             <div className="p-6 overflow-y-auto flex-1">
-              {/* Ошибка парсинга */}
-              {parseError && (
-                <div className="p-4 rounded-lg mb-4 bg-red-50 border border-red-200">
+              {/* Ошибка парсинга или состояние регенерации */}
+              {(parseError || regenerating) && (
+                <div className={`p-4 rounded-lg mb-4 ${regenerating ? "bg-purple-50 border border-purple-200" : "bg-red-50 border border-red-200"}`}>
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                    {regenerating ? (
+                      <RefreshCw className="h-5 w-5 text-purple-600 mt-0.5 animate-spin" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                    )}
                     <div className="flex-1">
-                      <span className="text-red-700">{parseError}</span>
-                      {uploadedFile && aiStatus.available && (
-                        <div className="mt-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRegenerate}
-                            disabled={regenerating}
-                            className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                          >
-                            {regenerating ? (
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Sparkles className="h-4 w-4 mr-2" />
-                            )}
-                            Попробовать с AI
-                          </Button>
+                      {regenerating ? (
+                        <div>
+                          <span className="text-purple-700 font-medium">Повторная обработка с AI...</span>
+                          <p className="text-purple-600 text-sm mt-1">Это может занять несколько секунд</p>
                         </div>
+                      ) : (
+                        <>
+                          <span className="text-red-700 whitespace-pre-line">{parseError}</span>
+                          {uploadedFile && aiStatus.available && (
+                            <div className="mt-3">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRegenerate}
+                                disabled={regenerating}
+                                className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                              >
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Попробовать с AI ещё раз
+                              </Button>
+                            </div>
+                          )}
+                          {uploadedFile && (
+                            <div className="mt-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setParseError(null)
+                                  setUploadedFile(null)
+                                }}
+                                className="text-gray-500 hover:text-gray-700"
+                              >
+                                Загрузить другой файл
+                              </Button>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Если нет данных - показываем загрузку файла */}
-              {!parsedData && !parseError && (
+              {/* Если нет данных и нет ошибки и нет регенерации - показываем загрузку файла */}
+              {!parsedData && !parseError && !regenerating && (
                 <div className="space-y-6">
                   {/* Загрузка файла */}
                   <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
