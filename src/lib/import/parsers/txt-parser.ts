@@ -235,6 +235,15 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
           case "длительность":
             currentModule.duration = value
             break
+          case "requires_submission":
+          case "requiressubmission":
+          case "требует_сдачу":
+          case "требуетсдачу":
+            currentModule.requiresSubmission = value.toLowerCase() === "да" ||
+              value.toLowerCase() === "yes" ||
+              value.toLowerCase() === "true" ||
+              value === "1"
+            break
         }
       }
       continue
