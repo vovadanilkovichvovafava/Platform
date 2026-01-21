@@ -16,6 +16,8 @@ import {
   Wrench,
   FolderGit2,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   HelpCircle,
   Code,
   Target,
@@ -36,6 +38,7 @@ import {
   Sparkles,
   AlertTriangle,
   Zap,
+  Info,
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 
@@ -143,7 +146,20 @@ export default function AdminContentPage() {
     parseMethod?: string
     detectedFormat?: string
     structureConfidence?: number
+    confidenceDetails?: {
+      totalScore: number
+      maxPossibleScore: number
+      percentage: number
+      criteria: Array<{
+        name: string
+        description: string
+        score: number
+        maxScore: number
+        met: boolean
+      }>
+    }
   } | null>(null)
+  const [showConfidenceDetails, setShowConfidenceDetails] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
   const [aiStatus, setAiStatus] = useState<{ available: boolean; error?: string; checking: boolean }>({
     available: false,
@@ -383,6 +399,7 @@ export default function AdminContentPage() {
     setParsedData(null)
     setParseError(null)
     setUploadedFile(null)
+    setShowConfidenceDetails(false)
   }
 
   const checkAIStatus = useCallback(async () => {
@@ -1232,19 +1249,85 @@ export default function AdminContentPage() {
               {/* Превью распарсенных данных */}
               {parsedData && parsedData.trails.length > 0 && (
                 <div className="space-y-6">
-                  {/* Информация о парсинге */}
-                  <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <div className="flex-1">
-                      <span className="text-green-700 font-medium">Контент успешно распознан</span>
-                      <span className="text-green-600 text-sm ml-2">
-                        ({parsedData.parseMethod === "ai" ? "AI" : parsedData.parseMethod === "hybrid" ? "Гибридный" : "Авто"})
-                      </span>
+                  {/* Информация о парсинге с выпадающим списком критериев */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg overflow-hidden">
+                    <div
+                      className="flex items-center gap-3 p-3 cursor-pointer hover:bg-green-100/50 transition-colors"
+                      onClick={() => parsedData.confidenceDetails && setShowConfidenceDetails(!showConfidenceDetails)}
+                    >
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div className="flex-1">
+                        <span className="text-green-700 font-medium">Контент успешно распознан</span>
+                        <span className="text-green-600 text-sm ml-2">
+                          ({parsedData.parseMethod === "ai" ? "AI" : parsedData.parseMethod === "hybrid" ? "Гибридный" : "Авто"})
+                        </span>
+                      </div>
+                      {parsedData.structureConfidence !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-green-600 font-medium">
+                            Уверенность: {parsedData.structureConfidence}%
+                          </span>
+                          {parsedData.confidenceDetails && (
+                            <button
+                              type="button"
+                              className="text-green-600 hover:text-green-700 p-1 rounded-full hover:bg-green-100"
+                              title="Показать критерии оценки"
+                            >
+                              {showConfidenceDetails ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {parsedData.structureConfidence !== undefined && (
-                      <span className="text-sm text-green-600">
-                        Уверенность: {parsedData.structureConfidence}%
-                      </span>
+
+                    {/* Выпадающий список критериев уверенности */}
+                    {showConfidenceDetails && parsedData.confidenceDetails && (
+                      <div className="border-t border-green-200 p-3 bg-green-50/50">
+                        <div className="flex items-center gap-2 mb-3 text-sm text-green-700">
+                          <Info className="h-4 w-4" />
+                          <span className="font-medium">Критерии оценки структуры</span>
+                        </div>
+                        <div className="space-y-2">
+                          {parsedData.confidenceDetails.criteria.map((criterion, idx) => (
+                            <div
+                              key={idx}
+                              className={`p-2 rounded-lg border ${
+                                criterion.met
+                                  ? 'bg-green-100/50 border-green-300'
+                                  : 'bg-gray-50 border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm font-medium ${
+                                  criterion.met ? 'text-green-700' : 'text-gray-600'
+                                }`}>
+                                  {criterion.name}
+                                </span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                  criterion.met
+                                    ? 'bg-green-200 text-green-700'
+                                    : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                  +{criterion.score}/{criterion.maxScore}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600">
+                                {criterion.description}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-green-200 flex items-center justify-between text-sm">
+                          <span className="text-green-700">Итоговая оценка</span>
+                          <span className="font-bold text-green-700">
+                            {parsedData.confidenceDetails.totalScore} из {parsedData.confidenceDetails.maxPossibleScore} баллов
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
 

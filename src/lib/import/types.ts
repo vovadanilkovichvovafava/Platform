@@ -35,6 +35,7 @@ export interface ParseResult {
   warnings: string[]
   errors: string[]
   parseMethod: "ai" | "code" | "hybrid"
+  confidenceDetails?: ConfidenceDetails
 }
 
 export interface ImportResult {
@@ -48,7 +49,42 @@ export interface ImportResult {
   warnings?: string[]
 }
 
-export type FileFormat = "txt" | "md" | "json" | "xml" | "docx" | "unknown"
+export type FileFormat =
+  | "txt"
+  | "md"
+  | "json"
+  | "xml"
+  | "docx"
+  | "doc"
+  | "yml"
+  | "yaml"
+  | "kdl"
+  | "csv"
+  | "rtf"
+  | "odt"
+  | "pdf"
+  | "html"
+  | "rst"
+  | "tex"
+  | "org"
+  | "adoc"
+  | "unknown"
+
+// Критерии уверенности для детализации
+export interface ConfidenceCriterion {
+  name: string
+  description: string
+  score: number
+  maxScore: number
+  met: boolean
+}
+
+export interface ConfidenceDetails {
+  totalScore: number
+  maxPossibleScore: number
+  percentage: number
+  criteria: ConfidenceCriterion[]
+}
 
 export interface AIParserConfig {
   enabled: boolean

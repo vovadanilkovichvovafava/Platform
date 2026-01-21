@@ -9,6 +9,8 @@ import {
   ImportResult,
   getAIConfig,
   checkAIAvailability,
+  SUPPORTED_FORMATS,
+  requiresAIParser,
 } from "@/lib/import"
 
 // POST - парсинг файла (без сохранения) или сохранение
@@ -43,16 +45,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    // Проверка расширения файла
+    // Проверка расширения файла - поддерживаем все форматы из SUPPORTED_FORMATS
     const filename = file.name.toLowerCase()
-    const supportedExtensions = [".txt", ".md", ".json", ".xml", ".markdown"]
+    const supportedExtensions = SUPPORTED_FORMATS.map(f => f.ext)
     const hasValidExtension = supportedExtensions.some(ext => filename.endsWith(ext))
 
     if (!hasValidExtension) {
       return NextResponse.json({
-        error: `Неподдерживаемый формат файла. Поддерживаются: ${supportedExtensions.join(", ")}`,
+        error: `Неподдерживаемый формат файла. Поддерживаются: ${supportedExtensions.slice(0, 10).join(", ")} и другие`,
       }, { status: 400 })
     }
+
+    // Для форматов требующих AI, автоматически включаем AI
+    const needsAI = requiresAIParser(filename)
 
     const text = await file.text()
 
@@ -85,6 +90,7 @@ export async function POST(request: NextRequest) {
             ...codeResult,
             detectedFormat,
             structureConfidence: structureAnalysis.confidence,
+            confidenceDetails: structureAnalysis.confidenceDetails,
             parseMethod: "code",
             warnings: [
               ...(codeResult.warnings || []),
@@ -97,6 +103,7 @@ export async function POST(request: NextRequest) {
             ...aiResult,
             detectedFormat,
             structureConfidence: structureAnalysis.confidence,
+            confidenceDetails: structureAnalysis.confidenceDetails,
             parseMethod: "ai",
             errors: [
               ...(aiResult.errors || []),
@@ -109,6 +116,7 @@ export async function POST(request: NextRequest) {
           ...aiResult,
           detectedFormat,
           structureConfidence: structureAnalysis.confidence,
+          confidenceDetails: structureAnalysis.confidenceDetails,
           parseMethod: "ai",
         }
       }
@@ -125,16 +133,27 @@ export async function POST(request: NextRequest) {
         ...codeResult,
         detectedFormat,
         structureConfidence: structureAnalysis.confidence,
+        confidenceDetails: structureAnalysis.confidenceDetails,
         warnings: [
           ...(codeResult.warnings || []),
           "AI парсер не настроен. Использован кодовый парсер."
         ],
       }
-    } else if (useAI && aiConfig.enabled) {
+    } else if ((useAI || needsAI) && aiConfig.enabled) {
+      // Для AI-only форматов или явного запроса AI - используем AI
       parseResult = await smartImport(text, file.name, {
         useAI: true,
         aiConfig,
       })
+    } else if (needsAI && !aiConfig.enabled) {
+      // Формат требует AI, но AI недоступен - пробуем как текст с предупреждением
+      parseResult = await smartImport(text, file.name, {
+        useAI: false,
+      })
+      parseResult.warnings = [
+        ...(parseResult.warnings || []),
+        `Формат файла ${file.name.split('.').pop()?.toUpperCase()} лучше обрабатывается с AI-парсером, но он не настроен.`
+      ]
     } else {
       parseResult = await smartImport(text, file.name, {
         useAI: false,
@@ -163,6 +182,7 @@ export async function POST(request: NextRequest) {
         parseMethod: parseResult.parseMethod,
         detectedFormat: parseResult.detectedFormat,
         structureConfidence: parseResult.structureConfidence,
+        confidenceDetails: parseResult.confidenceDetails,
         // Возвращаем пустой результат для отображения
         trails: [],
       }, { status: 200 }) // 200 чтобы клиент мог показать ошибку
@@ -176,6 +196,7 @@ export async function POST(request: NextRequest) {
       parseMethod: parseResult.parseMethod,
       detectedFormat: parseResult.detectedFormat,
       structureConfidence: parseResult.structureConfidence,
+      confidenceDetails: parseResult.confidenceDetails,
     })
   } catch (error) {
     console.error("Import error:", error)
