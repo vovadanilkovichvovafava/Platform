@@ -9,11 +9,9 @@ import {
   ImportResult,
   getAIConfig,
   checkAIAvailability,
-  generateSampleFormat,
-  FileFormat,
-  SUPPORTED_FORMATS,
 } from "@/lib/import"
 
+// POST - парсинг файла (без сохранения) или сохранение
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -21,10 +19,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const contentType = request.headers.get("content-type") || ""
+
+    // Если JSON - это запрос на сохранение уже распарсенных данных
+    if (contentType.includes("application/json")) {
+      const body = await request.json()
+
+      if (body.action === "save" && body.trails) {
+        const result = await importToDatabase(body.trails)
+        return NextResponse.json(result)
+      }
+
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    }
+
+    // Если FormData - это запрос на парсинг файла
     const formData = await request.formData()
     const file = formData.get("file") as File
     const useAI = formData.get("useAI") === "true"
-    const hybridMode = formData.get("hybridMode") === "true"
+    const forceAI = formData.get("forceAI") === "true" // Для перегенерации
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -47,35 +60,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Файл пуст" }, { status: 400 })
     }
 
-    // Парсинг файла
+    // Парсинг файла (БЕЗ сохранения в БД)
     const aiConfig = getAIConfig()
     let parseResult
 
-    if (hybridMode && aiConfig.enabled) {
+    // Если forceAI - используем только AI
+    if (forceAI && aiConfig.enabled && aiConfig.apiKey) {
       parseResult = await hybridImport(text, file.name, aiConfig)
+    } else if (useAI && aiConfig.enabled) {
+      parseResult = await smartImport(text, file.name, {
+        useAI: true,
+        aiConfig,
+      })
     } else {
       parseResult = await smartImport(text, file.name, {
-        useAI: useAI && aiConfig.enabled,
-        aiConfig,
+        useAI: false,
       })
     }
 
     if (!parseResult.success || parseResult.trails.length === 0) {
       return NextResponse.json({
+        success: false,
         error: "Не удалось распарсить файл",
         details: parseResult.errors,
         warnings: parseResult.warnings,
         parseMethod: parseResult.parseMethod,
         detectedFormat: parseResult.detectedFormat,
         structureConfidence: parseResult.structureConfidence,
-      }, { status: 400 })
+        // Возвращаем пустой результат для отображения
+        trails: [],
+      }, { status: 200 }) // 200 чтобы клиент мог показать ошибку
     }
 
-    // Импорт в БД
-    const result = await importToDatabase(parseResult.trails)
-
+    // Возвращаем распарсенные данные БЕЗ сохранения
     return NextResponse.json({
-      ...result,
+      success: true,
+      trails: parseResult.trails,
       warnings: parseResult.warnings,
       parseMethod: parseResult.parseMethod,
       detectedFormat: parseResult.detectedFormat,
@@ -90,7 +110,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// API для проверки статуса AI
+// GET - проверка статуса AI
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -113,18 +133,6 @@ export async function GET(request: NextRequest) {
 
       const status = await checkAIAvailability(aiConfig)
       return NextResponse.json(status)
-    }
-
-    // Получение примера формата
-    if (action === "sample") {
-      const format = (searchParams.get("format") || "txt") as FileFormat
-      const sample = generateSampleFormat(format)
-      return NextResponse.json({ format, sample })
-    }
-
-    // Получение списка поддерживаемых форматов
-    if (action === "formats") {
-      return NextResponse.json({ formats: SUPPORTED_FORMATS })
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 })
@@ -231,7 +239,7 @@ async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
   return {
     success: true,
     imported,
-    message: `Импортировано: ${imported.trails} трейлов, ${imported.modules} модулей, ${imported.questions} вопросов`,
+    message: `Добавлено: ${imported.trails} трейлов, ${imported.modules} модулей, ${imported.questions} вопросов`,
   }
 }
 
