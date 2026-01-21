@@ -12,8 +12,8 @@ import {
   detectColor,
   detectIcon,
   detectQuestionType,
-  generateMatchingData,
-  generateOrderingData,
+  parseMatchingOptions,
+  parseOrderingOptions,
   ConfidenceCriterion,
   ConfidenceDetails,
   FileFormat,
@@ -501,12 +501,7 @@ function extractQuestion(line: string): ParsedQuestion | null {
         correctAnswer: 0,
       }
 
-      // Генерируем data для специальных типов
-      if (questionType === "MATCHING") {
-        question.data = generateMatchingData(questionText)
-      } else if (questionType === "ORDERING") {
-        question.data = generateOrderingData(questionText)
-      }
+      // data будет заполнена позже после сбора всех опций
 
       return question
     }
@@ -524,11 +519,7 @@ function extractQuestion(line: string): ParsedQuestion | null {
       correctAnswer: 0,
     }
 
-    if (questionType === "MATCHING") {
-      question.data = generateMatchingData(questionText)
-    } else if (questionType === "ORDERING") {
-      question.data = generateOrderingData(questionText)
-    }
+    // data будет заполнена позже после сбора всех опций
 
     return question
   }
@@ -603,6 +594,15 @@ function createModule(
 
   // Определяем, требуется ли сдача работы
   const requiresSubmission = detectRequiresSubmission(type, cleanTitle, content)
+
+  // Заполнение data для MATCHING и ORDERING вопросов из опций
+  for (const question of questions) {
+    if (question.type === "MATCHING" && question.options.length > 0) {
+      question.data = parseMatchingOptions(question.options)
+    } else if (question.type === "ORDERING" && question.options.length > 0) {
+      question.data = parseOrderingOptions(question.options)
+    }
+  }
 
   return {
     title: cleanTitle,

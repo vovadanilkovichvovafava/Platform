@@ -71,14 +71,70 @@ export async function GET(request: NextRequest) {
           content += `\n=== ВОПРОСЫ ===\n`
           for (const question of module.questions) {
             content += `В: ${question.question}\n`
-            try {
-              const options = JSON.parse(question.options)
-              options.forEach((opt: string, idx: number) => {
-                const isCorrect = idx === question.correctAnswer
-                content += `- ${opt}${isCorrect ? " *" : ""}\n`
-              })
-            } catch {
-              content += `- ${question.options}\n`
+
+            const questionType = question.type || "SINGLE_CHOICE"
+
+            // Для MATCHING и ORDERING экспортируем данные из поля data
+            if (questionType === "MATCHING" && question.data) {
+              try {
+                const data = typeof question.data === "string" ? JSON.parse(question.data) : question.data
+                if (data.leftItems && data.rightItems) {
+                  // Экспортируем в формате "термин -> определение"
+                  for (let i = 0; i < data.leftItems.length; i++) {
+                    const left = data.leftItems[i]
+                    // Находим правильную пару
+                    const rightId = data.correctPairs?.[left.id]
+                    const right = data.rightItems.find((r: { id: string; text: string }) => r.id === rightId)
+                    if (left.text && right?.text) {
+                      content += `- ${left.text} -> ${right.text}\n`
+                    }
+                  }
+                }
+              } catch {
+                // Если data невалидна, пробуем options
+                try {
+                  const options = JSON.parse(question.options)
+                  options.forEach((opt: string) => {
+                    content += `- ${opt}\n`
+                  })
+                } catch {
+                  content += `- ${question.options}\n`
+                }
+              }
+            } else if (questionType === "ORDERING" && question.data) {
+              try {
+                const data = typeof question.data === "string" ? JSON.parse(question.data) : question.data
+                if (data.items && data.correctOrder) {
+                  // Экспортируем в правильном порядке
+                  for (const id of data.correctOrder) {
+                    const item = data.items.find((i: { id: string; text: string }) => i.id === id)
+                    if (item?.text) {
+                      content += `- ${item.text}\n`
+                    }
+                  }
+                }
+              } catch {
+                // Если data невалидна, пробуем options
+                try {
+                  const options = JSON.parse(question.options)
+                  options.forEach((opt: string) => {
+                    content += `- ${opt}\n`
+                  })
+                } catch {
+                  content += `- ${question.options}\n`
+                }
+              }
+            } else {
+              // SINGLE_CHOICE - стандартный формат
+              try {
+                const options = JSON.parse(question.options)
+                options.forEach((opt: string, idx: number) => {
+                  const isCorrect = idx === question.correctAnswer
+                  content += `- ${opt}${isCorrect ? " *" : ""}\n`
+                })
+              } catch {
+                content += `- ${question.options}\n`
+              }
             }
             content += `\n`
           }
