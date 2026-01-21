@@ -157,6 +157,8 @@ function detectFreeFormStructure(text: string): { modules: number; questions: nu
     /часть\s*(первая|вторая|третья|\d+)/i,
     /раздел\s*(первый|второй|третий|\d+)/i,
     /приложение\s*[A-ZА-Яа-я]/i,
+    // Теоретический материал / Теоретические материалы
+    /теоретическ(?:ий|ие)\s+материал(?:ы)?/i,
   ]
 
   // Паттерны для inline вопросов
@@ -413,6 +415,8 @@ function isModuleLine(line: string): boolean {
     /^#{2,3}\s+/,
     /^(?:модуль|module|урок|lesson|глава|chapter|тема|topic|часть|раздел|занятие|class|session|приложение|appendix)\s*(?:первый|второй|третий|четвёртый|пятый|шестой|первое|второе|третье|четвёртое|пятое|\d+|один|два|три|четыре|пять|№\s*\d+|[A-ZА-Яа-я])?[:\s—\-]/i,
     /^\d+[\.\)]\s+[A-ZА-ЯЁ]/,
+    // Теоретический материал / Теоретические материалы
+    /^(?:теоретическ(?:ий|ие)\s+материал(?:ы)?|theoretical\s+materials?)[:\s—\-]*/i,
   ]
   return modulePatterns.some(p => p.test(line))
 }
@@ -449,6 +453,9 @@ function extractModuleTitle(line: string): string | null {
     // Приложение A, Приложение B и т.д.
     /^(?:приложение|appendix)\s*[A-ZА-Яа-я][:\s—\-]+(.+)$/i,
     /^(?:приложение|appendix)\s*[A-ZА-Яа-я]$/i,
+    // Теоретический материал / Теоретические материалы
+    /^(?:теоретическ(?:ий|ие)\s+материал(?:ы)?|theoretical\s+materials?)[:\s—\-]+(.+)$/i,
+    /^(?:теоретическ(?:ий|ие)\s+материал(?:ы)?|theoretical\s+materials?)$/i,
   ]
 
   for (const pattern of modulePatterns) {
