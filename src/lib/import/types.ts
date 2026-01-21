@@ -1,9 +1,26 @@
 // Типы для системы импорта
 
+export type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+
+export interface MatchingData {
+  leftLabel: string
+  rightLabel: string
+  leftItems: { id: string; text: string }[]
+  rightItems: { id: string; text: string }[]
+  correctPairs: Record<string, string>
+}
+
+export interface OrderingData {
+  items: { id: string; text: string }[]
+  correctOrder: string[]
+}
+
 export interface ParsedQuestion {
   question: string
+  type?: QuestionType
   options: string[]
   correctAnswer: number
+  data?: MatchingData | OrderingData | null
   explanation?: string
 }
 
@@ -320,4 +337,66 @@ export function detectIcon(text: string): string {
   }
 
   return "📚" // default book
+}
+
+// Определение типа вопроса по тексту
+export function detectQuestionType(questionText: string): QuestionType {
+  const lowerText = questionText.toLowerCase()
+
+  // MATCHING - сопоставление
+  const matchingKeywords = [
+    "сопоставь", "сопоставьте", "соотнес", "соотнеси", "соотнесите",
+    "соедин", "соединить", "свяж", "связать",
+    "match", "matching", "pair", "connect",
+    "с их определениями", "с их описаниями",
+  ]
+  if (matchingKeywords.some(k => lowerText.includes(k))) {
+    return "MATCHING"
+  }
+
+  // ORDERING - порядок/последовательность
+  const orderingKeywords = [
+    "расположи", "расположите", "упорядочь", "упорядочьте",
+    "порядок", "последовательность", "правильном порядке",
+    "расставь", "расставьте", "выстрой", "выстройте",
+    "order", "arrange", "sequence", "sort",
+    "от первого к последнему", "от начала до конца",
+  ]
+  if (orderingKeywords.some(k => lowerText.includes(k))) {
+    return "ORDERING"
+  }
+
+  return "SINGLE_CHOICE"
+}
+
+// Генерация данных для MATCHING вопроса
+export function generateMatchingData(questionText: string): MatchingData {
+  return {
+    leftLabel: "Термин",
+    rightLabel: "Определение",
+    leftItems: [
+      { id: "l1", text: "" },
+      { id: "l2", text: "" },
+      { id: "l3", text: "" },
+    ],
+    rightItems: [
+      { id: "r1", text: "" },
+      { id: "r2", text: "" },
+      { id: "r3", text: "" },
+    ],
+    correctPairs: { l1: "r1", l2: "r2", l3: "r3" },
+  }
+}
+
+// Генерация данных для ORDERING вопроса
+export function generateOrderingData(questionText: string): OrderingData {
+  return {
+    items: [
+      { id: "s1", text: "" },
+      { id: "s2", text: "" },
+      { id: "s3", text: "" },
+      { id: "s4", text: "" },
+    ],
+    correctOrder: ["s1", "s2", "s3", "s4"],
+  }
 }

@@ -8,6 +8,9 @@ import {
   DEFAULT_PATTERNS,
   generateSlug,
   detectRequiresSubmission,
+  detectQuestionType,
+  generateMatchingData,
+  generateOrderingData,
 } from "../types"
 import { analyzeStructure, smartParseUnstructured } from "../smart-detector"
 
@@ -253,11 +256,23 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
     if (currentSection === "questions" && currentModule) {
       if (trimmedLine.startsWith("Q:") || trimmedLine.startsWith("В:")) {
         const questionText = trimmedLine.slice(2).trim()
-        currentModule.questions.push({
+        const questionType = detectQuestionType(questionText)
+
+        const newQuestion: ParsedQuestion = {
           question: questionText,
+          type: questionType,
           options: [],
           correctAnswer: 0,
-        })
+        }
+
+        // Генерируем data для специальных типов вопросов
+        if (questionType === "MATCHING") {
+          newQuestion.data = generateMatchingData(questionText)
+        } else if (questionType === "ORDERING") {
+          newQuestion.data = generateOrderingData(questionText)
+        }
+
+        currentModule.questions.push(newQuestion)
       } else if (trimmedLine.startsWith("-") || trimmedLine.startsWith("•")) {
         const currentQuestion = currentModule.questions[currentModule.questions.length - 1]
         if (currentQuestion) {
