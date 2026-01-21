@@ -21,7 +21,6 @@ import {
   Target,
   Palette,
   Lightbulb,
-  ArrowLeft,
   RefreshCw,
   Plus,
   X,
@@ -35,6 +34,11 @@ import {
   GripVertical,
   BarChart3,
   History,
+  Sparkles,
+  AlertTriangle,
+  Zap,
+  FileJson,
+  FileCode,
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 
@@ -114,7 +118,21 @@ export default function AdminContentPage() {
   // Import modal
   const [showImportModal, setShowImportModal] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [importResult, setImportResult] = useState<{
+    success: boolean
+    message: string
+    warnings?: string[]
+    parseMethod?: string
+    detectedFormat?: string
+    structureConfidence?: number
+  } | null>(null)
+  const [selectedFormat, setSelectedFormat] = useState<"txt" | "md" | "json" | "xml">("txt")
+  const [useAI, setUseAI] = useState(false)
+  const [hybridMode, setHybridMode] = useState(false)
+  const [aiStatus, setAiStatus] = useState<{ available: boolean; error?: string; checking: boolean }>({
+    available: false,
+    checking: false,
+  })
 
   // Drag and drop
   const [draggedModule, setDraggedModule] = useState<string | null>(null)
@@ -228,6 +246,8 @@ export default function AdminContentPage() {
 
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("useAI", String(useAI))
+      formData.append("hybridMode", String(hybridMode))
 
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -237,9 +257,23 @@ export default function AdminContentPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setImportResult({ success: false, message: data.error || "Ошибка импорта" })
+        setImportResult({
+          success: false,
+          message: data.error || "Ошибка импорта",
+          warnings: data.warnings,
+          parseMethod: data.parseMethod,
+          detectedFormat: data.detectedFormat,
+          structureConfidence: data.structureConfidence,
+        })
       } else {
-        setImportResult({ success: true, message: data.message })
+        setImportResult({
+          success: true,
+          message: data.message,
+          warnings: data.warnings,
+          parseMethod: data.parseMethod,
+          detectedFormat: data.detectedFormat,
+          structureConfidence: data.structureConfidence,
+        })
         fetchTrails()
       }
     } catch {
@@ -251,7 +285,27 @@ export default function AdminContentPage() {
     }
   }
 
-  const sampleFormat = `=== TRAIL ===
+  const checkAIStatus = async () => {
+    setAiStatus({ available: false, checking: true })
+    try {
+      const res = await fetch("/api/admin/import?action=check-ai")
+      const data = await res.json()
+      setAiStatus({
+        available: data.available,
+        error: data.error,
+        checking: false,
+      })
+    } catch {
+      setAiStatus({
+        available: false,
+        error: "Ошибка проверки AI",
+        checking: false,
+      })
+    }
+  }
+
+  const sampleFormats: Record<string, string> = {
+    txt: `=== TRAIL ===
 название: Vibe Coding
 slug: vibe-coding
 подзаголовок: Научись кодить с AI
@@ -269,10 +323,6 @@ slug: intro-vibe-coding
 # Добро пожаловать в Vibe Coding!
 
 Vibe Coding — это современный подход к программированию...
-
-## Что такое AI-ассистент?
-
-Здесь пишется контент модуля в формате Markdown.
 ---
 
 === ВОПРОСЫ ===
@@ -280,40 +330,100 @@ Vibe Coding — это современный подход к программи
 - Программирование без компьютера
 - Программирование с помощью AI *
 - Визуальное программирование
-- Игра
+- Игра`,
 
-В: Какой инструмент используется для Vibe Coding?
-- Excel
-- Word
-- Claude / ChatGPT *
-- Paint
+    md: `# Vibe Coding
 
-=== MODULE ===
-название: Практика промптинга
-slug: prompting-practice
-тип: проект
-очки: 100
-описание: Создай свой первый проект
----
-# Задание
+Научись кодить с AI
 
-Создайте простое приложение используя AI-ассистента.
+## Введение в Vibe Coding
 
-## Требования
+Основы работы с AI-ассистентами
 
-1. Опишите задачу ассистенту
-2. Получите код
-3. Протестируйте результат
----`
+### Добро пожаловать!
 
-  const downloadSample = () => {
-    const blob = new Blob([sampleFormat], { type: "text/plain" })
+Vibe Coding — это современный подход к программированию с использованием AI.
+
+### Вопросы
+
+В: Что такое Vibe Coding?
+- Программирование без компьютера
+- Программирование с помощью AI *
+- Визуальное программирование
+- Игра`,
+
+    json: JSON.stringify({
+      trails: [{
+        title: "Vibe Coding",
+        slug: "vibe-coding",
+        subtitle: "Научись кодить с AI",
+        icon: "💻",
+        color: "#6366f1",
+        modules: [{
+          title: "Введение в Vibe Coding",
+          slug: "intro-vibe-coding",
+          type: "THEORY",
+          points: 50,
+          content: "# Добро пожаловать!\\n\\nVibe Coding — это...",
+          questions: [{
+            question: "Что такое Vibe Coding?",
+            options: ["Без компьютера", "С помощью AI", "Визуальное", "Игра"],
+            correctAnswer: 1
+          }]
+        }]
+      }]
+    }, null, 2),
+
+    xml: `<?xml version="1.0" encoding="UTF-8"?>
+<trails>
+  <trail slug="vibe-coding">
+    <title>Vibe Coding</title>
+    <subtitle>Научись кодить с AI</subtitle>
+    <icon>💻</icon>
+    <color>#6366f1</color>
+    <modules>
+      <module slug="intro-vibe-coding">
+        <title>Введение в Vibe Coding</title>
+        <type>THEORY</type>
+        <points>50</points>
+        <content>Контент модуля...</content>
+        <questions>
+          <question>
+            <text>Что такое Vibe Coding?</text>
+            <options>
+              <option>Без компьютера</option>
+              <option correct="true">С помощью AI</option>
+            </options>
+          </question>
+        </questions>
+      </module>
+    </modules>
+  </trail>
+</trails>`,
+  }
+
+  const downloadSample = (format: string = selectedFormat) => {
+    const content = sampleFormats[format] || sampleFormats.txt
+    const mimeTypes: Record<string, string> = {
+      txt: "text/plain",
+      md: "text/markdown",
+      json: "application/json",
+      xml: "application/xml",
+    }
+    const blob = new Blob([content], { type: mimeTypes[format] || "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "sample-import.txt"
+    a.download = `sample-import.${format}`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const formatIcons: Record<string, typeof FileText> = {
+    txt: FileText,
+    md: FileCode,
+    json: FileJson,
+    xml: FileCode,
   }
 
   const deleteTrail = async (trailId: string, title: string) => {
@@ -993,11 +1103,11 @@ slug: prompting-practice
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Импорт из текстового файла
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                Умный импорт контента
               </h2>
               <button
                 onClick={() => {
@@ -1011,42 +1121,169 @@ slug: prompting-practice
             </div>
 
             <div className="p-6 overflow-y-auto flex-1">
-              {importResult ? (
+              {/* Результат импорта */}
+              {importResult && (
                 <div className={`p-4 rounded-lg mb-4 ${
                   importResult.success
                     ? "bg-green-50 border border-green-200"
                     : "bg-red-50 border border-red-200"
                 }`}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     {importResult.success ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                     ) : (
-                      <X className="h-5 w-5 text-red-600" />
+                      <X className="h-5 w-5 text-red-600 mt-0.5" />
                     )}
-                    <span className={importResult.success ? "text-green-700" : "text-red-700"}>
-                      {importResult.message}
-                    </span>
+                    <div className="flex-1">
+                      <span className={importResult.success ? "text-green-700" : "text-red-700"}>
+                        {importResult.message}
+                      </span>
+                      {importResult.parseMethod && (
+                        <div className="mt-1 text-xs text-gray-500">
+                          Метод: {importResult.parseMethod === "ai" ? "AI" : importResult.parseMethod === "hybrid" ? "Гибридный" : "Кодовый"}
+                          {importResult.detectedFormat && ` • Формат: ${importResult.detectedFormat}`}
+                          {importResult.structureConfidence !== undefined && ` • Уверенность: ${importResult.structureConfidence}%`}
+                        </div>
+                      )}
+                      {importResult.warnings && importResult.warnings.length > 0 && (
+                        <div className="mt-2 text-sm text-yellow-700">
+                          <div className="flex items-center gap-1 font-medium">
+                            <AlertTriangle className="h-4 w-4" />
+                            Предупреждения:
+                          </div>
+                          <ul className="list-disc list-inside mt-1">
+                            {importResult.warnings.slice(0, 5).map((w, i) => (
+                              <li key={i}>{w}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ) : null}
+              )}
 
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* AI парсер */}
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-500" />
+                      <h3 className="font-medium text-purple-900">AI-парсер</h3>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={checkAIStatus}
+                      disabled={aiStatus.checking}
+                      className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                    >
+                      {aiStatus.checking ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Zap className="h-4 w-4 mr-2" />
+                      )}
+                      Проверить статус
+                    </Button>
+                  </div>
+
+                  {aiStatus.checking ? (
+                    <p className="text-sm text-purple-600">Проверка...</p>
+                  ) : aiStatus.available ? (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      AI доступен
+                    </div>
+                  ) : aiStatus.error ? (
+                    <div className="flex items-center gap-2 text-sm text-orange-600">
+                      <AlertTriangle className="h-4 w-4" />
+                      {aiStatus.error}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Нажмите для проверки доступности AI</p>
+                  )}
+
+                  <div className="mt-3 flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useAI}
+                        onChange={(e) => setUseAI(e.target.checked)}
+                        className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-sm text-purple-700">Использовать AI</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hybridMode}
+                        onChange={(e) => setHybridMode(e.target.checked)}
+                        className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-sm text-purple-700">Гибридный режим</span>
+                    </label>
+                  </div>
+
+                  <p className="text-xs text-purple-500 mt-2">
+                    {hybridMode
+                      ? "Гибридный режим: код + AI для улучшения результата"
+                      : useAI
+                      ? "AI определит структуру автоматически"
+                      : "Кодовый парсер с умным определением структуры"}
+                  </p>
+                </div>
+
+                {/* Выбор формата */}
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-3">Поддерживаемые форматы</h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(["txt", "md", "json", "xml"] as const).map((format) => {
+                      const Icon = formatIcons[format]
+                      return (
+                        <button
+                          key={format}
+                          onClick={() => setSelectedFormat(format)}
+                          className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors ${
+                            selectedFormat === format
+                              ? "border-blue-500 bg-blue-50 text-blue-700"
+                              : "border-gray-200 hover:border-gray-300 text-gray-600"
+                          }`}
+                        >
+                          <Icon className="h-6 w-6" />
+                          <span className="text-sm font-medium uppercase">{format}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Загрузка файла */}
                 <div>
                   <h3 className="font-medium text-gray-900 mb-2">Загрузить файл</h3>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       {importing ? (
-                        <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mb-2" />
+                        <>
+                          <RefreshCw className="h-8 w-8 text-purple-500 animate-spin mb-2" />
+                          <p className="text-sm text-purple-600 font-medium">
+                            {useAI ? "AI анализирует..." : "Обработка..."}
+                          </p>
+                        </>
                       ) : (
-                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                        <>
+                          <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-500">
+                            Нажмите для выбора файла (.txt, .md, .json, .xml)
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Умный парсер автоматически определит структуру
+                          </p>
+                        </>
                       )}
-                      <p className="text-sm text-gray-500">
-                        {importing ? "Импортируем..." : "Нажмите для выбора .txt файла"}
-                      </p>
                     </div>
                     <input
                       type="file"
-                      accept=".txt"
+                      accept=".txt,.md,.markdown,.json,.xml"
                       onChange={handleImport}
                       disabled={importing}
                       className="hidden"
@@ -1054,27 +1291,29 @@ slug: prompting-practice
                   </label>
                 </div>
 
+                {/* Пример формата */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-gray-900">Формат файла</h3>
-                    <Button variant="outline" size="sm" onClick={downloadSample}>
+                    <h3 className="font-medium text-gray-900">Пример формата ({selectedFormat.toUpperCase()})</h3>
+                    <Button variant="outline" size="sm" onClick={() => downloadSample(selectedFormat)}>
                       <Download className="h-4 w-4 mr-2" />
                       Скачать пример
                     </Button>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-64 overflow-y-auto">
-                    <pre className="text-gray-700 whitespace-pre-wrap">{sampleFormat}</pre>
+                  <div className="bg-gray-50 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-48 overflow-y-auto">
+                    <pre className="text-gray-700 whitespace-pre-wrap">{sampleFormats[selectedFormat]}</pre>
                   </div>
                 </div>
 
+                {/* Подсказки */}
                 <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">Подсказки:</h4>
+                  <h4 className="font-medium text-blue-900 mb-2">Киллер-фичи:</h4>
                   <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• Используйте <code className="bg-blue-100 px-1 rounded">=== TRAIL ===</code> для начала нового trail</li>
-                    <li>• Используйте <code className="bg-blue-100 px-1 rounded">=== MODULE ===</code> для начала нового модуля</li>
-                    <li>• Контент модуля оборачивается в <code className="bg-blue-100 px-1 rounded">---</code></li>
-                    <li>• Правильный ответ отмечается <code className="bg-blue-100 px-1 rounded">*</code> в конце</li>
-                    <li>• Типы: урок, тест, проект</li>
+                    <li>• <strong>Умное определение</strong> - система сама найдёт заголовки, модули и вопросы</li>
+                    <li>• <strong>Любой формат</strong> - txt, md, json, xml поддерживаются из коробки</li>
+                    <li>• <strong>AI-парсер</strong> - для сложных случаев используйте нейросеть</li>
+                    <li>• <strong>Гибридный режим</strong> - комбинация кода и AI для лучших результатов</li>
+                    <li>• <strong>Правильный ответ</strong> - отмечайте звёздочкой (*) или (correct)</li>
                   </ul>
                 </div>
               </div>
