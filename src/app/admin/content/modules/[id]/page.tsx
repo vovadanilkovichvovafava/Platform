@@ -131,14 +131,58 @@ export default function ModuleEditorPage({ params }: Props) {
       setDuration(data.duration || "")
       setRequiresSubmission(data.requiresSubmission || false)
       setQuestions(
-        data.questions.map((q) => ({
-          id: q.id,
-          type: (q.type as QuestionType) || "SINGLE_CHOICE",
-          question: q.question,
-          options: safeJsonParse<string[]>(q.options, []),
-          correctAnswer: q.correctAnswer,
-          data: q.data ? safeJsonParse(q.data, null) : null,
-        }))
+        data.questions.map((q) => {
+          const questionType = (q.type as QuestionType) || "SINGLE_CHOICE"
+          let questionData = q.data ? safeJsonParse(q.data, null) : null
+
+          // Для MATCHING и ORDERING создаём дефолтные данные если их нет
+          if (questionType === "MATCHING" && (!questionData || !("leftItems" in questionData))) {
+            questionData = {
+              leftLabel: "Термин",
+              rightLabel: "Определение",
+              leftItems: [
+                { id: "l1", text: "" },
+                { id: "l2", text: "" },
+                { id: "l3", text: "" },
+              ],
+              rightItems: [
+                { id: "r1", text: "" },
+                { id: "r2", text: "" },
+                { id: "r3", text: "" },
+              ],
+              correctPairs: { l1: "r1", l2: "r2", l3: "r3" },
+            }
+          } else if (questionType === "ORDERING" && (!questionData || !("correctOrder" in questionData))) {
+            questionData = {
+              items: [
+                { id: "s1", text: "" },
+                { id: "s2", text: "" },
+                { id: "s3", text: "" },
+              ],
+              correctOrder: ["s1", "s2", "s3"],
+            }
+          } else if (questionType === "CASE_ANALYSIS" && (!questionData || !("caseContent" in questionData))) {
+            questionData = {
+              caseContent: "",
+              caseLabel: "Кейс для анализа",
+              options: [
+                { id: "o1", text: "", isCorrect: false, explanation: "" },
+                { id: "o2", text: "", isCorrect: false, explanation: "" },
+                { id: "o3", text: "", isCorrect: false, explanation: "" },
+              ],
+              minCorrectRequired: 2,
+            }
+          }
+
+          return {
+            id: q.id,
+            type: questionType,
+            question: q.question,
+            options: safeJsonParse<string[]>(q.options, []),
+            correctAnswer: q.correctAnswer,
+            data: questionData,
+          }
+        })
       )
     } catch {
       setError("Ошибка загрузки модуля")
