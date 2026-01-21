@@ -1163,6 +1163,21 @@ export default function AdminContentPage() {
                         <CheckCircle className="h-4 w-4" />
                         Доступен
                       </span>
+                    ) : aiStatus.error ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          {aiStatus.error}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={checkAIStatus}
+                          className="text-purple-600 hover:text-purple-700"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                        </Button>
+                      </div>
                     ) : (
                       <Button
                         variant="ghost"
