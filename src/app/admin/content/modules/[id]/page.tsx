@@ -664,12 +664,18 @@ export default function ModuleEditorPage({ params }: Props) {
 
                         {/* MATCHING Editor */}
                         {q.type === "MATCHING" && (() => {
-                          const matchingData: MatchingData = (q.data && "leftItems" in q.data)
+                          // Проверяем что данные существуют И имеют правильную структуру
+                          const hasValidData = q.data &&
+                            "leftItems" in q.data &&
+                            Array.isArray((q.data as MatchingData).leftItems) &&
+                            (q.data as MatchingData).leftItems.length > 0
+
+                          const matchingData: MatchingData = hasValidData
                             ? (q.data as MatchingData)
                             : getDefaultDataForType("MATCHING") as MatchingData
 
-                          // Инициализируем данные если их нет
-                          if (!q.data || !("leftItems" in q.data)) {
+                          // Инициализируем данные если их нет или они некорректны
+                          if (!hasValidData) {
                             queueMicrotask(() => updateQuestion(qIndex, "data", matchingData))
                           }
 
@@ -780,12 +786,18 @@ export default function ModuleEditorPage({ params }: Props) {
 
                         {/* ORDERING Editor */}
                         {q.type === "ORDERING" && (() => {
-                          const orderingData: OrderingData = (q.data && "correctOrder" in q.data)
+                          // Проверяем что данные существуют И имеют правильную структуру
+                          const hasValidData = q.data &&
+                            "correctOrder" in q.data &&
+                            Array.isArray((q.data as OrderingData).items) &&
+                            (q.data as OrderingData).items.length > 0
+
+                          const orderingData: OrderingData = hasValidData
                             ? (q.data as OrderingData)
                             : getDefaultDataForType("ORDERING") as OrderingData
 
-                          // Инициализируем данные если их нет
-                          if (!q.data || !("correctOrder" in q.data)) {
+                          // Инициализируем данные если их нет или они некорректны
+                          if (!hasValidData) {
                             queueMicrotask(() => updateQuestion(qIndex, "data", orderingData))
                           }
 
@@ -831,12 +843,18 @@ export default function ModuleEditorPage({ params }: Props) {
 
                         {/* CASE_ANALYSIS Editor */}
                         {q.type === "CASE_ANALYSIS" && (() => {
-                          const caseData: CaseAnalysisData = (q.data && "caseContent" in q.data)
+                          // Проверяем что данные существуют И имеют правильную структуру
+                          const hasValidData = q.data &&
+                            "caseContent" in q.data &&
+                            Array.isArray((q.data as CaseAnalysisData).options) &&
+                            (q.data as CaseAnalysisData).options.length > 0
+
+                          const caseData: CaseAnalysisData = hasValidData
                             ? (q.data as CaseAnalysisData)
                             : getDefaultDataForType("CASE_ANALYSIS") as CaseAnalysisData
 
-                          // Инициализируем данные если их нет
-                          if (!q.data || !("caseContent" in q.data)) {
+                          // Инициализируем данные если их нет или они некорректны
+                          if (!hasValidData) {
                             queueMicrotask(() => updateQuestion(qIndex, "data", caseData))
                           }
 
