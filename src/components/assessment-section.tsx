@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle2, XCircle, HelpCircle, RotateCcw } from "lucide-react"
+import { CheckCircle2, XCircle, HelpCircle, RotateCcw, BookOpen } from "lucide-react"
 import Link from "next/link"
 import { MatchingExercise, OrderingExercise, CaseAnalysisExercise } from "@/components/exercises"
 
@@ -197,11 +197,64 @@ export function AssessmentSection({
 
   const remainingAttempts = 3 - currentAttempts
 
+  // Handle module completion for modules without questions
+  const handleCompleteWithoutQuestions = async () => {
+    if (isCompleting) return
+
+    setIsCompleting(true)
+    try {
+      const response = await fetch("/api/modules/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleId }),
+      })
+
+      if (response.ok) {
+        setIsCompleted(true)
+        router.refresh()
+      }
+    } catch (error) {
+      console.error("Error completing module:", error)
+    } finally {
+      setIsCompleting(false)
+    }
+  }
+
   if (questions.length === 0) {
+    // Module without questions - allow direct completion
+    if (isCompleted) {
+      return (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Модуль завершён!</h3>
+            <p className="text-gray-600 text-sm mb-4">
+              Вы успешно прочитали материал
+            </p>
+            <Button asChild variant="outline" className="w-full">
+              <Link href={`/trails/${trailSlug}`}>К заданиям</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )
+    }
+
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-gray-500">Нет вопросов для этого модуля</p>
+          <BookOpen className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+          <h3 className="font-semibold text-lg mb-2">Теоретический материал</h3>
+          <p className="text-gray-500 mb-4">
+            Прочитайте материал слева и нажмите кнопку ниже, чтобы отметить модуль как завершённый
+          </p>
+          <Button
+            onClick={handleCompleteWithoutQuestions}
+            className="w-full bg-[#2E844A] hover:bg-[#256E3D]"
+            disabled={isCompleting}
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            {isCompleting ? "Сохранение..." : "Прочитано, завершить модуль"}
+          </Button>
         </CardContent>
       </Card>
     )

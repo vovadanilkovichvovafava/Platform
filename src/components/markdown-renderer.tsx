@@ -104,15 +104,53 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
     return parts
   }
 
+  // Parse italic text _text_ (not inside words)
+  const parseItalic = (text: string, startKey: number): ReactNode[] => {
+    // Match _text_ but not inside words (e.g., variable_name should not be affected)
+    // Pattern: underscore at start/after space, then content, then underscore before end/space
+    const parts: ReactNode[] = []
+    // Regex to match _text_ patterns (italic) - but not file_names or variable_names
+    const italicPattern = /(^|[\s(])_([^_\s][^_]*[^_\s]|[^_\s])_([\s,.)!?:]|$)/g
+
+    let lastIndex = 0
+    let match
+
+    while ((match = italicPattern.exec(text)) !== null) {
+      // Text before the match (including any preceding char that's not underscore)
+      if (match.index + match[1].length > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index + match[1].length))
+      }
+      // Italic text
+      parts.push(
+        <em key={`italic-${startKey}-${match.index}`}>{match[2]}</em>
+      )
+      // Update lastIndex to include trailing char
+      lastIndex = match.index + match[0].length - match[3].length
+    }
+
+    // Remaining text after last match
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex))
+    }
+
+    return parts.length > 0 ? parts : [text]
+  }
+
   // Parse bold text **text**
   const parseBold = (text: string, startKey: number): ReactNode[] => {
     const parts = text.split(/(\*\*[^*]+\*\*)/g)
-    return parts.map((part, idx) => {
+    const result: ReactNode[] = []
+
+    parts.forEach((part, idx) => {
       if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={`bold-${startKey}-${idx}`}>{part.slice(2, -2)}</strong>
+        result.push(<strong key={`bold-${startKey}-${idx}`}>{part.slice(2, -2)}</strong>)
+      } else if (part) {
+        // Parse italic within non-bold parts
+        result.push(...parseItalic(part, startKey + idx * 100))
       }
-      return part
     })
+
+    return result
   }
 
   // Parse the content with code blocks support
