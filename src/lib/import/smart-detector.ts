@@ -14,6 +14,7 @@ import {
   detectQuestionType,
   parseMatchingOptions,
   parseOrderingOptions,
+  parseCaseAnalysisOptions,
   ConfidenceCriterion,
   ConfidenceDetails,
   FileFormat,
@@ -614,7 +615,7 @@ function createModule(
   // Определяем, требуется ли сдача работы
   const requiresSubmission = detectRequiresSubmission(type, cleanTitle, content)
 
-  // Заполнение data для MATCHING и ORDERING вопросов из опций
+  // Заполнение data для MATCHING, ORDERING и CASE_ANALYSIS вопросов из опций
   // ВАЖНО: Для этих типов data создаётся ВСЕГДА, даже если опций нет
   for (const question of questions) {
     if (question.type === "MATCHING") {
@@ -625,6 +626,10 @@ function createModule(
       // Фильтруем пустые опции
       const nonEmptyOptions = question.options.filter(opt => opt.trim() !== "")
       question.data = parseOrderingOptions(nonEmptyOptions)
+    } else if (question.type === "CASE_ANALYSIS") {
+      // Фильтруем пустые опции
+      const nonEmptyOptions = question.options.filter(opt => opt.trim() !== "")
+      question.data = parseCaseAnalysisOptions(nonEmptyOptions, question.question)
     }
   }
 

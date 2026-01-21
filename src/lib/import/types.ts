@@ -15,12 +15,19 @@ export interface OrderingData {
   correctOrder: string[]
 }
 
+export interface CaseAnalysisData {
+  caseContent: string
+  caseLabel: string
+  options: { id: string; text: string; isCorrect: boolean; explanation: string }[]
+  minCorrectRequired: number
+}
+
 export interface ParsedQuestion {
   question: string
   type?: QuestionType
   options: string[]
   correctAnswer: number
-  data?: MatchingData | OrderingData | null
+  data?: MatchingData | OrderingData | CaseAnalysisData | null
   explanation?: string
 }
 
@@ -351,7 +358,7 @@ export function detectQuestionType(questionText: string): QuestionType {
     "сопоставь", "сопоставьте", "соотнес", "соотнеси", "соотнесите",
     "соедин", "соединить", "свяж", "связать",
     "match", "matching", "pair", "connect",
-    "с их определениями", "с их описаниями",
+    "с их определениями", "с их описаниями", "с их характеристиками",
   ]
   if (matchingKeywords.some(k => lowerText.includes(k))) {
     return "MATCHING"
@@ -362,11 +369,27 @@ export function detectQuestionType(questionText: string): QuestionType {
     "расположи", "расположите", "упорядочь", "упорядочьте",
     "порядок", "последовательность", "правильном порядке",
     "расставь", "расставьте", "выстрой", "выстройте",
+    "выставьте правильный порядок",
     "order", "arrange", "sequence", "sort",
     "от первого к последнему", "от начала до конца",
   ]
   if (orderingKeywords.some(k => lowerText.includes(k))) {
     return "ORDERING"
+  }
+
+  // CASE_ANALYSIS - анализ кейса/ситуации
+  const caseAnalysisKeywords = [
+    "найдите ошибки", "найди ошибки", "найдите ошибку",
+    "проанализируйте", "проанализируй",
+    "анализ кейса", "анализ ситуации",
+    "оцените ситуацию", "оцени ситуацию",
+    "что неправильно", "что не так",
+    "выберите правильные решения", "выбери правильные решения",
+    "аудит", "найдите проблемы", "найди проблемы",
+    "case analysis", "analyze", "find errors", "what's wrong",
+  ]
+  if (caseAnalysisKeywords.some(k => lowerText.includes(k))) {
+    return "CASE_ANALYSIS"
   }
 
   return "SINGLE_CHOICE"
@@ -512,5 +535,56 @@ export function generateOrderingData(questionText: string): OrderingData {
       { id: "s4", text: "" },
     ],
     correctOrder: ["s1", "s2", "s3", "s4"],
+  }
+}
+
+// Парсинг опций для CASE_ANALYSIS вопроса
+// Формат: текст варианта, с * для правильных ответов
+// Может содержать несколько правильных ответов
+export function parseCaseAnalysisOptions(options: string[], questionText: string = ""): CaseAnalysisData {
+  const parsedOptions: { id: string; text: string; isCorrect: boolean; explanation: string }[] = []
+
+  for (let i = 0; i < options.length; i++) {
+    let text = options[i].trim()
+    let isCorrect = false
+
+    // Проверяем маркер правильного ответа
+    if (text.endsWith("*")) {
+      isCorrect = true
+      text = text.slice(0, -1).trim()
+    }
+
+    if (text) {
+      parsedOptions.push({
+        id: `o${i + 1}`,
+        text,
+        isCorrect,
+        explanation: "",
+      })
+    }
+  }
+
+  // Если не удалось распарсить - создаем пустой шаблон
+  if (parsedOptions.length === 0) {
+    return {
+      caseContent: "",
+      caseLabel: "Кейс для анализа",
+      options: [
+        { id: "o1", text: "", isCorrect: false, explanation: "" },
+        { id: "o2", text: "", isCorrect: false, explanation: "" },
+        { id: "o3", text: "", isCorrect: false, explanation: "" },
+      ],
+      minCorrectRequired: 1,
+    }
+  }
+
+  // Считаем количество правильных ответов
+  const correctCount = parsedOptions.filter(o => o.isCorrect).length
+
+  return {
+    caseContent: "",
+    caseLabel: "Кейс для анализа",
+    options: parsedOptions,
+    minCorrectRequired: Math.max(1, correctCount),
   }
 }
