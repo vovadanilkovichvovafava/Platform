@@ -663,24 +663,34 @@ export default function ModuleEditorPage({ params }: Props) {
                         )}
 
                         {/* MATCHING Editor */}
-                        {q.type === "MATCHING" && q.data && "leftItems" in q.data && (
+                        {q.type === "MATCHING" && (() => {
+                          const matchingData: MatchingData = (q.data && "leftItems" in q.data)
+                            ? (q.data as MatchingData)
+                            : getDefaultDataForType("MATCHING") as MatchingData
+
+                          // Инициализируем данные если их нет
+                          if (!q.data || !("leftItems" in q.data)) {
+                            queueMicrotask(() => updateQuestion(qIndex, "data", matchingData))
+                          }
+
+                          return (
                           <div className="ml-7 space-y-3">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <Input
-                                  value={(q.data as MatchingData).leftLabel}
+                                  value={matchingData.leftLabel}
                                   onChange={(e) => {
                                     updateQuestionData(qIndex, { leftLabel: e.target.value })
                                   }}
                                   placeholder="Заголовок левой колонки"
                                   className="text-sm mb-2"
                                 />
-                                {(q.data as MatchingData).leftItems.map((item, idx) => (
+                                {matchingData.leftItems.map((item, idx) => (
                                   <Input
                                     key={item.id}
                                     value={item.text}
                                     onChange={(e) => {
-                                      const newItems = [...(q.data as MatchingData).leftItems]
+                                      const newItems = [...matchingData.leftItems]
                                       newItems[idx] = { ...newItems[idx], text: e.target.value }
                                       updateQuestionData(qIndex, { leftItems: newItems })
                                     }}
@@ -693,10 +703,9 @@ export default function ModuleEditorPage({ params }: Props) {
                                   variant="ghost"
                                   className="text-xs"
                                   onClick={() => {
-                                    const data = q.data as MatchingData
-                                    const newId = `l${data.leftItems.length + 1}`
+                                    const newId = `l${matchingData.leftItems.length + 1}`
                                     updateQuestionData(qIndex, {
-                                      leftItems: [...data.leftItems, { id: newId, text: "" }],
+                                      leftItems: [...matchingData.leftItems, { id: newId, text: "" }],
                                     })
                                   }}
                                 >
@@ -705,19 +714,19 @@ export default function ModuleEditorPage({ params }: Props) {
                               </div>
                               <div>
                                 <Input
-                                  value={(q.data as MatchingData).rightLabel}
+                                  value={matchingData.rightLabel}
                                   onChange={(e) => {
                                     updateQuestionData(qIndex, { rightLabel: e.target.value })
                                   }}
                                   placeholder="Заголовок правой колонки"
                                   className="text-sm mb-2"
                                 />
-                                {(q.data as MatchingData).rightItems.map((item, idx) => (
+                                {matchingData.rightItems.map((item, idx) => (
                                   <Input
                                     key={item.id}
                                     value={item.text}
                                     onChange={(e) => {
-                                      const newItems = [...(q.data as MatchingData).rightItems]
+                                      const newItems = [...matchingData.rightItems]
                                       newItems[idx] = { ...newItems[idx], text: e.target.value }
                                       updateQuestionData(qIndex, { rightItems: newItems })
                                     }}
@@ -730,10 +739,9 @@ export default function ModuleEditorPage({ params }: Props) {
                                   variant="ghost"
                                   className="text-xs"
                                   onClick={() => {
-                                    const data = q.data as MatchingData
-                                    const newId = `r${data.rightItems.length + 1}`
+                                    const newId = `r${matchingData.rightItems.length + 1}`
                                     updateQuestionData(qIndex, {
-                                      rightItems: [...data.rightItems, { id: newId, text: "" }],
+                                      rightItems: [...matchingData.rightItems, { id: newId, text: "" }],
                                     })
                                   }}
                                 >
@@ -743,22 +751,21 @@ export default function ModuleEditorPage({ params }: Props) {
                             </div>
                             <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
                               <p className="font-medium mb-1">Связи (левый → правый):</p>
-                              {(q.data as MatchingData).leftItems.map((leftItem, idx) => (
+                              {matchingData.leftItems.map((leftItem, idx) => (
                                 <div key={leftItem.id} className="flex items-center gap-2 mb-1">
                                   <span className="truncate max-w-[80px]">{leftItem.text || `Л${idx + 1}`}</span>
                                   <span>→</span>
                                   <select
-                                    value={(q.data as MatchingData).correctPairs[leftItem.id] || ""}
+                                    value={matchingData.correctPairs[leftItem.id] || ""}
                                     onChange={(e) => {
-                                      const data = q.data as MatchingData
                                       updateQuestionData(qIndex, {
-                                        correctPairs: { ...data.correctPairs, [leftItem.id]: e.target.value }
+                                        correctPairs: { ...matchingData.correctPairs, [leftItem.id]: e.target.value }
                                       })
                                     }}
                                     className="text-xs border rounded px-1 py-0.5"
                                   >
                                     <option value="">Выберите</option>
-                                    {(q.data as MatchingData).rightItems.map((rightItem, rIdx) => (
+                                    {matchingData.rightItems.map((rightItem, rIdx) => (
                                       <option key={rightItem.id} value={rightItem.id}>
                                         {rightItem.text || `П${rIdx + 1}`}
                                       </option>
@@ -768,15 +775,26 @@ export default function ModuleEditorPage({ params }: Props) {
                               ))}
                             </div>
                           </div>
-                        )}
+                          )
+                        })()}
 
                         {/* ORDERING Editor */}
-                        {q.type === "ORDERING" && q.data && "correctOrder" in q.data && (
+                        {q.type === "ORDERING" && (() => {
+                          const orderingData: OrderingData = (q.data && "correctOrder" in q.data)
+                            ? (q.data as OrderingData)
+                            : getDefaultDataForType("ORDERING") as OrderingData
+
+                          // Инициализируем данные если их нет
+                          if (!q.data || !("correctOrder" in q.data)) {
+                            queueMicrotask(() => updateQuestion(qIndex, "data", orderingData))
+                          }
+
+                          return (
                           <div className="ml-7 space-y-2">
                             <p className="text-xs text-gray-500 mb-2">
                               Введите элементы в правильном порядке (сверху вниз)
                             </p>
-                            {(q.data as OrderingData).items.map((item, idx) => (
+                            {orderingData.items.map((item, idx) => (
                               <div key={item.id} className="flex items-center gap-2">
                                 <span className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
                                   {idx + 1}
@@ -784,8 +802,7 @@ export default function ModuleEditorPage({ params }: Props) {
                                 <Input
                                   value={item.text}
                                   onChange={(e) => {
-                                    const data = q.data as OrderingData
-                                    const newItems = [...data.items]
+                                    const newItems = [...orderingData.items]
                                     newItems[idx] = { ...newItems[idx], text: e.target.value }
                                     updateQuestionData(qIndex, { items: newItems })
                                   }}
@@ -799,28 +816,38 @@ export default function ModuleEditorPage({ params }: Props) {
                               variant="ghost"
                               className="text-xs"
                               onClick={() => {
-                                const data = q.data as OrderingData
-                                const newId = `s${data.items.length + 1}`
+                                const newId = `s${orderingData.items.length + 1}`
                                 updateQuestionData(qIndex, {
-                                  items: [...data.items, { id: newId, text: "" }],
-                                  correctOrder: [...data.correctOrder, newId],
+                                  items: [...orderingData.items, { id: newId, text: "" }],
+                                  correctOrder: [...orderingData.correctOrder, newId],
                                 })
                               }}
                             >
                               <Plus className="h-3 w-3 mr-1" /> Шаг
                             </Button>
                           </div>
-                        )}
+                          )
+                        })()}
 
                         {/* CASE_ANALYSIS Editor */}
-                        {q.type === "CASE_ANALYSIS" && q.data && "caseContent" in q.data && (
+                        {q.type === "CASE_ANALYSIS" && (() => {
+                          const caseData: CaseAnalysisData = (q.data && "caseContent" in q.data)
+                            ? (q.data as CaseAnalysisData)
+                            : getDefaultDataForType("CASE_ANALYSIS") as CaseAnalysisData
+
+                          // Инициализируем данные если их нет
+                          if (!q.data || !("caseContent" in q.data)) {
+                            queueMicrotask(() => updateQuestion(qIndex, "data", caseData))
+                          }
+
+                          return (
                           <div className="ml-7 space-y-3">
                             <div>
                               <label className="text-xs font-medium text-gray-600 block mb-1">
                                 Название кейса
                               </label>
                               <Input
-                                value={(q.data as CaseAnalysisData).caseLabel}
+                                value={caseData.caseLabel}
                                 onChange={(e) => {
                                   updateQuestionData(qIndex, { caseLabel: e.target.value })
                                 }}
@@ -833,7 +860,7 @@ export default function ModuleEditorPage({ params }: Props) {
                                 Описание кейса (Markdown)
                               </label>
                               <textarea
-                                value={(q.data as CaseAnalysisData).caseContent}
+                                value={caseData.caseContent}
                                 onChange={(e) => {
                                   updateQuestionData(qIndex, { caseContent: e.target.value })
                                 }}
@@ -846,14 +873,13 @@ export default function ModuleEditorPage({ params }: Props) {
                               <label className="text-xs font-medium text-gray-600 block mb-1">
                                 Варианты ответов
                               </label>
-                              {(q.data as CaseAnalysisData).options.map((opt, idx) => (
+                              {caseData.options.map((opt, idx) => (
                                 <div key={opt.id} className="border rounded p-2 mb-2 space-y-2">
                                   <div className="flex items-center gap-2">
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const data = q.data as CaseAnalysisData
-                                        const newOptions = [...data.options]
+                                        const newOptions = [...caseData.options]
                                         newOptions[idx] = { ...newOptions[idx], isCorrect: !newOptions[idx].isCorrect }
                                         updateQuestionData(qIndex, { options: newOptions })
                                       }}
@@ -868,8 +894,7 @@ export default function ModuleEditorPage({ params }: Props) {
                                     <Input
                                       value={opt.text}
                                       onChange={(e) => {
-                                        const data = q.data as CaseAnalysisData
-                                        const newOptions = [...data.options]
+                                        const newOptions = [...caseData.options]
                                         newOptions[idx] = { ...newOptions[idx], text: e.target.value }
                                         updateQuestionData(qIndex, { options: newOptions })
                                       }}
@@ -880,8 +905,7 @@ export default function ModuleEditorPage({ params }: Props) {
                                   <Input
                                     value={opt.explanation}
                                     onChange={(e) => {
-                                      const data = q.data as CaseAnalysisData
-                                      const newOptions = [...data.options]
+                                      const newOptions = [...caseData.options]
                                       newOptions[idx] = { ...newOptions[idx], explanation: e.target.value }
                                       updateQuestionData(qIndex, { options: newOptions })
                                     }}
@@ -895,10 +919,9 @@ export default function ModuleEditorPage({ params }: Props) {
                                 variant="ghost"
                                 className="text-xs"
                                 onClick={() => {
-                                  const data = q.data as CaseAnalysisData
-                                  const newId = `o${data.options.length + 1}`
+                                  const newId = `o${caseData.options.length + 1}`
                                   updateQuestionData(qIndex, {
-                                    options: [...data.options, { id: newId, text: "", isCorrect: false, explanation: "" }],
+                                    options: [...caseData.options, { id: newId, text: "", isCorrect: false, explanation: "" }],
                                   })
                                 }}
                               >
@@ -912,7 +935,7 @@ export default function ModuleEditorPage({ params }: Props) {
                               <Input
                                 type="number"
                                 min={1}
-                                value={(q.data as CaseAnalysisData).minCorrectRequired}
+                                value={caseData.minCorrectRequired}
                                 onChange={(e) => {
                                   updateQuestionData(qIndex, { minCorrectRequired: parseInt(e.target.value) || 1 })
                                 }}
@@ -920,7 +943,8 @@ export default function ModuleEditorPage({ params }: Props) {
                               />
                             </div>
                           </div>
-                        )}
+                          )
+                        })()}
                       </div>
                     ))
                   )}
