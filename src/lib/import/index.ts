@@ -7,6 +7,9 @@ export { parseTxt } from "./parsers/txt-parser"
 export { parseMd } from "./parsers/md-parser"
 export { parseJson } from "./parsers/json-parser"
 export { parseXml } from "./parsers/xml-parser"
+export { parseHtml } from "./parsers/html-parser"
+export { parseDocx, parseDocxFromText } from "./parsers/docx-parser"
+export { parseDoc, parseDocFromText } from "./parsers/doc-parser"
 export { parseWithAI, checkAIAvailability, getAIConfig } from "./parsers/ai-parser"
 
 import { ParseResult, ParsedTrail, FileFormat, AIParserConfig, ConfidenceDetails } from "./types"
@@ -15,6 +18,9 @@ import { parseTxt } from "./parsers/txt-parser"
 import { parseMd } from "./parsers/md-parser"
 import { parseJson } from "./parsers/json-parser"
 import { parseXml } from "./parsers/xml-parser"
+import { parseHtml } from "./parsers/html-parser"
+import { parseDocxFromText } from "./parsers/docx-parser"
+import { parseDocFromText } from "./parsers/doc-parser"
 import { parseWithAI, getAIConfig } from "./parsers/ai-parser"
 
 export interface SmartImportOptions {
@@ -105,6 +111,15 @@ export async function smartImport(
     case "md":
       result = parseMd(content)
       break
+    case "html":
+      result = parseHtml(content)
+      break
+    case "docx":
+      result = parseDocxFromText(content)
+      break
+    case "doc":
+      result = parseDocFromText(content)
+      break
     case "txt":
     default:
       result = parseTxt(content)
@@ -192,6 +207,15 @@ export async function hybridImport(
     case "md":
       codeResult = parseMd(content)
       break
+    case "html":
+      codeResult = parseHtml(content)
+      break
+    case "docx":
+      codeResult = parseDocxFromText(content)
+      break
+    case "doc":
+      codeResult = parseDocFromText(content)
+      break
     default:
       codeResult = parseTxt(content)
   }
@@ -275,12 +299,14 @@ export const NATIVE_PARSER_FORMATS = [
   { ext: ".markdown", name: "Markdown", mime: "text/markdown", parser: "code" },
   { ext: ".json", name: "JSON", mime: "application/json", parser: "code" },
   { ext: ".xml", name: "XML", mime: "application/xml", parser: "code" },
+  { ext: ".html", name: "HTML", mime: "text/html", parser: "code" },
+  { ext: ".htm", name: "HTML", mime: "text/html", parser: "code" },
+  { ext: ".doc", name: "Word (старый)", mime: "application/msword", parser: "code" },
+  { ext: ".docx", name: "Word", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", parser: "code" },
 ] as const
 
 // Форматы, требующие AI-парсинга (нет нативного парсера)
 export const AI_ONLY_FORMATS = [
-  { ext: ".doc", name: "Word (старый)", mime: "application/msword", parser: "ai" },
-  { ext: ".docx", name: "Word", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", parser: "ai" },
   { ext: ".yml", name: "YAML", mime: "text/yaml", parser: "ai" },
   { ext: ".yaml", name: "YAML", mime: "text/yaml", parser: "ai" },
   { ext: ".kdl", name: "KDL", mime: "text/plain", parser: "ai" },
@@ -288,8 +314,6 @@ export const AI_ONLY_FORMATS = [
   { ext: ".rtf", name: "Rich Text", mime: "application/rtf", parser: "ai" },
   { ext: ".odt", name: "OpenDocument", mime: "application/vnd.oasis.opendocument.text", parser: "ai" },
   { ext: ".pdf", name: "PDF", mime: "application/pdf", parser: "ai" },
-  { ext: ".html", name: "HTML", mime: "text/html", parser: "ai" },
-  { ext: ".htm", name: "HTML", mime: "text/html", parser: "ai" },
   { ext: ".rst", name: "reStructuredText", mime: "text/x-rst", parser: "ai" },
   { ext: ".tex", name: "LaTeX", mime: "text/x-tex", parser: "ai" },
   { ext: ".org", name: "Org Mode", mime: "text/x-org", parser: "ai" },
