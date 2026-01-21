@@ -72,6 +72,13 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
   let contentBuffer: string[] = []
   let inContentBlock = false
 
+  // Функция проверки маркера секции (для определения конца контента)
+  const isSectionMarker = (line: string): boolean => {
+    return DEFAULT_PATTERNS.trailMarkers.some(p => p.test(line)) ||
+           DEFAULT_PATTERNS.moduleMarkers.some(p => p.test(line)) ||
+           /^={3,}\s*(QUESTIONS?|ВОПРОС[ЫА]?)\s*={3,}$/i.test(line)
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     const trimmedLine = line.trim()
@@ -140,21 +147,16 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
       continue
     }
 
-    // Content block markers
-    if (trimmedLine === "---" && currentSection === "module") {
-      if (!inContentBlock) {
-        inContentBlock = true
-        contentBuffer = []
-      } else {
-        if (currentModule) {
-          currentModule.content = contentBuffer.join("\n").trim()
-        }
-        inContentBlock = false
-      }
+    // Content block start marker (первый --- после метаданных модуля)
+    // ВАЖНО: --- внутри контента НЕ закрывает блок - только маркер секции закрывает
+    if (trimmedLine === "---" && currentSection === "module" && !inContentBlock) {
+      inContentBlock = true
+      contentBuffer = []
       continue
     }
 
-    // Inside content block
+    // Inside content block - собираем ВСЁ до следующего маркера секции
+    // --- внутри контента сохраняются как часть контента
     if (inContentBlock) {
       contentBuffer.push(line)
       continue
