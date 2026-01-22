@@ -25,8 +25,8 @@ const MAX_CONTENT_CHARS = parseInt(process.env.AI_MAX_CONTENT_CHARS || "100000")
 const CHARS_PER_TOKEN_ESTIMATE = 4  // Примерная оценка для русского текста
 
 // Константы для chunked parsing
-const MAX_CHUNK_SIZE = 2000 // ~2KB - безопасный размер для API
-const MIN_CHUNK_SIZE = 200 // Минимальный размер chunk
+const MAX_CHUNK_SIZE = 4000 // ~4KB - увеличен для лучшего контекста
+const MIN_CHUNK_SIZE = 500 // Минимальный размер chunk (увеличен для смысловых блоков)
 const MAX_CONCURRENT_REQUESTS = 3 // Максимум параллельных запросов
 
 // Функция для логирования (можно отключить в production)
@@ -549,8 +549,11 @@ interface ContentChunk {
 function splitContentIntoChunks(content: string): ContentChunk[] {
   const chunks: ContentChunk[] = []
 
+  console.log(`[AI-Parser] splitContentIntoChunks: входной размер ${content.length} символов`)
+
   // Если контент маленький - возвращаем как есть
   if (content.length <= MAX_CHUNK_SIZE) {
+    console.log(`[AI-Parser] Контент меньше MAX_CHUNK_SIZE, возвращаем как один chunk`)
     return [{
       index: 0,
       content,
@@ -559,82 +562,137 @@ function splitContentIntoChunks(content: string): ContentChunk[] {
     }]
   }
 
-  // Паттерны для определения границ секций
-  const sectionPatterns = [
-    /^#{1,3}\s+.+$/gm, // Markdown заголовки
-    /^[А-ЯA-Z][А-Яа-яA-Za-z\s]{5,50}$/gm, // Заголовки на отдельной строке
-    /^\d+\.\s+[А-ЯA-Z].+$/gm, // Нумерованные заголовки
-    /^[-*]\s+\*\*[^*]+\*\*/gm, // Жирные пункты списка
+  // Паттерны для определения СИЛЬНЫХ границ секций (предпочтительные точки разбиения)
+  const strongBoundaryPatterns = [
+    /^#{1,2}\s+.+$/gm, // Markdown заголовки h1, h2
+    /^[А-ЯA-Z][А-Яа-яA-Za-z\s]{5,80}$/gm, // Заголовки на отдельной строке (капитализированные)
+    /^\d+\.\s+[А-ЯA-Z].+$/gm, // Нумерованные заголовки типа "1. Введение"
   ]
 
-  // Находим все потенциальные границы секций
-  const boundaries: number[] = [0]
+  // Паттерны для СЛАБЫХ границ (используем если нет сильных)
+  const weakBoundaryPatterns = [
+    /^#{3,6}\s+.+$/gm, // Markdown заголовки h3-h6
+    /^[-*]\s+\*\*[^*]+\*\*/gm, // Жирные пункты списка
+    /^---+$/gm, // Горизонтальные разделители
+  ]
 
-  for (const pattern of sectionPatterns) {
+  // Собираем все границы с приоритетами
+  interface Boundary {
+    pos: number
+    priority: number // 1 = сильная, 2 = слабая, 3 = параграф
+  }
+
+  const boundaries: Boundary[] = [{ pos: 0, priority: 1 }]
+
+  // Сильные границы
+  for (const pattern of strongBoundaryPatterns) {
     let match
-    while ((match = pattern.exec(content)) !== null) {
-      boundaries.push(match.index)
+    const patternCopy = new RegExp(pattern.source, pattern.flags)
+    while ((match = patternCopy.exec(content)) !== null) {
+      boundaries.push({ pos: match.index, priority: 1 })
     }
   }
 
-  // Также добавляем границы по двойным переносам строк
+  // Слабые границы
+  for (const pattern of weakBoundaryPatterns) {
+    let match
+    const patternCopy = new RegExp(pattern.source, pattern.flags)
+    while ((match = patternCopy.exec(content)) !== null) {
+      boundaries.push({ pos: match.index, priority: 2 })
+    }
+  }
+
+  // Границы по двойным переносам строк (параграфы)
   let pos = 0
   while ((pos = content.indexOf("\n\n", pos)) !== -1) {
-    boundaries.push(pos)
+    boundaries.push({ pos: pos + 2, priority: 3 }) // +2 чтобы начать после переноса
     pos += 2
   }
 
-  // Сортируем и удаляем дубликаты
-  const uniqueBoundaries = [...new Set(boundaries)].sort((a, b) => a - b)
+  // Сортируем по позиции
+  boundaries.sort((a, b) => a.pos - b.pos)
 
-  // Группируем в chunks подходящего размера
-  let currentChunkStart = 0
-  let lastBoundary = 0
-
-  for (const boundary of uniqueBoundaries) {
-    const potentialChunkSize = boundary - currentChunkStart
-
-    // Если chunk достаточно большой, сохраняем его
-    if (potentialChunkSize >= MIN_CHUNK_SIZE && potentialChunkSize <= MAX_CHUNK_SIZE) {
-      lastBoundary = boundary
-    }
-
-    // Если превысили максимальный размер - создаём chunk
-    if (potentialChunkSize > MAX_CHUNK_SIZE && lastBoundary > currentChunkStart) {
-      chunks.push({
-        index: chunks.length,
-        content: content.slice(currentChunkStart, lastBoundary).trim(),
-        isFirst: currentChunkStart === 0,
-        isLast: false,
-      })
-      currentChunkStart = lastBoundary
-      lastBoundary = boundary
+  // Удаляем дубликаты (оставляем с наименьшим priority = наивысшим приоритетом)
+  const uniqueBoundaries: Boundary[] = []
+  for (const b of boundaries) {
+    const existing = uniqueBoundaries.find(ub => Math.abs(ub.pos - b.pos) < 10)
+    if (!existing) {
+      uniqueBoundaries.push(b)
+    } else if (b.priority < existing.priority) {
+      existing.priority = b.priority
+      existing.pos = b.pos
     }
   }
 
-  // Добавляем последний chunk
-  if (currentChunkStart < content.length) {
-    const remaining = content.slice(currentChunkStart).trim()
-    if (remaining.length > 0) {
-      // Если последняя часть слишком большая - разбиваем принудительно
-      if (remaining.length > MAX_CHUNK_SIZE * 1.5) {
-        const parts = splitLargeChunk(remaining)
-        for (let i = 0; i < parts.length; i++) {
-          chunks.push({
-            index: chunks.length,
-            content: parts[i],
-            isFirst: chunks.length === 0,
-            isLast: i === parts.length - 1,
-          })
+  console.log(`[AI-Parser] Найдено ${uniqueBoundaries.length} потенциальных границ`)
+
+  // Группируем в chunks
+  let currentChunkStart = 0
+
+  while (currentChunkStart < content.length) {
+    // Ищем лучшую границу для следующего chunk
+    let bestBoundary: Boundary | null = null
+
+    for (const boundary of uniqueBoundaries) {
+      if (boundary.pos <= currentChunkStart) continue
+
+      const chunkSize = boundary.pos - currentChunkStart
+
+      // Пропускаем слишком маленькие chunks
+      if (chunkSize < MIN_CHUNK_SIZE) continue
+
+      // Если размер в пределах допустимого - это кандидат
+      if (chunkSize <= MAX_CHUNK_SIZE) {
+        // Предпочитаем границы с более высоким приоритетом
+        if (!bestBoundary ||
+            boundary.priority < bestBoundary.priority ||
+            (boundary.priority === bestBoundary.priority && chunkSize > (bestBoundary.pos - currentChunkStart))) {
+          bestBoundary = boundary
         }
-      } else {
+      }
+
+      // Если уже превысили MAX_CHUNK_SIZE - используем последнюю хорошую границу
+      if (chunkSize > MAX_CHUNK_SIZE) {
+        break
+      }
+    }
+
+    if (bestBoundary) {
+      const chunkContent = content.slice(currentChunkStart, bestBoundary.pos).trim()
+      if (chunkContent.length > 0) {
         chunks.push({
           index: chunks.length,
-          content: remaining,
-          isFirst: chunks.length === 0,
-          isLast: true,
+          content: chunkContent,
+          isFirst: currentChunkStart === 0,
+          isLast: false,
         })
       }
+      currentChunkStart = bestBoundary.pos
+    } else {
+      // Нет подходящей границы - разбиваем принудительно
+      const remaining = content.slice(currentChunkStart).trim()
+      if (remaining.length > 0) {
+        if (remaining.length > MAX_CHUNK_SIZE) {
+          console.log(`[AI-Parser] Принудительное разбиение оставшихся ${remaining.length} символов`)
+          const parts = splitLargeChunk(remaining)
+          for (const part of parts) {
+            chunks.push({
+              index: chunks.length,
+              content: part,
+              isFirst: chunks.length === 0,
+              isLast: false,
+            })
+          }
+        } else {
+          chunks.push({
+            index: chunks.length,
+            content: remaining,
+            isFirst: chunks.length === 0,
+            isLast: true,
+          })
+        }
+      }
+      break
     }
   }
 
@@ -643,6 +701,8 @@ function splitContentIntoChunks(content: string): ContentChunk[] {
     chunks[0].isFirst = true
     chunks[chunks.length - 1].isLast = true
   }
+
+  console.log(`[AI-Parser] Создано ${chunks.length} chunks: ${chunks.map(c => c.content.length).join(', ')} символов`)
 
   return chunks
 }
@@ -655,23 +715,59 @@ function splitLargeChunk(content: string): string[] {
   while (start < content.length) {
     let end = Math.min(start + MAX_CHUNK_SIZE, content.length)
 
-    // Пытаемся найти хорошую точку разрыва
+    // Пытаемся найти хорошую точку разрыва (только если не в конце)
     if (end < content.length) {
-      // Ищем конец абзаца
-      const paragraphEnd = content.lastIndexOf("\n\n", end)
-      if (paragraphEnd > start + MIN_CHUNK_SIZE) {
-        end = paragraphEnd
-      } else {
-        // Ищем конец предложения
-        const sentenceEnd = content.lastIndexOf(". ", end)
-        if (sentenceEnd > start + MIN_CHUNK_SIZE) {
-          end = sentenceEnd + 1
+      const searchStart = start + MIN_CHUNK_SIZE
+      const searchArea = content.slice(searchStart, end + 200) // +200 для поиска рядом с границей
+
+      // Приоритеты точек разрыва (от лучшего к худшему)
+      const breakPoints = [
+        // 1. Двойной перенос (конец абзаца)
+        { pattern: /\n\n/g, offset: 2 },
+        // 2. Markdown заголовок
+        { pattern: /\n#{1,6}\s+/g, offset: 1 },
+        // 3. Нумерованный список
+        { pattern: /\n\d+\.\s+/g, offset: 1 },
+        // 4. Маркированный список
+        { pattern: /\n[-*]\s+/g, offset: 1 },
+        // 5. Конец предложения с переносом
+        { pattern: /[.!?]\s*\n/g, offset: 0 },
+        // 6. Конец предложения
+        { pattern: /[.!?]\s+/g, offset: 0 },
+      ]
+
+      let bestBreak = -1
+
+      for (const bp of breakPoints) {
+        let match
+        let lastMatch = -1
+        while ((match = bp.pattern.exec(searchArea)) !== null) {
+          const absolutePos = searchStart + match.index + match[0].length - bp.offset
+          if (absolutePos <= end && absolutePos > start + MIN_CHUNK_SIZE) {
+            lastMatch = absolutePos
+          }
         }
+        if (lastMatch > 0) {
+          bestBreak = lastMatch
+          break // Нашли хорошую точку разрыва
+        }
+      }
+
+      if (bestBreak > 0) {
+        end = bestBreak
       }
     }
 
-    parts.push(content.slice(start, end).trim())
+    const part = content.slice(start, end).trim()
+    if (part.length > 0) {
+      parts.push(part)
+    }
     start = end
+
+    // Пропускаем пробелы в начале следующего chunk
+    while (start < content.length && /\s/.test(content[start])) {
+      start++
+    }
   }
 
   return parts.filter(p => p.length > 0)
@@ -684,6 +780,8 @@ async function parseChunkWithAI(
   config: AIParserConfig
 ): Promise<{ modules: any[]; error?: string }> {
   try {
+    console.log(`[AI-Parser] Обработка части ${chunk.index + 1}/${totalChunks}, размер: ${chunk.content.length} символов`)
+
     const response = await fetch(config.apiEndpoint!, {
       method: "POST",
       headers: {
@@ -693,7 +791,7 @@ async function parseChunkWithAI(
       },
       body: JSON.stringify({
         model: config.model || "claude-sonnet-4-5-20241022",
-        max_tokens: 8000,
+        max_tokens: 16000, // Увеличен лимит для более полных ответов
         system: AI_MODULE_SYSTEM_PROMPT,
         messages: [
           {
@@ -709,6 +807,7 @@ async function parseChunkWithAI(
 
     if (!response.ok) {
       const errorText = await response.text()
+      console.log(`[AI-Parser] Часть ${chunk.index + 1}: API ошибка ${response.status}`)
       return { modules: [], error: `API ошибка: ${response.status}` }
     }
 
@@ -717,23 +816,210 @@ async function parseChunkWithAI(
     const aiResponse = data.content?.[0]?.text
 
     if (!aiResponse) {
+      console.log(`[AI-Parser] Часть ${chunk.index + 1}: пустой ответ от AI`)
       return { modules: [], error: "AI не вернул ответ" }
     }
 
-    // Извлечение JSON
-    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      return { modules: [], error: "Невалидный JSON" }
+    console.log(`[AI-Parser] Часть ${chunk.index + 1}: получен ответ ${aiResponse.length} символов, stop_reason: ${data.stop_reason}`)
+
+    // Проверяем, был ли ответ обрезан
+    const wasTruncated = data.stop_reason === "max_tokens"
+    if (wasTruncated) {
+      console.log(`[AI-Parser] Часть ${chunk.index + 1}: ВНИМАНИЕ - ответ обрезан!`)
     }
 
-    const parsed = JSON.parse(jsonMatch[0])
-    return { modules: parsed.modules || [] }
+    // Извлечение JSON с удалением markdown обёртки
+    let jsonStr = aiResponse.trim()
+
+    // Удаляем markdown code block если есть
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "")
+    }
+
+    // Находим начало JSON
+    const jsonStartIndex = jsonStr.indexOf("{")
+    if (jsonStartIndex === -1) {
+      console.log(`[AI-Parser] Часть ${chunk.index + 1}: не найден JSON в ответе`)
+      return { modules: [], error: "Невалидный JSON - не найдена открывающая скобка" }
+    }
+
+    let jsonCandidate = jsonStr.substring(jsonStartIndex)
+
+    // Пытаемся распарсить JSON
+    let parsed: any
+    try {
+      parsed = JSON.parse(jsonCandidate)
+    } catch (parseError) {
+      const errorMsg = parseError instanceof Error ? parseError.message : String(parseError)
+      console.log(`[AI-Parser] Часть ${chunk.index + 1}: ошибка парсинга JSON: ${errorMsg}`)
+      console.log(`[AI-Parser] Часть ${chunk.index + 1}: пытаемся восстановить JSON...`)
+
+      // Пробуем восстановить JSON
+      const repaired = repairJSON(jsonCandidate)
+      if (repaired) {
+        try {
+          parsed = JSON.parse(repaired)
+          console.log(`[AI-Parser] Часть ${chunk.index + 1}: JSON успешно восстановлен`)
+        } catch (repairError) {
+          // Пробуем извлечь модули напрямую из текста
+          console.log(`[AI-Parser] Часть ${chunk.index + 1}: repairJSON не помог, пробуем extractModulesFromText...`)
+          const extractedModules = extractModulesFromText(jsonCandidate)
+          if (extractedModules.length > 0) {
+            console.log(`[AI-Parser] Часть ${chunk.index + 1}: извлечено ${extractedModules.length} модулей из текста`)
+            return { modules: extractedModules }
+          }
+          return { modules: [], error: errorMsg }
+        }
+      } else {
+        // repairJSON вернул null, пробуем extractModulesFromText
+        console.log(`[AI-Parser] Часть ${chunk.index + 1}: repairJSON вернул null, пробуем extractModulesFromText...`)
+        const extractedModules = extractModulesFromText(jsonCandidate)
+        if (extractedModules.length > 0) {
+          console.log(`[AI-Parser] Часть ${chunk.index + 1}: извлечено ${extractedModules.length} модулей из текста`)
+          return { modules: extractedModules }
+        }
+        return { modules: [], error: errorMsg }
+      }
+    }
+
+    const modules = parsed.modules || []
+    console.log(`[AI-Parser] Часть ${chunk.index + 1}: успешно получено ${modules.length} модулей`)
+    return { modules }
   } catch (e) {
+    const errorMsg = e instanceof Error ? e.message : "unknown"
+    console.log(`[AI-Parser] Часть ${chunk.index + 1}: исключение: ${errorMsg}`)
     return {
       modules: [],
-      error: e instanceof Error ? e.message : "unknown"
+      error: errorMsg
     }
   }
+}
+
+// Извлечение модулей из повреждённого JSON текста
+function extractModulesFromText(jsonStr: string): any[] {
+  const modules: any[] = []
+
+  try {
+    // Ищем паттерн "modules": [ и извлекаем модули по одному
+    const modulesMatch = jsonStr.match(/"modules"\s*:\s*\[/)
+    if (!modulesMatch || modulesMatch.index === undefined) {
+      // Пробуем найти отдельные объекты модулей
+      return extractIndividualModules(jsonStr)
+    }
+
+    const startPos = modulesMatch.index + modulesMatch[0].length
+    const content = jsonStr.substring(startPos)
+
+    let depth = 0
+    let inString = false
+    let prevChar = ""
+    let moduleStart = -1
+
+    for (let i = 0; i < content.length; i++) {
+      const char = content[i]
+
+      if (char === '"' && prevChar !== "\\") {
+        inString = !inString
+      }
+
+      if (!inString) {
+        if (char === "{") {
+          if (depth === 0) {
+            moduleStart = i
+          }
+          depth++
+        } else if (char === "}") {
+          depth--
+          if (depth === 0 && moduleStart !== -1) {
+            const moduleJson = content.substring(moduleStart, i + 1)
+            try {
+              const mod = JSON.parse(moduleJson)
+              if (mod.title || mod.content) {
+                modules.push(mod)
+              }
+            } catch {
+              // Пробуем починить этот отдельный модуль
+              const repairedModule = repairJSON(moduleJson)
+              if (repairedModule) {
+                try {
+                  const mod = JSON.parse(repairedModule)
+                  if (mod.title || mod.content) {
+                    modules.push(mod)
+                  }
+                } catch {
+                  // Модуль слишком повреждён
+                }
+              }
+            }
+            moduleStart = -1
+          }
+        } else if (char === "]" && depth === 0) {
+          break
+        }
+      }
+      prevChar = char
+    }
+  } catch (e) {
+    console.log(`[AI-Parser] extractModulesFromText error:`, e)
+  }
+
+  return modules
+}
+
+// Извлечение отдельных модулей без массива modules
+function extractIndividualModules(jsonStr: string): any[] {
+  const modules: any[] = []
+
+  // Ищем объекты с полем "title"
+  const titlePattern = /\{\s*"title"\s*:/g
+  let match
+
+  while ((match = titlePattern.exec(jsonStr)) !== null) {
+    const startPos = match.index
+    let depth = 0
+    let inString = false
+    let prevChar = ""
+
+    for (let i = startPos; i < jsonStr.length; i++) {
+      const char = jsonStr[i]
+
+      if (char === '"' && prevChar !== "\\") {
+        inString = !inString
+      }
+
+      if (!inString) {
+        if (char === "{") depth++
+        else if (char === "}") {
+          depth--
+          if (depth === 0) {
+            const moduleJson = jsonStr.substring(startPos, i + 1)
+            try {
+              const mod = JSON.parse(moduleJson)
+              if (mod.title && (mod.content !== undefined || mod.type !== undefined)) {
+                modules.push(mod)
+              }
+            } catch {
+              const repaired = repairJSON(moduleJson)
+              if (repaired) {
+                try {
+                  const mod = JSON.parse(repaired)
+                  if (mod.title) {
+                    modules.push(mod)
+                  }
+                } catch {
+                  // Пропускаем
+                }
+              }
+            }
+            break
+          }
+        }
+      }
+      prevChar = char
+    }
+  }
+
+  return modules
 }
 
 // Получение метаданных курса из первой части
