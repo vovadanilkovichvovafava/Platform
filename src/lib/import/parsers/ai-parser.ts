@@ -688,12 +688,14 @@ async function parseChunkWithAI(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
+        "x-api-key": config.apiKey!,
+        "anthropic-version": ANTHROPIC_VERSION,
       },
       body: JSON.stringify({
-        model: config.model || "gpt-5-nano",
+        model: config.model || "claude-sonnet-4-5-20241022",
+        max_tokens: 8000,
+        system: AI_MODULE_SYSTEM_PROMPT,
         messages: [
-          { role: "system", content: AI_MODULE_SYSTEM_PROMPT },
           {
             role: "user",
             content: AI_MODULE_USER_PROMPT
@@ -702,7 +704,6 @@ async function parseChunkWithAI(
               .replace("{totalChunks}", String(totalChunks))
           },
         ],
-        max_completion_tokens: 8000,
       }),
     })
 
@@ -712,7 +713,8 @@ async function parseChunkWithAI(
     }
 
     const data = await response.json()
-    const aiResponse = data.choices?.[0]?.message?.content
+    // Anthropic API format: content[0].text
+    const aiResponse = data.content?.[0]?.text
 
     if (!aiResponse) {
       return { modules: [], error: "AI не вернул ответ" }
@@ -747,14 +749,15 @@ async function parseMetadataWithAI(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
+        "x-api-key": config.apiKey!,
+        "anthropic-version": ANTHROPIC_VERSION,
       },
       body: JSON.stringify({
-        model: config.model || "gpt-5-nano",
+        model: config.model || "claude-sonnet-4-5-20241022",
+        max_tokens: 1000,
         messages: [
           { role: "user", content: AI_METADATA_PROMPT.replace("{content}", preview) },
         ],
-        max_completion_tokens: 1000,
       }),
     })
 
@@ -763,7 +766,8 @@ async function parseMetadataWithAI(
     }
 
     const data = await response.json()
-    const aiResponse = data.choices?.[0]?.message?.content
+    // Anthropic API format: content[0].text
+    const aiResponse = data.content?.[0]?.text
 
     const jsonMatch = aiResponse?.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
