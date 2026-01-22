@@ -17,7 +17,7 @@ const ANTHROPIC_VERSION = "2023-06-01"
 
 // Таймауты для API запросов (настраиваемые через env)
 const API_CHECK_TIMEOUT_MS = parseInt(process.env.AI_CHECK_TIMEOUT_MS || "15000")   // 15 сек
-const API_PARSE_TIMEOUT_MS = parseInt(process.env.AI_PARSE_TIMEOUT_MS || "180000")  // 3 мин по умолчанию
+const API_PARSE_TIMEOUT_MS = parseInt(process.env.AI_PARSE_TIMEOUT_MS || "300000")  // 5 мин по умолчанию
 
 // Лимиты контента (примерно 4 символа = 1 токен для русского текста)
 const MAX_CONTENT_CHARS = parseInt(process.env.AI_MAX_CONTENT_CHARS || "100000")    // ~25k токенов
