@@ -1,4 +1,5 @@
 // AI парсер для умного определения структуры через Claude (Anthropic)
+// Поддерживает chunked parsing для больших файлов
 
 import {
   ParsedTrail,
@@ -22,6 +23,11 @@ const API_PARSE_TIMEOUT_MS = parseInt(process.env.AI_PARSE_TIMEOUT_MS || "900000
 // Лимиты контента (примерно 4 символа = 1 токен для русского текста)
 const MAX_CONTENT_CHARS = parseInt(process.env.AI_MAX_CONTENT_CHARS || "100000")    // ~25k токенов
 const CHARS_PER_TOKEN_ESTIMATE = 4  // Примерная оценка для русского текста
+
+// Константы для chunked parsing
+const MAX_CHUNK_SIZE = 2000 // ~2KB - безопасный размер для API
+const MIN_CHUNK_SIZE = 200 // Минимальный размер chunk
+const MAX_CONCURRENT_REQUESTS = 3 // Максимум параллельных запросов
 
 // Функция для логирования (можно отключить в production)
 const DEBUG_AI = process.env.AI_DEBUG === "true"
@@ -177,6 +183,61 @@ const AI_USER_PROMPT = `Преобразуй следующий образова
 ---
 
 Верни ТОЛЬКО JSON согласно формату (без \`\`\`json обёртки).`
+
+// Промпт для парсинга отдельного модуля (для chunked parsing)
+const AI_MODULE_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга части образовательного контента.
+Твоя задача - преобразовать текст в один или несколько модулей курса.
+
+Формат вывода (JSON):
+{
+  "modules": [{
+    "title": "Название модуля",
+    "slug": "nazvanie-modulya",
+    "type": "THEORY" | "PRACTICE" | "PROJECT",
+    "points": 50,
+    "description": "Описание модуля",
+    "content": "Контент в Markdown",
+    "questions": [{
+      "question": "Текст вопроса?",
+      "options": ["Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4"],
+      "correctAnswer": 0
+    }]
+  }]
+}
+
+Правила:
+1. Если есть вопросы с вариантами ответов - тип PRACTICE
+2. Если есть задание на создание чего-то - тип PROJECT
+3. Остальное - THEORY
+4. Slug генерируй из названия (транслитерация, lowercase, дефисы)
+5. points: THEORY=50, PRACTICE=75, PROJECT=100
+6. Сохрани весь контент в формате Markdown
+7. Верни ТОЛЬКО валидный JSON без комментариев`
+
+const AI_MODULE_USER_PROMPT = `Преобразуй следующий фрагмент в модули:
+
+---
+{content}
+---
+
+Это часть {chunkIndex} из {totalChunks}. Верни JSON с модулями.`
+
+// Промпт для определения метаданных курса
+const AI_METADATA_PROMPT = `Проанализируй начало документа и определи метаданные курса:
+
+---
+{content}
+---
+
+Верни ТОЛЬКО JSON:
+{
+  "title": "Название курса",
+  "slug": "nazvanie-kursa",
+  "subtitle": "Краткое описание",
+  "description": "Полное описание курса",
+  "icon": "📚",
+  "color": "#6366f1"
+}`
 
 export interface AIParserResult {
   available: boolean
@@ -472,6 +533,387 @@ export async function parseWithAI(
     return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
   }
 }
+
+// ============================================
+// CHUNKED PARSING - для больших файлов
+// ============================================
+
+interface ContentChunk {
+  index: number
+  content: string
+  isFirst: boolean
+  isLast: boolean
+}
+
+// Разделение контента на логические части
+function splitContentIntoChunks(content: string): ContentChunk[] {
+  const chunks: ContentChunk[] = []
+
+  // Если контент маленький - возвращаем как есть
+  if (content.length <= MAX_CHUNK_SIZE) {
+    return [{
+      index: 0,
+      content,
+      isFirst: true,
+      isLast: true,
+    }]
+  }
+
+  // Паттерны для определения границ секций
+  const sectionPatterns = [
+    /^#{1,3}\s+.+$/gm, // Markdown заголовки
+    /^[А-ЯA-Z][А-Яа-яA-Za-z\s]{5,50}$/gm, // Заголовки на отдельной строке
+    /^\d+\.\s+[А-ЯA-Z].+$/gm, // Нумерованные заголовки
+    /^[-*]\s+\*\*[^*]+\*\*/gm, // Жирные пункты списка
+  ]
+
+  // Находим все потенциальные границы секций
+  const boundaries: number[] = [0]
+
+  for (const pattern of sectionPatterns) {
+    let match
+    while ((match = pattern.exec(content)) !== null) {
+      boundaries.push(match.index)
+    }
+  }
+
+  // Также добавляем границы по двойным переносам строк
+  let pos = 0
+  while ((pos = content.indexOf("\n\n", pos)) !== -1) {
+    boundaries.push(pos)
+    pos += 2
+  }
+
+  // Сортируем и удаляем дубликаты
+  const uniqueBoundaries = [...new Set(boundaries)].sort((a, b) => a - b)
+
+  // Группируем в chunks подходящего размера
+  let currentChunkStart = 0
+  let lastBoundary = 0
+
+  for (const boundary of uniqueBoundaries) {
+    const potentialChunkSize = boundary - currentChunkStart
+
+    // Если chunk достаточно большой, сохраняем его
+    if (potentialChunkSize >= MIN_CHUNK_SIZE && potentialChunkSize <= MAX_CHUNK_SIZE) {
+      lastBoundary = boundary
+    }
+
+    // Если превысили максимальный размер - создаём chunk
+    if (potentialChunkSize > MAX_CHUNK_SIZE && lastBoundary > currentChunkStart) {
+      chunks.push({
+        index: chunks.length,
+        content: content.slice(currentChunkStart, lastBoundary).trim(),
+        isFirst: currentChunkStart === 0,
+        isLast: false,
+      })
+      currentChunkStart = lastBoundary
+      lastBoundary = boundary
+    }
+  }
+
+  // Добавляем последний chunk
+  if (currentChunkStart < content.length) {
+    const remaining = content.slice(currentChunkStart).trim()
+    if (remaining.length > 0) {
+      // Если последняя часть слишком большая - разбиваем принудительно
+      if (remaining.length > MAX_CHUNK_SIZE * 1.5) {
+        const parts = splitLargeChunk(remaining)
+        for (let i = 0; i < parts.length; i++) {
+          chunks.push({
+            index: chunks.length,
+            content: parts[i],
+            isFirst: chunks.length === 0,
+            isLast: i === parts.length - 1,
+          })
+        }
+      } else {
+        chunks.push({
+          index: chunks.length,
+          content: remaining,
+          isFirst: chunks.length === 0,
+          isLast: true,
+        })
+      }
+    }
+  }
+
+  // Обновляем флаги isFirst/isLast
+  if (chunks.length > 0) {
+    chunks[0].isFirst = true
+    chunks[chunks.length - 1].isLast = true
+  }
+
+  return chunks
+}
+
+// Принудительное разделение большого блока
+function splitLargeChunk(content: string): string[] {
+  const parts: string[] = []
+  let start = 0
+
+  while (start < content.length) {
+    let end = Math.min(start + MAX_CHUNK_SIZE, content.length)
+
+    // Пытаемся найти хорошую точку разрыва
+    if (end < content.length) {
+      // Ищем конец абзаца
+      const paragraphEnd = content.lastIndexOf("\n\n", end)
+      if (paragraphEnd > start + MIN_CHUNK_SIZE) {
+        end = paragraphEnd
+      } else {
+        // Ищем конец предложения
+        const sentenceEnd = content.lastIndexOf(". ", end)
+        if (sentenceEnd > start + MIN_CHUNK_SIZE) {
+          end = sentenceEnd + 1
+        }
+      }
+    }
+
+    parts.push(content.slice(start, end).trim())
+    start = end
+  }
+
+  return parts.filter(p => p.length > 0)
+}
+
+// Парсинг одного chunk через AI
+async function parseChunkWithAI(
+  chunk: ContentChunk,
+  totalChunks: number,
+  config: AIParserConfig
+): Promise<{ modules: any[]; error?: string }> {
+  try {
+    const response = await fetch(config.apiEndpoint!, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model || "gpt-5-nano",
+        messages: [
+          { role: "system", content: AI_MODULE_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: AI_MODULE_USER_PROMPT
+              .replace("{content}", chunk.content)
+              .replace("{chunkIndex}", String(chunk.index + 1))
+              .replace("{totalChunks}", String(totalChunks))
+          },
+        ],
+        max_completion_tokens: 8000,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      return { modules: [], error: `API ошибка: ${response.status}` }
+    }
+
+    const data = await response.json()
+    const aiResponse = data.choices?.[0]?.message?.content
+
+    if (!aiResponse) {
+      return { modules: [], error: "AI не вернул ответ" }
+    }
+
+    // Извлечение JSON
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      return { modules: [], error: "Невалидный JSON" }
+    }
+
+    const parsed = JSON.parse(jsonMatch[0])
+    return { modules: parsed.modules || [] }
+  } catch (e) {
+    return {
+      modules: [],
+      error: e instanceof Error ? e.message : "unknown"
+    }
+  }
+}
+
+// Получение метаданных курса из первой части
+async function parseMetadataWithAI(
+  content: string,
+  config: AIParserConfig
+): Promise<{ metadata: Partial<ParsedTrail>; error?: string }> {
+  try {
+    // Берём первые 500 символов для определения метаданных
+    const preview = content.slice(0, 500)
+
+    const response = await fetch(config.apiEndpoint!, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model || "gpt-5-nano",
+        messages: [
+          { role: "user", content: AI_METADATA_PROMPT.replace("{content}", preview) },
+        ],
+        max_completion_tokens: 1000,
+      }),
+    })
+
+    if (!response.ok) {
+      return { metadata: {}, error: "Не удалось получить метаданные" }
+    }
+
+    const data = await response.json()
+    const aiResponse = data.choices?.[0]?.message?.content
+
+    const jsonMatch = aiResponse?.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      return { metadata: {}, error: "Невалидный JSON метаданных" }
+    }
+
+    const parsed = JSON.parse(jsonMatch[0])
+    return {
+      metadata: {
+        title: parsed.title,
+        slug: parsed.slug || generateSlugFromTitle(parsed.title || "course"),
+        subtitle: parsed.subtitle,
+        description: parsed.description,
+        icon: parsed.icon || "📚",
+        color: isValidColor(parsed.color) ? parsed.color : "#6366f1",
+      }
+    }
+  } catch (e) {
+    return { metadata: {}, error: e instanceof Error ? e.message : "unknown" }
+  }
+}
+
+// Основная функция chunked parsing
+export async function parseWithAIChunked(
+  content: string,
+  config: AIParserConfig,
+  onProgress?: (current: number, total: number, status: string) => void
+): Promise<ParseResult> {
+  const warnings: string[] = []
+  const errors: string[] = []
+
+  if (!config.enabled || !config.apiEndpoint || !config.apiKey) {
+    errors.push("AI API не настроен")
+    return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
+  }
+
+  // Разбиваем на chunks
+  const chunks = splitContentIntoChunks(content)
+  const totalChunks = chunks.length
+
+  onProgress?.(0, totalChunks + 1, "Анализ структуры...")
+
+  // Если только 1 chunk - используем обычный парсинг
+  if (totalChunks === 1) {
+    onProgress?.(1, 1, "Обработка...")
+    return parseWithAI(content, config)
+  }
+
+  warnings.push(`Файл разбит на ${totalChunks} частей для обработки`)
+
+  // Параллельно: получаем метаданные и парсим первый chunk
+  onProgress?.(0, totalChunks + 1, "Определение метаданных курса...")
+
+  const [metadataResult, ...chunkResults] = await Promise.all([
+    parseMetadataWithAI(content, config),
+    ...processChunksInBatches(chunks, config, totalChunks, onProgress),
+  ])
+
+  // Собираем все модули
+  const allModules: any[] = []
+  let successfulChunks = 0
+
+  for (let i = 0; i < chunkResults.length; i++) {
+    const result = chunkResults[i] as { modules: any[]; error?: string }
+    if (result.error) {
+      warnings.push(`Часть ${i + 1}: ${result.error}`)
+    } else if (result.modules.length > 0) {
+      allModules.push(...result.modules)
+      successfulChunks++
+    }
+  }
+
+  onProgress?.(totalChunks + 1, totalChunks + 1, "Объединение результатов...")
+
+  if (allModules.length === 0) {
+    errors.push("Не удалось распарсить ни одной части")
+    return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
+  }
+
+  // Формируем trail
+  const trail: ParsedTrail = {
+    title: metadataResult.metadata.title || "Импортированный курс",
+    slug: metadataResult.metadata.slug || generateSlugFromTitle("imported-course"),
+    subtitle: metadataResult.metadata.subtitle || "",
+    description: metadataResult.metadata.description || "",
+    icon: metadataResult.metadata.icon || "📚",
+    color: metadataResult.metadata.color || "#6366f1",
+    modules: [],
+  }
+
+  // Валидируем и добавляем модули
+  for (const mod of allModules) {
+    if (!mod || typeof mod !== "object") continue
+
+    trail.modules.push({
+      title: mod.title || "Без названия",
+      slug: mod.slug || generateSlugFromTitle(mod.title || "module"),
+      type: validateType(mod.type),
+      points: typeof mod.points === "number" ? mod.points : 50,
+      description: mod.description || "",
+      content: mod.content || "",
+      questions: validateQuestions(mod.questions || [], warnings),
+      level: mod.level,
+      duration: mod.duration,
+    })
+  }
+
+  warnings.push(`Успешно обработано ${successfulChunks} из ${totalChunks} частей`)
+
+  return {
+    success: trail.modules.length > 0,
+    trails: [trail],
+    warnings,
+    errors,
+    parseMethod: "ai",
+  }
+}
+
+// Обработка chunks батчами для ограничения параллельных запросов
+async function processChunksInBatches(
+  chunks: ContentChunk[],
+  config: AIParserConfig,
+  totalChunks: number,
+  onProgress?: (current: number, total: number, status: string) => void
+): Promise<Promise<{ modules: any[]; error?: string }>[]> {
+  const results: Promise<{ modules: any[]; error?: string }>[] = []
+  let completed = 0
+
+  // Обрабатываем батчами
+  for (let i = 0; i < chunks.length; i += MAX_CONCURRENT_REQUESTS) {
+    const batch = chunks.slice(i, i + MAX_CONCURRENT_REQUESTS)
+
+    const batchPromises = batch.map(async (chunk) => {
+      const result = await parseChunkWithAI(chunk, totalChunks, config)
+      completed++
+      onProgress?.(completed, totalChunks + 1, `Обработка части ${completed}/${totalChunks}...`)
+      return result
+    })
+
+    // Ждём завершения батча перед следующим
+    const batchResults = await Promise.all(batchPromises)
+    results.push(...batchResults.map(r => Promise.resolve(r)))
+  }
+
+  return results
+}
+
+// ============================================
+// ВАЛИДАЦИЯ
+// ============================================
 
 // Валидация и исправление результатов AI
 function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] {

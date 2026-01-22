@@ -10,7 +10,7 @@ export { parseXml } from "./parsers/xml-parser"
 export { parseHtml } from "./parsers/html-parser"
 export { parseDocx, parseDocxFromText } from "./parsers/docx-parser"
 export { parseDoc, parseDocFromText } from "./parsers/doc-parser"
-export { parseWithAI, checkAIAvailability, getAIConfig } from "./parsers/ai-parser"
+export { parseWithAI, parseWithAIChunked, checkAIAvailability, getAIConfig } from "./parsers/ai-parser"
 
 import { ParseResult, ParsedTrail, FileFormat, AIParserConfig, ConfidenceDetails } from "./types"
 import { detectFileFormat, analyzeStructure } from "./smart-detector"
@@ -21,7 +21,10 @@ import { parseXml } from "./parsers/xml-parser"
 import { parseHtml } from "./parsers/html-parser"
 import { parseDocxFromText } from "./parsers/docx-parser"
 import { parseDocFromText } from "./parsers/doc-parser"
-import { parseWithAI, getAIConfig } from "./parsers/ai-parser"
+import { parseWithAI, parseWithAIChunked, getAIConfig } from "./parsers/ai-parser"
+
+// Порог для использования chunked parsing (2KB)
+const CHUNKED_PARSING_THRESHOLD = 2000
 
 export interface SmartImportOptions {
   useAI?: boolean
@@ -52,7 +55,11 @@ export async function smartImport(
     const aiConfig = options.aiConfig || getAIConfig()
     if (aiConfig.enabled && aiConfig.apiKey) {
       try {
-        result = await parseWithAI(content, aiConfig)
+        // Для больших файлов используем chunked parsing
+        const useChunked = content.length > CHUNKED_PARSING_THRESHOLD
+        result = useChunked
+          ? await parseWithAIChunked(content, aiConfig)
+          : await parseWithAI(content, aiConfig)
         if (result.success) {
           return {
             ...result,
@@ -82,7 +89,11 @@ export async function smartImport(
     const aiConfig = options.aiConfig || getAIConfig()
     if (aiConfig.enabled && aiConfig.apiKey) {
       try {
-        result = await parseWithAI(content, aiConfig)
+        // Для больших файлов используем chunked parsing
+        const useChunked = content.length > CHUNKED_PARSING_THRESHOLD
+        result = useChunked
+          ? await parseWithAIChunked(content, aiConfig)
+          : await parseWithAI(content, aiConfig)
         if (result.success) {
           return {
             ...result,
@@ -131,7 +142,11 @@ export async function smartImport(
     const aiConfig = options.aiConfig || getAIConfig()
     if (aiConfig.enabled && aiConfig.apiKey) {
       try {
-        const aiResult = await parseWithAI(content, aiConfig)
+        // Для больших файлов используем chunked parsing
+        const useChunked = content.length > CHUNKED_PARSING_THRESHOLD
+        const aiResult = useChunked
+          ? await parseWithAIChunked(content, aiConfig)
+          : await parseWithAI(content, aiConfig)
         if (aiResult.success) {
           return {
             ...aiResult,
@@ -170,7 +185,11 @@ export async function hybridImport(
     const config = aiConfig || getAIConfig()
     if (config.enabled && config.apiKey) {
       try {
-        const aiResult = await parseWithAI(content, config)
+        // Для больших файлов используем chunked parsing
+        const useChunked = content.length > CHUNKED_PARSING_THRESHOLD
+        const aiResult = useChunked
+          ? await parseWithAIChunked(content, config)
+          : await parseWithAI(content, config)
         if (aiResult.success) {
           return {
             ...aiResult,
@@ -235,7 +254,11 @@ export async function hybridImport(
   const config = aiConfig || getAIConfig()
   if (config.enabled && config.apiKey) {
     try {
-      const aiResult = await parseWithAI(content, config)
+      // Для больших файлов используем chunked parsing
+      const useChunked = content.length > CHUNKED_PARSING_THRESHOLD
+      const aiResult = useChunked
+        ? await parseWithAIChunked(content, config)
+        : await parseWithAI(content, config)
 
       if (aiResult.success) {
         // Если AI справился лучше - используем его результат
