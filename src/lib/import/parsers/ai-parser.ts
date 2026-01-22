@@ -15,8 +15,9 @@ import {
 // Claude API version
 const ANTHROPIC_VERSION = "2023-06-01"
 
-// Таймаут для API запросов (30 секунд)
-const API_TIMEOUT_MS = 30000
+// Таймауты для API запросов
+const API_CHECK_TIMEOUT_MS = 15000   // 15 сек для проверки доступности
+const API_PARSE_TIMEOUT_MS = 120000  // 2 мин для парсинга больших текстов
 
 // Детальный промпт для AI парсинга с поддержкой всех типов вопросов
 const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга и улучшения образовательного контента.
@@ -184,7 +185,7 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
   try {
     // Создаём AbortController для таймаута
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+    const timeoutId = setTimeout(() => controller.abort(), API_CHECK_TIMEOUT_MS)
 
     // Пробный запрос для проверки токена
     const response = await fetch(config.apiEndpoint, {
@@ -221,7 +222,7 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
     if (e instanceof Error && e.name === "AbortError") {
       return {
         available: false,
-        error: `Таймаут: AI API не ответил за ${API_TIMEOUT_MS / 1000} секунд`,
+        error: `Таймаут: AI API не ответил за ${API_CHECK_TIMEOUT_MS / 1000} секунд`,
       }
     }
     return {
@@ -247,7 +248,7 @@ export async function parseWithAI(
   try {
     // Создаём AbortController для таймаута (60 секунд для парсинга, т.к. AI может работать дольше)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS * 2)
+    const timeoutId = setTimeout(() => controller.abort(), API_PARSE_TIMEOUT_MS)
 
     const response = await fetch(config.apiEndpoint, {
       method: "POST",
@@ -314,7 +315,7 @@ export async function parseWithAI(
     }
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError") {
-      errors.push(`Таймаут: AI парсер не ответил за ${(API_TIMEOUT_MS * 2) / 1000} секунд. Проверьте подключение к интернету.`)
+      errors.push(`Таймаут: AI парсер не ответил за ${API_PARSE_TIMEOUT_MS / 1000} секунд. Проверьте подключение к интернету.`)
     } else {
       errors.push(`Ошибка AI парсинга: ${e instanceof Error ? e.message : "unknown"}`)
     }
