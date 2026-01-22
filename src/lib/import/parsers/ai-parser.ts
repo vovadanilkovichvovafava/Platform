@@ -286,10 +286,9 @@ export async function parseWithAI(
     }, API_PARSE_TIMEOUT_MS)
 
     // Используем максимальный лимит токенов для полноценного обогащения контента
-    // Claude 3.5/4 Sonnet поддерживает extended output до 64k токенов
-    // По умолчанию ставим 32000 - этого должно хватить для большинства курсов
-    // Можно увеличить через AI_MAX_OUTPUT_TOKENS если нужно больше
-    const maxTokens = parseInt(process.env.AI_MAX_OUTPUT_TOKENS || "32000")
+    // Claude 3.5/4 Sonnet поддерживает extended output до 128k токенов
+    // Ставим максимум по умолчанию - API сам ограничит если нужно
+    const maxTokens = parseInt(process.env.AI_MAX_OUTPUT_TOKENS || "128000")
     console.log(`[AI-Parser] max_tokens: ${maxTokens}, контент: ${processedContent.length} символов`)
 
     const requestBody = {
