@@ -41,18 +41,20 @@ export async function GET() {
     })
 
     // Calculate analytics for each module
-    const analytics = modules.map((module) => {
+    type ModuleType = typeof modules[number]
+    type SubmissionType = ModuleType["submissions"][number]
+    const analytics = modules.map((module: ModuleType) => {
       const completedCount = module.progress.length
       const totalSubmissions = module.submissions.length
-      const reviewedSubmissions = module.submissions.filter((s) => s.review)
-      const approvedSubmissions = module.submissions.filter((s) => s.status === "APPROVED")
+      const reviewedSubmissions = module.submissions.filter((s: SubmissionType) => s.review)
+      const approvedSubmissions = module.submissions.filter((s: SubmissionType) => s.status === "APPROVED")
 
       // Calculate average score
       const scores = reviewedSubmissions
-        .map((s) => s.review?.score)
-        .filter((s): s is number => s !== null && s !== undefined)
+        .map((s: SubmissionType) => s.review?.score)
+        .filter((s: number | undefined | null): s is number => s !== null && s !== undefined)
       const avgScore = scores.length > 0
-        ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+        ? Math.round((scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 10) / 10
         : null
 
       // Calculate completion rate (students who completed vs students who started)
@@ -83,16 +85,17 @@ export async function GET() {
     })
 
     // Summary statistics
+    type AnalyticsItemType = typeof analytics[number]
     const summary = {
       totalModules: modules.length,
-      totalCompletions: analytics.reduce((a, m) => a + m.completedCount, 0),
+      totalCompletions: analytics.reduce((a: number, m: AnalyticsItemType) => a + m.completedCount, 0),
       avgCompletionRate: Math.round(
-        analytics.reduce((a, m) => a + m.completionRate, 0) / (analytics.length || 1)
+        analytics.reduce((a: number, m: AnalyticsItemType) => a + m.completionRate, 0) / (analytics.length || 1)
       ),
       avgScore: (() => {
-        const scores = analytics.filter((m) => m.avgScore !== null).map((m) => m.avgScore!)
+        const scores = analytics.filter((m: AnalyticsItemType) => m.avgScore !== null).map((m: AnalyticsItemType) => m.avgScore!)
         return scores.length > 0
-          ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+          ? Math.round((scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 10) / 10
           : null
       })(),
     }

@@ -20,7 +20,7 @@ export async function GET() {
 
     // Map to full achievement data
     const earned = userAchievements
-      .map((ua) => {
+      .map((ua: { achievementId: string; earnedAt: Date }) => {
         const def = getAchievement(ua.achievementId)
         if (!def) return null
         return {
@@ -32,7 +32,7 @@ export async function GET() {
 
     // Get all possible achievements with locked status
     const allAchievements = Object.values(ACHIEVEMENTS).map((def) => {
-      const userAch = userAchievements.find((ua) => ua.achievementId === def.id)
+      const userAch = userAchievements.find((ua: { achievementId: string }) => ua.achievementId === def.id)
       return {
         ...def,
         earned: !!userAch,
@@ -111,7 +111,7 @@ export async function POST() {
       where: { userId },
       select: { achievementId: true },
     })
-    const existingIds = new Set(existing.map((e) => e.achievementId))
+    const existingIds = new Set(existing.map((e: { achievementId: string }) => e.achievementId))
 
     // Determine which achievements to award
     const toAward: string[] = []

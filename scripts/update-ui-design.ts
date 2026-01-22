@@ -304,7 +304,7 @@ async function main() {
   console.log("\n📦 Создаю проектные задания...")
 
   // Get max order from existing modules
-  const maxOrder = modules.length > 0 ? Math.max(...modules.map(m => m.order)) : 6
+  const maxOrder = modules.length > 0 ? Math.max(...modules.map((m: { order: number }) => m.order)) : 6
 
   // Project 1: Junior (Easy)
   const existingEasyProject = await prisma.module.findFirst({
