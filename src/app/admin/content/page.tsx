@@ -166,6 +166,13 @@ export default function AdminContentPage() {
     available: false,
     checking: false,
   })
+  const [aiTestResult, setAiTestResult] = useState<{
+    testing: boolean
+    logs?: string
+    success?: boolean
+    error?: string
+    duration?: number
+  }>({ testing: false })
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [useNeuralParser, setUseNeuralParser] = useState(true) // По умолчанию используем нейронку
 
@@ -429,6 +436,29 @@ export default function AdminContentPage() {
       checkAIStatus()
     }
   }, [showImportModal, checkAIStatus])
+
+  // Детальный тест AI API
+  const runAITest = useCallback(async () => {
+    setAiTestResult({ testing: true })
+    try {
+      const res = await fetch("/api/admin/import?action=test-ai")
+      const data = await res.json()
+      setAiTestResult({
+        testing: false,
+        logs: data.logs,
+        success: data.success,
+        error: data.error,
+        duration: data.duration,
+      })
+    } catch (e) {
+      setAiTestResult({
+        testing: false,
+        logs: `Ошибка запроса: ${e instanceof Error ? e.message : "неизвестная ошибка"}`,
+        success: false,
+        error: "Ошибка сети",
+      })
+    }
+  }, [])
 
   const deleteTrail = async (trailId: string, title: string) => {
     const confirmed = await confirm({
@@ -1238,33 +1268,78 @@ export default function AdminContentPage() {
                       <div className="pt-2 border-t border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500">Статус AI:</span>
-                          {aiStatus.checking ? (
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
-                              <RefreshCw className="h-3 w-3 animate-spin" />
-                              Проверка...
-                            </span>
-                          ) : aiStatus.available ? (
-                            <span className="text-xs text-green-600 flex items-center gap-1">
-                              <CheckCircle className="h-3 w-3" />
-                              Доступен
-                            </span>
-                          ) : (
+                          <div className="flex items-center gap-2">
+                            {aiStatus.checking ? (
+                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                Проверка...
+                              </span>
+                            ) : aiStatus.available ? (
+                              <span className="text-xs text-green-600 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" />
+                                Доступен
+                              </span>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={checkAIStatus}
+                                className="text-purple-600 hover:text-purple-700 h-6 px-2 text-xs"
+                              >
+                                <Zap className="h-3 w-3 mr-1" />
+                                Проверить
+                              </Button>
+                            )}
+                            {/* Кнопка детального теста */}
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={checkAIStatus}
-                              className="text-purple-600 hover:text-purple-700 h-6 px-2 text-xs"
+                              onClick={runAITest}
+                              disabled={aiTestResult.testing}
+                              className="h-6 px-2 text-xs"
                             >
-                              <Zap className="h-3 w-3 mr-1" />
-                              Проверить
+                              {aiTestResult.testing ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Zap className="h-3 w-3 mr-1" />
+                                  Тест API
+                                </>
+                              )}
                             </Button>
-                          )}
+                          </div>
                         </div>
                         {/* Отображение ошибки AI */}
                         {aiStatus.error && !aiStatus.checking && (
                           <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-start gap-2">
                             <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                             <span>{aiStatus.error}</span>
+                          </div>
+                        )}
+                        {/* Результат детального теста AI */}
+                        {aiTestResult.logs && (
+                          <div className={`mt-2 p-3 rounded border ${
+                            aiTestResult.success
+                              ? "bg-green-50 border-green-200"
+                              : "bg-red-50 border-red-200"
+                          }`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={`text-xs font-medium ${
+                                aiTestResult.success ? "text-green-700" : "text-red-700"
+                              }`}>
+                                {aiTestResult.success ? "Тест пройден" : "Тест не пройден"}
+                                {aiTestResult.duration && ` (${aiTestResult.duration}ms)`}
+                              </span>
+                              <button
+                                onClick={() => setAiTestResult({ testing: false })}
+                                className="text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                            <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono bg-white/50 p-2 rounded max-h-48 overflow-y-auto">
+                              {aiTestResult.logs}
+                            </pre>
                           </div>
                         )}
                       </div>
