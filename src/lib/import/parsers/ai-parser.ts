@@ -1,10 +1,13 @@
-// AI парсер для умного определения структуры через нейросеть
+// AI парсер для умного определения структуры через Claude (Anthropic)
 
 import {
   ParsedTrail,
   ParseResult,
   AIParserConfig,
 } from "../types"
+
+// Claude API version
+const ANTHROPIC_VERSION = "2023-06-01"
 
 // Промпт для AI парсинга
 const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга образовательного контента.
@@ -61,7 +64,7 @@ export interface AIParserResult {
   error?: string
 }
 
-// Проверка доступности AI API
+// Проверка доступности Claude AI API
 export async function checkAIAvailability(config: AIParserConfig): Promise<{
   available: boolean
   error?: string
@@ -77,12 +80,13 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
+        "x-api-key": config.apiKey,
+        "anthropic-version": ANTHROPIC_VERSION,
       },
       body: JSON.stringify({
-        model: config.model || "gpt-5-nano",
+        model: config.model || "claude-sonnet-4-5-20241022",
+        max_tokens: 10,
         messages: [{ role: "user", content: "test" }],
-        max_completion_tokens: 5,
       }),
     })
 
@@ -107,7 +111,7 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
   }
 }
 
-// Парсинг через AI
+// Парсинг через Claude AI
 export async function parseWithAI(
   content: string,
   config: AIParserConfig
@@ -125,16 +129,16 @@ export async function parseWithAI(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
+        "x-api-key": config.apiKey,
+        "anthropic-version": ANTHROPIC_VERSION,
       },
       body: JSON.stringify({
-        model: config.model || "gpt-5-nano",
+        model: config.model || "claude-sonnet-4-5-20241022",
+        max_tokens: 16000, // Увеличено для больших курсов
+        system: AI_SYSTEM_PROMPT,
         messages: [
-          { role: "system", content: AI_SYSTEM_PROMPT },
           { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
         ],
-        // temperature не поддерживается reasoning моделями (gpt-5-nano)
-        max_completion_tokens: 16000, // Увеличено для больших курсов
       }),
     })
 
@@ -145,7 +149,8 @@ export async function parseWithAI(
     }
 
     const data = await response.json()
-    const aiResponse = data.choices?.[0]?.message?.content
+    // Claude API response format: content[0].text
+    const aiResponse = data.content?.[0]?.text
 
     if (!aiResponse) {
       errors.push("AI не вернул ответ")
@@ -297,12 +302,12 @@ function isValidColor(color: any): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(color)
 }
 
-// Получение конфигурации AI из переменных окружения
+// Получение конфигурации Claude AI из переменных окружения
 export function getAIConfig(): AIParserConfig {
   return {
     enabled: process.env.AI_PARSER_ENABLED === "true",
-    apiEndpoint: process.env.AI_API_ENDPOINT || process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions",
-    apiKey: process.env.AI_API_KEY || process.env.OPENAI_API_KEY,
-    model: process.env.AI_MODEL || "gpt-5-nano",
+    apiEndpoint: process.env.AI_API_ENDPOINT || "https://api.anthropic.com/v1/messages",
+    apiKey: process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY,
+    model: process.env.AI_MODEL || "claude-sonnet-4-5-20241022",
   }
 }
