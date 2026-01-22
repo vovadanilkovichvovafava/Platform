@@ -162,7 +162,7 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 4. **Иконка**: подбери релевантный emoji по теме
 5. **Цвет**: подбери hex-цвет по тематике (#6366f1 - tech, #ec4899 - design, #10b981 - data)
 6. **Контент**: сохраняй и обогащай в Markdown (заголовки ##, списки, \`код\`, **жирный**)
-7. **Вопросы**: создавай разнообразные типы вопросов (не только SINGLE_CHOICE)
+7. **Вопросы**: создавай разнообразные типы вопросов (SINGLE_CHOICE, MATCHING, ORDERING, CASE_ANALYSIS)
 8. **Улучшение**: если контент бедный - дополни примерами, пояснениями, деталями
 9. **requiresSubmission**: true для PROJECT, true для PRACTICE с практическими заданиями
 10. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
@@ -285,9 +285,15 @@ export async function parseWithAI(
       controller.abort()
     }, API_PARSE_TIMEOUT_MS)
 
+    // Используем максимальный лимит токенов для полноценного обогащения контента
+    // Claude 3.5/4 Sonnet поддерживает extended output до 128k токенов
+    // Ставим максимум по умолчанию - API сам ограничит если нужно
+    const maxTokens = parseInt(process.env.AI_MAX_OUTPUT_TOKENS || "128000")
+    console.log(`[AI-Parser] max_tokens: ${maxTokens}, контент: ${processedContent.length} символов`)
+
     const requestBody = {
       model: config.model || "claude-sonnet-4-5-20241022",
-      max_tokens: 16000,
+      max_tokens: maxTokens,
       system: AI_SYSTEM_PROMPT,
       messages: [
         { role: "user", content: AI_USER_PROMPT.replace("{content}", processedContent) },
@@ -336,9 +342,10 @@ export async function parseWithAI(
     console.log(`[AI-Parser] Usage: input=${data.usage?.input_tokens}, output=${data.usage?.output_tokens}`)
 
     // Проверяем, был ли ответ обрезан из-за лимита токенов
-    if (data.stop_reason === "max_tokens") {
+    const wasTruncated = data.stop_reason === "max_tokens"
+    if (wasTruncated) {
       console.log(`[AI-Parser] ВНИМАНИЕ: Ответ был обрезан из-за лимита токенов!`)
-      warnings.push("Ответ AI был обрезан из-за лимита токенов. Возможно, JSON неполный.")
+      warnings.push("Ответ AI был обрезан из-за лимита токенов. Пытаемся восстановить данные.")
     }
 
     // Извлечение JSON из ответа (убираем возможные ```json обёртки)
@@ -349,39 +356,72 @@ export async function parseWithAI(
       jsonStr = jsonStr.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "")
     }
 
-    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
+    // Находим начало JSON
+    const jsonStartIndex = jsonStr.indexOf("{")
+    if (jsonStartIndex === -1) {
       errors.push("AI вернул невалидный JSON")
       warnings.push(`AI ответ: ${aiResponse.substring(0, 300)}...`)
       return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
     }
 
+    // Берём всё от первой { до конца (без поиска закрывающей - она может быть обрезана)
+    let jsonCandidate = jsonStr.substring(jsonStartIndex)
+
     // Пытаемся распарсить JSON, при ошибке - пробуем починить
     let parsed: any
     try {
-      parsed = JSON.parse(jsonMatch[0])
+      parsed = JSON.parse(jsonCandidate)
     } catch (parseError) {
-      console.log(`[AI-Parser] JSON невалиден, пытаемся починить...`)
-      const repaired = repairJSON(jsonMatch[0])
+      console.log(`[AI-Parser] JSON невалиден (${parseError instanceof Error ? parseError.message : parseError}), пытаемся починить...`)
+
+      // Если ответ был обрезан - используем агрессивный ремонт
+      if (wasTruncated) {
+        console.log(`[AI-Parser] Ответ обрезан, применяем агрессивное восстановление...`)
+      }
+
+      const repaired = repairJSON(jsonCandidate)
       if (repaired) {
         try {
           parsed = JSON.parse(repaired)
           warnings.push("JSON от AI был повреждён и автоматически восстановлен")
           console.log(`[AI-Parser] JSON успешно восстановлен`)
-        } catch {
+        } catch (repairError) {
           // Если ремонт не помог - пробуем извлечь частичные данные
-          console.log(`[AI-Parser] Ремонт JSON не помог, пытаемся извлечь частичные данные...`)
-          const partialData = extractPartialJSON(jsonMatch[0])
+          console.log(`[AI-Parser] Ремонт JSON не помог (${repairError instanceof Error ? repairError.message : repairError}), пытаемся извлечь частичные данные...`)
+          const partialData = extractPartialJSON(jsonCandidate)
           if (partialData) {
             parsed = partialData
             warnings.push("JSON от AI был сильно повреждён, извлечены частичные данные")
             console.log(`[AI-Parser] Извлечены частичные данные`)
           } else {
-            throw parseError
+            // Последняя попытка - ищем завершённые trail'ы
+            console.log(`[AI-Parser] Пробуем найти завершённые trail'ы...`)
+            const recoveredTrails = recoverCompletedTrails(jsonCandidate)
+            if (recoveredTrails.length > 0) {
+              parsed = { trails: recoveredTrails }
+              warnings.push(`Восстановлено ${recoveredTrails.length} trail(ов) из обрезанного ответа`)
+              console.log(`[AI-Parser] Восстановлено ${recoveredTrails.length} trail(ов)`)
+            } else {
+              throw parseError
+            }
           }
         }
       } else {
-        throw parseError
+        // repairJSON вернул null - пробуем extractPartialJSON напрямую
+        console.log(`[AI-Parser] repairJSON вернул null, пробуем extractPartialJSON...`)
+        const partialData = extractPartialJSON(jsonCandidate)
+        if (partialData) {
+          parsed = partialData
+          warnings.push("JSON от AI был сильно повреждён, извлечены частичные данные")
+        } else {
+          const recoveredTrails = recoverCompletedTrails(jsonCandidate)
+          if (recoveredTrails.length > 0) {
+            parsed = { trails: recoveredTrails }
+            warnings.push(`Восстановлено ${recoveredTrails.length} trail(ов) из обрезанного ответа`)
+          } else {
+            throw parseError
+          }
+        }
       }
     }
     const trails = parsed.trails || [parsed]
@@ -693,37 +733,74 @@ function isValidColor(color: any): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(color)
 }
 
-// Функция для ремонта битого JSON
+// Функция для ремонта битого JSON (улучшенная версия)
 function repairJSON(jsonStr: string): string | null {
   try {
     let repaired = jsonStr
+    console.log(`[AI-Parser] repairJSON: входная длина ${repaired.length}`)
+
+    // 0. Если JSON обрезан посередине строки - найдём точку обрезки
+    // Ищем последнюю валидную позицию (закрытый объект/массив)
+    const lastValidEnd = findLastValidPosition(repaired)
+    if (lastValidEnd > 0 && lastValidEnd < repaired.length - 10) {
+      console.log(`[AI-Parser] Обнаружена обрезка на позиции ${lastValidEnd}, обрезаем хвост`)
+      repaired = repaired.substring(0, lastValidEnd)
+    }
 
     // 1. Удаляем trailing commas перед закрывающими скобками
     repaired = repaired.replace(/,(\s*[\]}])/g, "$1")
 
-    // 2. Закрываем незакрытые строки (ищем незавершённые кавычки)
-    const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length
-    if (quoteCount % 2 !== 0) {
-      // Находим последнюю открытую строку и закрываем её
-      const lastQuoteIndex = repaired.lastIndexOf('"')
-      const afterLastQuote = repaired.substring(lastQuoteIndex + 1)
+    // 2. Обрабатываем незакрытые строки более агрессивно
+    // Ищем последнюю незавершённую строку и обрезаем её
+    let inString = false
+    let lastStringStart = -1
+    let prevChar = ""
 
-      // Если после последней кавычки нет закрывающей - добавляем
-      if (!afterLastQuote.includes('"')) {
-        // Ищем конец значения (до запятой, скобки или конца)
-        const endMatch = afterLastQuote.match(/^[^,\]\}]*/)
-        if (endMatch) {
-          const insertPos = lastQuoteIndex + 1 + endMatch[0].length
-          repaired = repaired.substring(0, insertPos) + '"' + repaired.substring(insertPos)
+    for (let i = 0; i < repaired.length; i++) {
+      const char = repaired[i]
+      if (char === '"' && prevChar !== "\\") {
+        if (!inString) {
+          lastStringStart = i
+          inString = true
+        } else {
+          inString = false
+          lastStringStart = -1
         }
+      }
+      prevChar = char
+    }
+
+    // Если строка не закрыта - обрезаем её и закрываем
+    if (inString && lastStringStart > 0) {
+      console.log(`[AI-Parser] Незакрытая строка начинается на позиции ${lastStringStart}`)
+      // Ищем позицию перед этой строкой (до ключа или предыдущего значения)
+      const beforeString = repaired.substring(0, lastStringStart)
+      // Находим последнюю запятую или открывающую скобку
+      const lastSafePos = Math.max(
+        beforeString.lastIndexOf(","),
+        beforeString.lastIndexOf("["),
+        beforeString.lastIndexOf("{")
+      )
+      if (lastSafePos > 0) {
+        // Если это запятая - обрезаем до неё
+        if (beforeString[lastSafePos] === ",") {
+          repaired = beforeString.substring(0, lastSafePos)
+        } else {
+          // Если это скобка - оставляем её
+          repaired = beforeString.substring(0, lastSafePos + 1)
+        }
+        console.log(`[AI-Parser] Обрезано до позиции ${lastSafePos}`)
+      } else {
+        // Fallback: просто закрываем строку
+        repaired += '"'
       }
     }
 
     // 3. Балансируем скобки
     let openBraces = 0
     let openBrackets = 0
-    let inString = false
-    let prevChar = ""
+    inString = false
+    prevChar = ""
 
     for (const char of repaired) {
       if (char === '"' && prevChar !== "\\") {
@@ -737,12 +814,36 @@ function repairJSON(jsonStr: string): string | null {
       prevChar = char
     }
 
-    // Закрываем незакрытые скобки
+    // Если всё ещё в строке - закрываем
     if (inString) {
       repaired += '"'
     }
 
-    // Добавляем недостающие закрывающие скобки
+    // 4. Очищаем незавершённые элементы в конце
+    // Паттерн: удаляем всё после последней закрытой структуры
+    repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"}\]]*$/g, "")
+    repaired = repaired.replace(/,\s*$/g, "")
+    repaired = repaired.replace(/,(\s*[\]}])/g, "$1")
+
+    // 5. Добавляем недостающие закрывающие скобки
+    // Пересчитываем после очистки
+    openBraces = 0
+    openBrackets = 0
+    inString = false
+    prevChar = ""
+
+    for (const char of repaired) {
+      if (char === '"' && prevChar !== "\\") {
+        inString = !inString
+      } else if (!inString) {
+        if (char === "{") openBraces++
+        else if (char === "}") openBraces--
+        else if (char === "[") openBrackets++
+        else if (char === "]") openBrackets--
+      }
+      prevChar = char
+    }
+
     while (openBrackets > 0) {
       repaired += "]"
       openBrackets--
@@ -752,17 +853,190 @@ function repairJSON(jsonStr: string): string | null {
       openBraces--
     }
 
-    // 4. Убираем незавершённые элементы в конце массивов/объектов
-    // Например: {"key": "value", "incomplete  ->  {"key": "value"}
-    repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"}\]]*$/g, "")
-    repaired = repaired.replace(/,\s*$/g, "")
-
-    // 5. Финальная очистка trailing commas
-    repaired = repaired.replace(/,(\s*[\]}])/g, "$1")
+    console.log(`[AI-Parser] repairJSON: итоговая длина ${repaired.length}`)
 
     // Проверяем что получилось
     JSON.parse(repaired)
+    console.log(`[AI-Parser] repairJSON: JSON валиден!`)
     return repaired
+  } catch (e) {
+    console.log(`[AI-Parser] repairJSON failed:`, e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+// Находит последнюю позицию, где JSON ещё валиден (закрытый объект в массиве trails)
+function findLastValidPosition(jsonStr: string): number {
+  // Ищем последний полностью закрытый модуль или trail
+  // Паттерн: }] или }]} в контексте структуры
+
+  let depth = 0
+  let inString = false
+  let prevChar = ""
+  let lastValidModuleEnd = -1
+  let lastValidTrailEnd = -1
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const char = jsonStr[i]
+
+    if (char === '"' && prevChar !== "\\") {
+      inString = !inString
+    }
+
+    if (!inString) {
+      if (char === "{") depth++
+      else if (char === "}") {
+        depth--
+        // Проверяем, не является ли это концом модуля (} внутри массива modules)
+        const next = jsonStr.substring(i, i + 3)
+        if (next === "},") {
+          lastValidModuleEnd = i + 1
+        }
+        // Или концом trail
+        if (depth === 1 && next.startsWith("}")) {
+          lastValidTrailEnd = i + 1
+        }
+      }
+    }
+    prevChar = char
+  }
+
+  // Возвращаем последнюю безопасную позицию
+  if (lastValidModuleEnd > lastValidTrailEnd) {
+    return lastValidModuleEnd
+  }
+  return lastValidTrailEnd
+}
+
+// Восстановление завершённых trail'ов из обрезанного JSON
+function recoverCompletedTrails(jsonStr: string): any[] {
+  const trails: any[] = []
+
+  try {
+    // Ищем начало массива trails
+    const trailsMatch = jsonStr.match(/"trails"\s*:\s*\[/)
+    if (!trailsMatch || trailsMatch.index === undefined) return trails
+
+    const startPos = trailsMatch.index + trailsMatch[0].length
+
+    // Ищем завершённые объекты trail (каждый заканчивается на }] или }, внутри массива)
+    let depth = 0
+    let inString = false
+    let prevChar = ""
+    let trailStart = -1
+    let braceDepth = 0
+
+    for (let i = startPos; i < jsonStr.length; i++) {
+      const char = jsonStr[i]
+
+      if (char === '"' && prevChar !== "\\") {
+        inString = !inString
+      }
+
+      if (!inString) {
+        if (char === "{") {
+          if (depth === 0) {
+            trailStart = i
+          }
+          depth++
+          braceDepth++
+        } else if (char === "}") {
+          depth--
+          braceDepth--
+
+          if (depth === 0 && trailStart !== -1) {
+            // Завершён один trail
+            const trailJson = jsonStr.substring(trailStart, i + 1)
+            try {
+              const trail = JSON.parse(trailJson)
+              if (trail.title || trail.modules) {
+                trails.push(trail)
+                console.log(`[AI-Parser] Восстановлен trail: "${trail.title || 'без названия'}"`)
+              }
+            } catch {
+              // Этот trail повреждён - пробуем извлечь модули
+              const partialTrail = extractPartialTrail(trailJson)
+              if (partialTrail) {
+                trails.push(partialTrail)
+                console.log(`[AI-Parser] Частично восстановлен trail`)
+              }
+            }
+            trailStart = -1
+          }
+        } else if (char === "]" && depth === 0) {
+          // Конец массива trails
+          break
+        }
+      }
+      prevChar = char
+    }
+  } catch (e) {
+    console.log(`[AI-Parser] recoverCompletedTrails error:`, e)
+  }
+
+  return trails
+}
+
+// Извлечение частичного trail с завершёнными модулями
+function extractPartialTrail(trailJson: string): any | null {
+  try {
+    // Ищем базовые поля
+    const titleMatch = trailJson.match(/"title"\s*:\s*"([^"]*)"/)
+    const slugMatch = trailJson.match(/"slug"\s*:\s*"([^"]*)"/)
+
+    if (!titleMatch) return null
+
+    const trail: any = {
+      title: titleMatch[1],
+      slug: slugMatch ? slugMatch[1] : generateSlugFromTitle(titleMatch[1]),
+      modules: [],
+    }
+
+    // Ищем завершённые модули
+    const modulesMatch = trailJson.match(/"modules"\s*:\s*\[/)
+    if (modulesMatch && modulesMatch.index !== undefined) {
+      const modulesStart = modulesMatch.index + modulesMatch[0].length
+      const modulesContent = trailJson.substring(modulesStart)
+
+      let depth = 0
+      let inString = false
+      let prevChar = ""
+      let moduleStart = -1
+
+      for (let i = 0; i < modulesContent.length; i++) {
+        const char = modulesContent[i]
+
+        if (char === '"' && prevChar !== "\\") {
+          inString = !inString
+        }
+
+        if (!inString) {
+          if (char === "{") {
+            if (depth === 0) moduleStart = i
+            depth++
+          } else if (char === "}") {
+            depth--
+            if (depth === 0 && moduleStart !== -1) {
+              const moduleJson = modulesContent.substring(moduleStart, i + 1)
+              try {
+                const mod = JSON.parse(moduleJson)
+                if (mod.title) {
+                  trail.modules.push(mod)
+                }
+              } catch {
+                // Модуль повреждён, пропускаем
+              }
+              moduleStart = -1
+            }
+          } else if (char === "]" && depth === 0) {
+            break
+          }
+        }
+        prevChar = char
+      }
+    }
+
+    return trail.modules.length > 0 ? trail : null
   } catch {
     return null
   }
