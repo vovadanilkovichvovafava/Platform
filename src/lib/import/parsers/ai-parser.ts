@@ -332,6 +332,14 @@ export async function parseWithAI(
     }
 
     console.log(`[AI-Parser] Получен ответ: ${aiResponse.length} символов`)
+    console.log(`[AI-Parser] Stop reason: ${data.stop_reason}`)
+    console.log(`[AI-Parser] Usage: input=${data.usage?.input_tokens}, output=${data.usage?.output_tokens}`)
+
+    // Проверяем, был ли ответ обрезан из-за лимита токенов
+    if (data.stop_reason === "max_tokens") {
+      console.log(`[AI-Parser] ВНИМАНИЕ: Ответ был обрезан из-за лимита токенов!`)
+      warnings.push("Ответ AI был обрезан из-за лимита токенов. Возможно, JSON неполный.")
+    }
 
     // Извлечение JSON из ответа (убираем возможные ```json обёртки)
     let jsonStr = aiResponse.trim()
@@ -348,7 +356,34 @@ export async function parseWithAI(
       return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
     }
 
-    const parsed = JSON.parse(jsonMatch[0])
+    // Пытаемся распарсить JSON, при ошибке - пробуем починить
+    let parsed: any
+    try {
+      parsed = JSON.parse(jsonMatch[0])
+    } catch (parseError) {
+      console.log(`[AI-Parser] JSON невалиден, пытаемся починить...`)
+      const repaired = repairJSON(jsonMatch[0])
+      if (repaired) {
+        try {
+          parsed = JSON.parse(repaired)
+          warnings.push("JSON от AI был повреждён и автоматически восстановлен")
+          console.log(`[AI-Parser] JSON успешно восстановлен`)
+        } catch {
+          // Если ремонт не помог - пробуем извлечь частичные данные
+          console.log(`[AI-Parser] Ремонт JSON не помог, пытаемся извлечь частичные данные...`)
+          const partialData = extractPartialJSON(jsonMatch[0])
+          if (partialData) {
+            parsed = partialData
+            warnings.push("JSON от AI был сильно повреждён, извлечены частичные данные")
+            console.log(`[AI-Parser] Извлечены частичные данные`)
+          } else {
+            throw parseError
+          }
+        }
+      } else {
+        throw parseError
+      }
+    }
     const trails = parsed.trails || [parsed]
 
     // Валидация результата
@@ -656,6 +691,143 @@ function generateSlugFromTitle(title: string): string {
 function isValidColor(color: any): boolean {
   if (typeof color !== "string") return false
   return /^#[0-9A-Fa-f]{6}$/.test(color)
+}
+
+// Функция для ремонта битого JSON
+function repairJSON(jsonStr: string): string | null {
+  try {
+    let repaired = jsonStr
+
+    // 1. Удаляем trailing commas перед закрывающими скобками
+    repaired = repaired.replace(/,(\s*[\]}])/g, "$1")
+
+    // 2. Закрываем незакрытые строки (ищем незавершённые кавычки)
+    const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length
+    if (quoteCount % 2 !== 0) {
+      // Находим последнюю открытую строку и закрываем её
+      const lastQuoteIndex = repaired.lastIndexOf('"')
+      const afterLastQuote = repaired.substring(lastQuoteIndex + 1)
+
+      // Если после последней кавычки нет закрывающей - добавляем
+      if (!afterLastQuote.includes('"')) {
+        // Ищем конец значения (до запятой, скобки или конца)
+        const endMatch = afterLastQuote.match(/^[^,\]\}]*/)
+        if (endMatch) {
+          const insertPos = lastQuoteIndex + 1 + endMatch[0].length
+          repaired = repaired.substring(0, insertPos) + '"' + repaired.substring(insertPos)
+        }
+      }
+    }
+
+    // 3. Балансируем скобки
+    let openBraces = 0
+    let openBrackets = 0
+    let inString = false
+    let prevChar = ""
+
+    for (const char of repaired) {
+      if (char === '"' && prevChar !== "\\") {
+        inString = !inString
+      } else if (!inString) {
+        if (char === "{") openBraces++
+        else if (char === "}") openBraces--
+        else if (char === "[") openBrackets++
+        else if (char === "]") openBrackets--
+      }
+      prevChar = char
+    }
+
+    // Закрываем незакрытые скобки
+    if (inString) {
+      repaired += '"'
+    }
+
+    // Добавляем недостающие закрывающие скобки
+    while (openBrackets > 0) {
+      repaired += "]"
+      openBrackets--
+    }
+    while (openBraces > 0) {
+      repaired += "}"
+      openBraces--
+    }
+
+    // 4. Убираем незавершённые элементы в конце массивов/объектов
+    // Например: {"key": "value", "incomplete  ->  {"key": "value"}
+    repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"}\]]*$/g, "")
+    repaired = repaired.replace(/,\s*$/g, "")
+
+    // 5. Финальная очистка trailing commas
+    repaired = repaired.replace(/,(\s*[\]}])/g, "$1")
+
+    // Проверяем что получилось
+    JSON.parse(repaired)
+    return repaired
+  } catch {
+    return null
+  }
+}
+
+// Извлечение частичных данных из сильно повреждённого JSON
+function extractPartialJSON(jsonStr: string): any | null {
+  try {
+    // Пытаемся найти и извлечь отдельные trails
+    const trailsMatch = jsonStr.match(/"trails"\s*:\s*\[([\s\S]*)/i)
+    if (!trailsMatch) return null
+
+    let trailsContent = trailsMatch[1]
+
+    // Ищем завершённые объекты trail
+    const trails: any[] = []
+    let depth = 0
+    let currentTrail = ""
+    let inString = false
+    let prevChar = ""
+
+    for (let i = 0; i < trailsContent.length; i++) {
+      const char = trailsContent[i]
+
+      if (char === '"' && prevChar !== "\\") {
+        inString = !inString
+      }
+
+      if (!inString) {
+        if (char === "{") {
+          if (depth === 0) {
+            currentTrail = ""
+          }
+          depth++
+        } else if (char === "}") {
+          depth--
+          if (depth === 0) {
+            currentTrail += char
+            try {
+              const trail = JSON.parse(currentTrail)
+              trails.push(trail)
+            } catch {
+              // Этот trail битый, пропускаем
+            }
+            currentTrail = ""
+            continue
+          }
+        }
+      }
+
+      if (depth > 0) {
+        currentTrail += char
+      }
+
+      prevChar = char
+    }
+
+    if (trails.length > 0) {
+      return { trails }
+    }
+
+    return null
+  } catch {
+    return null
+  }
 }
 
 // Получение конфигурации Claude AI из переменных окружения
