@@ -13,6 +13,11 @@ import {
   requiresAIParser,
 } from "@/lib/import"
 
+// Увеличиваем лимит времени выполнения функции для AI парсинга
+// Vercel: Hobby = 10s, Pro = 60s (можно до 300s), Enterprise = 900s
+// Для Pro плана можно увеличить до 300 секунд в настройках проекта
+export const maxDuration = 300 // 5 минут (требует Pro план на Vercel)
+
 // POST - парсинг файла (без сохранения) или сохранение
 export async function POST(request: NextRequest) {
   try {
