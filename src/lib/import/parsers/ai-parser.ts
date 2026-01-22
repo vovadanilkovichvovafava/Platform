@@ -15,9 +15,9 @@ import {
 // Claude API version
 const ANTHROPIC_VERSION = "2023-06-01"
 
-// Таймауты для API запросов
-const API_CHECK_TIMEOUT_MS = 15000   // 15 сек для проверки доступности
-const API_PARSE_TIMEOUT_MS = 120000  // 2 мин для парсинга больших текстов
+// Таймауты для API запросов (настраиваемые через env)
+const API_CHECK_TIMEOUT_MS = parseInt(process.env.AI_CHECK_TIMEOUT_MS || "15000")   // 15 сек
+const API_PARSE_TIMEOUT_MS = parseInt(process.env.AI_PARSE_TIMEOUT_MS || "180000")  // 3 мин по умолчанию
 
 // Детальный промпт для AI парсинга с поддержкой всех типов вопросов
 const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга и улучшения образовательного контента.
