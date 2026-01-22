@@ -27,7 +27,7 @@ const CHARS_PER_TOKEN_ESTIMATE = 4  // Примерная оценка для р
 // Константы для chunked parsing (оптимизированы для надёжности + скорости)
 const MAX_CHUNK_SIZE = 3000 // ~3KB - уменьшен для надёжности (меньше потерь при ошибке)
 const MIN_CHUNK_SIZE = 500 // Минимальный размер chunk
-const MAX_CONCURRENT_REQUESTS = 5 // Максимум параллельных запросов (компенсирует меньший размер чанков)
+const MAX_CONCURRENT_REQUESTS = 6 // Для файла ~15KB все 6 чанков обрабатываются одновременно
 
 // Функция для логирования (можно отключить в production)
 const DEBUG_AI = process.env.AI_DEBUG === "true"
