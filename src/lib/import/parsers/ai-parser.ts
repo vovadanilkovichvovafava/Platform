@@ -231,15 +231,28 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
       error: `API вернул ошибку: ${response.status} - ${error.substring(0, 200)}`,
     }
   } catch (e) {
+    // Обработка таймаута
     if (e instanceof Error && e.name === "AbortError") {
       return {
         available: false,
         error: `Таймаут: AI API не ответил за ${API_CHECK_TIMEOUT_MS / 1000} секунд`,
       }
     }
+
+    // Улучшаем сообщения об ошибках для более понятного отображения
+    let errorMessage = e instanceof Error ? e.message : "unknown"
+
+    if (errorMessage === "fetch failed" || errorMessage.includes("ECONNREFUSED")) {
+      errorMessage = "Не удалось подключиться к AI API. Проверьте настройки сети и доступность сервера."
+    } else if (errorMessage.includes("ETIMEDOUT") || errorMessage.includes("timeout")) {
+      errorMessage = "Превышено время ожидания ответа."
+    } else if (errorMessage.includes("ENOTFOUND")) {
+      errorMessage = "AI API endpoint не найден. Проверьте URL."
+    }
+
     return {
       available: false,
-      error: `Ошибка соединения: ${e instanceof Error ? e.message : "unknown"}`,
+      error: `Ошибка соединения: ${errorMessage}`,
     }
   }
 }
@@ -436,11 +449,23 @@ export async function parseWithAI(
       parseMethod: "ai",
     }
   } catch (e) {
+    // Обработка таймаута
     if (e instanceof Error && e.name === "AbortError") {
       console.log(`[AI-Parser] Таймаут после ${API_PARSE_TIMEOUT_MS / 1000} секунд`)
       errors.push(`Таймаут: AI парсер не ответил за ${API_PARSE_TIMEOUT_MS / 1000} секунд. Попробуйте файл меньшего размера или увеличьте AI_PARSE_TIMEOUT_MS.`)
     } else {
-      const errorMessage = e instanceof Error ? e.message : "unknown"
+      // Улучшаем сообщения об ошибках для более понятного отображения пользователю
+      let errorMessage = e instanceof Error ? e.message : "unknown"
+
+      // Расшифровываем типичные ошибки сети
+      if (errorMessage === "fetch failed" || errorMessage.includes("ECONNREFUSED")) {
+        errorMessage = "Не удалось подключиться к AI API. Проверьте настройки сети и доступность API."
+      } else if (errorMessage.includes("ETIMEDOUT") || errorMessage.includes("timeout")) {
+        errorMessage = "Превышено время ожидания ответа от AI API."
+      } else if (errorMessage.includes("ENOTFOUND")) {
+        errorMessage = "AI API endpoint не найден. Проверьте URL в настройках."
+      }
+
       console.log(`[AI-Parser] Ошибка:`, errorMessage)
       errors.push(`Ошибка AI парсинга: ${errorMessage}`)
     }

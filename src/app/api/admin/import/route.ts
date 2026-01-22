@@ -74,16 +74,25 @@ export async function POST(request: NextRequest) {
     const aiConfig = getAIConfig()
     let parseResult
 
+    // Порог для использования chunked parsing (2KB)
+    const CHUNKED_PARSING_THRESHOLD = 2000
+
     // Если forceAI - используем AI парсер, но с fallback на кодовый парсер при ошибке
     if (forceAI && aiConfig.enabled && aiConfig.apiKey) {
-      const { parseWithAI } = await import("@/lib/import/parsers/ai-parser")
+      const { parseWithAI, parseWithAIChunked } = await import("@/lib/import/parsers/ai-parser")
       const { detectFileFormat, analyzeStructure } = await import("@/lib/import/smart-detector")
 
       const detectedFormat = detectFileFormat(file.name, text)
       const structureAnalysis = analyzeStructure(text)
 
+      // Для больших файлов используем chunked parsing
+      const useChunked = text.length > CHUNKED_PARSING_THRESHOLD
+      console.log(`Размер файла: ${text.length} символов, chunked: ${useChunked}`)
+
       console.log("Запуск AI парсера...")
-      const aiResult = await parseWithAI(text, aiConfig)
+      const aiResult = useChunked
+        ? await parseWithAIChunked(text, aiConfig)
+        : await parseWithAI(text, aiConfig)
       console.log("AI парсер завершён:", aiResult.success ? "успешно" : "с ошибками", aiResult.errors)
 
       // Если AI парсер не справился, пробуем кодовый парсер как fallback
@@ -93,9 +102,10 @@ export async function POST(request: NextRequest) {
 
         if (codeResult.success && codeResult.trails.length > 0) {
           // Кодовый парсер справился - возвращаем его результат с пометкой
-          const aiErrorMsg = aiResult.errors && aiResult.errors.length > 0
-            ? aiResult.errors[0]
-            : "неизвестная ошибка"
+          // Формируем информативное сообщение с причиной ошибки AI
+          const aiErrorDetail = aiResult.errors?.length > 0
+            ? ` (${aiResult.errors[0]})`
+            : ""
           parseResult = {
             ...codeResult,
             detectedFormat,
@@ -104,7 +114,7 @@ export async function POST(request: NextRequest) {
             parseMethod: "code",
             warnings: [
               ...(codeResult.warnings || []),
-              `AI парсер недоступен (${aiErrorMsg}). Использован кодовый парсер.`
+              `AI парсер недоступен${aiErrorDetail}. Использован кодовый парсер.`
             ],
           }
         } else {
