@@ -111,6 +111,42 @@ export interface ConfidenceDetails {
   criteria: ConfidenceCriterion[]
 }
 
+// Модели Claude AI
+export const CLAUDE_MODELS = {
+  OPUS: "claude-opus-4-5-20251101",
+  SONNET: "claude-sonnet-4-5-20250514",
+  HAIKU: "claude-3-5-haiku-20241022",
+} as const
+
+export type ClaudeModel = typeof CLAUDE_MODELS[keyof typeof CLAUDE_MODELS]
+
+// Информация о моделях для отображения в UI
+export const CLAUDE_MODEL_INFO: Record<ClaudeModel, {
+  name: string
+  description: string
+  speed: "fast" | "medium" | "slow"
+  quality: "good" | "better" | "best"
+}> = {
+  [CLAUDE_MODELS.HAIKU]: {
+    name: "Haiku 3.5",
+    description: "Быстрая и экономичная модель",
+    speed: "fast",
+    quality: "good",
+  },
+  [CLAUDE_MODELS.SONNET]: {
+    name: "Sonnet 4.5",
+    description: "Оптимальный баланс скорости и качества",
+    speed: "medium",
+    quality: "better",
+  },
+  [CLAUDE_MODELS.OPUS]: {
+    name: "Opus 4.5",
+    description: "Максимальное качество для сложных задач",
+    speed: "slow",
+    quality: "best",
+  },
+}
+
 export interface AIParserConfig {
   enabled: boolean
   apiEndpoint?: string

@@ -169,6 +169,10 @@ export default function AdminContentPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [useNeuralParser, setUseNeuralParser] = useState(true) // По умолчанию используем нейронку
 
+  // Выбор модели Claude (null = не использовать AI, "haiku"/"sonnet"/"opus" = модель)
+  type ClaudeModelOption = "haiku" | "sonnet" | "opus" | null
+  const [selectedModel, setSelectedModel] = useState<ClaudeModelOption>("haiku") // Haiku по умолчанию
+
   // Drag and drop
   const [draggedModule, setDraggedModule] = useState<string | null>(null)
   const [dragOverModule, setDragOverModule] = useState<string | null>(null)
@@ -281,10 +285,14 @@ export default function AdminContentPage() {
       setParseError(null)
       setUploadedFile(file)
 
+      const useAI = selectedModel !== null
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("useAI", useNeuralParser ? "true" : "false")
-      formData.append("forceAI", useNeuralParser ? "true" : "false") // Используем AI парсер если включен переключатель
+      formData.append("useAI", useAI ? "true" : "false")
+      formData.append("forceAI", useAI ? "true" : "false") // Используем AI парсер если выбрана модель
+      if (selectedModel) {
+        formData.append("model", selectedModel)
+      }
 
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -359,10 +367,14 @@ export default function AdminContentPage() {
       setParsedData(null)
       // НЕ сбрасываем parseError сразу - показываем индикатор регенерации в блоке ошибки
 
+      const useAI = selectedModel !== null
       const formData = new FormData()
       formData.append("file", uploadedFile)
-      formData.append("useAI", useNeuralParser ? "true" : "false")
-      formData.append("forceAI", useNeuralParser ? "true" : "false") // AI если включен переключатель
+      formData.append("useAI", useAI ? "true" : "false")
+      formData.append("forceAI", useAI ? "true" : "false") // AI если выбрана модель
+      if (selectedModel) {
+        formData.append("model", selectedModel)
+      }
 
       const res = await fetch("/api/admin/import", {
         method: "POST",
@@ -1147,16 +1159,16 @@ export default function AdminContentPage() {
                                 size="sm"
                                 onClick={handleRegenerate}
                                 disabled={regenerating}
-                                className={useNeuralParser
+                                className={selectedModel !== null
                                   ? "text-purple-700 border-purple-300 hover:bg-purple-50"
                                   : "text-gray-600 border-gray-300 hover:bg-gray-50"}
                               >
-                                {useNeuralParser ? (
+                                {selectedModel !== null ? (
                                   <Sparkles className="h-4 w-4 mr-2" />
                                 ) : (
                                   <RefreshCw className="h-4 w-4 mr-2" />
                                 )}
-                                {useNeuralParser ? "Попробовать с AI ещё раз" : "Попробовать ещё раз"}
+                                {selectedModel !== null ? "Попробовать с AI ещё раз" : "Попробовать ещё раз"}
                               </Button>
                             </div>
                           )}
@@ -1214,30 +1226,167 @@ export default function AdminContentPage() {
                     />
                   </label>
 
-                  {/* Переключатель режима парсера */}
-                  <div className="p-4 bg-gray-50 rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className={`h-4 w-4 ${useNeuralParser ? "text-purple-500" : "text-gray-400"}`} />
-                        <span className="text-sm font-medium text-gray-700">Использовать нейросеть</span>
-                      </div>
-                      <Switch
-                        checked={useNeuralParser}
-                        onCheckedChange={setUseNeuralParser}
-                        disabled={importing}
-                      />
+                  {/* Выбор модели AI (Claude) */}
+                  <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm font-medium text-gray-700">Выберите модель AI</span>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      {useNeuralParser
-                        ? "AI-парсер лучше распознаёт сложную структуру документов"
-                        : "Кодовый парсер быстрее, но может пропустить детали"}
-                    </p>
 
-                    {/* AI статус (показываем только если нейросеть включена) */}
-                    {useNeuralParser && (
-                      <div className="pt-2 border-t border-gray-200">
+                    {/* Модели Claude */}
+                    <div className="space-y-2">
+                      {/* Haiku - по умолчанию */}
+                      <label
+                        className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedModel === "haiku"
+                            ? "border-green-500 bg-green-50"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="aiModel"
+                          value="haiku"
+                          checked={selectedModel === "haiku"}
+                          onChange={() => setSelectedModel("haiku")}
+                          disabled={importing}
+                          className="sr-only"
+                        />
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedModel === "haiku" ? "border-green-500" : "border-gray-300"
+                        }`}>
+                          {selectedModel === "haiku" && (
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">Haiku 3.5</span>
+                            <Badge className="bg-green-100 text-green-700 border-0 text-xs">По умолчанию</Badge>
+                          </div>
+                          <p className="text-xs text-gray-500">Быстрая и экономичная модель</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                          <Zap className="h-3 w-3" />
+                          Быстро
+                        </div>
+                      </label>
+
+                      {/* Sonnet */}
+                      <label
+                        className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedModel === "sonnet"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="aiModel"
+                          value="sonnet"
+                          checked={selectedModel === "sonnet"}
+                          onChange={() => setSelectedModel("sonnet")}
+                          disabled={importing}
+                          className="sr-only"
+                        />
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedModel === "sonnet" ? "border-blue-500" : "border-gray-300"
+                        }`}>
+                          {selectedModel === "sonnet" && (
+                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">Sonnet 4.5</span>
+                          </div>
+                          <p className="text-xs text-gray-500">Баланс скорости и качества</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                          <Target className="h-3 w-3" />
+                          Оптимально
+                        </div>
+                      </label>
+
+                      {/* Opus */}
+                      <label
+                        className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedModel === "opus"
+                            ? "border-purple-500 bg-purple-50"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="aiModel"
+                          value="opus"
+                          checked={selectedModel === "opus"}
+                          onChange={() => setSelectedModel("opus")}
+                          disabled={importing}
+                          className="sr-only"
+                        />
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedModel === "opus" ? "border-purple-500" : "border-gray-300"
+                        }`}>
+                          {selectedModel === "opus" && (
+                            <div className="w-2 h-2 rounded-full bg-purple-500" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">Opus 4.5</span>
+                            <Badge className="bg-purple-100 text-purple-700 border-0 text-xs">Premium</Badge>
+                          </div>
+                          <p className="text-xs text-gray-500">Максимальное качество для сложных задач</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                          <Sparkles className="h-3 w-3" />
+                          Лучшее
+                        </div>
+                      </label>
+
+                      {/* Без AI */}
+                      <label
+                        className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedModel === null
+                            ? "border-gray-500 bg-gray-100"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="aiModel"
+                          value="none"
+                          checked={selectedModel === null}
+                          onChange={() => setSelectedModel(null)}
+                          disabled={importing}
+                          className="sr-only"
+                        />
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedModel === null ? "border-gray-500" : "border-gray-300"
+                        }`}>
+                          {selectedModel === null && (
+                            <div className="w-2 h-2 rounded-full bg-gray-500" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">Без AI</span>
+                          </div>
+                          <p className="text-xs text-gray-500">Только кодовый парсер (быстрее)</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                          <Code className="h-3 w-3" />
+                          Код
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* AI статус (показываем только если AI включен) */}
+                    {selectedModel !== null && (
+                      <div className="pt-3 border-t border-gray-200">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">Статус AI:</span>
+                          <span className="text-xs text-gray-500">Статус Claude API:</span>
                           {aiStatus.checking ? (
                             <span className="text-xs text-gray-500 flex items-center gap-1">
                               <RefreshCw className="h-3 w-3 animate-spin" />
@@ -1444,7 +1593,7 @@ export default function AdminContentPage() {
                   >
                     Отмена
                   </Button>
-                  {useNeuralParser && aiStatus.available && (
+                  {selectedModel !== null && aiStatus.available && (
                     <Button
                       variant="outline"
                       onClick={handleRegenerate}
@@ -1459,7 +1608,7 @@ export default function AdminContentPage() {
                       Перегенерировать
                     </Button>
                   )}
-                  {!useNeuralParser && (
+                  {selectedModel === null && (
                     <Button
                       variant="outline"
                       onClick={handleRegenerate}

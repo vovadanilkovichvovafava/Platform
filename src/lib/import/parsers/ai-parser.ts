@@ -4,7 +4,18 @@ import {
   ParsedTrail,
   ParseResult,
   AIParserConfig,
+  ClaudeModel,
+  CLAUDE_MODELS,
 } from "../types"
+
+// Определяем провайдера API по эндпоинту
+type AIProvider = "claude" | "openai"
+
+function detectProvider(endpoint?: string): AIProvider {
+  if (!endpoint) return "openai"
+  if (endpoint.includes("anthropic.com")) return "claude"
+  return "openai"
+}
 
 // Промпт для AI парсинга
 const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга образовательного контента.
@@ -66,24 +77,43 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
   available: boolean
   error?: string
   model?: string
+  provider?: AIProvider
 }> {
   if (!config.enabled || !config.apiEndpoint || !config.apiKey) {
     return { available: false, error: "AI API не настроен" }
   }
 
+  const provider = detectProvider(config.apiEndpoint)
+
   try {
-    // Пробный запрос для проверки токена
-    const response = await fetch(config.apiEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
+    // Разный формат запроса для разных провайдеров
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    }
+
+    let body: string
+
+    if (provider === "claude") {
+      headers["x-api-key"] = config.apiKey
+      headers["anthropic-version"] = "2023-06-01"
+      body = JSON.stringify({
+        model: config.model || CLAUDE_MODELS.HAIKU,
+        max_tokens: 10,
+        messages: [{ role: "user", content: "test" }],
+      })
+    } else {
+      headers["Authorization"] = `Bearer ${config.apiKey}`
+      body = JSON.stringify({
         model: config.model || "gpt-5-nano",
         messages: [{ role: "user", content: "test" }],
         max_completion_tokens: 5,
-      }),
+      })
+    }
+
+    const response = await fetch(config.apiEndpoint, {
+      method: "POST",
+      headers,
+      body,
     })
 
     if (response.ok) {
@@ -91,6 +121,7 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
       return {
         available: true,
         model: data.model || config.model,
+        provider,
       }
     }
 
@@ -98,11 +129,13 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
     return {
       available: false,
       error: `API вернул ошибку: ${response.status} - ${error.substring(0, 100)}`,
+      provider,
     }
   } catch (e) {
     return {
       available: false,
       error: `Ошибка соединения: ${e instanceof Error ? e.message : "unknown"}`,
+      provider,
     }
   }
 }
@@ -120,22 +153,45 @@ export async function parseWithAI(
     return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
   }
 
+  const provider = detectProvider(config.apiEndpoint)
+
   try {
-    const response = await fetch(config.apiEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model || "gpt-5-nano",
+    // Разный формат запроса для разных провайдеров
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    }
+
+    let body: string
+    const model = config.model || (provider === "claude" ? CLAUDE_MODELS.HAIKU : "gpt-5-nano")
+
+    if (provider === "claude") {
+      headers["x-api-key"] = config.apiKey
+      headers["anthropic-version"] = "2023-06-01"
+      body = JSON.stringify({
+        model,
+        max_tokens: 16000, // Claude использует max_tokens
+        system: AI_SYSTEM_PROMPT,
+        messages: [
+          { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
+        ],
+      })
+    } else {
+      headers["Authorization"] = `Bearer ${config.apiKey}`
+      body = JSON.stringify({
+        model,
         messages: [
           { role: "system", content: AI_SYSTEM_PROMPT },
           { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
         ],
         // temperature не поддерживается reasoning моделями (gpt-5-nano)
         max_completion_tokens: 16000, // Увеличено для больших курсов
-      }),
+      })
+    }
+
+    const response = await fetch(config.apiEndpoint, {
+      method: "POST",
+      headers,
+      body,
     })
 
     if (!response.ok) {
@@ -145,7 +201,16 @@ export async function parseWithAI(
     }
 
     const data = await response.json()
-    const aiResponse = data.choices?.[0]?.message?.content
+
+    // Разный формат ответа для разных провайдеров
+    let aiResponse: string | undefined
+    if (provider === "claude") {
+      // Claude возвращает content как массив блоков
+      aiResponse = data.content?.[0]?.text
+    } else {
+      // OpenAI формат
+      aiResponse = data.choices?.[0]?.message?.content
+    }
 
     if (!aiResponse) {
       errors.push("AI не вернул ответ")
@@ -298,11 +363,33 @@ function isValidColor(color: any): boolean {
 }
 
 // Получение конфигурации AI из переменных окружения
-export function getAIConfig(): AIParserConfig {
+export function getAIConfig(selectedModel?: ClaudeModel): AIParserConfig {
+  // Проверяем, есть ли настройки для Claude
+  const claudeApiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY
+  const openaiApiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY
+
+  // Если есть Claude API ключ - используем Claude, иначе OpenAI
+  const useClaude = !!claudeApiKey
+
+  if (useClaude) {
+    return {
+      enabled: process.env.AI_PARSER_ENABLED === "true",
+      apiEndpoint: process.env.ANTHROPIC_API_URL || "https://api.anthropic.com/v1/messages",
+      apiKey: claudeApiKey,
+      model: selectedModel || (process.env.AI_MODEL as ClaudeModel) || CLAUDE_MODELS.HAIKU,
+    }
+  }
+
+  // Fallback на OpenAI
   return {
     enabled: process.env.AI_PARSER_ENABLED === "true",
     apiEndpoint: process.env.AI_API_ENDPOINT || process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions",
-    apiKey: process.env.AI_API_KEY || process.env.OPENAI_API_KEY,
+    apiKey: openaiApiKey,
     model: process.env.AI_MODEL || "gpt-5-nano",
   }
+}
+
+// Проверка, используется ли Claude
+export function isClaudeEnabled(): boolean {
+  return !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)
 }

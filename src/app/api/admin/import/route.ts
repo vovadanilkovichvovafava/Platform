@@ -11,7 +11,24 @@ import {
   checkAIAvailability,
   SUPPORTED_FORMATS,
   requiresAIParser,
+  CLAUDE_MODELS,
+  ClaudeModel,
 } from "@/lib/import"
+
+// Маппинг короткого названия модели в полное
+function getClaudeModelId(shortName: string | null): ClaudeModel | undefined {
+  if (!shortName) return undefined
+  switch (shortName) {
+    case "haiku":
+      return CLAUDE_MODELS.HAIKU
+    case "sonnet":
+      return CLAUDE_MODELS.SONNET
+    case "opus":
+      return CLAUDE_MODELS.OPUS
+    default:
+      return CLAUDE_MODELS.HAIKU
+  }
+}
 
 // POST - парсинг файла (без сохранения) или сохранение
 export async function POST(request: NextRequest) {
@@ -40,6 +57,8 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File
     const useAI = formData.get("useAI") === "true"
     const forceAI = formData.get("forceAI") === "true" // Для перегенерации
+    const modelShortName = formData.get("model") as string | null // Короткое имя модели (haiku/sonnet/opus)
+    const selectedModel = getClaudeModelId(modelShortName)
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -66,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Парсинг файла (БЕЗ сохранения в БД)
-    const aiConfig = getAIConfig()
+    const aiConfig = getAIConfig(selectedModel)
     let parseResult
 
     // Если forceAI - используем AI парсер, но с fallback на кодовый парсер при ошибке

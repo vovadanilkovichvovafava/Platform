@@ -10,7 +10,7 @@ export { parseXml } from "./parsers/xml-parser"
 export { parseHtml } from "./parsers/html-parser"
 export { parseDocx, parseDocxFromText } from "./parsers/docx-parser"
 export { parseDoc, parseDocFromText } from "./parsers/doc-parser"
-export { parseWithAI, checkAIAvailability, getAIConfig } from "./parsers/ai-parser"
+export { parseWithAI, checkAIAvailability, getAIConfig, isClaudeEnabled } from "./parsers/ai-parser"
 
 import { ParseResult, ParsedTrail, FileFormat, AIParserConfig, ConfidenceDetails } from "./types"
 import { detectFileFormat, analyzeStructure } from "./smart-detector"
@@ -21,7 +21,7 @@ import { parseXml } from "./parsers/xml-parser"
 import { parseHtml } from "./parsers/html-parser"
 import { parseDocxFromText } from "./parsers/docx-parser"
 import { parseDocFromText } from "./parsers/doc-parser"
-import { parseWithAI, getAIConfig } from "./parsers/ai-parser"
+import { parseWithAI, getAIConfig, isClaudeEnabled } from "./parsers/ai-parser"
 
 export interface SmartImportOptions {
   useAI?: boolean
