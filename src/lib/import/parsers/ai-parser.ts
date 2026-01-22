@@ -19,6 +19,18 @@ const ANTHROPIC_VERSION = "2023-06-01"
 const API_CHECK_TIMEOUT_MS = parseInt(process.env.AI_CHECK_TIMEOUT_MS || "15000")   // 15 сек
 const API_PARSE_TIMEOUT_MS = parseInt(process.env.AI_PARSE_TIMEOUT_MS || "180000")  // 3 мин по умолчанию
 
+// Лимиты контента (примерно 4 символа = 1 токен для русского текста)
+const MAX_CONTENT_CHARS = parseInt(process.env.AI_MAX_CONTENT_CHARS || "100000")    // ~25k токенов
+const CHARS_PER_TOKEN_ESTIMATE = 4  // Примерная оценка для русского текста
+
+// Функция для логирования (можно отключить в production)
+const DEBUG_AI = process.env.AI_DEBUG === "true"
+function debugLog(...args: any[]) {
+  if (DEBUG_AI) {
+    console.log("[AI-Parser]", ...args)
+  }
+}
+
 // Детальный промпт для AI парсинга с поддержкой всех типов вопросов
 const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга и улучшения образовательного контента.
 Твоя задача - преобразовать текст в структурированный формат курса.
@@ -245,10 +257,44 @@ export async function parseWithAI(
     return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
   }
 
+  // Проверка и ограничение размера контента
+  const contentLength = content.length
+  const estimatedTokens = Math.ceil(contentLength / CHARS_PER_TOKEN_ESTIMATE)
+
+  debugLog(`Размер контента: ${contentLength} символов (~${estimatedTokens} токенов)`)
+  console.log(`[AI-Parser] Размер контента: ${contentLength} символов (~${estimatedTokens} токенов)`)
+
+  let processedContent = content
+  if (contentLength > MAX_CONTENT_CHARS) {
+    console.log(`[AI-Parser] Контент слишком большой (${contentLength} > ${MAX_CONTENT_CHARS}), обрезаем...`)
+    processedContent = content.substring(0, MAX_CONTENT_CHARS)
+    warnings.push(`Контент обрезан с ${contentLength} до ${MAX_CONTENT_CHARS} символов (лимит API)`)
+  }
+
   try {
-    // Создаём AbortController для таймаута (60 секунд для парсинга, т.к. AI может работать дольше)
+    console.log(`[AI-Parser] Отправка запроса к ${config.apiEndpoint}...`)
+    console.log(`[AI-Parser] Модель: ${config.model || "claude-sonnet-4-5-20241022"}`)
+    console.log(`[AI-Parser] Таймаут: ${API_PARSE_TIMEOUT_MS / 1000} секунд`)
+
+    const startTime = Date.now()
+
+    // Создаём AbortController для таймаута
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_PARSE_TIMEOUT_MS)
+    const timeoutId = setTimeout(() => {
+      console.log(`[AI-Parser] Таймаут! Прошло ${API_PARSE_TIMEOUT_MS / 1000} секунд, отменяем запрос...`)
+      controller.abort()
+    }, API_PARSE_TIMEOUT_MS)
+
+    const requestBody = {
+      model: config.model || "claude-sonnet-4-5-20241022",
+      max_tokens: 16000,
+      system: AI_SYSTEM_PROMPT,
+      messages: [
+        { role: "user", content: AI_USER_PROMPT.replace("{content}", processedContent) },
+      ],
+    }
+
+    debugLog("Размер тела запроса:", JSON.stringify(requestBody).length, "байт")
 
     const response = await fetch(config.apiEndpoint, {
       method: "POST",
@@ -257,33 +303,35 @@ export async function parseWithAI(
         "x-api-key": config.apiKey,
         "anthropic-version": ANTHROPIC_VERSION,
       },
-      body: JSON.stringify({
-        model: config.model || "claude-sonnet-4-5-20241022",
-        max_tokens: 16000,
-        system: AI_SYSTEM_PROMPT,
-        messages: [
-          { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
       signal: controller.signal,
     })
 
     clearTimeout(timeoutId)
 
+    const elapsedTime = Date.now() - startTime
+    console.log(`[AI-Parser] Ответ получен за ${(elapsedTime / 1000).toFixed(1)} секунд`)
+
     if (!response.ok) {
       const errorText = await response.text()
+      console.log(`[AI-Parser] Ошибка API: ${response.status}`, errorText.substring(0, 500))
       errors.push(`AI API ошибка: ${response.status} - ${errorText.substring(0, 200)}`)
       return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
     }
 
+    console.log(`[AI-Parser] Читаем JSON ответ...`)
     const data = await response.json()
+
     // Claude API response format: content[0].text
     const aiResponse = data.content?.[0]?.text
 
     if (!aiResponse) {
+      console.log(`[AI-Parser] Пустой ответ от AI:`, JSON.stringify(data).substring(0, 500))
       errors.push("AI не вернул ответ")
       return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
     }
+
+    console.log(`[AI-Parser] Получен ответ: ${aiResponse.length} символов`)
 
     // Извлечение JSON из ответа (убираем возможные ```json обёртки)
     let jsonStr = aiResponse.trim()
@@ -315,9 +363,12 @@ export async function parseWithAI(
     }
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError") {
-      errors.push(`Таймаут: AI парсер не ответил за ${API_PARSE_TIMEOUT_MS / 1000} секунд. Проверьте подключение к интернету.`)
+      console.log(`[AI-Parser] Таймаут после ${API_PARSE_TIMEOUT_MS / 1000} секунд`)
+      errors.push(`Таймаут: AI парсер не ответил за ${API_PARSE_TIMEOUT_MS / 1000} секунд. Попробуйте файл меньшего размера или увеличьте AI_PARSE_TIMEOUT_MS.`)
     } else {
-      errors.push(`Ошибка AI парсинга: ${e instanceof Error ? e.message : "unknown"}`)
+      const errorMessage = e instanceof Error ? e.message : "unknown"
+      console.log(`[AI-Parser] Ошибка:`, errorMessage)
+      errors.push(`Ошибка AI парсинга: ${errorMessage}`)
     }
     return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
   }
