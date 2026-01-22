@@ -15,6 +15,9 @@ import {
 // Claude API version
 const ANTHROPIC_VERSION = "2023-06-01"
 
+// Таймаут для API запросов (30 секунд)
+const API_TIMEOUT_MS = 30000
+
 // Детальный промпт для AI парсинга с поддержкой всех типов вопросов
 const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга и улучшения образовательного контента.
 Твоя задача - преобразовать текст в структурированный формат курса.
@@ -179,6 +182,10 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
   }
 
   try {
+    // Создаём AbortController для таймаута
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+
     // Пробный запрос для проверки токена
     const response = await fetch(config.apiEndpoint, {
       method: "POST",
@@ -192,7 +199,10 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
         max_tokens: 10,
         messages: [{ role: "user", content: "test" }],
       }),
+      signal: controller.signal,
     })
+
+    clearTimeout(timeoutId)
 
     if (response.ok) {
       const data = await response.json()
@@ -208,6 +218,12 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
       error: `API вернул ошибку: ${response.status} - ${error.substring(0, 200)}`,
     }
   } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      return {
+        available: false,
+        error: `Таймаут: AI API не ответил за ${API_TIMEOUT_MS / 1000} секунд`,
+      }
+    }
     return {
       available: false,
       error: `Ошибка соединения: ${e instanceof Error ? e.message : "unknown"}`,
@@ -229,6 +245,10 @@ export async function parseWithAI(
   }
 
   try {
+    // Создаём AbortController для таймаута (60 секунд для парсинга, т.к. AI может работать дольше)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS * 2)
+
     const response = await fetch(config.apiEndpoint, {
       method: "POST",
       headers: {
@@ -244,7 +264,10 @@ export async function parseWithAI(
           { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
         ],
       }),
+      signal: controller.signal,
     })
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -290,7 +313,11 @@ export async function parseWithAI(
       parseMethod: "ai",
     }
   } catch (e) {
-    errors.push(`Ошибка AI парсинга: ${e instanceof Error ? e.message : "unknown"}`)
+    if (e instanceof Error && e.name === "AbortError") {
+      errors.push(`Таймаут: AI парсер не ответил за ${(API_TIMEOUT_MS * 2) / 1000} секунд. Проверьте подключение к интернету.`)
+    } else {
+      errors.push(`Ошибка AI парсинга: ${e instanceof Error ? e.message : "unknown"}`)
+    }
     return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
   }
 }

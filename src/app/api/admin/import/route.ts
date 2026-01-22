@@ -77,15 +77,20 @@ export async function POST(request: NextRequest) {
       const detectedFormat = detectFileFormat(file.name, text)
       const structureAnalysis = analyzeStructure(text)
 
+      console.log("Запуск AI парсера...")
       const aiResult = await parseWithAI(text, aiConfig)
+      console.log("AI парсер завершён:", aiResult.success ? "успешно" : "с ошибками", aiResult.errors)
 
       // Если AI парсер не справился, пробуем кодовый парсер как fallback
       if (!aiResult.success || aiResult.trails.length === 0) {
-        console.log("AI парсер не справился, пробуем кодовый парсер...")
+        console.log("AI парсер не справился, пробуем кодовый парсер...", aiResult.errors)
         const codeResult = await smartImport(text, file.name, { useAI: false })
 
         if (codeResult.success && codeResult.trails.length > 0) {
           // Кодовый парсер справился - возвращаем его результат с пометкой
+          const aiErrorMsg = aiResult.errors && aiResult.errors.length > 0
+            ? aiResult.errors[0]
+            : "неизвестная ошибка"
           parseResult = {
             ...codeResult,
             detectedFormat,
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest) {
             parseMethod: "code",
             warnings: [
               ...(codeResult.warnings || []),
-              "AI парсер недоступен или не смог обработать файл. Использован кодовый парсер."
+              `AI парсер недоступен (${aiErrorMsg}). Использован кодовый парсер.`
             ],
           }
         } else {
