@@ -814,12 +814,12 @@ export async function parseWithAIChunked(
 
   warnings.push(`Файл разбит на ${totalChunks} частей для обработки`)
 
-  // Параллельно: получаем метаданные и парсим первый chunk
+  // Параллельно: получаем метаданные и обрабатываем chunks
   onProgress?.(0, totalChunks + 1, "Определение метаданных курса...")
 
-  const [metadataResult, ...chunkResults] = await Promise.all([
+  const [metadataResult, chunkResults] = await Promise.all([
     parseMetadataWithAI(content, config),
-    ...processChunksInBatches(chunks, config, totalChunks, onProgress),
+    processChunksInBatches(chunks, config, totalChunks, onProgress),
   ])
 
   // Собираем все модули
@@ -861,7 +861,7 @@ export async function parseWithAIChunked(
     trail.modules.push({
       title: mod.title || "Без названия",
       slug: mod.slug || generateSlugFromTitle(mod.title || "module"),
-      type: validateType(mod.type),
+      type: validateModuleType(mod.type),
       points: typeof mod.points === "number" ? mod.points : 50,
       description: mod.description || "",
       content: mod.content || "",
@@ -888,8 +888,8 @@ async function processChunksInBatches(
   config: AIParserConfig,
   totalChunks: number,
   onProgress?: (current: number, total: number, status: string) => void
-): Promise<Promise<{ modules: any[]; error?: string }>[]> {
-  const results: Promise<{ modules: any[]; error?: string }>[] = []
+): Promise<{ modules: any[]; error?: string }[]> {
+  const results: { modules: any[]; error?: string }[] = []
   let completed = 0
 
   // Обрабатываем батчами
@@ -905,7 +905,7 @@ async function processChunksInBatches(
 
     // Ждём завершения батча перед следующим
     const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults.map(r => Promise.resolve(r)))
+    results.push(...batchResults)
   }
 
   return results
