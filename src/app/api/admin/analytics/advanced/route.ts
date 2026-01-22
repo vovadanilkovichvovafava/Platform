@@ -80,11 +80,12 @@ export async function GET() {
     }
 
     // 2. Funnel Analysis
+    type StudentType = typeof students[number]
     const totalStudents = students.length
-    const enrolledStudents = students.filter((s) => s._count.enrollments > 0).length
-    const startedModules = students.filter((s) => s._count.moduleProgress > 0).length
-    const submittedWork = students.filter((s) => s._count.submissions > 0).length
-    const completedModule = students.filter((s) => s._count.moduleProgress > 0).length
+    const enrolledStudents = students.filter((s: StudentType) => s._count.enrollments > 0).length
+    const startedModules = students.filter((s: StudentType) => s._count.moduleProgress > 0).length
+    const submittedWork = students.filter((s: StudentType) => s._count.submissions > 0).length
+    const completedModule = students.filter((s: StudentType) => s._count.moduleProgress > 0).length
 
     // Get certificates count
     const certificateHolders = await prisma.certificate.groupBy({
@@ -112,7 +113,8 @@ export async function GET() {
       orderBy: { date: "asc" },
     })
 
-    const trends = activityTrend.map((day) => ({
+    type ActivityTrendType = typeof activityTrend[number]
+    const trends = activityTrend.map((day: ActivityTrendType) => ({
       date: day.date.toISOString().split("T")[0],
       activeUsers: day._count.userId,
       totalActions: day._sum.actions || 0,
@@ -157,9 +159,10 @@ export async function GET() {
       }
     }
 
-    const difficultyAnalysis = moduleStats.map((m) => {
+    type ModuleStatsType = typeof moduleStats[number]
+    const difficultyAnalysis = moduleStats.map((m: ModuleStatsType) => {
       const scores = moduleScoreMap.get(m.id) || []
-      const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null
+      const avgScore = scores.length > 0 ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length : null
 
       return {
         id: m.id,
@@ -192,12 +195,12 @@ export async function GET() {
       },
       funnel,
       trends,
-      difficultyAnalysis: difficultyAnalysis.sort((a, b) => (a.avgScore || 10) - (b.avgScore || 10)),
+      difficultyAnalysis: difficultyAnalysis.sort((a: { avgScore: number | null }, b: { avgScore: number | null }) => (a.avgScore || 10) - (b.avgScore || 10)),
       summary: {
         totalStudents,
         atRiskStudents: churnRisk.high.length + churnRisk.medium.length,
         conversionRate: totalStudents > 0 ? Math.round((completedModule / totalStudents) * 100) : 0,
-        avgDailyActiveUsers: trends.length > 0 ? Math.round(trends.reduce((a, b) => a + b.activeUsers, 0) / trends.length) : 0,
+        avgDailyActiveUsers: trends.length > 0 ? Math.round(trends.reduce((a: number, b: { activeUsers: number }) => a + b.activeUsers, 0) / trends.length) : 0,
       },
     })
   } catch (error) {

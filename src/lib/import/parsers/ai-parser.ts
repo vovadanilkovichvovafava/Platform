@@ -24,10 +24,10 @@ const API_PARSE_TIMEOUT_MS = parseInt(process.env.AI_PARSE_TIMEOUT_MS || "900000
 const MAX_CONTENT_CHARS = parseInt(process.env.AI_MAX_CONTENT_CHARS || "100000")    // ~25k токенов
 const CHARS_PER_TOKEN_ESTIMATE = 4  // Примерная оценка для русского текста
 
-// Константы для chunked parsing
-const MAX_CHUNK_SIZE = 4000 // ~4KB - увеличен для лучшего контекста
-const MIN_CHUNK_SIZE = 500 // Минимальный размер chunk (увеличен для смысловых блоков)
-const MAX_CONCURRENT_REQUESTS = 3 // Максимум параллельных запросов
+// Константы для chunked parsing (оптимизированы для надёжности + скорости)
+const MAX_CHUNK_SIZE = 3000 // ~3KB - уменьшен для надёжности (меньше потерь при ошибке)
+const MIN_CHUNK_SIZE = 500 // Минимальный размер chunk
+const MAX_CONCURRENT_REQUESTS = 6 // Для файла ~15KB все 6 чанков обрабатываются одновременно
 
 // Функция для логирования (можно отключить в production)
 const DEBUG_AI = process.env.AI_DEBUG === "true"

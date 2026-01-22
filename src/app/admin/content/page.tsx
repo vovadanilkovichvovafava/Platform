@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
+import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
@@ -176,6 +177,14 @@ export default function AdminContentPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [useNeuralParser, setUseNeuralParser] = useState(true) // По умолчанию используем нейронку
 
+  // Progress tracking для импорта
+  const [importProgress, setImportProgress] = useState<{
+    current: number
+    total: number
+    status: string
+    phase: string // 'analyzing' | 'metadata' | 'parsing' | 'merging'
+  } | null>(null)
+
   // Drag and drop
   const [draggedModule, setDraggedModule] = useState<string | null>(null)
   const [dragOverModule, setDragOverModule] = useState<string | null>(null)
@@ -287,39 +296,96 @@ export default function AdminContentPage() {
       setParsedData(null)
       setParseError(null)
       setUploadedFile(file)
+      setImportProgress({ current: 0, total: 100, status: "Подготовка...", phase: "analyzing" })
 
       const formData = new FormData()
       formData.append("file", file)
       formData.append("useAI", useNeuralParser ? "true" : "false")
-      formData.append("forceAI", useNeuralParser ? "true" : "false") // Используем AI парсер если включен переключатель
+      formData.append("forceAI", useNeuralParser ? "true" : "false")
 
-      const res = await fetch("/api/admin/import", {
+      // Используем SSE для отслеживания прогресса
+      const res = await fetch("/api/admin/import/stream", {
         method: "POST",
         body: formData,
       })
 
-      const data = await res.json()
-
-      if (!data.success || !data.trails || data.trails.length === 0) {
-        // Собираем детальную информацию об ошибке
-        const errorDetails = data.details?.length > 0
-          ? `\n${data.details.join("; ")}`
-          : ""
-        setParseError((data.error || "Не удалось распознать структуру файла") + errorDetails)
+      if (!res.ok) {
+        const errorData = await res.json()
+        setParseError(errorData.error || "Ошибка при загрузке файла")
         setParsedData(null)
-      } else {
-        setParsedData({
-          trails: data.trails,
-          warnings: data.warnings,
-          parseMethod: data.parseMethod,
-          detectedFormat: data.detectedFormat,
-          structureConfidence: data.structureConfidence,
-        })
-        setParseError(null)
+        setImportProgress(null)
+        return
+      }
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        setParseError("Не удалось создать поток для чтения")
+        setParsedData(null)
+        setImportProgress(null)
+        return
+      }
+
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        // Парсим SSE события
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || "" // Оставляем неполное сообщение в буфере
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6))
+
+              if (event.type === "progress") {
+                setImportProgress({
+                  current: event.current || 0,
+                  total: event.total || 100,
+                  status: event.status || "Обработка...",
+                  phase: event.phase || "parsing"
+                })
+              } else if (event.type === "complete") {
+                const data = event.result
+                if (!data.success || !data.trails || data.trails.length === 0) {
+                  const errorDetails = data.details?.length > 0
+                    ? `\n${data.details.join("; ")}`
+                    : ""
+                  setParseError((data.error || "Не удалось распознать структуру файла") + errorDetails)
+                  setParsedData(null)
+                } else {
+                  setParsedData({
+                    trails: data.trails,
+                    warnings: data.warnings,
+                    parseMethod: data.parseMethod,
+                    detectedFormat: data.detectedFormat,
+                    structureConfidence: data.structureConfidence,
+                    confidenceDetails: data.confidenceDetails,
+                  })
+                  setParseError(null)
+                }
+                setImportProgress(null)
+              } else if (event.type === "error") {
+                setParseError(event.error || "Неизвестная ошибка")
+                setParsedData(null)
+                setImportProgress(null)
+              }
+            } catch {
+              console.error("Failed to parse SSE event:", line)
+            }
+          }
+        }
       }
     } catch {
       setParseError("Ошибка при загрузке файла")
       setParsedData(null)
+      setImportProgress(null)
     } finally {
       setImporting(false)
       e.target.value = ""
@@ -364,40 +430,95 @@ export default function AdminContentPage() {
     try {
       setRegenerating(true)
       setParsedData(null)
-      // НЕ сбрасываем parseError сразу - показываем индикатор регенерации в блоке ошибки
+      setImportProgress({ current: 0, total: 100, status: "Подготовка к перегенерации...", phase: "analyzing" })
 
       const formData = new FormData()
       formData.append("file", uploadedFile)
       formData.append("useAI", useNeuralParser ? "true" : "false")
-      formData.append("forceAI", useNeuralParser ? "true" : "false") // AI если включен переключатель
+      formData.append("forceAI", useNeuralParser ? "true" : "false")
 
-      const res = await fetch("/api/admin/import", {
+      // Используем SSE для отслеживания прогресса
+      const res = await fetch("/api/admin/import/stream", {
         method: "POST",
         body: formData,
       })
 
-      const data = await res.json()
-
-      if (!data.success || !data.trails || data.trails.length === 0) {
-        // Собираем детальную информацию об ошибке
-        const errorDetails = data.details?.length > 0
-          ? `\n${data.details.join("; ")}`
-          : ""
-        setParseError((data.error || "AI не смог распознать структуру") + errorDetails)
+      if (!res.ok) {
+        const errorData = await res.json()
+        setParseError(errorData.error || "Ошибка при перегенерации")
         setParsedData(null)
-      } else {
-        setParsedData({
-          trails: data.trails,
-          warnings: data.warnings,
-          parseMethod: data.parseMethod,
-          detectedFormat: data.detectedFormat,
-          structureConfidence: data.structureConfidence,
-        })
-        setParseError(null)
+        setImportProgress(null)
+        return
+      }
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        setParseError("Не удалось создать поток для чтения")
+        setParsedData(null)
+        setImportProgress(null)
+        return
+      }
+
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6))
+
+              if (event.type === "progress") {
+                setImportProgress({
+                  current: event.current || 0,
+                  total: event.total || 100,
+                  status: event.status || "Обработка...",
+                  phase: event.phase || "parsing"
+                })
+              } else if (event.type === "complete") {
+                const data = event.result
+                if (!data.success || !data.trails || data.trails.length === 0) {
+                  const errorDetails = data.details?.length > 0
+                    ? `\n${data.details.join("; ")}`
+                    : ""
+                  setParseError((data.error || "AI не смог распознать структуру") + errorDetails)
+                  setParsedData(null)
+                } else {
+                  setParsedData({
+                    trails: data.trails,
+                    warnings: data.warnings,
+                    parseMethod: data.parseMethod,
+                    detectedFormat: data.detectedFormat,
+                    structureConfidence: data.structureConfidence,
+                    confidenceDetails: data.confidenceDetails,
+                  })
+                  setParseError(null)
+                }
+                setImportProgress(null)
+              } else if (event.type === "error") {
+                setParseError(event.error || "Неизвестная ошибка")
+                setParsedData(null)
+                setImportProgress(null)
+              }
+            } catch {
+              console.error("Failed to parse SSE event:", line)
+            }
+          }
+        }
       }
     } catch {
       setParseError("Ошибка при перегенерации")
       setParsedData(null)
+      setImportProgress(null)
     } finally {
       setRegenerating(false)
     }
@@ -409,6 +530,7 @@ export default function AdminContentPage() {
     setParseError(null)
     setUploadedFile(null)
     setShowConfidenceDetails(false)
+    setImportProgress(null)
   }
 
   const checkAIStatus = useCallback(async () => {
@@ -1163,9 +1285,16 @@ export default function AdminContentPage() {
                     )}
                     <div className="flex-1">
                       {regenerating ? (
-                        <div>
+                        <div className="space-y-3">
                           <span className="text-purple-700 font-medium">Повторная обработка с AI...</span>
-                          <p className="text-purple-600 text-sm mt-1">Это может занять несколько секунд</p>
+                          {importProgress ? (
+                            <>
+                              <Progress value={importProgress.current} className="h-2" />
+                              <p className="text-purple-600 text-sm">{importProgress.status}</p>
+                            </>
+                          ) : (
+                            <p className="text-purple-600 text-sm">Подготовка...</p>
+                          )}
                         </div>
                       ) : (
                         <>
@@ -1215,34 +1344,85 @@ export default function AdminContentPage() {
               {/* Если нет данных и нет ошибки и нет регенерации - показываем загрузку файла */}
               {!parsedData && !parseError && !regenerating && (
                 <div className="space-y-6">
-                  {/* Загрузка файла */}
-                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                    <div className="flex flex-col items-center justify-center">
-                      {importing ? (
-                        <>
-                          <RefreshCw className="h-12 w-12 text-purple-500 animate-spin mb-3" />
-                          <p className="text-lg text-purple-600 font-medium">Анализируем файл...</p>
-                          <p className="text-sm text-gray-400 mt-1">Это может занять несколько секунд</p>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-12 w-12 text-gray-400 mb-3" />
-                          <p className="text-lg text-gray-600 font-medium">Выберите файл для импорта</p>
-                          <p className="text-sm text-gray-400 mt-1">.txt, .md, .json, .xml</p>
-                          <p className="text-xs text-gray-400 mt-3">
-                            Система автоматически определит структуру
+                  {/* Загрузка файла или прогресс парсинга */}
+                  {importing && importProgress ? (
+                    // Показываем прогресс-бар во время парсинга
+                    <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="relative">
+                          <RefreshCw className="h-8 w-8 text-purple-600 animate-spin" />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-bold text-purple-700">
+                              {importProgress.current}%
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-lg font-medium text-purple-700">
+                            {importProgress.phase === "analyzing" && "Анализ структуры"}
+                            {importProgress.phase === "metadata" && "Извлечение метаданных"}
+                            {importProgress.phase === "parsing" && "Обработка контента"}
+                            {importProgress.phase === "merging" && "Объединение результатов"}
                           </p>
-                        </>
-                      )}
+                          <p className="text-sm text-purple-600">{importProgress.status}</p>
+                        </div>
+                      </div>
+
+                      <Progress value={importProgress.current} className="h-3 mb-3" />
+
+                      {/* Этапы парсинга */}
+                      <div className="flex justify-between text-xs text-gray-500 mt-4">
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 5 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 5 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          Анализ
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 10 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 10 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          Метаданные
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 50 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 50 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          Парсинг
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 95 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 95 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          Финализация
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-400 mt-4 text-center">
+                        Большие файлы могут обрабатываться несколько минут
+                      </p>
                     </div>
-                    <input
-                      type="file"
-                      accept=".txt,.md,.markdown,.json,.xml"
-                      onChange={handleImport}
-                      disabled={importing}
-                      className="hidden"
-                    />
-                  </label>
+                  ) : (
+                    // Обычная зона drag&drop
+                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col items-center justify-center">
+                        {importing ? (
+                          <>
+                            <RefreshCw className="h-12 w-12 text-purple-500 animate-spin mb-3" />
+                            <p className="text-lg text-purple-600 font-medium">Подготовка...</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-12 w-12 text-gray-400 mb-3" />
+                            <p className="text-lg text-gray-600 font-medium">Выберите файл для импорта</p>
+                            <p className="text-sm text-gray-400 mt-1">.txt, .md, .json, .xml</p>
+                            <p className="text-xs text-gray-400 mt-3">
+                              Система автоматически определит структуру
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        accept=".txt,.md,.markdown,.json,.xml"
+                        onChange={handleImport}
+                        disabled={importing}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
 
                   {/* Переключатель режима парсера */}
                   <div className="p-4 bg-gray-50 rounded-lg space-y-3">
