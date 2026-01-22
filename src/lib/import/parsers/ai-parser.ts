@@ -2,61 +2,165 @@
 
 import {
   ParsedTrail,
+  ParsedModule,
+  ParsedQuestion,
   ParseResult,
   AIParserConfig,
+  QuestionType,
+  MatchingData,
+  OrderingData,
+  CaseAnalysisData,
 } from "../types"
 
 // Claude API version
 const ANTHROPIC_VERSION = "2023-06-01"
 
-// Промпт для AI парсинга
-const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга образовательного контента.
+// Детальный промпт для AI парсинга с поддержкой всех типов вопросов
+const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга и улучшения образовательного контента.
 Твоя задача - преобразовать текст в структурированный формат курса.
 
-Формат вывода (JSON):
+ВАЖНО: Если исходный текст слишком краткий или бедный по содержанию:
+- Дополни его релевантной информацией по теме
+- Добавь примеры и пояснения
+- Сохрани исходную структуру, но обогати контент
+- Убедись, что каждый модуль содержит достаточно материала для изучения
+
+## ТИПЫ ВОПРОСОВ
+
+Поддерживаются 4 типа вопросов:
+
+### 1. SINGLE_CHOICE - Один правильный ответ
+Стандартный тест с одним правильным вариантом.
+\`\`\`json
+{
+  "question": "Какой тег используется для заголовка?",
+  "type": "SINGLE_CHOICE",
+  "options": ["<header>", "<h1>", "<title>", "<heading>"],
+  "correctAnswer": 1,
+  "explanation": "Тег <h1> - это заголовок первого уровня в HTML"
+}
+\`\`\`
+
+### 2. MATCHING - Сопоставление
+Соединение элементов из двух колонок.
+\`\`\`json
+{
+  "question": "Сопоставьте термины с их определениями",
+  "type": "MATCHING",
+  "options": [],
+  "correctAnswer": 0,
+  "data": {
+    "leftLabel": "Термин",
+    "rightLabel": "Определение",
+    "leftItems": [
+      {"id": "l1", "text": "HTML"},
+      {"id": "l2", "text": "CSS"},
+      {"id": "l3", "text": "JavaScript"}
+    ],
+    "rightItems": [
+      {"id": "r1", "text": "Язык разметки"},
+      {"id": "r2", "text": "Язык стилей"},
+      {"id": "r3", "text": "Язык программирования"}
+    ],
+    "correctPairs": {"l1": "r1", "l2": "r2", "l3": "r3"}
+  }
+}
+\`\`\`
+
+### 3. ORDERING - Порядок действий
+Расположить элементы в правильном порядке.
+\`\`\`json
+{
+  "question": "Расположите этапы разработки в правильном порядке",
+  "type": "ORDERING",
+  "options": [],
+  "correctAnswer": 0,
+  "data": {
+    "items": [
+      {"id": "s1", "text": "Анализ требований"},
+      {"id": "s2", "text": "Проектирование"},
+      {"id": "s3", "text": "Разработка"},
+      {"id": "s4", "text": "Тестирование"}
+    ],
+    "correctOrder": ["s1", "s2", "s3", "s4"]
+  }
+}
+\`\`\`
+
+### 4. CASE_ANALYSIS - Анализ кейса
+Анализ ситуации с множественным выбором правильных ответов.
+\`\`\`json
+{
+  "question": "Проанализируйте код и найдите ошибки",
+  "type": "CASE_ANALYSIS",
+  "options": [],
+  "correctAnswer": 0,
+  "data": {
+    "caseContent": "function sum(a, b) { return a - b; }",
+    "caseLabel": "Код для анализа",
+    "options": [
+      {"id": "o1", "text": "Неправильная операция (минус вместо плюса)", "isCorrect": true, "explanation": "Функция называется sum, но использует вычитание"},
+      {"id": "o2", "text": "Отсутствует проверка типов", "isCorrect": true, "explanation": "Нет валидации входных данных"},
+      {"id": "o3", "text": "Неправильное имя функции", "isCorrect": false, "explanation": "Имя функции корректное"}
+    ],
+    "minCorrectRequired": 2
+  }
+}
+\`\`\`
+
+## ФОРМАТ ВЫВОДА
+
+\`\`\`json
 {
   "trails": [{
     "title": "Название курса",
     "slug": "nazvanie-kursa",
-    "subtitle": "Краткое описание",
-    "description": "Полное описание курса",
+    "subtitle": "Краткое описание (1-2 предложения)",
+    "description": "Полное описание курса (что изучим, для кого)",
     "icon": "📚",
     "color": "#6366f1",
     "modules": [{
       "title": "Название модуля",
       "slug": "nazvanie-modulya",
-      "type": "THEORY" | "PRACTICE" | "PROJECT",
+      "type": "THEORY | PRACTICE | PROJECT",
       "points": 50,
-      "description": "Описание модуля",
-      "content": "Контент в Markdown",
-      "questions": [{
-        "question": "Текст вопроса?",
-        "options": ["Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4"],
-        "correctAnswer": 0
-      }]
+      "description": "Краткое описание модуля",
+      "content": "Полный контент в Markdown с заголовками, списками, примерами кода",
+      "level": "Beginner | Middle | Advanced",
+      "duration": "15 мин",
+      "requiresSubmission": false,
+      "questions": [/* массив вопросов разных типов */]
     }]
   }]
 }
+\`\`\`
 
-Правила:
-1. Определи структуру: заголовки -> trail, подзаголовки -> module
-2. Если есть вопросы с вариантами ответов - это PRACTICE
-3. Если есть задание на создание чего-то - это PROJECT
-4. Остальное - THEORY
-5. Slug генерируй из названия (транслитерация, lowercase, дефисы)
-6. Выбери подходящий emoji для icon
-7. Выбери подходящий цвет (#hex)
-8. points: THEORY=50, PRACTICE=75, PROJECT=100
-9. Сохрани весь контент в формате Markdown
-10. Верни ТОЛЬКО валидный JSON без комментариев`
+## ПРАВИЛА
 
-const AI_USER_PROMPT = `Преобразуй следующий текст в структурированный курс:
+1. **Структура**: заголовки верхнего уровня -> trail, подзаголовки -> module
+2. **Типы модулей**:
+   - THEORY (50 points) - теоретический материал без тестов
+   - PRACTICE (75 points) - материал с вопросами/тестами
+   - PROJECT (100 points) - практическое задание на создание чего-то
+3. **Slug**: транслитерация кириллицы, lowercase, дефисы вместо пробелов
+4. **Иконка**: подбери релевантный emoji по теме
+5. **Цвет**: подбери hex-цвет по тематике (#6366f1 - tech, #ec4899 - design, #10b981 - data)
+6. **Контент**: сохраняй и обогащай в Markdown (заголовки ##, списки, \`код\`, **жирный**)
+7. **Вопросы**: создавай разнообразные типы вопросов (не только SINGLE_CHOICE)
+8. **Улучшение**: если контент бедный - дополни примерами, пояснениями, деталями
+9. **requiresSubmission**: true для PROJECT, true для PRACTICE с практическими заданиями
+10. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
+
+const AI_USER_PROMPT = `Преобразуй следующий образовательный контент в структурированный курс.
+
+Если контент слишком краткий - дополни его полезной информацией по теме.
+Создай разнообразные типы вопросов (SINGLE_CHOICE, MATCHING, ORDERING, CASE_ANALYSIS).
 
 ---
 {content}
 ---
 
-Верни JSON согласно формату.`
+Верни ТОЛЬКО JSON согласно формату (без \`\`\`json обёртки).`
 
 export interface AIParserResult {
   available: boolean
@@ -101,7 +205,7 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
     const error = await response.text()
     return {
       available: false,
-      error: `API вернул ошибку: ${response.status} - ${error.substring(0, 100)}`,
+      error: `API вернул ошибку: ${response.status} - ${error.substring(0, 200)}`,
     }
   } catch (e) {
     return {
@@ -134,7 +238,7 @@ export async function parseWithAI(
       },
       body: JSON.stringify({
         model: config.model || "claude-sonnet-4-5-20241022",
-        max_tokens: 16000, // Увеличено для больших курсов
+        max_tokens: 16000,
         system: AI_SYSTEM_PROMPT,
         messages: [
           { role: "user", content: AI_USER_PROMPT.replace("{content}", content) },
@@ -157,11 +261,18 @@ export async function parseWithAI(
       return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
     }
 
-    // Извлечение JSON из ответа
-    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
+    // Извлечение JSON из ответа (убираем возможные ```json обёртки)
+    let jsonStr = aiResponse.trim()
+
+    // Удаляем markdown code block если есть
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "")
+    }
+
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       errors.push("AI вернул невалидный JSON")
-      warnings.push(`AI ответ: ${aiResponse.substring(0, 200)}...`)
+      warnings.push(`AI ответ: ${aiResponse.substring(0, 300)}...`)
       return { success: false, trails: [], warnings, errors, parseMethod: "ai" }
     }
 
@@ -210,16 +321,17 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
     for (const mod of modules) {
       if (!mod || typeof mod !== "object") continue
 
-      const validModule = {
+      const validModule: ParsedModule = {
         title: mod.title || mod.name || "Без названия",
         slug: mod.slug || generateSlugFromTitle(mod.title || "module"),
-        type: validateType(mod.type),
-        points: typeof mod.points === "number" ? mod.points : 50,
+        type: validateModuleType(mod.type),
+        points: typeof mod.points === "number" ? mod.points : getDefaultPoints(mod.type),
         description: mod.description || "",
         content: mod.content || "",
         questions: validateQuestions(mod.questions || [], warnings),
         level: mod.level,
         duration: mod.duration,
+        requiresSubmission: mod.requiresSubmission ?? (mod.type === "PROJECT"),
       }
 
       validTrail.modules.push(validModule)
@@ -236,7 +348,7 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
 }
 
 // Валидация типа модуля
-function validateType(type: any): "THEORY" | "PRACTICE" | "PROJECT" {
+function validateModuleType(type: any): "THEORY" | "PRACTICE" | "PROJECT" {
   const upperType = String(type || "").toUpperCase()
   if (upperType === "THEORY" || upperType === "PRACTICE" || upperType === "PROJECT") {
     return upperType
@@ -244,37 +356,202 @@ function validateType(type: any): "THEORY" | "PRACTICE" | "PROJECT" {
   return "THEORY"
 }
 
-// Валидация вопросов
-function validateQuestions(questions: any[], warnings: string[]): Array<{
-  question: string
-  options: string[]
-  correctAnswer: number
-}> {
-  const result: Array<{
-    question: string
-    options: string[]
-    correctAnswer: number
-  }> = []
+// Получение баллов по умолчанию
+function getDefaultPoints(type: string): number {
+  switch (String(type).toUpperCase()) {
+    case "PRACTICE": return 75
+    case "PROJECT": return 100
+    default: return 50
+  }
+}
+
+// Валидация типа вопроса
+function validateQuestionType(type: any): QuestionType {
+  const validTypes: QuestionType[] = ["SINGLE_CHOICE", "MATCHING", "ORDERING", "CASE_ANALYSIS"]
+  const upperType = String(type || "").toUpperCase() as QuestionType
+  return validTypes.includes(upperType) ? upperType : "SINGLE_CHOICE"
+}
+
+// Валидация вопросов с поддержкой всех типов
+function validateQuestions(questions: any[], warnings: string[]): ParsedQuestion[] {
+  const result: ParsedQuestion[] = []
 
   for (const q of questions) {
     if (!q || typeof q !== "object") continue
 
-    const question = q.question || q.text || ""
-    const options = Array.isArray(q.options) ? q.options.filter((o: any) => typeof o === "string") : []
-    const correctAnswer = typeof q.correctAnswer === "number" ? q.correctAnswer : 0
+    const questionText = q.question || q.text || ""
+    if (!questionText) continue
 
-    if (question && options.length >= 2) {
-      result.push({
-        question,
-        options,
-        correctAnswer: Math.min(correctAnswer, options.length - 1),
-      })
-    } else if (question) {
-      warnings.push(`Вопрос "${question.substring(0, 30)}..." имеет недостаточно вариантов`)
+    const questionType = validateQuestionType(q.type)
+
+    const validQuestion: ParsedQuestion = {
+      question: questionText,
+      type: questionType,
+      options: [],
+      correctAnswer: 0,
+      explanation: q.explanation || undefined,
     }
+
+    // Валидация в зависимости от типа вопроса
+    switch (questionType) {
+      case "MATCHING":
+        validQuestion.data = validateMatchingData(q.data, warnings)
+        break
+
+      case "ORDERING":
+        validQuestion.data = validateOrderingData(q.data, warnings)
+        break
+
+      case "CASE_ANALYSIS":
+        validQuestion.data = validateCaseAnalysisData(q.data, warnings)
+        break
+
+      case "SINGLE_CHOICE":
+      default:
+        const options = Array.isArray(q.options)
+          ? q.options.filter((o: any) => typeof o === "string")
+          : []
+
+        if (options.length < 2) {
+          warnings.push(`Вопрос "${questionText.substring(0, 30)}..." имеет недостаточно вариантов`)
+          continue
+        }
+
+        validQuestion.options = options
+        validQuestion.correctAnswer = typeof q.correctAnswer === "number"
+          ? Math.min(q.correctAnswer, options.length - 1)
+          : 0
+        break
+    }
+
+    result.push(validQuestion)
   }
 
   return result
+}
+
+// Валидация данных MATCHING
+function validateMatchingData(data: any, warnings: string[]): MatchingData {
+  if (!data || typeof data !== "object") {
+    return createDefaultMatchingData()
+  }
+
+  const leftItems = Array.isArray(data.leftItems)
+    ? data.leftItems.filter((i: any) => i && i.id && i.text)
+    : []
+
+  const rightItems = Array.isArray(data.rightItems)
+    ? data.rightItems.filter((i: any) => i && i.id && i.text)
+    : []
+
+  if (leftItems.length < 2 || rightItems.length < 2) {
+    warnings.push("MATCHING вопрос имеет недостаточно элементов")
+    return createDefaultMatchingData()
+  }
+
+  return {
+    leftLabel: data.leftLabel || "Термин",
+    rightLabel: data.rightLabel || "Определение",
+    leftItems,
+    rightItems,
+    correctPairs: data.correctPairs || {},
+  }
+}
+
+function createDefaultMatchingData(): MatchingData {
+  return {
+    leftLabel: "Термин",
+    rightLabel: "Определение",
+    leftItems: [
+      { id: "l1", text: "Элемент 1" },
+      { id: "l2", text: "Элемент 2" },
+      { id: "l3", text: "Элемент 3" },
+    ],
+    rightItems: [
+      { id: "r1", text: "Описание 1" },
+      { id: "r2", text: "Описание 2" },
+      { id: "r3", text: "Описание 3" },
+    ],
+    correctPairs: { l1: "r1", l2: "r2", l3: "r3" },
+  }
+}
+
+// Валидация данных ORDERING
+function validateOrderingData(data: any, warnings: string[]): OrderingData {
+  if (!data || typeof data !== "object") {
+    return createDefaultOrderingData()
+  }
+
+  const items = Array.isArray(data.items)
+    ? data.items.filter((i: any) => i && i.id && i.text)
+    : []
+
+  if (items.length < 2) {
+    warnings.push("ORDERING вопрос имеет недостаточно элементов")
+    return createDefaultOrderingData()
+  }
+
+  const correctOrder = Array.isArray(data.correctOrder)
+    ? data.correctOrder
+    : items.map((i: any) => i.id)
+
+  return { items, correctOrder }
+}
+
+function createDefaultOrderingData(): OrderingData {
+  return {
+    items: [
+      { id: "s1", text: "Шаг 1" },
+      { id: "s2", text: "Шаг 2" },
+      { id: "s3", text: "Шаг 3" },
+      { id: "s4", text: "Шаг 4" },
+    ],
+    correctOrder: ["s1", "s2", "s3", "s4"],
+  }
+}
+
+// Валидация данных CASE_ANALYSIS
+function validateCaseAnalysisData(data: any, warnings: string[]): CaseAnalysisData {
+  if (!data || typeof data !== "object") {
+    return createDefaultCaseAnalysisData()
+  }
+
+  const options = Array.isArray(data.options)
+    ? data.options.filter((o: any) => o && o.id && o.text !== undefined)
+        .map((o: any) => ({
+          id: o.id,
+          text: o.text,
+          isCorrect: Boolean(o.isCorrect),
+          explanation: o.explanation || "",
+        }))
+    : []
+
+  if (options.length < 2) {
+    warnings.push("CASE_ANALYSIS вопрос имеет недостаточно вариантов")
+    return createDefaultCaseAnalysisData()
+  }
+
+  const correctCount = options.filter((o: any) => o.isCorrect).length
+
+  return {
+    caseContent: data.caseContent || "",
+    caseLabel: data.caseLabel || "Кейс для анализа",
+    options,
+    minCorrectRequired: data.minCorrectRequired || Math.max(1, correctCount),
+  }
+}
+
+function createDefaultCaseAnalysisData(): CaseAnalysisData {
+  return {
+    caseContent: "",
+    caseLabel: "Кейс для анализа",
+    options: [
+      { id: "o1", text: "Вариант 1", isCorrect: false, explanation: "" },
+      { id: "o2", text: "Вариант 2", isCorrect: false, explanation: "" },
+      { id: "o3", text: "Вариант 3", isCorrect: false, explanation: "" },
+    ],
+    minCorrectRequired: 1,
+  }
 }
 
 // Генерация slug
