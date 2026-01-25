@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
@@ -9,7 +10,6 @@ import {
   Trophy,
   Medal,
   Star,
-  Flame,
   Award,
   RefreshCw,
   Crown,
@@ -20,7 +20,6 @@ interface LeaderboardEntry {
   id: string
   name: string
   totalXP: number
-  streak: number
   avatarUrl: string | null
   modulesCompleted: number
   certificates: number
@@ -132,46 +131,46 @@ export default function LeaderboardPage() {
         {leaderboard.length >= 3 && (
           <div className="grid grid-cols-3 gap-4 mb-8">
             {/* 2nd place */}
-            <Card className="text-center pt-8 bg-gradient-to-b from-gray-50 to-white order-1">
-              <CardContent className="p-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center text-xl font-bold text-gray-700 mb-2">
-                  {getInitials(leaderboard[1].name)}
-                </div>
-                <Medal className="h-6 w-6 text-gray-400 mx-auto mb-1" />
-                <p className="font-medium text-gray-900 truncate">{leaderboard[1].name}</p>
-                <p className="text-lg font-bold text-gray-600">{leaderboard[1].totalXP} XP</p>
-              </CardContent>
-            </Card>
+            <Link href={`/dashboard/${leaderboard[1].id}`} className="order-1">
+              <Card className="text-center pt-8 bg-gradient-to-b from-gray-50 to-white hover:shadow-lg transition-shadow cursor-pointer h-full">
+                <CardContent className="p-4">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center text-xl font-bold text-gray-700 mb-2">
+                    {getInitials(leaderboard[1].name)}
+                  </div>
+                  <Medal className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+                  <p className="font-medium text-gray-900 truncate hover:text-[#0176D3]">{leaderboard[1].name}</p>
+                  <p className="text-lg font-bold text-gray-600">{leaderboard[1].totalXP} XP</p>
+                </CardContent>
+              </Card>
+            </Link>
 
             {/* 1st place */}
-            <Card className="text-center bg-gradient-to-b from-yellow-50 to-white border-yellow-200 order-0 lg:order-1 -mt-4">
-              <CardContent className="p-4 pt-8">
-                <Crown className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-                <div className="w-20 h-20 mx-auto rounded-full bg-yellow-100 flex items-center justify-center text-2xl font-bold text-yellow-700 mb-2">
-                  {getInitials(leaderboard[0].name)}
-                </div>
-                <p className="font-medium text-gray-900 truncate">{leaderboard[0].name}</p>
-                <p className="text-2xl font-bold text-yellow-600">{leaderboard[0].totalXP} XP</p>
-                {leaderboard[0].streak > 0 && (
-                  <Badge className="mt-2 bg-orange-100 text-orange-700 border-0">
-                    <Flame className="h-3 w-3 mr-1" />
-                    {leaderboard[0].streak} дней
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
+            <Link href={`/dashboard/${leaderboard[0].id}`} className="order-0 lg:order-1 -mt-4">
+              <Card className="text-center bg-gradient-to-b from-yellow-50 to-white border-yellow-200 hover:shadow-lg transition-shadow cursor-pointer h-full">
+                <CardContent className="p-4 pt-8">
+                  <Crown className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                  <div className="w-20 h-20 mx-auto rounded-full bg-yellow-100 flex items-center justify-center text-2xl font-bold text-yellow-700 mb-2">
+                    {getInitials(leaderboard[0].name)}
+                  </div>
+                  <p className="font-medium text-gray-900 truncate hover:text-[#0176D3]">{leaderboard[0].name}</p>
+                  <p className="text-2xl font-bold text-yellow-600">{leaderboard[0].totalXP} XP</p>
+                </CardContent>
+              </Card>
+            </Link>
 
             {/* 3rd place */}
-            <Card className="text-center pt-12 bg-gradient-to-b from-amber-50 to-white order-2">
-              <CardContent className="p-4">
-                <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 flex items-center justify-center text-lg font-bold text-amber-700 mb-2">
-                  {getInitials(leaderboard[2].name)}
-                </div>
-                <Medal className="h-5 w-5 text-amber-600 mx-auto mb-1" />
-                <p className="font-medium text-gray-900 truncate">{leaderboard[2].name}</p>
-                <p className="text-lg font-bold text-amber-600">{leaderboard[2].totalXP} XP</p>
-              </CardContent>
-            </Card>
+            <Link href={`/dashboard/${leaderboard[2].id}`} className="order-2">
+              <Card className="text-center pt-12 bg-gradient-to-b from-amber-50 to-white hover:shadow-lg transition-shadow cursor-pointer h-full">
+                <CardContent className="p-4">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 flex items-center justify-center text-lg font-bold text-amber-700 mb-2">
+                    {getInitials(leaderboard[2].name)}
+                  </div>
+                  <Medal className="h-5 w-5 text-amber-600 mx-auto mb-1" />
+                  <p className="font-medium text-gray-900 truncate hover:text-[#0176D3]">{leaderboard[2].name}</p>
+                  <p className="text-lg font-bold text-amber-600">{leaderboard[2].totalXP} XP</p>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         )}
 
@@ -189,11 +188,12 @@ export default function LeaderboardPage() {
                 const isCurrentUser = session?.user?.id === entry.id
 
                 return (
-                  <div
+                  <Link
                     key={entry.id}
+                    href={`/dashboard/${entry.id}`}
                     className={`flex items-center gap-4 p-4 ${getRankStyle(entry.rank)} ${
                       isCurrentUser ? "ring-2 ring-blue-400 ring-inset" : ""
-                    }`}
+                    } hover:bg-gray-50 transition-colors cursor-pointer`}
                   >
                     <div className="w-8 flex justify-center">
                       {getRankIcon(entry.rank)}
@@ -205,7 +205,7 @@ export default function LeaderboardPage() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={`font-medium truncate ${isCurrentUser ? "text-blue-700" : "text-gray-900"}`}>
+                        <span className={`font-medium truncate ${isCurrentUser ? "text-blue-700" : "text-gray-900"} group-hover:text-[#0176D3]`}>
                           {entry.name}
                         </span>
                         {isCurrentUser && (
@@ -222,12 +222,6 @@ export default function LeaderboardPage() {
                             {entry.certificates}
                           </span>
                         )}
-                        {entry.streak > 0 && (
-                          <span className="flex items-center gap-1 text-orange-500">
-                            <Flame className="h-3 w-3" />
-                            {entry.streak}
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -242,7 +236,7 @@ export default function LeaderboardPage() {
                       </p>
                       <p className="text-xs text-gray-400">XP</p>
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
 

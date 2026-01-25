@@ -12,7 +12,6 @@ export async function GET() {
         id: true,
         name: true,
         totalXP: true,
-        currentStreak: true,
         avatarUrl: true,
         _count: {
           select: {
@@ -31,7 +30,6 @@ export async function GET() {
       id: student.id,
       name: student.name,
       totalXP: student.totalXP,
-      streak: student.currentStreak,
       avatarUrl: student.avatarUrl,
       modulesCompleted: student._count.moduleProgress,
       certificates: student._count.certificates,
