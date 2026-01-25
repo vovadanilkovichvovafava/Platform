@@ -1,21 +1,29 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { ACHIEVEMENTS } from "@/lib/achievements"
 
 export const dynamic = "force-dynamic"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { TrailCard } from "@/components/trail-card"
 import {
-  Flame,
   Star,
   Trophy,
   BookOpen,
   Clock,
+  Medal,
+  Award,
+  Lock,
+  CheckCircle,
+  XCircle,
+  FileText,
+  ArrowRight,
+  ExternalLink,
 } from "lucide-react"
-import Link from "next/link"
 
 function getRank(xp: number) {
   if (xp >= 1000) return { name: "Master", color: "text-purple-600", bg: "bg-purple-100" }
@@ -31,6 +39,17 @@ function getInitials(name: string) {
     .join("")
     .toUpperCase()
     .slice(0, 2)
+}
+
+function getRarityBorder(rarity: string) {
+  switch (rarity) {
+    case "common": return "border-gray-200"
+    case "uncommon": return "border-green-300"
+    case "rare": return "border-blue-400"
+    case "epic": return "border-purple-500"
+    case "legendary": return "border-yellow-500"
+    default: return "border-gray-200"
+  }
 }
 
 export default async function DashboardPage() {
@@ -58,7 +77,6 @@ export default async function DashboardPage() {
         where: { status: "COMPLETED" },
       },
       submissions: {
-        where: { status: "PENDING" },
         take: 5,
         orderBy: { createdAt: "desc" },
         include: {
@@ -67,12 +85,77 @@ export default async function DashboardPage() {
           },
         },
       },
+      certificates: {
+        include: {
+          trail: {
+            select: {
+              title: true,
+              slug: true,
+              color: true,
+            },
+          },
+        },
+        orderBy: { issuedAt: "desc" },
+      },
     },
   })
 
   if (!user) {
     redirect("/login")
   }
+
+  // Get leaderboard position
+  const higherRanked = await prisma.user.count({
+    where: {
+      role: "STUDENT",
+      totalXP: { gt: user.totalXP },
+    },
+  })
+  const leaderboardRank = higherRanked + 1
+
+  const totalStudents = await prisma.user.count({
+    where: { role: "STUDENT" },
+  })
+
+  // Get submissions stats
+  const submissionStats = await prisma.submission.groupBy({
+    by: ["status"],
+    where: { userId: session.user.id },
+    _count: true,
+  })
+
+  const stats = {
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  }
+  submissionStats.forEach((s) => {
+    if (s.status === "PENDING") stats.pending = s._count
+    if (s.status === "APPROVED") stats.approved = s._count
+    if (s.status === "REJECTED") stats.rejected = s._count
+  })
+  const totalSubmissions = stats.approved + stats.rejected + stats.pending
+  const successRate = totalSubmissions > 0
+    ? Math.round((stats.approved / totalSubmissions) * 100)
+    : 0
+
+  // Get achievements
+  const userAchievements = await prisma.userAchievement.findMany({
+    where: { userId: session.user.id },
+    orderBy: { earnedAt: "desc" },
+  })
+
+  const achievements = Object.values(ACHIEVEMENTS).map((def) => {
+    const userAch = userAchievements.find((ua) => ua.achievementId === def.id)
+    return {
+      ...def,
+      earned: !!userAch,
+      earnedAt: userAch?.earnedAt.toISOString() || null,
+    }
+  })
+
+  const achievementCount = userAchievements.length
+  const achievementTotal = Object.keys(ACHIEVEMENTS).length
 
   const rank = getRank(user.totalXP)
 
@@ -97,9 +180,9 @@ export default async function DashboardPage() {
   // Filter out restricted trails user doesn't have access to
   const isPrivileged = user.role === "ADMIN" || user.role === "TEACHER"
   const allTrails = allPublishedTrails.filter((trail) => {
-    if (!trail.isRestricted) return true // Public trail
-    if (isPrivileged) return true // Admin/Teacher can see all
-    return accessibleTrailIds.includes(trail.id) // Check access
+    if (!trail.isRestricted) return true
+    if (isPrivileged) return true
+    return accessibleTrailIds.includes(trail.id)
   })
 
   // Calculate progress for enrolled trails
@@ -121,103 +204,100 @@ export default async function DashboardPage() {
   const enrolledTrails = trailsWithProgress.filter((t) => t.enrolled)
   const availableTrails = trailsWithProgress.filter((t) => !t.enrolled)
 
+  // Pending submissions for notification
+  const pendingSubmissions = user.submissions.filter((s) => s.status === "PENDING")
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section with Mountains */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white py-8">
-        <div className="absolute inset-0 pointer-events-none opacity-50">
-          <svg
-            className="absolute bottom-0 left-0 w-full"
-            viewBox="0 0 1440 200"
-            fill="none"
-            preserveAspectRatio="xMidYMax slice"
-          >
-            <path
-              d="M0 200L200 140L400 180L600 120L800 160L1000 100L1200 150L1440 80V200H0Z"
-              fill="#E0ECFF"
-              fillOpacity="0.5"
-            />
-            <path
-              d="M0 200L150 160L350 190L550 150L750 180L950 130L1150 170L1350 140L1440 160V200H0Z"
-              fill="#C5D9E8"
-              fillOpacity="0.6"
-            />
-          </svg>
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="flex flex-col md:flex-row gap-6 items-start">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-orange-50 py-8 border-b border-gray-100">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col lg:flex-row gap-8">
             {/* Profile Card */}
-            <Card className="w-full md:w-80 shrink-0">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <Avatar className="h-16 w-16">
-                    <AvatarFallback className="bg-[#0176D3] text-white text-xl">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h2 className="font-semibold text-lg">{user.name}</h2>
-                    <Badge className={`${rank.bg} ${rank.color} border-0`}>
-                      {rank.name}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-5 w-5 text-yellow-500" />
-                      <span className="text-sm font-medium">Total XP</span>
+            <div className="lg:w-80 shrink-0">
+              <Card className="h-full">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4 mb-6">
+                    <Avatar className="h-16 w-16 border-4 border-white shadow-lg">
+                      <AvatarFallback className="bg-gradient-to-br from-[#0176D3] to-[#014486] text-white text-xl">
+                        {getInitials(user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h2 className="font-semibold text-lg">{user.name}</h2>
+                      <Badge className={`${rank.bg} ${rank.color} border-0`}>
+                        {rank.name}
+                      </Badge>
                     </div>
-                    <span className="font-bold text-lg">{user.totalXP}</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-5 w-5 text-orange-500" />
-                      <span className="text-sm font-medium">Streak</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-yellow-50 rounded-xl text-center">
+                      <div className="flex items-center justify-center gap-1 text-yellow-600 mb-1">
+                        <Star className="h-4 w-4" />
+                        <span className="text-lg font-bold">{user.totalXP}</span>
+                      </div>
+                      <p className="text-xs text-yellow-700">XP</p>
                     </div>
-                    <span className="font-bold text-lg">
-                      {user.currentStreak} дней
-                    </span>
-                  </div>
 
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-green-500" />
-                      <span className="text-sm font-medium">Модулей пройдено</span>
+                    <Link href="/leaderboard" className="p-3 bg-blue-50 rounded-xl text-center hover:bg-blue-100 transition-colors">
+                      <div className="flex items-center justify-center gap-1 text-blue-600 mb-1">
+                        <Medal className="h-4 w-4" />
+                        <span className="text-lg font-bold">#{leaderboardRank}</span>
+                      </div>
+                      <p className="text-xs text-blue-700">в рейтинге</p>
+                    </Link>
+
+                    <div className="p-3 bg-green-50 rounded-xl text-center">
+                      <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
+                        <Trophy className="h-4 w-4" />
+                        <span className="text-lg font-bold">{user.moduleProgress.length}</span>
+                      </div>
+                      <p className="text-xs text-green-700">модулей</p>
                     </div>
-                    <span className="font-bold text-lg">
-                      {user.moduleProgress.length}
-                    </span>
+
+                    <div className="p-3 bg-purple-50 rounded-xl text-center">
+                      <div className="flex items-center justify-center gap-1 text-purple-600 mb-1">
+                        <Award className="h-4 w-4" />
+                        <span className="text-lg font-bold">{user.certificates.length}</span>
+                      </div>
+                      <p className="text-xs text-purple-700">сертификатов</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Welcome Message */}
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Добро пожаловать, {user.name.split(" ")[0]}!
-              </h1>
-              <p className="text-gray-600 mb-6">
-                Продолжайте обучение и развивайте свои навыки
-              </p>
+                  <Link
+                    href={`/dashboard/${user.id}`}
+                    className="mt-4 flex items-center justify-center gap-2 p-2 text-sm text-[#0176D3] hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    Публичный профиль
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
 
-              {user.submissions.length > 0 && (
+            {/* Welcome + Stats */}
+            <div className="flex-1 space-y-6">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                  Добро пожаловать, {user.name.split(" ")[0]}!
+                </h1>
+                <p className="text-gray-600">
+                  Продолжайте обучение и развивайте свои навыки
+                </p>
+              </div>
+
+              {/* Pending Submissions Notification */}
+              {pendingSubmissions.length > 0 && (
                 <Card className="bg-orange-50 border-orange-200">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 text-orange-700 mb-2">
                       <Clock className="h-4 w-4" />
                       <span className="font-medium">На проверке</span>
                     </div>
-                    <div className="space-y-2">
-                      {user.submissions.map((sub) => (
-                        <div
-                          key={sub.id}
-                          className="text-sm text-orange-600"
-                        >
+                    <div className="space-y-1">
+                      {pendingSubmissions.map((sub) => (
+                        <div key={sub.id} className="text-sm text-orange-600">
                           {sub.module.title}
                         </div>
                       ))}
@@ -225,6 +305,47 @@ export default async function DashboardPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Submissions Stats */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-[#0176D3]" />
+                    Статистика работ
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="text-center p-3 bg-green-50 rounded-xl">
+                      <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-1" />
+                      <p className="text-xl font-bold text-green-700">{stats.approved}</p>
+                      <p className="text-[10px] text-green-600">Принято</p>
+                    </div>
+                    <div className="text-center p-3 bg-orange-50 rounded-xl">
+                      <Clock className="h-5 w-5 text-orange-500 mx-auto mb-1" />
+                      <p className="text-xl font-bold text-orange-700">{stats.pending}</p>
+                      <p className="text-[10px] text-orange-600">На проверке</p>
+                    </div>
+                    <div className="text-center p-3 bg-red-50 rounded-xl">
+                      <XCircle className="h-5 w-5 text-red-500 mx-auto mb-1" />
+                      <p className="text-xl font-bold text-red-700">{stats.rejected}</p>
+                      <p className="text-[10px] text-red-600">На доработку</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Успешность</span>
+                      <span className="font-medium">{successRate}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full"
+                        style={{ width: `${successRate}%` }}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -232,60 +353,201 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        {/* Enrolled Trails */}
-        {enrolledTrails.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                Мои trails
-              </h2>
-              <Link
-                href="/trails"
-                className="text-sm text-[#0176D3] hover:underline"
-              >
-                Смотреть все
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {enrolledTrails.map((trail) => (
-                <TrailCard
-                  key={trail.id}
-                  trail={trail}
-                  progress={trail.progress}
-                  enrolled
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left column - Trails */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Enrolled Trails */}
+            {enrolledTrails.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-[#0176D3]" />
+                    Мои trails
+                  </h2>
+                  <Link
+                    href="/trails"
+                    className="text-sm text-[#0176D3] hover:underline flex items-center gap-1"
+                  >
+                    Смотреть все
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {enrolledTrails.map((trail) => (
+                    <TrailCard
+                      key={trail.id}
+                      trail={trail}
+                      progress={trail.progress}
+                      enrolled
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {/* Available Trails */}
-        {availableTrails.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                Доступные trails
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {availableTrails.map((trail) => (
-                <TrailCard key={trail.id} trail={trail} />
-              ))}
-            </div>
-          </section>
-        )}
+            {/* Available Trails */}
+            {availableTrails.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-orange-500" />
+                    Доступные trails
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {availableTrails.map((trail) => (
+                    <TrailCard key={trail.id} trail={trail} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {enrolledTrails.length === 0 && availableTrails.length === 0 && (
-          <div className="text-center py-12">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Trails пока не добавлены
-            </h3>
-            <p className="text-gray-600">
-              Скоро здесь появятся курсы для обучения
-            </p>
+            {enrolledTrails.length === 0 && availableTrails.length === 0 && (
+              <div className="text-center py-12">
+                <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Trails пока не добавлены
+                </h3>
+                <p className="text-gray-600">
+                  Скоро здесь появятся курсы для обучения
+                </p>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Right column - Achievements & Certificates */}
+          <div className="space-y-6">
+            {/* Certificates */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Award className="h-5 w-5 text-amber-500" />
+                  Сертификаты
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {user.certificates.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {user.certificates.length > 0 ? (
+                  <div className="space-y-3">
+                    {user.certificates.slice(0, 3).map((cert) => (
+                      <Link
+                        key={cert.id}
+                        href={`/certificates/${cert.uniqueCode}`}
+                        className="group block"
+                      >
+                        <div
+                          className="p-3 rounded-xl border transition-all hover:shadow-md"
+                          style={{ borderColor: cert.trail.color + "40" }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                              style={{ background: cert.trail.color }}
+                            >
+                              <Award className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm text-gray-900 truncate group-hover:text-[#0176D3]">
+                                {cert.trail.title}
+                              </h4>
+                              <p className="text-xs text-gray-500">
+                                {new Date(cert.issuedAt).toLocaleDateString("ru-RU")}
+                              </p>
+                            </div>
+                            <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-[#0176D3]" />
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                    {user.certificates.length > 3 && (
+                      <Link
+                        href={`/dashboard/${user.id}`}
+                        className="block text-center text-sm text-[#0176D3] hover:underline"
+                      >
+                        Показать все ({user.certificates.length})
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <Award className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">Завершите trail для получения сертификата</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Achievements */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-orange-500" />
+                  Достижения
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {achievementCount} / {achievementTotal}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-2">
+                  {achievements.slice(0, 9).map((achievement) => (
+                    <div
+                      key={achievement.id}
+                      className={`relative p-2 rounded-lg text-center transition-all ${
+                        achievement.earned
+                          ? `border ${getRarityBorder(achievement.rarity)} bg-white`
+                          : "opacity-40 grayscale bg-gray-50 border border-gray-200"
+                      }`}
+                      title={`${achievement.name}: ${achievement.description}`}
+                    >
+                      <div className="text-xl mb-0.5">{achievement.icon}</div>
+                      <p className="text-[9px] text-gray-600 truncate">{achievement.name}</p>
+                      {!achievement.earned && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-lg">
+                          <Lock className="h-3 w-3 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  href={`/dashboard/${user.id}`}
+                  className="mt-3 flex items-center justify-center gap-1 text-sm text-[#0176D3] hover:underline"
+                >
+                  Все достижения
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card className="bg-gradient-to-br from-blue-50 to-white">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-700">Ваш прогресс</span>
+                  <span className="text-xs text-gray-500">из {totalStudents} студентов</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">Позиция в рейтинге</span>
+                    <span className="font-bold text-[#0176D3]">#{leaderboardRank}</span>
+                  </div>
+                  <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#0176D3] rounded-full"
+                      style={{ width: `${Math.max(5, 100 - (leaderboardRank / totalStudents) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 text-center">
+                    Вы опережаете {Math.round((1 - leaderboardRank / totalStudents) * 100)}% студентов
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

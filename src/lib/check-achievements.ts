@@ -9,7 +9,6 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
       where: { id: userId },
       select: {
         totalXP: true,
-        currentStreak: true,
         _count: {
           select: {
             moduleProgress: { where: { status: "COMPLETED" } },
@@ -92,17 +91,6 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
     }
     if (user.totalXP >= 5000 && !existingIds.has("XP_5000")) {
       toAward.push("XP_5000")
-    }
-
-    // Streak achievements
-    if (user.currentStreak >= 3 && !existingIds.has("STREAK_3")) {
-      toAward.push("STREAK_3")
-    }
-    if (user.currentStreak >= 7 && !existingIds.has("STREAK_7")) {
-      toAward.push("STREAK_7")
-    }
-    if (user.currentStreak >= 30 && !existingIds.has("STREAK_30")) {
-      toAward.push("STREAK_30")
     }
 
     // Perfect scores
