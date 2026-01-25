@@ -129,7 +129,7 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
           type: "ACHIEVEMENT_EARNED",
           title: `Достижение: ${def?.name || achievementId}`,
           message: def?.description || "Вы получили новое достижение!",
-          link: "/profile",
+          link: "/dashboard",
         }
       })
 
