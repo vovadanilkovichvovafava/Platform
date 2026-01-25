@@ -35,9 +35,9 @@ export default async function TeacherStatsPage() {
     _count: true,
   })
 
-  const pendingCount = submissionsByStatus.find((s) => s.status === "PENDING")?._count || 0
-  const approvedCount = submissionsByStatus.find((s) => s.status === "APPROVED")?._count || 0
-  const revisionCount = submissionsByStatus.find((s) => s.status === "REVISION")?._count || 0
+  const pendingCount = submissionsByStatus.find((s: { status: string }) => s.status === "PENDING")?._count || 0
+  const approvedCount = submissionsByStatus.find((s: { status: string }) => s.status === "APPROVED")?._count || 0
+  const revisionCount = submissionsByStatus.find((s: { status: string }) => s.status === "REVISION")?._count || 0
 
   // Get submissions by trail
   const submissionsByTrail = await prisma.submission.findMany({
@@ -52,7 +52,7 @@ export default async function TeacherStatsPage() {
     },
   })
 
-  const trailStats = submissionsByTrail.reduce((acc, sub) => {
+  const trailStats = submissionsByTrail.reduce((acc: Record<string, { total: number; approved: number; pending: number; revision: number; color: string }>, sub: typeof submissionsByTrail[number]) => {
     const trail = sub.module.trail.title
     if (!acc[trail]) {
       acc[trail] = { total: 0, approved: 0, pending: 0, revision: 0, color: sub.module.trail.color }
@@ -271,7 +271,7 @@ export default async function TeacherStatsPage() {
               <p className="text-gray-500 text-center py-4">Нет данных</p>
             ) : (
               <div className="space-y-4">
-                {Object.entries(trailStats).map(([trail, stats]) => (
+                {(Object.entries(trailStats) as [string, { total: number; approved: number; pending: number; revision: number; color: string }][]).map(([trail, stats]) => (
                   <div key={trail} className="p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{trail}</span>
@@ -310,7 +310,7 @@ export default async function TeacherStatsPage() {
               <p className="text-gray-500 text-center py-4">Нет данных</p>
             ) : (
               <div className="space-y-3">
-                {topStudents.map((student, idx) => (
+                {topStudents.map((student: typeof topStudents[number], idx: number) => (
                   <div
                     key={student.name}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"

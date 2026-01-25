@@ -18,7 +18,7 @@ export async function GET() {
       const allTrails = await prisma.trail.findMany({
         select: { id: true },
       })
-      return NextResponse.json(allTrails.map(t => ({ trailId: t.id })))
+      return NextResponse.json(allTrails.map((t: { id: string }) => ({ trailId: t.id })))
     }
 
     const assignments = await prisma.trailTeacher.findMany({

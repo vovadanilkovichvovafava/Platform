@@ -49,7 +49,7 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
       where: { userId },
       select: { achievementId: true },
     })
-    const existingIds = new Set(existing.map((e) => e.achievementId))
+    const existingIds = new Set(existing.map((e: { achievementId: string }) => e.achievementId))
 
     // Determine which achievements to award
     const toAward: string[] = []

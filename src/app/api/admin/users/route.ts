@@ -65,7 +65,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete in transaction to ensure consistency
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: typeof prisma) => {
       // First delete invites created by this user (no cascade)
       await tx.invite.deleteMany({
         where: { createdById: userId },
