@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
         if (mod.questions.length > 0) {
           content += `\n=== ВОПРОСЫ ===\n`
-          for (const question of module.questions) {
+          for (const question of mod.questions) {
             const questionType = question.type || "SINGLE_CHOICE"
 
             // Добавляем маркер типа вопроса для MATCHING и ORDERING

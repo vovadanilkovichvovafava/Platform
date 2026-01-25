@@ -498,7 +498,8 @@ export async function parseWithAI(
         }
       }
     }
-    const trails = parsed.trails || [parsed]
+    const parsedData = parsed as { trails?: unknown[] }
+    const trails = parsedData.trails || [parsed]
 
     // Валидация результата
     const validatedTrails = validateAndFixTrails(trails, warnings)
@@ -883,7 +884,8 @@ async function parseChunkWithAI(
       }
     }
 
-    const modules = parsed.modules || []
+    const parsedData = parsed as { modules?: unknown[] }
+    const modules = parsedData.modules || []
     console.log(`[AI-Parser] Часть ${chunk.index + 1}: успешно получено ${modules.length} модулей`)
     return { modules }
   } catch (e) {
