@@ -45,29 +45,29 @@ export async function GET(request: NextRequest) {
       content += `опубликован: ${trail.isPublished ? "да" : "нет"}\n`
       content += `\n`
 
-      for (const module of trail.modules) {
+      for (const mod of trail.modules) {
         content += `=== MODULE ===\n`
-        content += `название: ${module.title}\n`
-        content += `slug: ${module.slug}\n`
-        content += `тип: ${module.type === "THEORY" ? "урок" : module.type === "PRACTICE" ? "тест" : "проект"}\n`
-        content += `уровень: ${module.level}\n`
-        content += `очки: ${module.points}\n`
-        content += `длительность: ${module.duration}\n`
-        content += `описание: ${module.description}\n`
-        if (module.requiresSubmission) {
+        content += `название: ${mod.title}\n`
+        content += `slug: ${mod.slug}\n`
+        content += `тип: ${mod.type === "THEORY" ? "урок" : mod.type === "PRACTICE" ? "тест" : "проект"}\n`
+        content += `уровень: ${mod.level}\n`
+        content += `очки: ${mod.points}\n`
+        content += `длительность: ${mod.duration}\n`
+        content += `описание: ${mod.description}\n`
+        if (mod.requiresSubmission) {
           content += `требует_сдачу: да\n`
         }
         content += `---\n`
-        content += module.content || ""
+        content += mod.content || ""
         content += `\n---\n`
 
-        if (module.requirements) {
+        if (mod.requirements) {
           content += `\n=== ТРЕБОВАНИЯ ===\n`
-          content += module.requirements
+          content += mod.requirements
           content += `\n`
         }
 
-        if (module.questions.length > 0) {
+        if (mod.questions.length > 0) {
           content += `\n=== ВОПРОСЫ ===\n`
           for (const question of module.questions) {
             const questionType = question.type || "SINGLE_CHOICE"

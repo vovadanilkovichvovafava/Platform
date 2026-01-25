@@ -17,7 +17,7 @@ interface ProgressEvent {
   total?: number
   status?: string
   phase?: string // 'analyzing' | 'metadata' | 'parsing' | 'merging'
-  result?: any
+  result?: unknown
   error?: string
 }
 

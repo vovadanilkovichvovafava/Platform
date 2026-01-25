@@ -1,5 +1,6 @@
 // AI парсер для умного определения структуры через Claude (Anthropic)
 // Поддерживает chunked parsing для больших файлов
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
   ParsedTrail,
@@ -438,10 +439,10 @@ export async function parseWithAI(
     }
 
     // Берём всё от первой { до конца (без поиска закрывающей - она может быть обрезана)
-    let jsonCandidate = jsonStr.substring(jsonStartIndex)
+    const jsonCandidate = jsonStr.substring(jsonStartIndex)
 
     // Пытаемся распарсить JSON, при ошибке - пробуем починить
-    let parsed: any
+    let parsed: unknown
     try {
       parsed = JSON.parse(jsonCandidate)
     } catch (parseError) {
@@ -843,10 +844,10 @@ async function parseChunkWithAI(
       return { modules: [], error: "Невалидный JSON - не найдена открывающая скобка" }
     }
 
-    let jsonCandidate = jsonStr.substring(jsonStartIndex)
+    const jsonCandidate = jsonStr.substring(jsonStartIndex)
 
     // Пытаемся распарсить JSON
-    let parsed: any
+    let parsed: unknown
     try {
       parsed = JSON.parse(jsonCandidate)
     } catch (parseError) {
@@ -1805,10 +1806,10 @@ function extractPartialJSON(jsonStr: string): any | null {
     const trailsMatch = jsonStr.match(/"trails"\s*:\s*\[([\s\S]*)/i)
     if (!trailsMatch) return null
 
-    let trailsContent = trailsMatch[1]
+    const trailsContent = trailsMatch[1]
 
     // Ищем завершённые объекты trail
-    const trails: any[] = []
+    const trails: unknown[] = []
     let depth = 0
     let currentTrail = ""
     let inString = false

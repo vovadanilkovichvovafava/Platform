@@ -167,8 +167,8 @@ function convertXmlToTrails(root: XmlNode, warnings: string[]): ParsedTrail[] {
       const modules: ParsedModule[] = []
 
       for (const moduleNode of moduleNodes) {
-        const module = convertXmlModule(moduleNode, warnings)
-        if (module) modules.push(module)
+        const mod = convertXmlModule(moduleNode, warnings)
+        if (mod) modules.push(mod)
       }
 
       if (modules.length > 0) {
@@ -225,8 +225,8 @@ function convertXmlTrail(node: XmlNode, warnings: string[]): ParsedTrail | null 
   }
 
   for (const moduleNode of moduleNodes) {
-    const module = convertXmlModule(moduleNode, warnings)
-    if (module) trail.modules.push(module)
+    const mod = convertXmlModule(moduleNode, warnings)
+    if (mod) trail.modules.push(mod)
   }
 
   return trail

@@ -124,14 +124,14 @@ function convertSectionsToTrails(sections: MarkdownSection[], warnings: string[]
 
       // Сам раздел как модуль
       if (section.content.length > 0 || section.children.length === 0) {
-        const module = createModuleFromSection(section, warnings)
-        trail.modules.push(module)
+        const mod = createModuleFromSection(section, warnings)
+        trail.modules.push(mod)
       }
 
       // Дочерние как модули
       for (const child of section.children) {
-        const module = createModuleFromSection(child, warnings)
-        trail.modules.push(module)
+        const mod = createModuleFromSection(child, warnings)
+        trail.modules.push(mod)
       }
 
       trails.push(trail)
@@ -186,17 +186,17 @@ function createTrailFromSection(section: MarkdownSection, warnings: string[]): P
 
   // H2/H3 = Modules
   for (const child of section.children) {
-    const module = createModuleFromSection(child, warnings)
-    trail.modules.push(module)
+    const mod = createModuleFromSection(child, warnings)
+    trail.modules.push(mod)
 
     // H3/H4 внутри модуля - добавить к контенту
     for (const subchild of child.children) {
-      module.content += `\n\n## ${subchild.title}\n${subchild.content.join("\n")}`
+      mod.content += `\n\n## ${subchild.title}\n${subchild.content.join("\n")}`
 
       // Проверка на секцию вопросов
       if (/вопрос|question|quiz|тест/i.test(subchild.title)) {
         const questions = parseQuestionsFromContent(subchild.content.join("\n"))
-        module.questions.push(...questions)
+        mod.questions.push(...questions)
       }
     }
   }
@@ -259,8 +259,8 @@ function createModuleFromSection(section: MarkdownSection, warnings: string[]): 
 }
 
 // Извлечение метаданных из контента (YAML frontmatter или комментарии)
-function extractMetadata(content: string[]): Record<string, any> {
-  const metadata: Record<string, any> = {}
+function extractMetadata(content: string[]): Record<string, string | number | boolean> {
+  const metadata: Record<string, string | number | boolean> = {}
   const text = content.join("\n")
 
   // YAML frontmatter
@@ -272,7 +272,7 @@ function extractMetadata(content: string[]): Record<string, any> {
       const match = line.match(/^(\w+):\s*(.+)$/)
       if (match) {
         const key = match[1].toLowerCase()
-        let value: any = match[2].trim()
+        let value: string | number | boolean = match[2].trim()
 
         // Убрать кавычки
         value = value.replace(/^["']|["']$/g, "")

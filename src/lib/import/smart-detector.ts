@@ -198,7 +198,7 @@ export function smartParseUnstructured(text: string): ParsedTrail[] {
 
   let trailTitle = ""
   let trailSubtitle = ""
-  let modules: ParsedModule[] = []
+  const modules: ParsedModule[] = []
   let currentModuleTitle = ""
   let currentModuleContent: string[] = []
   let currentQuestions: ParsedQuestion[] = []
