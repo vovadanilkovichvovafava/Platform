@@ -98,7 +98,7 @@ export function parseJson(text: string): ParseResult {
 }
 
 // Конвертация JSON в trails
-function convertJsonToTrails(data: any, warnings: string[]): ParsedTrail[] {
+function convertJsonToTrails(data: unknown, warnings: string[]): ParsedTrail[] {
   const trails: ParsedTrail[] = []
 
   // Массив trails
@@ -180,8 +180,8 @@ function convertJsonModules(data: JsonModule[], warnings: string[]): ParsedModul
   const modules: ParsedModule[] = []
 
   for (const item of data) {
-    const module = convertJsonModule(item, warnings)
-    if (module) modules.push(module)
+    const mod = convertJsonModule(item, warnings)
+    if (mod) modules.push(mod)
   }
 
   return modules

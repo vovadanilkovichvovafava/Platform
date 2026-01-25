@@ -64,7 +64,6 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   const parseInlineMarkdown = (text: string): ReactNode[] => {
     // First handle inline code, then bold
     const parts: ReactNode[] = []
-    let remaining = text
     let keyIndex = 0
 
     // Pattern for inline code `code`

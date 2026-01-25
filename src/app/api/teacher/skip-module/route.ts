@@ -28,11 +28,11 @@ export async function POST(request: Request) {
     }
 
     // Check module exists
-    const module = await prisma.module.findUnique({
+    const moduleData = await prisma.module.findUnique({
       where: { id: moduleId },
     })
 
-    if (!module) {
+    if (!moduleData) {
       return NextResponse.json({ error: "Module not found" }, { status: 404 })
     }
 
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       await prisma.user.update({
         where: { id: studentId },
         data: {
-          totalXP: { increment: module.points },
+          totalXP: { increment: moduleData.points },
         },
       })
     }
@@ -134,11 +134,11 @@ export async function DELETE(request: Request) {
     }
 
     // Get module points
-    const module = await prisma.module.findUnique({
+    const moduleData = await prisma.module.findUnique({
       where: { id: moduleId },
     })
 
-    if (!module) {
+    if (!moduleData) {
       return NextResponse.json({ error: "Module not found" }, { status: 404 })
     }
 
@@ -156,7 +156,7 @@ export async function DELETE(request: Request) {
     await prisma.user.update({
       where: { id: studentId },
       data: {
-        totalXP: { decrement: module.points },
+        totalXP: { decrement: moduleData.points },
       },
     })
 

@@ -80,7 +80,7 @@ export function TrailSearch({ trails, enrolledTrailIds, progressMap }: TrailSear
       ) : (
         <div className="text-center py-12 text-gray-500">
           <Search className="h-12 w-12 mx-auto mb-4 opacity-30" />
-          <p>Ничего не найдено по запросу "{search}"</p>
+          <p>Ничего не найдено по запросу &quot;{search}&quot;</p>
           <button
             onClick={() => setSearch("")}
             className="mt-2 text-orange-500 hover:underline"
