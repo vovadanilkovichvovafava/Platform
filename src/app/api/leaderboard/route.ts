@@ -25,7 +25,7 @@ export async function GET() {
     })
 
     // Add rank
-    const leaderboard = students.map((student, index) => ({
+    const leaderboard = students.map((student: typeof students[number], index: number) => ({
       rank: index + 1,
       id: student.id,
       name: student.name,

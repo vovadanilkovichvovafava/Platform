@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       await prisma.questionAttempt.deleteMany({
         where: {
           userId: session.user.id,
-          questionId: { in: questions.map((q) => q.id) },
+          questionId: { in: questions.map((q: { id: string }) => q.id) },
         },
       })
     }

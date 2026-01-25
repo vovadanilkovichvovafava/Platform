@@ -91,7 +91,7 @@ export default async function MyWorkPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {submissions.map((submission) => {
+            {submissions.map((submission: typeof submissions[number]) => {
               const config = statusConfig[submission.status]
               const StatusIcon = config.icon
 

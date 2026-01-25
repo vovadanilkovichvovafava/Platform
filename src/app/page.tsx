@@ -200,7 +200,7 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {trails.map((trail) => (
+            {trails.map((trail: typeof trails[number]) => (
               <TrailCard key={trail.id} trail={trail} />
             ))}
           </div>

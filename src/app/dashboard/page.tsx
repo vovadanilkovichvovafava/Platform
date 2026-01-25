@@ -129,7 +129,7 @@ export default async function DashboardPage() {
     approved: 0,
     rejected: 0,
   }
-  submissionStats.forEach((s) => {
+  submissionStats.forEach((s: { status: string; _count: number }) => {
     if (s.status === "PENDING") stats.pending = s._count
     if (s.status === "APPROVED") stats.approved = s._count
     if (s.status === "REJECTED") stats.rejected = s._count
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
   })
 
   const achievements = Object.values(ACHIEVEMENTS).map((def) => {
-    const userAch = userAchievements.find((ua) => ua.achievementId === def.id)
+    const userAch = userAchievements.find((ua: { achievementId: string }) => ua.achievementId === def.id)
     return {
       ...def,
       earned: !!userAch,
@@ -164,7 +164,7 @@ export default async function DashboardPage() {
     where: { studentId: session.user.id },
     select: { trailId: true },
   })
-  const accessibleTrailIds = userAccess.map((a) => a.trailId)
+  const accessibleTrailIds = userAccess.map((a: { trailId: string }) => a.trailId)
 
   // Get all published trails
   const allPublishedTrails = await prisma.trail.findMany({
@@ -179,18 +179,18 @@ export default async function DashboardPage() {
 
   // Filter out restricted trails user doesn't have access to
   const isPrivileged = user.role === "ADMIN" || user.role === "TEACHER"
-  const allTrails = allPublishedTrails.filter((trail) => {
+  const allTrails = allPublishedTrails.filter((trail: typeof allPublishedTrails[number]) => {
     if (!trail.isRestricted) return true
     if (isPrivileged) return true
     return accessibleTrailIds.includes(trail.id)
   })
 
   // Calculate progress for enrolled trails
-  const enrolledTrailIds = user.enrollments.map((e) => e.trailId)
-  const trailsWithProgress = allTrails.map((trail) => {
+  const enrolledTrailIds = user.enrollments.map((e: { trailId: string }) => e.trailId)
+  const trailsWithProgress = allTrails.map((trail: typeof allTrails[number]) => {
     const enrolled = enrolledTrailIds.includes(trail.id)
-    const moduleIds = trail.modules.map((m) => m.id)
-    const completedCount = user.moduleProgress.filter((p) =>
+    const moduleIds = trail.modules.map((m: { id: string }) => m.id)
+    const completedCount = user.moduleProgress.filter((p: { moduleId: string }) =>
       moduleIds.includes(p.moduleId)
     ).length
     const progress =
@@ -201,11 +201,11 @@ export default async function DashboardPage() {
     return { ...trail, enrolled, progress }
   })
 
-  const enrolledTrails = trailsWithProgress.filter((t) => t.enrolled)
-  const availableTrails = trailsWithProgress.filter((t) => !t.enrolled)
+  const enrolledTrails = trailsWithProgress.filter((t: { enrolled: boolean }) => t.enrolled)
+  const availableTrails = trailsWithProgress.filter((t: { enrolled: boolean }) => !t.enrolled)
 
   // Pending submissions for notification
-  const pendingSubmissions = user.submissions.filter((s) => s.status === "PENDING")
+  const pendingSubmissions = user.submissions.filter((s: { status: string }) => s.status === "PENDING")
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -296,7 +296,7 @@ export default async function DashboardPage() {
                       <span className="font-medium">На проверке</span>
                     </div>
                     <div className="space-y-1">
-                      {pendingSubmissions.map((sub) => (
+                      {pendingSubmissions.map((sub: { id: string; module: { title: string } }) => (
                         <div key={sub.id} className="text-sm text-orange-600">
                           {sub.module.title}
                         </div>
@@ -373,7 +373,7 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {enrolledTrails.map((trail) => (
+                  {enrolledTrails.map((trail: typeof enrolledTrails[number]) => (
                     <TrailCard
                       key={trail.id}
                       trail={trail}
@@ -395,7 +395,7 @@ export default async function DashboardPage() {
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {availableTrails.map((trail) => (
+                  {availableTrails.map((trail: typeof availableTrails[number]) => (
                     <TrailCard key={trail.id} trail={trail} />
                   ))}
                 </div>
@@ -431,7 +431,7 @@ export default async function DashboardPage() {
               <CardContent>
                 {user.certificates.length > 0 ? (
                   <div className="space-y-3">
-                    {user.certificates.slice(0, 3).map((cert) => (
+                    {user.certificates.slice(0, 3).map((cert: { id: string; uniqueCode: string; trail: { color: string; title: string }; issuedAt: Date; level: string }) => (
                       <Link
                         key={cert.id}
                         href={`/certificates/${cert.uniqueCode}`}

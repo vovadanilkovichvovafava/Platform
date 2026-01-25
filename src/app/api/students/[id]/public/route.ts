@@ -60,7 +60,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       approved: 0,
       rejected: 0,
     }
-    submissions.forEach((s) => {
+    submissions.forEach((s: { status: string; _count: number }) => {
       if (s.status === "PENDING") submissionStats.pending = s._count
       if (s.status === "APPROVED") submissionStats.approved = s._count
       if (s.status === "REJECTED") submissionStats.rejected = s._count
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     })
 
     const achievements = Object.values(ACHIEVEMENTS).map((def) => {
-      const userAch = userAchievements.find((ua) => ua.achievementId === def.id)
+      const userAch = userAchievements.find((ua: { achievementId: string }) => ua.achievementId === def.id)
       return {
         ...def,
         earned: !!userAch,
@@ -115,11 +115,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       where: { userId: id, status: "COMPLETED" },
       select: { moduleId: true },
     })
-    const completedModuleIds = new Set(moduleProgress.map((p) => p.moduleId))
+    const completedModuleIds = new Set(moduleProgress.map((p: { moduleId: string }) => p.moduleId))
 
-    const trails = enrollments.map((enrollment) => {
-      const moduleIds = enrollment.trail.modules.map((m) => m.id)
-      const completedCount = moduleIds.filter((id) => completedModuleIds.has(id)).length
+    const trails = enrollments.map((enrollment: typeof enrollments[number]) => {
+      const moduleIds = enrollment.trail.modules.map((m: { id: string }) => m.id)
+      const completedCount = moduleIds.filter((id: string) => completedModuleIds.has(id)).length
       const progress = moduleIds.length > 0
         ? Math.round((completedCount / moduleIds.length) * 100)
         : 0
