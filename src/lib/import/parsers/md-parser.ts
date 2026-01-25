@@ -179,10 +179,10 @@ function createTrailFromSection(section: MarkdownSection, warnings: string[]): P
 
   // Парсинг метаданных из контента
   const metadata = extractMetadata(section.content)
-  if (metadata.subtitle) trail.subtitle = metadata.subtitle
-  if (metadata.description) trail.description = metadata.description
-  if (metadata.icon) trail.icon = metadata.icon
-  if (metadata.color) trail.color = metadata.color
+  if (metadata.subtitle) trail.subtitle = String(metadata.subtitle)
+  if (metadata.description) trail.description = String(metadata.description)
+  if (metadata.icon) trail.icon = String(metadata.icon)
+  if (metadata.color) trail.color = String(metadata.color)
 
   // H2/H3 = Modules
   for (const child of section.children) {
@@ -239,21 +239,22 @@ function createModuleFromSection(section: MarkdownSection, warnings: string[]): 
   const metadata = extractMetadata(section.content)
 
   // Определяем итоговый тип модуля
-  const finalType = metadata.type || (questions.length > 0 ? "PRACTICE" : type)
+  const metaType = metadata.type as "THEORY" | "PRACTICE" | "PROJECT" | undefined
+  const finalType: "THEORY" | "PRACTICE" | "PROJECT" = metaType || (questions.length > 0 ? "PRACTICE" : type)
 
   // Определяем, требуется ли сдача работы
   const requiresSubmission = detectRequiresSubmission(finalType, cleanTitle, content)
 
   return {
     title: cleanTitle,
-    slug: metadata.slug || generateSlug(section.title),
+    slug: metadata.slug ? String(metadata.slug) : generateSlug(section.title),
     type: finalType,
-    points: metadata.points || (finalType === "PROJECT" ? 100 : finalType === "PRACTICE" ? 75 : 50),
-    description: metadata.description || extractDescription(section.content),
+    points: typeof metadata.points === "number" ? metadata.points : (finalType === "PROJECT" ? 100 : finalType === "PRACTICE" ? 75 : 50),
+    description: metadata.description ? String(metadata.description) : extractDescription(section.content),
     content: cleanContent,
     questions,
-    level: metadata.level,
-    duration: metadata.duration,
+    level: metadata.level ? String(metadata.level) : undefined,
+    duration: metadata.duration ? String(metadata.duration) : undefined,
     requiresSubmission,
   }
 }
@@ -289,7 +290,7 @@ function extractMetadata(content: string[]): Record<string, string | number | bo
             quiz: "PRACTICE", practice: "PRACTICE", тест: "PRACTICE", практика: "PRACTICE",
             project: "PROJECT", проект: "PROJECT",
           }
-          value = typeMap[value.toLowerCase()] || "THEORY"
+          value = typeMap[String(value).toLowerCase()] || "THEORY"
         }
 
         metadata[key] = value
