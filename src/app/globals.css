@@ -150,3 +150,238 @@ body {
 .trail-rnd-creator {
   background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
 }
+
+/* Achievement Card Holographic Effects */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes holographic-rotate {
+  0%, 100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(30deg);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+/* Achievement card base with holographic effect */
+.achievement-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+.achievement-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.3) 45%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.3) 55%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.achievement-card:hover::before {
+  opacity: 1;
+}
+
+/* Rarity-specific glow effects */
+.achievement-card-common {
+  --glow-color: rgb(156, 163, 175);
+  --border-color: rgb(209, 213, 219);
+  --gradient-start: #9ca3af;
+  --gradient-end: #6b7280;
+}
+
+.achievement-card-uncommon {
+  --glow-color: rgb(34, 197, 94);
+  --border-color: rgb(74, 222, 128);
+  --gradient-start: #22c55e;
+  --gradient-end: #16a34a;
+}
+
+.achievement-card-rare {
+  --glow-color: rgb(59, 130, 246);
+  --border-color: rgb(96, 165, 250);
+  --gradient-start: #3b82f6;
+  --gradient-end: #2563eb;
+}
+
+.achievement-card-epic {
+  --glow-color: rgb(168, 85, 247);
+  --border-color: rgb(192, 132, 252);
+  --gradient-start: #a855f7;
+  --gradient-end: #9333ea;
+}
+
+.achievement-card-legendary {
+  --glow-color: rgb(249, 115, 22);
+  --border-color: rgb(251, 146, 60);
+  --gradient-start: #f97316;
+  --gradient-end: #ea580c;
+}
+
+/* Holographic pattern overlay for modal */
+.achievement-holographic {
+  position: relative;
+  overflow: hidden;
+}
+
+.achievement-holographic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 4px
+    );
+  pointer-events: none;
+  animation: holographic-rotate 4s ease-in-out infinite;
+}
+
+/* Glowing border animation */
+.achievement-glow {
+  position: relative;
+}
+
+.achievement-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    45deg,
+    var(--gradient-start),
+    var(--gradient-end),
+    var(--gradient-start),
+    var(--gradient-end)
+  );
+  background-size: 400% 400%;
+  border-radius: inherit;
+  z-index: -1;
+  animation: glow-pulse 2s ease-in-out infinite;
+  filter: blur(8px);
+  opacity: 0.6;
+}
+
+/* Shimmer effect for modal cards */
+.achievement-modal-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.achievement-modal-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+/* Stencil pattern for achievement icons */
+.achievement-stencil {
+  position: relative;
+}
+
+.achievement-stencil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.1) 25%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 50%,
+      transparent 75%,
+      rgba(255, 255, 255, 0.1) 75%
+    );
+  background-size: 8px 8px;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Legendary special rainbow effect */
+.achievement-card-legendary .achievement-stencil::after {
+  background:
+    linear-gradient(135deg,
+      transparent 25%,
+      rgba(255, 200, 100, 0.15) 25%,
+      rgba(255, 200, 100, 0.15) 50%,
+      transparent 50%,
+      transparent 75%,
+      rgba(255, 200, 100, 0.15) 75%
+    );
+  background-size: 8px 8px;
+}
+
+/* Sparkle effect for earned achievements */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+.achievement-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.achievement-sparkle:nth-child(1) { top: 10%; left: 15%; animation-delay: 0s; }
+.achievement-sparkle:nth-child(2) { top: 20%; right: 20%; animation-delay: 0.3s; }
+.achievement-sparkle:nth-child(3) { bottom: 25%; left: 10%; animation-delay: 0.6s; }
+.achievement-sparkle:nth-child(4) { bottom: 15%; right: 15%; animation-delay: 0.9s; }

@@ -8,6 +8,15 @@ export interface AchievementDef {
   rarity: "common" | "uncommon" | "rare" | "epic" | "legendary"
 }
 
+// Стандартизированные цвета по редкостям
+export const RARITY_COLORS = {
+  common: "bg-gray-100 text-gray-600",
+  uncommon: "bg-green-100 text-green-700",
+  rare: "bg-blue-100 text-blue-700",
+  epic: "bg-purple-100 text-purple-700",
+  legendary: "bg-orange-100 text-orange-700",
+} as const
+
 export const ACHIEVEMENTS: Record<string, AchievementDef> = {
   // Getting Started
   FIRST_MODULE: {
@@ -15,7 +24,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Первый шаг",
     description: "Завершите первый модуль",
     icon: "streamline-pixel:business-product-target",
-    color: "bg-green-100 text-green-700",
+    color: RARITY_COLORS.common,
     rarity: "common",
   },
   FIRST_TRAIL: {
@@ -23,7 +32,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Первый trail",
     description: "Записаться на первый trail",
     icon: "streamline-pixel:business-product-startup-1",
-    color: "bg-blue-100 text-blue-700",
+    color: RARITY_COLORS.common,
     rarity: "common",
   },
   FIRST_SUBMISSION: {
@@ -31,7 +40,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Первая работа",
     description: "Отправьте первую работу на проверку",
     icon: "streamline-pixel:content-files-write-note",
-    color: "bg-purple-100 text-purple-700",
+    color: RARITY_COLORS.common,
     rarity: "common",
   },
   FIRST_APPROVED: {
@@ -39,7 +48,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Первый успех",
     description: "Получите первую одобренную работу",
     icon: "streamline-pixel:business-product-check",
-    color: "bg-green-100 text-green-700",
+    color: RARITY_COLORS.common,
     rarity: "common",
   },
 
@@ -49,7 +58,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Ученик",
     description: "Завершите 5 модулей",
     icon: "streamline-pixel:content-files-book",
-    color: "bg-blue-100 text-blue-700",
+    color: RARITY_COLORS.common,
     rarity: "common",
   },
   MODULES_10: {
@@ -57,7 +66,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Студент",
     description: "Завершите 10 модулей",
     icon: "streamline-pixel:school-science-graduation-cap",
-    color: "bg-indigo-100 text-indigo-700",
+    color: RARITY_COLORS.uncommon,
     rarity: "uncommon",
   },
   MODULES_25: {
@@ -65,7 +74,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Эксперт",
     description: "Завершите 25 модулей",
     icon: "streamline-pixel:interface-essential-trophy",
-    color: "bg-yellow-100 text-yellow-700",
+    color: RARITY_COLORS.rare,
     rarity: "rare",
   },
 
@@ -75,7 +84,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Первая сотня",
     description: "Заработайте 100 XP",
     icon: "streamline-pixel:business-money-coin-currency",
-    color: "bg-orange-100 text-orange-700",
+    color: RARITY_COLORS.common,
     rarity: "common",
   },
   XP_500: {
@@ -83,7 +92,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Полтысячи",
     description: "Заработайте 500 XP",
     icon: "streamline-pixel:social-rewards-rating-star-1",
-    color: "bg-yellow-100 text-yellow-700",
+    color: RARITY_COLORS.uncommon,
     rarity: "uncommon",
   },
   XP_1000: {
@@ -91,7 +100,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Тысячник",
     description: "Заработайте 1000 XP",
     icon: "streamline-pixel:social-rewards-rating-star-2",
-    color: "bg-amber-100 text-amber-700",
+    color: RARITY_COLORS.rare,
     rarity: "rare",
   },
   XP_5000: {
@@ -99,7 +108,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Легенда",
     description: "Заработайте 5000 XP",
     icon: "streamline-pixel:social-rewards-vip-crown-king",
-    color: "bg-purple-100 text-purple-700",
+    color: RARITY_COLORS.legendary,
     rarity: "legendary",
   },
 
@@ -109,7 +118,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Разогрев",
     description: "Активность 3 дня подряд",
     icon: "streamline-pixel:social-rewards-trends-hot-flame",
-    color: "bg-orange-100 text-orange-700",
+    color: RARITY_COLORS.common,
     rarity: "common",
   },
   STREAK_7: {
@@ -117,7 +126,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Недельный марафон",
     description: "Активность 7 дней подряд",
     icon: "streamline-pixel:ecology-global-warming-globe-fire",
-    color: "bg-red-100 text-red-700",
+    color: RARITY_COLORS.uncommon,
     rarity: "uncommon",
   },
   STREAK_30: {
@@ -125,7 +134,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Месячный челлендж",
     description: "Активность 30 дней подряд",
     icon: "streamline-pixel:entertainment-events-hobbies-reward-winner-talent",
-    color: "bg-red-100 text-red-700",
+    color: RARITY_COLORS.epic,
     rarity: "epic",
   },
 
@@ -135,7 +144,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Перфекционист",
     description: "Получите оценку 10/10",
     icon: "streamline-pixel:money-payments-diamond",
-    color: "bg-cyan-100 text-cyan-700",
+    color: RARITY_COLORS.uncommon,
     rarity: "uncommon",
   },
   PERFECT_STREAK_3: {
@@ -143,7 +152,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Идеальная серия",
     description: "Получите 3 оценки 10/10 подряд",
     icon: "streamline-pixel:business-prodect-diamond",
-    color: "bg-purple-100 text-purple-700",
+    color: RARITY_COLORS.epic,
     rarity: "epic",
   },
 
@@ -153,7 +162,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Сертифицирован",
     description: "Получите первый сертификат",
     icon: "streamline-pixel:social-rewards-certified-diploma",
-    color: "bg-amber-100 text-amber-700",
+    color: RARITY_COLORS.rare,
     rarity: "rare",
   },
 
@@ -163,7 +172,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Скоростной",
     description: "Завершите модуль за один день",
     icon: "streamline-pixel:interface-essential-stopwatch",
-    color: "bg-yellow-100 text-yellow-700",
+    color: RARITY_COLORS.uncommon,
     rarity: "uncommon",
   },
 
@@ -173,7 +182,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Топ-10",
     description: "Попадите в топ-10 лидерборда",
     icon: "streamline-pixel:business-products-climb-top",
-    color: "bg-yellow-100 text-yellow-700",
+    color: RARITY_COLORS.rare,
     rarity: "rare",
   },
   TOP_3: {
@@ -181,7 +190,7 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Призёр",
     description: "Попадите в топ-3 лидерборда",
     icon: "streamline-pixel:interface-essential-crown",
-    color: "bg-amber-100 text-amber-700",
+    color: RARITY_COLORS.epic,
     rarity: "epic",
   },
 }
