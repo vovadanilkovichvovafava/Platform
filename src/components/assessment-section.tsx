@@ -431,6 +431,7 @@ export function AssessmentSection({
           caseContent={data.caseContent}
           caseLabel={data.caseLabel}
           options={data.options}
+          minCorrectRequired={data.minCorrectRequired}
           onComplete={handleExerciseComplete}
           disabled={isQuestionFinished}
         />
