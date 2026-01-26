@@ -1,8 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import { Icon } from "@iconify/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Award, Lock, ChevronDown } from "lucide-react"
 
 export interface Achievement {
@@ -47,6 +54,126 @@ function getRarityBorder(rarity: string) {
   }
 }
 
+function getRarityGradient(rarity: string) {
+  switch (rarity) {
+    case "common": return "from-gray-100 to-gray-200"
+    case "uncommon": return "from-green-100 to-emerald-200"
+    case "rare": return "from-blue-100 to-indigo-200"
+    case "epic": return "from-purple-100 to-violet-200"
+    case "legendary": return "from-yellow-100 via-amber-200 to-orange-200"
+    default: return "from-gray-100 to-gray-200"
+  }
+}
+
+function getRarityIconBg(rarity: string) {
+  switch (rarity) {
+    case "common": return "bg-gray-100"
+    case "uncommon": return "bg-green-100"
+    case "rare": return "bg-blue-100"
+    case "epic": return "bg-purple-100"
+    case "legendary": return "bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-300"
+    default: return "bg-gray-100"
+  }
+}
+
+function getRarityIconColor(rarity: string) {
+  switch (rarity) {
+    case "common": return "text-gray-600"
+    case "uncommon": return "text-green-600"
+    case "rare": return "text-blue-600"
+    case "epic": return "text-purple-600"
+    case "legendary": return "text-amber-700"
+    default: return "text-gray-600"
+  }
+}
+
+function AchievementModal({
+  achievement,
+  open,
+  onOpenChange,
+}: {
+  achievement: Achievement | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  if (!achievement) return null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="sr-only">{achievement.name}</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-col items-center text-center">
+          {/* Achievement Icon */}
+          <div
+            className={`relative w-24 h-24 rounded-2xl flex items-center justify-center mb-4 ${
+              achievement.earned
+                ? `bg-gradient-to-br ${getRarityGradient(achievement.rarity)} shadow-lg`
+                : "bg-gray-100"
+            }`}
+          >
+            <Icon
+              icon={achievement.icon}
+              className={`w-14 h-14 ${
+                achievement.earned
+                  ? getRarityIconColor(achievement.rarity)
+                  : "text-gray-400"
+              }`}
+            />
+            {!achievement.earned && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-2xl">
+                <Lock className="h-8 w-8 text-gray-400" />
+              </div>
+            )}
+          </div>
+
+          {/* Achievement Name */}
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            {achievement.name}
+          </h3>
+
+          {/* Rarity Badge */}
+          <Badge
+            className={`mb-3 ${
+              achievement.earned ? achievement.color : "bg-gray-100 text-gray-500"
+            }`}
+          >
+            {getRarityLabel(achievement.rarity)}
+          </Badge>
+
+          {/* Description */}
+          <p className="text-gray-600 mb-4">
+            {achievement.description}
+          </p>
+
+          {/* Earned Date or Status */}
+          {achievement.earned && achievement.earnedAt ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Получено {new Date(achievement.earnedAt).toLocaleDateString("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric"
+                })}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <Lock className="w-4 h-4" />
+              <span>Ещё не получено</span>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function AchievementsGrid({
   achievements,
   stats,
@@ -56,6 +183,13 @@ export function AchievementsGrid({
   defaultExpanded = true,
 }: AchievementsGridProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  const handleAchievementClick = (achievement: Achievement) => {
+    setSelectedAchievement(achievement)
+    setModalOpen(true)
+  }
 
   if (achievements.length === 0) {
     return (
@@ -73,8 +207,6 @@ export function AchievementsGrid({
     : achievements
 
   const earnedCount = achievements.filter((a) => a.earned).length
-  // Use stats.total for percentage calculation when available (for public dashboard)
-  // to correctly account for hidden achievements
   const totalCount = stats?.total ?? achievements.length
   const progressPercent = Math.round((earnedCount / totalCount) * 100)
 
@@ -143,15 +275,29 @@ export function AchievementsGrid({
           {earnedAchievements.map((achievement) => (
             <Card
               key={achievement.id}
-              className={`relative overflow-hidden transition-all duration-200 ${
+              onClick={() => handleAchievementClick(achievement)}
+              className={`relative overflow-hidden transition-all duration-200 cursor-pointer ${
                 achievement.earned
                   ? `border-2 ${getRarityBorder(achievement.rarity)} hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5`
                   : "opacity-50 grayscale hover:opacity-70 hover:grayscale-[50%]"
               }`}
             >
               <CardContent className={`text-center ${compact ? "p-3" : "p-4"}`}>
-                <div className={`${compact ? "text-2xl mb-1" : "text-3xl mb-2"} transition-transform duration-200 hover:scale-110`}>
-                  {achievement.icon}
+                <div
+                  className={`${compact ? "w-10 h-10 mb-1" : "w-12 h-12 mb-2"} mx-auto rounded-xl flex items-center justify-center transition-transform duration-200 hover:scale-110 ${
+                    achievement.earned
+                      ? getRarityIconBg(achievement.rarity)
+                      : "bg-gray-100"
+                  }`}
+                >
+                  <Icon
+                    icon={achievement.icon}
+                    className={`${compact ? "w-6 h-6" : "w-7 h-7"} ${
+                      achievement.earned
+                        ? getRarityIconColor(achievement.rarity)
+                        : "text-gray-400"
+                    }`}
+                  />
                 </div>
                 <h3 className={`font-semibold text-gray-900 mb-1 ${
                   compact ? "text-xs" : "text-sm"
@@ -191,6 +337,12 @@ export function AchievementsGrid({
           </p>
         )}
       </div>
+
+      <AchievementModal
+        achievement={selectedAchievement}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
     </div>
   )
 }
