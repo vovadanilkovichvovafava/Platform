@@ -296,6 +296,8 @@ export default async function PublicDashboardPage({ params }: PageProps) {
               stats={achievementStats}
               showTitle={true}
               compact={false}
+              collapsible={true}
+              defaultExpanded={true}
             />
           </section>
         ) : (

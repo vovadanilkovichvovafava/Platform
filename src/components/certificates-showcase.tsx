@@ -93,13 +93,18 @@ export function CertificatesShowcase({
           // Compact view - simple list
           <div className="space-y-2">
             {certificates.map((cert) => (
-              <div
+              <Link
                 key={cert.id}
-                className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg"
+                href={`/certificates/${cert.id}`}
+                className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 hover:shadow-sm transition-all duration-200 group"
               >
-                <span className="text-2xl">{cert.trail.icon || getLevelEmoji(cert.level)}</span>
+                <span className="text-2xl group-hover:scale-110 transition-transform duration-200">
+                  {cert.trail.icon || getLevelEmoji(cert.level)}
+                </span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{cert.trail.title}</p>
+                  <p className="font-medium text-sm truncate group-hover:text-amber-800 transition-colors">
+                    {cert.trail.title}
+                  </p>
                   <p className="text-xs text-gray-500">
                     {new Date(cert.issuedAt).toLocaleDateString("ru-RU")}
                   </p>
@@ -109,7 +114,7 @@ export function CertificatesShowcase({
                     {cert.level}
                   </Badge>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
@@ -118,11 +123,11 @@ export function CertificatesShowcase({
             {certificates.map((cert) => (
               <div
                 key={cert.id}
-                className="relative overflow-hidden rounded-lg border bg-gradient-to-br from-amber-50 to-orange-50"
+                className="relative overflow-hidden rounded-lg border bg-gradient-to-br from-amber-50 to-orange-50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
               >
                 {/* Color accent */}
                 <div
-                  className="absolute top-0 left-0 right-0 h-1"
+                  className="absolute top-0 left-0 right-0 h-1 group-hover:h-1.5 transition-all duration-200"
                   style={{ backgroundColor: cert.trail.color || "#f59e0b" }}
                 />
 
@@ -130,7 +135,7 @@ export function CertificatesShowcase({
                   <div className="flex items-start gap-3">
                     {/* Certificate icon/preview */}
                     <div
-                      className="w-14 h-14 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                      className="w-14 h-14 rounded-lg flex items-center justify-center text-white flex-shrink-0 group-hover:scale-105 transition-transform duration-200 shadow-sm"
                       style={{
                         background: `linear-gradient(135deg, ${cert.trail.color || "#f59e0b"} 0%, ${cert.trail.color || "#f59e0b"}dd 100%)`,
                       }}
@@ -139,7 +144,7 @@ export function CertificatesShowcase({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 truncate">
+                      <h4 className="font-semibold text-gray-900 truncate group-hover:text-amber-800 transition-colors">
                         {cert.trail.title}
                       </h4>
 
@@ -169,7 +174,7 @@ export function CertificatesShowcase({
                   {/* View certificate link */}
                   <Link
                     href={`/certificates/${cert.id}`}
-                    className="mt-3 flex items-center justify-center gap-1 text-xs text-amber-700 hover:text-amber-800 py-2 bg-amber-100/50 rounded-lg transition-colors"
+                    className="mt-3 flex items-center justify-center gap-1 text-xs text-amber-700 hover:text-amber-800 py-2 bg-amber-100/50 hover:bg-amber-100 rounded-lg transition-all duration-200"
                   >
                     <ExternalLink className="h-3 w-3" />
                     Открыть сертификат

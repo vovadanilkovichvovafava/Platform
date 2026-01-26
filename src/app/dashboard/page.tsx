@@ -423,6 +423,8 @@ export default async function DashboardPage() {
             stats={achievementStats}
             showTitle={true}
             compact={false}
+            collapsible={true}
+            defaultExpanded={true}
           />
         </section>
 
