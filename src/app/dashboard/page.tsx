@@ -16,6 +16,8 @@ import {
   BookOpen,
   Clock,
   Medal,
+  GraduationCap,
+  Compass,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -280,9 +282,19 @@ export default async function DashboardPage() {
         {enrolledTrails.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                Мои trails
-              </h2>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600">
+                  <GraduationCap className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Мои trails
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {enrolledTrails.length} активных курсов
+                  </p>
+                </div>
+              </div>
               <Link
                 href="/trails"
                 className="text-sm text-[#0176D3] hover:underline"
@@ -306,10 +318,18 @@ export default async function DashboardPage() {
         {/* Available Trails */}
         {availableTrails.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                Доступные trails
-              </h2>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600">
+                <Compass className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Доступные trails
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {availableTrails.length} курсов для изучения
+                </p>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {availableTrails.map((trail) => (
