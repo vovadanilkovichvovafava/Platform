@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Award, Lock, ChevronDown } from "lucide-react"
+import { Award, Lock, ChevronDown, X } from "lucide-react"
 
 export interface Achievement {
   id: string
@@ -140,7 +140,7 @@ function AchievementModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-0 bg-transparent shadow-none">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-0 bg-transparent shadow-none" showCloseButton={false}>
         <DialogHeader className="sr-only">
           <DialogTitle>{achievement.name}</DialogTitle>
         </DialogHeader>
@@ -151,11 +151,17 @@ function AchievementModal({
             isEarned ? "achievement-glow" : ""
           }`}
         >
+          {/* Close Button */}
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-500 hover:text-gray-700 transition-all duration-200 shadow-sm hover:shadow"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
           {/* Animated Border Gradient */}
           <div
-            className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${getRarityBorderGradient(rarity)} p-[2px] ${
-              isEarned ? "animate-pulse" : ""
-            }`}
+            className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${getRarityBorderGradient(rarity)} p-[2px]`}
           >
             <div className={`h-full w-full rounded-2xl bg-gradient-to-br ${getRarityBgGradient(rarity)}`} />
           </div>
@@ -206,7 +212,7 @@ function AchievementModal({
               <Badge
                 className={`mb-4 px-4 py-1 text-sm font-medium ${
                   isEarned ? achievement.color : "bg-gray-100 text-gray-500"
-                } ${isEarned && rarity === "legendary" ? "animate-pulse" : ""}`}
+                }`}
               >
                 {getRarityLabel(rarity)}
               </Badge>
@@ -364,7 +370,7 @@ export function AchievementsGrid({
             >
               <CardContent className={`text-center ${compact ? "p-3" : "p-5"}`}>
                 <div
-                  className={`${compact ? "w-14 h-14 mb-2" : "w-20 h-20 mb-3"} mx-auto rounded-xl flex items-center justify-center transition-transform duration-200 hover:scale-110 achievement-stencil ${
+                  className={`${compact ? "w-12 h-12 mb-2" : "w-[76px] h-[76px] mb-3"} mx-auto rounded-xl flex items-center justify-center transition-transform duration-200 hover:scale-110 achievement-stencil ${
                     achievement.earned
                       ? `${getRarityIconBg(achievement.rarity)} ${getRarityGlowColor(achievement.rarity)} shadow-lg`
                       : "bg-gray-100"
@@ -372,7 +378,7 @@ export function AchievementsGrid({
                 >
                   <Icon
                     icon={achievement.icon}
-                    className={`${compact ? "w-9 h-9" : "w-12 h-12"} ${
+                    className={`${compact ? "w-8 h-8" : "w-11 h-11"} ${
                       achievement.earned
                         ? getRarityIconColor(achievement.rarity)
                         : "text-gray-400"

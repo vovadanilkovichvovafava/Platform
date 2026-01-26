@@ -201,7 +201,7 @@ body {
     transparent 60%
   );
   background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
+  animation: shimmer 12s ease-in-out infinite;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -273,7 +273,7 @@ body {
       rgba(255, 255, 255, 0.03) 4px
     );
   pointer-events: none;
-  animation: holographic-rotate 4s ease-in-out infinite;
+  animation: holographic-rotate 16s ease-in-out infinite;
 }
 
 /* Glowing border animation */
@@ -295,7 +295,7 @@ body {
   background-size: 400% 400%;
   border-radius: inherit;
   z-index: -1;
-  animation: glow-pulse 2s ease-in-out infinite;
+  animation: glow-pulse 8s ease-in-out infinite;
   filter: blur(8px);
   opacity: 0.6;
 }
@@ -319,7 +319,7 @@ body {
     rgba(255, 255, 255, 0.2),
     transparent
   );
-  animation: shimmer 2.5s ease-in-out infinite;
+  animation: shimmer 10s ease-in-out infinite;
 }
 
 /* Stencil pattern for achievement icons */
@@ -343,7 +343,7 @@ body {
   background-size: 8px 8px;
   border-radius: inherit;
   pointer-events: none;
-  animation: shimmer 4s linear infinite;
+  animation: shimmer 16s linear infinite;
 }
 
 /* Legendary special rainbow effect */
