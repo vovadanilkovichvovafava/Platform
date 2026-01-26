@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     const completedModules = await prisma.moduleProgress.count({
       where: {
         userId: session.user.id,
-        moduleId: { in: trail.modules.map((m: { id: string }) => m.id) },
+        moduleId: { in: trail.modules.map((m) => m.id) },
         status: "COMPLETED",
       },
     })

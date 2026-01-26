@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Award, Download, ExternalLink, Loader2, Calendar, Trophy } from "lucide-react"
@@ -106,7 +105,7 @@ export default function CertificatesPage() {
               Завершите все модули в trail, чтобы получить сертификат
             </p>
             <Button asChild variant="outline">
-              <Link href="/trails">Перейти к trails</Link>
+              <a href="/trails">Перейти к trails</a>
             </Button>
           </CardContent>
         </Card>

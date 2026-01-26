@@ -1,6 +1,5 @@
 // AI парсер для умного определения структуры через Claude (Anthropic)
 // Поддерживает chunked parsing для больших файлов
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
   ParsedTrail,
@@ -439,10 +438,10 @@ export async function parseWithAI(
     }
 
     // Берём всё от первой { до конца (без поиска закрывающей - она может быть обрезана)
-    const jsonCandidate = jsonStr.substring(jsonStartIndex)
+    let jsonCandidate = jsonStr.substring(jsonStartIndex)
 
     // Пытаемся распарсить JSON, при ошибке - пробуем починить
-    let parsed: unknown
+    let parsed: any
     try {
       parsed = JSON.parse(jsonCandidate)
     } catch (parseError) {
@@ -498,8 +497,7 @@ export async function parseWithAI(
         }
       }
     }
-    const parsedData = parsed as { trails?: unknown[] }
-    const trails = parsedData.trails || [parsed]
+    const trails = parsed.trails || [parsed]
 
     // Валидация результата
     const validatedTrails = validateAndFixTrails(trails, warnings)
@@ -808,6 +806,7 @@ async function parseChunkWithAI(
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
       console.log(`[AI-Parser] Часть ${chunk.index + 1}: API ошибка ${response.status}`)
       return { modules: [], error: `API ошибка: ${response.status}` }
     }
@@ -844,10 +843,10 @@ async function parseChunkWithAI(
       return { modules: [], error: "Невалидный JSON - не найдена открывающая скобка" }
     }
 
-    const jsonCandidate = jsonStr.substring(jsonStartIndex)
+    let jsonCandidate = jsonStr.substring(jsonStartIndex)
 
     // Пытаемся распарсить JSON
-    let parsed: unknown
+    let parsed: any
     try {
       parsed = JSON.parse(jsonCandidate)
     } catch (parseError) {
@@ -861,7 +860,7 @@ async function parseChunkWithAI(
         try {
           parsed = JSON.parse(repaired)
           console.log(`[AI-Parser] Часть ${chunk.index + 1}: JSON успешно восстановлен`)
-        } catch {
+        } catch (repairError) {
           // Пробуем извлечь модули напрямую из текста
           console.log(`[AI-Parser] Часть ${chunk.index + 1}: repairJSON не помог, пробуем extractModulesFromText...`)
           const extractedModules = extractModulesFromText(jsonCandidate)
@@ -883,8 +882,7 @@ async function parseChunkWithAI(
       }
     }
 
-    const parsedData = parsed as { modules?: unknown[] }
-    const modules = parsedData.modules || []
+    const modules = parsed.modules || []
     console.log(`[AI-Parser] Часть ${chunk.index + 1}: успешно получено ${modules.length} модулей`)
     return { modules }
   } catch (e) {
@@ -1682,6 +1680,7 @@ function recoverCompletedTrails(jsonStr: string): any[] {
     let inString = false
     let prevChar = ""
     let trailStart = -1
+    let braceDepth = 0
 
     for (let i = startPos; i < jsonStr.length; i++) {
       const char = jsonStr[i]
@@ -1696,8 +1695,10 @@ function recoverCompletedTrails(jsonStr: string): any[] {
             trailStart = i
           }
           depth++
+          braceDepth++
         } else if (char === "}") {
           depth--
+          braceDepth--
 
           if (depth === 0 && trailStart !== -1) {
             // Завершён один trail
@@ -1804,10 +1805,10 @@ function extractPartialJSON(jsonStr: string): any | null {
     const trailsMatch = jsonStr.match(/"trails"\s*:\s*\[([\s\S]*)/i)
     if (!trailsMatch) return null
 
-    const trailsContent = trailsMatch[1]
+    let trailsContent = trailsMatch[1]
 
     // Ищем завершённые объекты trail
-    const trails: unknown[] = []
+    const trails: any[] = []
     let depth = 0
     let currentTrail = ""
     let inString = false

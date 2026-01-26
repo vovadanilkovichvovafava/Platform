@@ -33,7 +33,7 @@ export async function GET() {
         id: trail.id,
         title: trail.title,
         slug: trail.slug,
-        modules: trail.modules.map((m: { id: string; title: string; type: string; order: number; questions: unknown[] }) => ({
+        modules: trail.modules.map((m) => ({
           id: m.id,
           title: m.title,
           type: m.type,
@@ -352,7 +352,7 @@ export async function PUT() {
     }
 
     // Create PROJECT modules
-    const maxOrder = modules.length > 0 ? Math.max(...modules.map((m: { order: number }) => m.order)) : 6
+    const maxOrder = modules.length > 0 ? Math.max(...modules.map(m => m.order)) : 6
 
     // Project 1: Junior (Easy)
     const existingEasyProject = await prisma.module.findFirst({

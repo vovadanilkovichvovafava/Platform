@@ -108,8 +108,8 @@ export default async function StudentDetailPage({ params }: Props) {
   }
 
   // Create a map of module progress for quick lookup
-  const progressMap = new Map<string, { moduleId: string; status: string; skippedByTeacher: boolean }>(
-    student.moduleProgress.map((p: { moduleId: string; status: string; skippedByTeacher: boolean }) => [p.moduleId, {
+  const progressMap = new Map(
+    student.moduleProgress.map((p) => [p.moduleId, {
       moduleId: p.moduleId,
       status: p.status,
       skippedByTeacher: p.skippedByTeacher,
@@ -118,15 +118,15 @@ export default async function StudentDetailPage({ params }: Props) {
 
   // Calculate total max XP
   const totalMaxXP = student.enrollments.reduce(
-    (sum: number, e: { trail: { modules: { points: number }[] } }) => sum + e.trail.modules.reduce((s: number, m: { points: number }) => s + m.points, 0),
+    (sum, e) => sum + e.trail.modules.reduce((s, m) => s + m.points, 0),
     0
   )
 
   // Group submissions by status
   const submissionStats = {
-    pending: student.submissions.filter((s: { status: string }) => s.status === "PENDING").length,
-    approved: student.submissions.filter((s: { status: string }) => s.status === "APPROVED").length,
-    revision: student.submissions.filter((s: { status: string }) => s.status === "REVISION").length,
+    pending: student.submissions.filter((s) => s.status === "PENDING").length,
+    approved: student.submissions.filter((s) => s.status === "APPROVED").length,
+    revision: student.submissions.filter((s) => s.status === "REVISION").length,
   }
 
   // Build activity details by date
@@ -134,7 +134,7 @@ export default async function StudentDetailPage({ params }: Props) {
   const activityDetailsMap = new Map<string, ActivityDetail[]>()
 
   // Add submissions to activity details
-  student.submissions.forEach((sub: { createdAt: Date; module: { title: string } }) => {
+  student.submissions.forEach((sub) => {
     const dateKey = new Date(sub.createdAt).toISOString().split("T")[0]
     const details = activityDetailsMap.get(dateKey) || []
     details.push({ type: "submission", title: sub.module.title })
@@ -142,7 +142,7 @@ export default async function StudentDetailPage({ params }: Props) {
   })
 
   // Add module completions to activity details
-  student.moduleProgress.forEach((mp: { updatedAt: Date; module: { title: string } }) => {
+  student.moduleProgress.forEach((mp) => {
     const dateKey = new Date(mp.updatedAt).toISOString().split("T")[0]
     const details = activityDetailsMap.get(dateKey) || []
     details.push({ type: "module", title: mp.module.title })
@@ -150,7 +150,7 @@ export default async function StudentDetailPage({ params }: Props) {
   })
 
   // Build activity days with details
-  const activityDaysWithDetails = student.activityDays.map((d: { date: Date; actions: number }) => {
+  const activityDaysWithDetails = student.activityDays.map((d) => {
     const dateKey = d.date.toISOString().split("T")[0]
     return {
       date: d.date.toISOString(),
@@ -219,7 +219,7 @@ export default async function StudentDetailPage({ params }: Props) {
             <CardContent className="p-4 text-center">
               <BookOpen className="h-8 w-8 text-blue-500 mx-auto mb-2" />
               <p className="text-2xl font-bold text-blue-600">
-                {student.moduleProgress.filter((p: { status: string }) => p.status === "COMPLETED").length}
+                {student.moduleProgress.filter((p) => p.status === "COMPLETED").length}
               </p>
               <p className="text-xs text-gray-500">модулей</p>
             </CardContent>
@@ -251,7 +251,7 @@ export default async function StudentDetailPage({ params }: Props) {
 
           <StudentModuleList
             studentId={student.id}
-            enrollments={student.enrollments.map((e: typeof student.enrollments[number]) => ({
+            enrollments={student.enrollments.map((e) => ({
               trailId: e.trailId,
               trail: {
                 title: e.trail.title,
@@ -291,7 +291,7 @@ export default async function StudentDetailPage({ params }: Props) {
             </Card>
           ) : (
             <div className="space-y-3">
-              {student.submissions.map((submission: typeof student.submissions[number]) => (
+              {student.submissions.map((submission) => (
                 <Card key={submission.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">

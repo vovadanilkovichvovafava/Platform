@@ -124,14 +124,14 @@ function convertSectionsToTrails(sections: MarkdownSection[], warnings: string[]
 
       // Сам раздел как модуль
       if (section.content.length > 0 || section.children.length === 0) {
-        const mod = createModuleFromSection(section, warnings)
-        trail.modules.push(mod)
+        const module = createModuleFromSection(section, warnings)
+        trail.modules.push(module)
       }
 
       // Дочерние как модули
       for (const child of section.children) {
-        const mod = createModuleFromSection(child, warnings)
-        trail.modules.push(mod)
+        const module = createModuleFromSection(child, warnings)
+        trail.modules.push(module)
       }
 
       trails.push(trail)
@@ -179,24 +179,24 @@ function createTrailFromSection(section: MarkdownSection, warnings: string[]): P
 
   // Парсинг метаданных из контента
   const metadata = extractMetadata(section.content)
-  if (metadata.subtitle) trail.subtitle = String(metadata.subtitle)
-  if (metadata.description) trail.description = String(metadata.description)
-  if (metadata.icon) trail.icon = String(metadata.icon)
-  if (metadata.color) trail.color = String(metadata.color)
+  if (metadata.subtitle) trail.subtitle = metadata.subtitle
+  if (metadata.description) trail.description = metadata.description
+  if (metadata.icon) trail.icon = metadata.icon
+  if (metadata.color) trail.color = metadata.color
 
   // H2/H3 = Modules
   for (const child of section.children) {
-    const mod = createModuleFromSection(child, warnings)
-    trail.modules.push(mod)
+    const module = createModuleFromSection(child, warnings)
+    trail.modules.push(module)
 
     // H3/H4 внутри модуля - добавить к контенту
     for (const subchild of child.children) {
-      mod.content += `\n\n## ${subchild.title}\n${subchild.content.join("\n")}`
+      module.content += `\n\n## ${subchild.title}\n${subchild.content.join("\n")}`
 
       // Проверка на секцию вопросов
       if (/вопрос|question|quiz|тест/i.test(subchild.title)) {
         const questions = parseQuestionsFromContent(subchild.content.join("\n"))
-        mod.questions.push(...questions)
+        module.questions.push(...questions)
       }
     }
   }
@@ -219,7 +219,7 @@ function createTrailFromSection(section: MarkdownSection, warnings: string[]): P
 }
 
 // Создание модуля из секции
-function createModuleFromSection(section: MarkdownSection, _warnings: string[]): ParsedModule {
+function createModuleFromSection(section: MarkdownSection, warnings: string[]): ParsedModule {
   const content = section.content.join("\n").trim()
   const cleanTitle = section.title.replace(/^\d+[\.\)]\s*/, "")
   const type = detectModuleType(cleanTitle, content)
@@ -239,29 +239,28 @@ function createModuleFromSection(section: MarkdownSection, _warnings: string[]):
   const metadata = extractMetadata(section.content)
 
   // Определяем итоговый тип модуля
-  const metaType = metadata.type as "THEORY" | "PRACTICE" | "PROJECT" | undefined
-  const finalType: "THEORY" | "PRACTICE" | "PROJECT" = metaType || (questions.length > 0 ? "PRACTICE" : type)
+  const finalType = metadata.type || (questions.length > 0 ? "PRACTICE" : type)
 
   // Определяем, требуется ли сдача работы
   const requiresSubmission = detectRequiresSubmission(finalType, cleanTitle, content)
 
   return {
     title: cleanTitle,
-    slug: metadata.slug ? String(metadata.slug) : generateSlug(section.title),
+    slug: metadata.slug || generateSlug(section.title),
     type: finalType,
-    points: typeof metadata.points === "number" ? metadata.points : (finalType === "PROJECT" ? 100 : finalType === "PRACTICE" ? 75 : 50),
-    description: metadata.description ? String(metadata.description) : extractDescription(section.content),
+    points: metadata.points || (finalType === "PROJECT" ? 100 : finalType === "PRACTICE" ? 75 : 50),
+    description: metadata.description || extractDescription(section.content),
     content: cleanContent,
     questions,
-    level: metadata.level ? String(metadata.level) : undefined,
-    duration: metadata.duration ? String(metadata.duration) : undefined,
+    level: metadata.level,
+    duration: metadata.duration,
     requiresSubmission,
   }
 }
 
 // Извлечение метаданных из контента (YAML frontmatter или комментарии)
-function extractMetadata(content: string[]): Record<string, string | number | boolean> {
-  const metadata: Record<string, string | number | boolean> = {}
+function extractMetadata(content: string[]): Record<string, any> {
+  const metadata: Record<string, any> = {}
   const text = content.join("\n")
 
   // YAML frontmatter
@@ -273,7 +272,7 @@ function extractMetadata(content: string[]): Record<string, string | number | bo
       const match = line.match(/^(\w+):\s*(.+)$/)
       if (match) {
         const key = match[1].toLowerCase()
-        let value: string | number | boolean = match[2].trim()
+        let value: any = match[2].trim()
 
         // Убрать кавычки
         value = value.replace(/^["']|["']$/g, "")
@@ -290,7 +289,7 @@ function extractMetadata(content: string[]): Record<string, string | number | bo
             quiz: "PRACTICE", practice: "PRACTICE", тест: "PRACTICE", практика: "PRACTICE",
             project: "PROJECT", проект: "PROJECT",
           }
-          value = typeMap[String(value).toLowerCase()] || "THEORY"
+          value = typeMap[value.toLowerCase()] || "THEORY"
         }
 
         metadata[key] = value
@@ -381,6 +380,7 @@ function parseQuestionsFromContent(content: string): ParsedQuestion[] {
 
 // Извлечение подзаголовка
 function extractSubtitle(content: string[]): string {
+  const text = content.join("\n")
   // Первая строка после заголовка, если она короткая
   const firstLine = content.find(l => l.trim() && !l.startsWith("#") && !l.startsWith("-"))
   if (firstLine && firstLine.length < 150) {

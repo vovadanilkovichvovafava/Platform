@@ -104,10 +104,10 @@ export default async function TrailPage({ params }: Props) {
       const progress = await prisma.moduleProgress.findMany({
         where: {
           userId: session.user.id,
-          moduleId: { in: trail.modules.map((m: { id: string }) => m.id) },
+          moduleId: { in: trail.modules.map((m) => m.id) },
         },
       })
-      progress.forEach((p: { moduleId: string; status: string }) => {
+      progress.forEach((p) => {
         moduleProgressMap[p.moduleId] = p.status
       })
 
@@ -141,18 +141,18 @@ export default async function TrailPage({ params }: Props) {
   }
 
   // Separate assessment modules and project modules
-  const assessmentModules = trail.modules.filter((m: { type: string }) => m.type !== "PROJECT")
-  const projectModules = trail.modules.filter((m: { type: string }) => m.type === "PROJECT")
+  const assessmentModules = trail.modules.filter(m => m.type !== "PROJECT")
+  const projectModules = trail.modules.filter(m => m.type === "PROJECT")
 
   // Check if all assessments are completed
   const assessmentCompletedCount = assessmentModules.filter(
-    (m: { id: string }) => moduleProgressMap[m.id] === "COMPLETED"
+    m => moduleProgressMap[m.id] === "COMPLETED"
   ).length
   const allAssessmentsCompleted = assessmentModules.length > 0 && assessmentCompletedCount === assessmentModules.length
 
   // Check if at least one project is completed
   const completedProjectCount = projectModules.filter(
-    (m: { id: string }) => moduleProgressMap[m.id] === "COMPLETED"
+    m => moduleProgressMap[m.id] === "COMPLETED"
   ).length
   const hasCompletedProject = completedProjectCount > 0
 
@@ -163,7 +163,7 @@ export default async function TrailPage({ params }: Props) {
     ? Math.round((assessmentCompletedCount / assessmentModules.length) * 100)
     : 0
 
-  const totalXP = trail.modules.reduce((sum: number, m: { points: number }) => sum + m.points, 0)
+  const totalXP = trail.modules.reduce((sum, m) => sum + m.points, 0)
   const Icon = iconMap[trail.icon] || Code
 
   // Check if user is admin or teacher (to show level badges)
@@ -350,7 +350,7 @@ export default async function TrailPage({ params }: Props) {
           <p className="text-gray-500 mb-6">Пройдите тесты для получения доступа к заданиям</p>
 
           <div className="space-y-4">
-            {assessmentModules.map((module: typeof assessmentModules[number], index: number) => {
+            {assessmentModules.map((module, index) => {
               const TypeIcon = typeIcons[module.type]
               const status = moduleProgressMap[module.id] || "NOT_STARTED"
               const isCompleted = status === "COMPLETED"
@@ -452,7 +452,7 @@ export default async function TrailPage({ params }: Props) {
                 // If no projects found based on taskProgress, show the first project as PENDING
                 if (projectsToShow.length === 0 && projectModules.length > 0) {
                   // Fallback: find Middle or first project
-                  const fallbackProject = projectModules.find((m: { level: string }) => m.level === "Middle") || projectModules[0]
+                  const fallbackProject = projectModules.find(m => m.level === "Middle") || projectModules[0]
                   if (fallbackProject) {
                     projectsToShow.push({ project: fallbackProject, status: "PENDING" })
                   }
@@ -468,6 +468,7 @@ export default async function TrailPage({ params }: Props) {
 
                 return projectsToShow.map(({ project, status }) => {
                   const isProjectCompleted = status === "PASSED" || moduleProgressMap[project.id] === "COMPLETED"
+                  const isPending = status === "PENDING" && !isProjectCompleted
 
                   return (
                     <Card

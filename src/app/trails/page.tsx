@@ -15,7 +15,7 @@ export default async function TrailsPage() {
       where: { studentId: session.user.id },
       select: { trailId: true },
     })
-    accessibleTrailIds = userAccess.map((a: { trailId: string }) => a.trailId)
+    accessibleTrailIds = userAccess.map((a) => a.trailId)
   }
 
   const allTrails = await prisma.trail.findMany({
@@ -31,7 +31,7 @@ export default async function TrailsPage() {
   // Filter out restricted trails user doesn't have access to
   // Admins and teachers can see all trails
   const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER"
-  const trails = allTrails.filter((trail: typeof allTrails[number]) => {
+  const trails = allTrails.filter((trail) => {
     if (!trail.isRestricted) return true // Public trail
     if (isPrivileged) return true // Admin/Teacher can see all
     if (!session) return false // Not logged in, can't see restricted
@@ -46,7 +46,7 @@ export default async function TrailsPage() {
       where: { userId: session.user.id },
       select: { trailId: true },
     })
-    enrolledTrailIds = enrollments.map((e: { trailId: string }) => e.trailId)
+    enrolledTrailIds = enrollments.map((e) => e.trailId)
 
     const moduleProgress = await prisma.moduleProgress.findMany({
       where: {
@@ -56,11 +56,11 @@ export default async function TrailsPage() {
       select: { moduleId: true },
     })
 
-    const completedModuleIds = moduleProgress.map((p: { moduleId: string }) => p.moduleId)
+    const completedModuleIds = moduleProgress.map((p) => p.moduleId)
 
-    trails.forEach((trail: typeof trails[number]) => {
-      const moduleIds = trail.modules.map((m: { id: string }) => m.id)
-      const completedCount = moduleIds.filter((id: string) =>
+    trails.forEach((trail) => {
+      const moduleIds = trail.modules.map((m) => m.id)
+      const completedCount = moduleIds.filter((id) =>
         completedModuleIds.includes(id)
       ).length
       progressMap[trail.id] =
