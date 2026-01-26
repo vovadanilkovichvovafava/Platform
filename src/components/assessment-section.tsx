@@ -389,6 +389,7 @@ export function AssessmentSection({
       const cleanRightItems = data.rightItems.map(item => ({ ...item, text: stripEmojis(item.text) }))
       return (
         <MatchingExercise
+          key={question.id}
           question={question.question}
           leftItems={cleanLeftItems}
           rightItems={cleanRightItems}
@@ -407,6 +408,7 @@ export function AssessmentSection({
       const shuffledItems = [...data.items].sort(() => Math.random() - 0.5)
       return (
         <OrderingExercise
+          key={question.id}
           question={question.question}
           items={shuffledItems}
           correctOrder={data.correctOrder}
@@ -427,6 +429,7 @@ export function AssessmentSection({
       }
       return (
         <CaseAnalysisExercise
+          key={question.id}
           question={question.question}
           caseContent={data.caseContent}
           caseLabel={data.caseLabel}
