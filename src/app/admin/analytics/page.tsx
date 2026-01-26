@@ -35,6 +35,11 @@ import {
   GraduationCap,
   Trophy,
   BookOpen,
+  Filter,
+  Calendar,
+  ArrowRight,
+  Layers,
+  Zap,
 } from "lucide-react"
 
 interface ChurnRiskStudent {
@@ -96,12 +101,42 @@ interface ScoreDistribution {
   avgScore: number | null
 }
 
+interface ModuleDropoffStats {
+  id: string
+  title: string
+  order: number
+  type: string
+  totalEnrolled: number
+  startedCount: number
+  inProgressCount: number
+  completedCount: number
+  completionRate: number
+  dropRate: number
+  avgTimeDays: number
+  isBottleneck: boolean
+}
+
+interface TrailDropoffAnalysis {
+  trailId: string
+  trailTitle: string
+  trailSlug: string
+  totalEnrolled: number
+  modules: ModuleDropoffStats[]
+}
+
+interface FilterTrail {
+  id: string
+  title: string
+  slug: string
+}
+
 interface AnalyticsData {
   churnRisk: {
     high: ChurnRiskStudent[]
     highCount: number
     medium: ChurnRiskStudent[]
     mediumCount: number
+    low: ChurnRiskStudent[]
     lowCount: number
   }
   funnel: FunnelStage[]
@@ -117,6 +152,14 @@ interface AnalyticsData {
   trailProgress?: TrailProgress[]
   topStudents?: TopStudent[]
   scoreDistribution?: ScoreDistribution
+  // Module drop-off analysis
+  dropoffAnalysis?: TrailDropoffAnalysis[]
+  // Filters
+  filters?: {
+    trails: FilterTrail[]
+    currentTrail: string
+    currentPeriod: string
+  }
 }
 
 // Описания блоков аналитики
@@ -163,20 +206,27 @@ const ANALYTICS_INFO = {
 export default function AdvancedAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [expandedRisk, setExpandedRisk] = useState<"high" | "medium" | null>("high")
+  const [expandedRisk, setExpandedRisk] = useState<"high" | "medium" | "low" | null>("high")
   const [showMethodology, setShowMethodology] = useState(false)
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
+  const [trailFilter, setTrailFilter] = useState("all")
+  const [periodFilter, setPeriodFilter] = useState("30")
+  const [expandedDropoff, setExpandedDropoff] = useState<string | null>(null)
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
   useEffect(() => {
     fetchAnalytics()
-  }, [])
+  }, [trailFilter, periodFilter])
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true)
-      const res = await fetch("/api/admin/analytics/advanced")
+      const params = new URLSearchParams({
+        trail: trailFilter,
+        period: periodFilter,
+      })
+      const res = await fetch(`/api/admin/analytics/advanced?${params}`)
       if (res.ok) {
         const json = await res.json()
         setData(json)
@@ -263,7 +313,7 @@ export default function AdvancedAnalyticsPage() {
           className="mb-6"
         />
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600">
               <BarChart3 className="h-6 w-6 text-white" />
@@ -271,7 +321,7 @@ export default function AdvancedAnalyticsPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Продвинутая аналитика</h1>
               <p className="text-gray-500 text-sm">
-                Риск отсева, воронка, тренды
+                Риск отсева, воронка, drop-off, тренды
               </p>
             </div>
           </div>
@@ -285,10 +335,68 @@ export default function AdvancedAnalyticsPage() {
               <Info className="h-4 w-4 mr-2" />
               Методология
             </Button>
-            <Button onClick={fetchAnalytics} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button onClick={fetchAnalytics} variant="outline" size="sm" disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Обновить
             </Button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg border p-4 mb-6">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Фильтры:</span>
+            </div>
+
+            {/* Trail Filter */}
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-gray-400" />
+              <select
+                value={trailFilter}
+                onChange={(e) => setTrailFilter(e.target.value)}
+                className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="all">Все направления</option>
+                {data?.filters?.trails.map((trail) => (
+                  <option key={trail.id} value={trail.id}>
+                    {trail.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Period Filter */}
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <select
+                value={periodFilter}
+                onChange={(e) => setPeriodFilter(e.target.value)}
+                className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="7">Последние 7 дней</option>
+                <option value="14">Последние 14 дней</option>
+                <option value="30">Последние 30 дней</option>
+                <option value="90">Последние 90 дней</option>
+                <option value="365">Последний год</option>
+              </select>
+            </div>
+
+            {(trailFilter !== "all" || periodFilter !== "30") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setTrailFilter("all")
+                  setPeriodFilter("30")
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                Сбросить
+              </Button>
+            )}
           </div>
         </div>
 
@@ -590,12 +698,80 @@ export default function AdvancedAnalyticsPage() {
               </div>
 
               {/* Low Risk */}
-              <div className="p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-green-500">Низкий</Badge>
-                  <span className="text-green-700 font-medium">{data.churnRisk.lowCount} студентов</span>
-                  <span className="text-green-600 text-sm">(активны)</span>
-                </div>
+              <div className="mb-4">
+                <button
+                  onClick={() => setExpandedRisk(expandedRisk === "low" ? null : "low")}
+                  className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-500">Низкий</Badge>
+                    <span className="text-green-700 font-medium">{data.churnRisk.lowCount} студентов</span>
+                    <span className="text-green-600 text-sm">(активны)</span>
+                  </div>
+                  {expandedRisk === "low" ? (
+                    <ChevronUp className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-green-500" />
+                  )}
+                </button>
+                {expandedRisk === "low" && (
+                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                    {data.churnRisk.low.length === 0 ? (
+                      <p className="text-gray-500 text-sm text-center py-4">Нет активных студентов</p>
+                    ) : (
+                      data.churnRisk.low.map((student) => (
+                        <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-green-200 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-gray-900">{student.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className="text-xs bg-green-100 text-green-700 border-0">
+                                {student.daysSinceActive === 0 ? "Сегодня" : `${student.daysSinceActive} д. назад`}
+                              </Badge>
+                              {student.modulesCompleted !== undefined && (
+                                <span className="text-xs text-gray-400">
+                                  {student.modulesCompleted} модулей
+                                </span>
+                              )}
+                              {student.xp !== undefined && student.xp > 0 && (
+                                <span className="text-xs text-amber-600">
+                                  {student.xp} XP
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 ml-2">
+                            {/* Кнопка копирования email */}
+                            <button
+                              onClick={() => copyEmail(student.email, student.name)}
+                              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Копировать email"
+                            >
+                              {copiedEmail === student.email ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </button>
+                            {/* Кнопка mailto */}
+                            <button
+                              onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Написать письмо"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {data.churnRisk.lowCount > 30 && (
+                      <p className="text-xs text-gray-500 text-center py-2">
+                        Показаны 30 из {data.churnRisk.lowCount} активных студентов
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -789,6 +965,187 @@ export default function AdvancedAnalyticsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Module Drop-off Analysis - Bottlenecks */}
+        {data.dropoffAnalysis && data.dropoffAnalysis.length > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-5 w-5 text-orange-500" />
+              <h2 className="text-lg font-semibold text-gray-900">Анализ Drop-off по модулям</h2>
+              <span className="text-xs text-gray-500">— Где студенты останавливаются</span>
+            </div>
+
+            <div className="space-y-4">
+              {data.dropoffAnalysis.map((trail) => (
+                <Card key={trail.trailId}>
+                  <CardHeader className="pb-2">
+                    <button
+                      onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)}
+                      className="w-full flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <CardTitle className="text-base">{trail.trailTitle}</CardTitle>
+                        <Badge variant="outline" className="text-xs">
+                          <Users className="h-3 w-3 mr-1" />
+                          {trail.totalEnrolled} записались
+                        </Badge>
+                        {trail.modules.some(m => m.isBottleneck) && (
+                          <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {trail.modules.filter(m => m.isBottleneck).length} узких мест
+                          </Badge>
+                        )}
+                      </div>
+                      {expandedDropoff === trail.trailId ? (
+                        <ChevronUp className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </CardHeader>
+
+                  {expandedDropoff === trail.trailId && (
+                    <CardContent className="pt-0">
+                      {/* Visual funnel */}
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                          <Info className="h-3.5 w-3.5" />
+                          <span>Визуализация: ширина блока = % завершивших</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {trail.modules.map((module, index) => (
+                            <div key={module.id} className="flex items-center">
+                              <div
+                                className={`h-8 rounded transition-all ${
+                                  module.isBottleneck
+                                    ? "bg-orange-400"
+                                    : module.completionRate >= 70
+                                    ? "bg-green-400"
+                                    : module.completionRate >= 40
+                                    ? "bg-yellow-400"
+                                    : "bg-red-400"
+                                }`}
+                                style={{
+                                  width: `${Math.max(module.completionRate, 5)}px`,
+                                  minWidth: "20px",
+                                  maxWidth: "100px",
+                                }}
+                                title={`${module.title}: ${module.completionRate}%`}
+                              />
+                              {index < trail.modules.length - 1 && (
+                                <ArrowRight className="h-4 w-4 text-gray-300 mx-0.5" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left">
+                              <th className="py-2 font-medium w-8">#</th>
+                              <th className="py-2 font-medium">Модуль</th>
+                              <th className="py-2 font-medium text-center">Тип</th>
+                              <th className="py-2 font-medium text-center">Начали</th>
+                              <th className="py-2 font-medium text-center">Завершили</th>
+                              <th className="py-2 font-medium text-center">% завершения</th>
+                              <th className="py-2 font-medium text-center">Drop-off</th>
+                              <th className="py-2 font-medium text-center">Ср. время</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {trail.modules.map((module, index) => (
+                              <tr
+                                key={module.id}
+                                className={`border-b hover:bg-gray-50 transition-colors ${
+                                  module.isBottleneck ? "bg-orange-50" : ""
+                                }`}
+                              >
+                                <td className="py-2 text-gray-500">{index + 1}</td>
+                                <td className="py-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900">{module.title}</span>
+                                    {module.isBottleneck && (
+                                      <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
+                                        Узкое место
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-2 text-center">
+                                  <Badge variant="outline" className="text-xs">
+                                    {module.type === "THEORY" ? "Теория" : module.type === "PRACTICE" ? "Практика" : "Проект"}
+                                  </Badge>
+                                </td>
+                                <td className="py-2 text-center">{module.startedCount}</td>
+                                <td className="py-2 text-center font-medium">{module.completedCount}</td>
+                                <td className="py-2 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Progress
+                                      value={module.completionRate}
+                                      className="h-2 w-16"
+                                    />
+                                    <span className={`text-xs font-medium ${
+                                      module.completionRate >= 70 ? "text-green-600" :
+                                      module.completionRate >= 40 ? "text-yellow-600" :
+                                      "text-red-600"
+                                    }`}>
+                                      {module.completionRate}%
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-2 text-center">
+                                  {module.dropRate > 0 ? (
+                                    <span className={`text-xs font-medium ${
+                                      module.dropRate > 30 ? "text-red-600" :
+                                      module.dropRate > 15 ? "text-yellow-600" :
+                                      "text-gray-500"
+                                    }`}>
+                                      -{module.dropRate}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">—</span>
+                                  )}
+                                </td>
+                                <td className="py-2 text-center text-gray-500">
+                                  {module.avgTimeDays > 0 ? `${module.avgTimeDays} д.` : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Summary insights */}
+                      {trail.modules.some(m => m.isBottleneck) && (
+                        <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-orange-700 font-medium mb-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            Обнаружены узкие места
+                          </div>
+                          <ul className="text-sm text-orange-600 space-y-1">
+                            {trail.modules
+                              .filter(m => m.isBottleneck)
+                              .map(m => (
+                                <li key={m.id}>
+                                  • <strong>{m.title}</strong>: {m.dropRate}% студентов не продолжают после этого модуля
+                                </li>
+                              ))}
+                          </ul>
+                          <p className="text-xs text-orange-500 mt-2">
+                            Рекомендация: проверьте сложность контента или добавьте дополнительные материалы
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Student Progress Section - Графики развития */}
         <div className="mt-8">

@@ -24,9 +24,9 @@ import {
   AlertCircle,
   Award,
   Pencil,
-  Settings,
 } from "lucide-react"
 import { ClaimCertificateButton } from "@/components/claim-certificate-button"
+import { TrailEditButton } from "@/components/trail-edit-button"
 
 const iconMap: Record<string, LucideIcon> = {
   Code,
@@ -288,12 +288,18 @@ export default async function TrailPage({ params }: Props) {
                 </div>
                 {/* Admin/Teacher edit button */}
                 {isPrivileged && (
-                  <Button asChild variant="outline" size="sm" className="shrink-0">
-                    <Link href={`/admin/content`}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Редактировать trail
-                    </Link>
-                  </Button>
+                  <TrailEditButton
+                    trail={{
+                      id: trail.id,
+                      title: trail.title,
+                      subtitle: trail.subtitle,
+                      description: trail.description,
+                      icon: trail.icon,
+                      color: trail.color,
+                      duration: trail.duration,
+                      isPublished: trail.isPublished,
+                    }}
+                  />
                 )}
               </div>
               <p className="text-gray-600 mb-6 max-w-2xl">
