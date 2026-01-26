@@ -40,7 +40,13 @@ import {
   ArrowRight,
   Layers,
   Zap,
+  ExternalLink,
+  Search,
+  User,
+  FileText,
+  MoreHorizontal,
 } from "lucide-react"
+import Link from "next/link"
 
 interface ChurnRiskStudent {
   id: string
@@ -61,7 +67,11 @@ interface FunnelStage {
 interface DifficultyModule {
   id: string
   title: string
+  slug: string
   type: string
+  trailId: string | null
+  trailTitle: string | null
+  trailSlug: string | null
   completedCount: number
   submissionCount: number
   avgScore: number | null
@@ -99,11 +109,39 @@ interface ScoreDistribution {
   poor: number
   total: number
   avgScore: number | null
+  filteredByTrail?: boolean
+}
+
+interface StudentSubmissions {
+  approved: number
+  pending: number
+  revision: number
+  total: number
+}
+
+interface TrailStudent {
+  id: string
+  name: string
+  totalXP: number
+  currentStreak: number
+  modulesCompleted: number
+  totalModules: number
+  completionPercent: number
+  submissions: StudentSubmissions
+  avgScore: number | null
+}
+
+interface TrailStudentsGroup {
+  trailId: string
+  trailTitle: string
+  trailSlug: string
+  students: TrailStudent[]
 }
 
 interface ModuleDropoffStats {
   id: string
   title: string
+  slug: string
   order: number
   type: string
   totalEnrolled: number
@@ -154,6 +192,8 @@ interface AnalyticsData {
   scoreDistribution?: ScoreDistribution
   // Module drop-off analysis
   dropoffAnalysis?: TrailDropoffAnalysis[]
+  // Students by trail with detailed progress
+  studentsByTrail?: TrailStudentsGroup[]
   // Filters
   filters?: {
     trails: FilterTrail[]
@@ -212,6 +252,163 @@ export default function AdvancedAnalyticsPage() {
   const [trailFilter, setTrailFilter] = useState("all")
   const [periodFilter, setPeriodFilter] = useState("30")
   const [expandedDropoff, setExpandedDropoff] = useState<string | null>(null)
+  const [expandedStudentTrail, setExpandedStudentTrail] = useState<string | null>(null)
+  const [studentSearch, setStudentSearch] = useState("")
+  // Collapsible section states - all open by default
+  const [sectionsExpanded, setSectionsExpanded] = useState({
+    difficulty: true,
+    trailProgress: true,
+    scoreDistribution: true,
+    studentsByTrail: true,
+    topStudents: true,
+    studentAnalytics: true,
+  })
+  // Student drill-down analytics
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
+  const [studentDetailSearch, setStudentDetailSearch] = useState("")
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false)
+  const [selectedStudentData, setSelectedStudentData] = useState<{
+    id: string
+    name: string
+    trailProgress: Array<{
+      trailId: string
+      trailTitle: string
+      trailSlug: string
+      modulesCompleted: number
+      totalModules: number
+      completionPercent: number
+      avgScore: number | null
+      submissions: StudentSubmissions | null
+      modules: Array<{
+        id: string
+        title: string
+        slug: string
+        status: string
+        score: number | null
+        submissionDate: string | null
+      }>
+    }>
+    totalXP: number
+    avgScore: number | null
+    strongModules: string[]
+    weakModules: string[]
+  } | null>(null)
+  const [loadingStudentDetail, setLoadingStudentDetail] = useState(false)
+
+  const toggleSection = (section: keyof typeof sectionsExpanded) => {
+    setSectionsExpanded(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  // Get all unique students from studentsByTrail for dropdown
+  const allStudents = data?.studentsByTrail?.flatMap(trail =>
+    trail.students.map(s => ({ id: s.id, name: s.name, trailTitle: trail.trailTitle }))
+  ).reduce<Array<{ id: string; name: string; trails: string[] }>>((acc, curr) => {
+    const existing = acc.find(s => s.id === curr.id)
+    if (existing) {
+      if (!existing.trails.includes(curr.trailTitle)) {
+        existing.trails.push(curr.trailTitle)
+      }
+    } else {
+      acc.push({ id: curr.id, name: curr.name, trails: [curr.trailTitle] })
+    }
+    return acc
+  }, []) || []
+
+  const filteredStudentsForDropdown = studentDetailSearch
+    ? allStudents.filter(s => s.name.toLowerCase().includes(studentDetailSearch.toLowerCase()))
+    : allStudents
+
+  // Select student and build analytics
+  const selectStudentForAnalytics = (studentId: string) => {
+    setSelectedStudentId(studentId)
+    setShowStudentDropdown(false)
+    setLoadingStudentDetail(true)
+
+    // Build student data from existing studentsByTrail
+    const student = allStudents.find(s => s.id === studentId)
+    if (!student || !data?.studentsByTrail) {
+      setLoadingStudentDetail(false)
+      return
+    }
+
+    type TrailProgressItem = {
+      trailId: string
+      trailTitle: string
+      trailSlug: string
+      modulesCompleted: number
+      totalModules: number
+      completionPercent: number
+      avgScore: number | null
+      submissions: StudentSubmissions | null
+      modules: Array<{
+        id: string
+        title: string
+        slug: string
+        status: string
+        score: number | null
+        submissionDate: string | null
+      }>
+    }
+
+    const trailProgress: TrailProgressItem[] = data.studentsByTrail
+      .map((trail): TrailProgressItem | null => {
+        const studentInTrail = trail.students.find(s => s.id === studentId)
+        if (!studentInTrail) return null
+
+        return {
+          trailId: trail.trailId,
+          trailTitle: trail.trailTitle,
+          trailSlug: trail.trailSlug,
+          modulesCompleted: studentInTrail.modulesCompleted,
+          totalModules: studentInTrail.totalModules,
+          completionPercent: studentInTrail.completionPercent,
+          avgScore: studentInTrail.avgScore,
+          submissions: studentInTrail.submissions,
+          modules: [],
+        }
+      })
+      .filter((item): item is TrailProgressItem => item !== null)
+
+    // Calculate strong and weak modules based on completion rate in dropoff
+    const strongModules: string[] = []
+    const weakModules: string[] = []
+
+    if (data.dropoffAnalysis) {
+      data.dropoffAnalysis.forEach(trail => {
+        trail.modules.forEach(module => {
+          if (module.completionRate >= 70) {
+            strongModules.push(module.title)
+          } else if (module.completionRate < 40 || module.isBottleneck) {
+            weakModules.push(module.title)
+          }
+        })
+      })
+    }
+
+    // Calculate total XP and avg score
+    const studentFromTopList = data.topStudents?.find(s => s.id === studentId)
+    const totalXP = studentFromTopList?.totalXP || trailProgress.reduce((sum: number, t: TrailProgressItem) => {
+      const studentData = data.studentsByTrail?.find(tr => tr.trailId === t.trailId)?.students.find(s => s.id === studentId)
+      return sum + (studentData?.totalXP || 0)
+    }, 0)
+
+    const scoresWithValues = trailProgress.filter((t: TrailProgressItem) => t.avgScore !== null)
+    const avgScore = scoresWithValues.length > 0
+      ? Math.round((scoresWithValues.reduce((sum: number, t: TrailProgressItem) => sum + (t.avgScore || 0), 0) / scoresWithValues.length) * 10) / 10
+      : null
+
+    setSelectedStudentData({
+      id: studentId,
+      name: student.name,
+      trailProgress,
+      totalXP,
+      avgScore,
+      strongModules: strongModules.slice(0, 5),
+      weakModules: weakModules.slice(0, 5),
+    })
+    setLoadingStudentDetail(false)
+  }
+
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
@@ -830,11 +1027,33 @@ export default function AdvancedAnalyticsPage() {
                       </div>
                       {index < data.funnel.length - 1 && (
                         <div className="text-center my-1">
-                          <span className="text-xs text-gray-400">
-                            {stage.count > 0 && data.funnel[index + 1].count > 0
-                              ? `${Math.round((data.funnel[index + 1].count / stage.count) * 100)}% переходят`
-                              : "—"}
-                          </span>
+                          {(() => {
+                            const nextStage = data.funnel[index + 1]
+                            if (stage.count === 0 || nextStage.count === 0) {
+                              return <span className="text-xs text-gray-400">—</span>
+                            }
+                            const conversionRate = Math.round((nextStage.count / stage.count) * 100)
+                            const isAnomalous = conversionRate > 100
+
+                            return (
+                              <span className={`text-xs ${isAnomalous ? "text-orange-500" : "text-gray-400"}`}>
+                                {isAnomalous ? (
+                                  <span className="flex items-center justify-center gap-1 relative">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {nextStage.count} из {stage.count} ({conversionRate}%)
+                                    <span className="relative cursor-help">
+                                      <HelpCircle className="h-3 w-3 hover:text-orange-600" />
+                                      <span className="hidden group-hover:block absolute z-20 left-1/2 transform -translate-x-1/2 bottom-full mb-1 p-2 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
+                                        &gt;100% означает, что студенты пропустили предыдущие шаги
+                                      </span>
+                                    </span>
+                                  </span>
+                                ) : (
+                                  `${nextStage.count} из ${stage.count} (${conversionRate}%) переходят`
+                                )}
+                              </span>
+                            )
+                          })()}
                         </div>
                       )}
                     </div>
@@ -847,14 +1066,21 @@ export default function AdvancedAnalyticsPage() {
 
         {/* Module Difficulty */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart3 className="h-5 w-5 text-purple-500" />
-              {ANALYTICS_INFO.difficulty.title}
-            </CardTitle>
+          <CardHeader className="cursor-pointer" onClick={() => toggleSection("difficulty")}>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BarChart3 className="h-5 w-5 text-purple-500" />
+                {ANALYTICS_INFO.difficulty.title}
+              </CardTitle>
+              {sectionsExpanded.difficulty ? (
+                <ChevronUp className="h-5 w-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-400" />
+              )}
+            </div>
             <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.difficulty.description}</p>
           </CardHeader>
-          <CardContent>
+          {sectionsExpanded.difficulty && <CardContent>
             {/* Методология */}
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
               <div className="flex items-start gap-2 text-xs text-gray-600 mb-2">
@@ -915,12 +1141,27 @@ export default function AdvancedAnalyticsPage() {
                       </div>
                     </th>
                     <th className="py-2 font-medium text-center">Сложность</th>
+                    <th className="py-2 font-medium w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.difficultyAnalysis.slice(0, 15).map((module) => (
-                    <tr key={module.id} className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="py-2 font-medium text-gray-900">{module.title}</td>
+                    <tr key={module.id} className="border-b hover:bg-gray-50 transition-colors group">
+                      <td className="py-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">{module.title}</span>
+                          {module.trailTitle && (
+                            <Link
+                              href={`/trails/${module.trailSlug}`}
+                              target="_blank"
+                              className="text-xs text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-1"
+                            >
+                              <Layers className="h-3 w-3" />
+                              {module.trailTitle}
+                            </Link>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-2 text-center">
                         <Badge variant="outline" className="text-xs">
                           {module.type === "THEORY" ? "Теория" : module.type === "PRACTICE" ? "Практика" : "Проект"}
@@ -953,6 +1194,15 @@ export default function AdvancedAnalyticsPage() {
                            module.difficulty === "easy" ? "Лёгкий" : "Н/Д"}
                         </Badge>
                       </td>
+                      <td className="py-2">
+                        <Link
+                          href={`/module/${module.slug}`}
+                          target="_blank"
+                          className="p-1 text-gray-400 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -963,7 +1213,7 @@ export default function AdvancedAnalyticsPage() {
                 </p>
               )}
             </div>
-          </CardContent>
+          </CardContent>}
         </Card>
 
         {/* Module Drop-off Analysis - Bottlenecks */}
@@ -979,11 +1229,11 @@ export default function AdvancedAnalyticsPage() {
               {data.dropoffAnalysis.map((trail) => (
                 <Card key={trail.trailId}>
                   <CardHeader className="pb-2">
-                    <button
-                      onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)}
-                      className="w-full flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
+                    <div className="w-full flex items-center justify-between">
+                      <button
+                        onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)}
+                        className="flex items-center gap-3 flex-1"
+                      >
                         <CardTitle className="text-base">{trail.trailTitle}</CardTitle>
                         <Badge variant="outline" className="text-xs">
                           <Users className="h-3 w-3 mr-1" />
@@ -995,13 +1245,25 @@ export default function AdvancedAnalyticsPage() {
                             {trail.modules.filter(m => m.isBottleneck).length} узких мест
                           </Badge>
                         )}
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/trails/${trail.trailSlug}`}
+                          target="_blank"
+                          className="p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 rounded transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                        <button onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)}>
+                          {expandedDropoff === trail.trailId ? (
+                            <ChevronUp className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-gray-400" />
+                          )}
+                        </button>
                       </div>
-                      {expandedDropoff === trail.trailId ? (
-                        <ChevronUp className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
+                    </div>
                   </CardHeader>
 
                   {expandedDropoff === trail.trailId && (
@@ -1053,20 +1315,27 @@ export default function AdvancedAnalyticsPage() {
                               <th className="py-2 font-medium text-center">% завершения</th>
                               <th className="py-2 font-medium text-center">Drop-off</th>
                               <th className="py-2 font-medium text-center">Ср. время</th>
+                              <th className="py-2 font-medium w-8"></th>
                             </tr>
                           </thead>
                           <tbody>
                             {trail.modules.map((module, index) => (
                               <tr
                                 key={module.id}
-                                className={`border-b hover:bg-gray-50 transition-colors ${
+                                className={`border-b hover:bg-gray-50 transition-colors group ${
                                   module.isBottleneck ? "bg-orange-50" : ""
                                 }`}
                               >
                                 <td className="py-2 text-gray-500">{index + 1}</td>
                                 <td className="py-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900">{module.title}</span>
+                                    <Link
+                                      href={`/module/${module.slug}`}
+                                      target="_blank"
+                                      className="font-medium text-gray-900 hover:text-purple-700 hover:underline"
+                                    >
+                                      {module.title}
+                                    </Link>
                                     {module.isBottleneck && (
                                       <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
                                         Узкое место
@@ -1111,6 +1380,15 @@ export default function AdvancedAnalyticsPage() {
                                 </td>
                                 <td className="py-2 text-center text-gray-500">
                                   {module.avgTimeDays > 0 ? `${module.avgTimeDays} д.` : "—"}
+                                </td>
+                                <td className="py-2">
+                                  <Link
+                                    href={`/module/${module.slug}`}
+                                    target="_blank"
+                                    className="p-1 text-gray-400 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Link>
                                 </td>
                               </tr>
                             ))}
@@ -1159,14 +1437,21 @@ export default function AdvancedAnalyticsPage() {
             {/* Trail Progress */}
             {data.trailProgress && data.trailProgress.length > 0 && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Target className="h-4 w-4 text-blue-500" />
-                    Прогресс по направлениям
-                  </CardTitle>
+                <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("trailProgress")}>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Target className="h-4 w-4 text-blue-500" />
+                      Прогресс по направлениям
+                    </CardTitle>
+                    {sectionsExpanded.trailProgress ? (
+                      <ChevronUp className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500">Завершённость и качество работ по каждому trail</p>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                {sectionsExpanded.trailProgress && <CardContent className="space-y-4">
                   {data.trailProgress.map((trail) => (
                     <div key={trail.id} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
@@ -1209,26 +1494,39 @@ export default function AdvancedAnalyticsPage() {
                       </div>
                     </div>
                   ))}
-                </CardContent>
+                </CardContent>}
               </Card>
             )}
 
             {/* Score Distribution */}
             {data.scoreDistribution && data.scoreDistribution.total > 0 && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    Распределение оценок
-                  </CardTitle>
+                <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("scoreDistribution")}>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      Распределение оценок
+                    </CardTitle>
+                    {sectionsExpanded.scoreDistribution ? (
+                      <ChevronUp className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500">
                     Всего оценено работ: {data.scoreDistribution.total}
                     {data.scoreDistribution.avgScore && (
                       <> • Средняя: <span className="font-medium text-blue-600">{data.scoreDistribution.avgScore}/10</span></>
                     )}
                   </p>
+                  {data.scoreDistribution.filteredByTrail && (
+                    <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                      <Filter className="h-3 w-3" />
+                      Данные отфильтрованы по выбранному направлению
+                    </p>
+                  )}
                 </CardHeader>
-                <CardContent>
+                {sectionsExpanded.scoreDistribution && <CardContent>
                   <div className="space-y-3">
                     {/* Excellent 9-10 */}
                     <div>
@@ -1306,22 +1604,193 @@ export default function AdvancedAnalyticsPage() {
                       </div>
                     </div>
                   </div>
-                </CardContent>
+                </CardContent>}
               </Card>
             )}
           </div>
 
+          {/* Students by Trail - Collapsible Sections */}
+          {data.studentsByTrail && data.studentsByTrail.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("studentsByTrail")}>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Users className="h-4 w-4 text-indigo-500" />
+                    Студенты по направлениям
+                  </CardTitle>
+                  {sectionsExpanded.studentsByTrail ? (
+                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Детальный прогресс студентов по каждому trail — оценки, работы, завершённость модулей
+                </p>
+              </CardHeader>
+              {sectionsExpanded.studentsByTrail && <CardContent className="space-y-4">
+                {/* Search input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="Поиск студента по имени..."
+                    className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                {data.studentsByTrail.map((trailGroup) => {
+                  const filteredStudents = studentSearch
+                    ? trailGroup.students.filter((s) =>
+                        s.name.toLowerCase().includes(studentSearch.toLowerCase())
+                      )
+                    : trailGroup.students
+
+                  if (filteredStudents.length === 0 && studentSearch) return null
+
+                  return (
+                    <div key={trailGroup.trailId} className="border rounded-lg overflow-hidden">
+                      <button
+                        onClick={() =>
+                          setExpandedStudentTrail(
+                            expandedStudentTrail === trailGroup.trailId ? null : trailGroup.trailId
+                          )
+                        }
+                        className="w-full flex items-center justify-between p-3 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-indigo-900">{trailGroup.trailTitle}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {filteredStudents.length} студентов
+                          </Badge>
+                        </div>
+                        {expandedStudentTrail === trailGroup.trailId ? (
+                          <ChevronUp className="h-5 w-5 text-indigo-500" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-indigo-500" />
+                        )}
+                      </button>
+
+                      {expandedStudentTrail === trailGroup.trailId && (
+                        <div className="max-h-96 overflow-y-auto">
+                          {filteredStudents.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-sm">
+                              Нет студентов на этом направлении
+                            </div>
+                          ) : (
+                            <table className="w-full text-sm">
+                              <thead className="bg-gray-50 sticky top-0">
+                                <tr className="border-b text-left">
+                                  <th className="py-2 px-3 font-medium">Студент</th>
+                                  <th className="py-2 px-3 font-medium text-center">Прогресс</th>
+                                  <th className="py-2 px-3 font-medium text-center">Работы</th>
+                                  <th className="py-2 px-3 font-medium text-center">Ср. оценка</th>
+                                  <th className="py-2 px-3 font-medium text-center">XP</th>
+                                  <th className="py-2 px-3 font-medium w-10"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {filteredStudents.map((student) => (
+                                  <tr
+                                    key={student.id}
+                                    className="border-b hover:bg-gray-50 transition-colors"
+                                  >
+                                    <td className="py-2 px-3">
+                                      <Link
+                                        href={`/dashboard/${student.id}`}
+                                        target="_blank"
+                                        className="font-medium text-gray-900 hover:text-indigo-600 transition-colors flex items-center gap-1"
+                                      >
+                                        <User className="h-3 w-3" />
+                                        {student.name}
+                                      </Link>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <div className="flex items-center justify-center gap-2">
+                                        <Progress
+                                          value={student.completionPercent}
+                                          className="h-2 w-16"
+                                        />
+                                        <span className="text-xs text-gray-600">
+                                          {student.modulesCompleted}/{student.totalModules}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <div className="flex items-center justify-center gap-1">
+                                        <span className="text-green-600">{student.submissions.approved}</span>
+                                        <span className="text-gray-300">/</span>
+                                        <span className="text-yellow-600">{student.submissions.pending}</span>
+                                        <span className="text-gray-300">/</span>
+                                        <span className="text-orange-600">{student.submissions.revision}</span>
+                                      </div>
+                                      <p className="text-xs text-gray-400">прин/ожид/дораб</p>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      {student.avgScore !== null ? (
+                                        <Badge
+                                          className={`text-xs border-0 ${
+                                            student.avgScore >= 8
+                                              ? "bg-green-100 text-green-700"
+                                              : student.avgScore >= 6
+                                              ? "bg-yellow-100 text-yellow-700"
+                                              : "bg-red-100 text-red-700"
+                                          }`}
+                                        >
+                                          {student.avgScore}/10
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-gray-400">—</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <span className="font-medium text-amber-600">
+                                        {student.totalXP}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      <Link
+                                        href={`/dashboard/${student.id}`}
+                                        target="_blank"
+                                        className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Link>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </CardContent>}
+            </Card>
+          )}
+
           {/* Top Students */}
           {data.topStudents && data.topStudents.length > 0 && (
             <Card className="mt-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <GraduationCap className="h-4 w-4 text-purple-500" />
-                  Лидеры платформы
-                </CardTitle>
+              <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("topStudents")}>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <GraduationCap className="h-4 w-4 text-purple-500" />
+                    Лидеры платформы
+                  </CardTitle>
+                  {sectionsExpanded.topStudents ? (
+                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
                 <p className="text-xs text-gray-500">Топ-10 студентов по XP и достижениям</p>
               </CardHeader>
-              <CardContent>
+              {sectionsExpanded.topStudents && <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -1362,11 +1831,20 @@ export default function AdvancedAnalyticsPage() {
                     </thead>
                     <tbody>
                       {data.topStudents.map((student, index) => (
-                        <tr key={student.id} className="border-b hover:bg-gray-50 transition-colors">
+                        <tr key={student.id} className="border-b hover:bg-purple-50 transition-colors group">
                           <td className="py-2 text-gray-500">
                             {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
                           </td>
-                          <td className="py-2 font-medium text-gray-900">{student.name}</td>
+                          <td className="py-2">
+                            <Link
+                              href={`/dashboard/${student.id}`}
+                              target="_blank"
+                              className="flex items-center gap-2 font-medium text-gray-900 hover:text-purple-700 transition-colors"
+                            >
+                              <span className="group-hover:underline">{student.name}</span>
+                              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500" />
+                            </Link>
+                          </td>
                           <td className="py-2 text-center">
                             <span className="font-bold text-amber-600">{student.totalXP.toLocaleString()}</span>
                           </td>
@@ -1397,7 +1875,234 @@ export default function AdvancedAnalyticsPage() {
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
+              </CardContent>}
+            </Card>
+          )}
+
+          {/* Student Analytics Drill-down */}
+          {allStudents.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("studentAnalytics")}>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <User className="h-4 w-4 text-cyan-500" />
+                    Детальный анализ студента
+                  </CardTitle>
+                  {sectionsExpanded.studentAnalytics ? (
+                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Выберите студента для просмотра прогресса, оценок и точек drop-off
+                </p>
+              </CardHeader>
+              {sectionsExpanded.studentAnalytics && (
+                <CardContent className="space-y-4">
+                  {/* Student Dropdown with Search */}
+                  <div className="relative">
+                    <div
+                      className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:border-cyan-400 transition-colors"
+                      onClick={() => setShowStudentDropdown(!showStudentDropdown)}
+                    >
+                      <Search className="h-4 w-4 text-gray-400" />
+                      {selectedStudentData ? (
+                        <span className="font-medium text-gray-900">{selectedStudentData.name}</span>
+                      ) : (
+                        <span className="text-gray-500">Выберите студента...</span>
+                      )}
+                      <ChevronDown className="h-4 w-4 text-gray-400 ml-auto" />
+                    </div>
+
+                    {showStudentDropdown && (
+                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-hidden">
+                        <div className="p-2 border-b">
+                          <input
+                            type="text"
+                            value={studentDetailSearch}
+                            onChange={(e) => setStudentDetailSearch(e.target.value)}
+                            placeholder="Поиск по имени..."
+                            className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto">
+                          {filteredStudentsForDropdown.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-sm">
+                              Студенты не найдены
+                            </div>
+                          ) : (
+                            filteredStudentsForDropdown.map((student) => (
+                              <button
+                                key={student.id}
+                                onClick={() => selectStudentForAnalytics(student.id)}
+                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-cyan-50 transition-colors text-left"
+                              >
+                                <span className="font-medium text-gray-900">{student.name}</span>
+                                <span className="text-xs text-gray-500">{student.trails.length} направлений</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Student Analytics Content */}
+                  {loadingStudentDetail && (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-6 w-6 animate-spin text-cyan-500" />
+                    </div>
+                  )}
+
+                  {selectedStudentData && !loadingStudentDetail && (
+                    <div className="space-y-4">
+                      {/* Summary Stats */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="p-3 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg border border-amber-100">
+                          <div className="flex items-center gap-2 text-amber-700 mb-1">
+                            <Star className="h-4 w-4" />
+                            <span className="text-xs font-medium">Total XP</span>
+                          </div>
+                          <span className="text-xl font-bold text-amber-800">
+                            {selectedStudentData.totalXP.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                          <div className="flex items-center gap-2 text-blue-700 mb-1">
+                            <Target className="h-4 w-4" />
+                            <span className="text-xs font-medium">Направлений</span>
+                          </div>
+                          <span className="text-xl font-bold text-blue-800">
+                            {selectedStudentData.trailProgress.length}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-100">
+                          <div className="flex items-center gap-2 text-green-700 mb-1">
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="text-xs font-medium">Ср. оценка</span>
+                          </div>
+                          <span className="text-xl font-bold text-green-800">
+                            {selectedStudentData.avgScore !== null ? `${selectedStudentData.avgScore}/10` : "—"}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg border border-purple-100">
+                          <Link
+                            href={`/dashboard/${selectedStudentData.id}`}
+                            target="_blank"
+                            className="block h-full"
+                          >
+                            <div className="flex items-center gap-2 text-purple-700 mb-1">
+                              <ExternalLink className="h-4 w-4" />
+                              <span className="text-xs font-medium">Профиль</span>
+                            </div>
+                            <span className="text-sm font-medium text-purple-800 hover:underline">
+                              Открыть дашборд →
+                            </span>
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Trail Progress Breakdown */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <Layers className="h-4 w-4" />
+                          Прогресс по направлениям
+                        </h4>
+                        {selectedStudentData.trailProgress.map((trail) => (
+                          <div key={trail.trailId} className="p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/trails/${trail.trailSlug}`}
+                                  target="_blank"
+                                  className="font-medium text-gray-900 hover:text-cyan-700 hover:underline"
+                                >
+                                  {trail.trailTitle}
+                                </Link>
+                                <ExternalLink className="h-3 w-3 text-gray-400" />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {trail.avgScore !== null && (
+                                  <Badge className={`text-xs border-0 ${
+                                    trail.avgScore >= 8
+                                      ? "bg-green-100 text-green-700"
+                                      : trail.avgScore >= 6
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : "bg-red-100 text-red-700"
+                                  }`}>
+                                    {trail.avgScore}/10
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <Progress value={trail.completionPercent} className="h-2 flex-1" />
+                              <span className="text-xs text-gray-600 whitespace-nowrap">
+                                {trail.modulesCompleted}/{trail.totalModules} модулей ({trail.completionPercent}%)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                {trail.submissions?.approved || 0} принято
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-yellow-500" />
+                                {trail.submissions?.pending || 0} на проверке
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <FileText className="h-3 w-3 text-orange-500" />
+                                {trail.submissions?.revision || 0} на доработке
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Insights */}
+                      {(selectedStudentData.strongModules.length > 0 || selectedStudentData.weakModules.length > 0) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedStudentData.strongModules.length > 0 && (
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
+                                <TrendingUp className="h-4 w-4" />
+                                Сильные модули
+                              </div>
+                              <ul className="text-sm text-green-600 space-y-1">
+                                {selectedStudentData.strongModules.map((m, i) => (
+                                  <li key={i}>• {m}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {selectedStudentData.weakModules.length > 0 && (
+                            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                              <div className="flex items-center gap-2 text-orange-700 font-medium mb-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                Сложные модули (узкие места)
+                              </div>
+                              <ul className="text-sm text-orange-600 space-y-1">
+                                {selectedStudentData.weakModules.map((m, i) => (
+                                  <li key={i}>• {m}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!selectedStudentData && !loadingStudentDetail && (
+                    <div className="text-center py-8 text-gray-500">
+                      <User className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-sm">Выберите студента для просмотра детальной аналитики</p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
             </Card>
           )}
         </div>

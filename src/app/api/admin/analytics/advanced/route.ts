@@ -128,7 +128,15 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         title: true,
+        slug: true,
         type: true,
+        trail: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+          },
+        },
         _count: {
           select: {
             progress: { where: { status: "COMPLETED" } },
@@ -170,7 +178,11 @@ export async function GET(request: NextRequest) {
       return {
         id: m.id,
         title: m.title,
+        slug: m.slug,
         type: m.type,
+        trailId: m.trail?.id || null,
+        trailTitle: m.trail?.title || null,
+        trailSlug: m.trail?.slug || null,
         completedCount: m._count.progress,
         submissionCount: m._count.submissions,
         avgScore: avgScore ? Math.round(avgScore * 10) / 10 : null,
@@ -205,6 +217,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             title: true,
+            slug: true,
             order: true,
             type: true,
             _count: {
@@ -229,20 +242,21 @@ export async function GET(request: NextRequest) {
 
     type ModuleDropoffTrail = typeof moduleDropoffData[number]
     type ModuleDropoffModule = ModuleDropoffTrail["modules"][number]
+    type ModuleProgressType = ModuleDropoffModule["progress"][number]
 
     const dropoffAnalysis = moduleDropoffData.map((trail: ModuleDropoffTrail) => {
       const totalEnrolled = trail._count.enrollments
       const moduleStats = trail.modules.map((module: ModuleDropoffModule, index: number) => {
         const completedCount = module._count.progress
-        const startedCount = module.progress.filter(p => p.status !== "NOT_STARTED").length
-        const inProgressCount = module.progress.filter(p => p.status === "IN_PROGRESS").length
+        const startedCount = module.progress.filter((p: ModuleProgressType) => p.status !== "NOT_STARTED").length
+        const inProgressCount = module.progress.filter((p: ModuleProgressType) => p.status === "IN_PROGRESS").length
 
         // Calculate avg completion time
         const completedWithTimes = module.progress.filter(
-          p => p.status === "COMPLETED" && p.startedAt && p.completedAt
+          (p: ModuleProgressType) => p.status === "COMPLETED" && p.startedAt && p.completedAt
         )
         const avgTimeMs = completedWithTimes.length > 0
-          ? completedWithTimes.reduce((sum, p) => {
+          ? completedWithTimes.reduce((sum: number, p: ModuleProgressType) => {
               const start = new Date(p.startedAt!).getTime()
               const end = new Date(p.completedAt!).getTime()
               return sum + (end - start)
@@ -260,6 +274,7 @@ export async function GET(request: NextRequest) {
         return {
           id: module.id,
           title: module.title,
+          slug: module.slug,
           order: module.order,
           type: module.type,
           totalEnrolled,
@@ -383,8 +398,19 @@ export async function GET(request: NextRequest) {
       certificates: s._count.certificates,
     }))
 
-    // Score distribution (for all reviewed submissions)
+    // Score distribution (for filtered submissions based on trail)
+    const reviewWhereClause = trailFilter !== "all"
+      ? {
+          submission: {
+            module: {
+              trailId: trailFilter
+            }
+          }
+        }
+      : {}
+
     const allReviews = await prisma.review.findMany({
+      where: reviewWhereClause,
       select: { score: true },
     })
 
@@ -398,7 +424,114 @@ export async function GET(request: NextRequest) {
       avgScore: allReviews.length > 0
         ? Math.round((allReviews.reduce((a: number, r: ReviewType) => a + r.score, 0) / allReviews.length) * 10) / 10
         : null,
+      filteredByTrail: trailFilter !== "all",
     }
+
+    // 8. Students by trail with detailed progress (для коллапсеров)
+    const trailStudentsData = await prisma.trail.findMany({
+      where: trailFilter !== "all" ? { id: trailFilter } : {},
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        enrollments: {
+          take: 50, // Limit to prevent large payloads
+          orderBy: { enrolledAt: "desc" },
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                totalXP: true,
+                currentStreak: true,
+              },
+            },
+          },
+        },
+        modules: {
+          select: { id: true },
+        },
+      },
+    })
+
+    type TrailStudentData = typeof trailStudentsData[number]
+    type EnrollmentData = TrailStudentData["enrollments"][number]
+
+    const studentsByTrail = await Promise.all(
+      trailStudentsData.map(async (trail: TrailStudentData) => {
+        const moduleIds = trail.modules.map((m: { id: string }) => m.id)
+
+        const studentsWithProgress = await Promise.all(
+          trail.enrollments.map(async (enrollment: EnrollmentData) => {
+            const userId = enrollment.user.id
+
+            // Get module progress for this student in this trail
+            const progress = await prisma.moduleProgress.count({
+              where: {
+                userId,
+                moduleId: { in: moduleIds },
+                status: "COMPLETED",
+              },
+            })
+
+            // Get submissions stats
+            const submissionsStats = await prisma.submission.groupBy({
+              by: ["status"],
+              where: {
+                userId,
+                moduleId: { in: moduleIds },
+              },
+              _count: true,
+            })
+
+            // Get avg score for this student
+            const studentReviews = await prisma.review.findMany({
+              where: {
+                submission: {
+                  userId,
+                  moduleId: { in: moduleIds },
+                },
+              },
+              select: { score: true },
+            })
+
+            type StudentReviewType = { score: number }
+            const avgScore = studentReviews.length > 0
+              ? Math.round((studentReviews.reduce((a: number, r: StudentReviewType) => a + r.score, 0) / studentReviews.length) * 10) / 10
+              : null
+
+            type SubmissionStatType = { status: string; _count: number }
+            const approved = submissionsStats.find((s: SubmissionStatType) => s.status === "APPROVED")?._count || 0
+            const pending = submissionsStats.find((s: SubmissionStatType) => s.status === "PENDING")?._count || 0
+            const revision = submissionsStats.find((s: SubmissionStatType) => s.status === "REVISION")?._count || 0
+
+            return {
+              id: userId,
+              name: enrollment.user.name,
+              totalXP: enrollment.user.totalXP,
+              currentStreak: enrollment.user.currentStreak,
+              modulesCompleted: progress,
+              totalModules: moduleIds.length,
+              completionPercent: moduleIds.length > 0 ? Math.round((progress / moduleIds.length) * 100) : 0,
+              submissions: {
+                approved,
+                pending,
+                revision,
+                total: approved + pending + revision,
+              },
+              avgScore,
+            }
+          })
+        )
+
+        return {
+          trailId: trail.id,
+          trailTitle: trail.title,
+          trailSlug: trail.slug,
+          students: studentsWithProgress.sort((a, b) => b.completionPercent - a.completionPercent),
+        }
+      })
+    )
 
     return NextResponse.json({
       churnRisk: {
@@ -424,6 +557,8 @@ export async function GET(request: NextRequest) {
       scoreDistribution,
       // Module drop-off analysis
       dropoffAnalysis,
+      // Students by trail with detailed progress
+      studentsByTrail,
       // Filters data
       filters: {
         trails: trailsList,
