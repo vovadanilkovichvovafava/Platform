@@ -21,7 +21,6 @@ import {
   Key,
   Loader2,
 } from "lucide-react"
-import { AchievementsGrid, type Achievement } from "@/components/achievements-grid"
 
 interface UserProfile {
   id: string
@@ -42,8 +41,6 @@ export default function ProfilePage() {
   const { data: session, update: updateSession } = useSession()
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [achievements, setAchievements] = useState<Achievement[]>([])
-  const [achievementStats, setAchievementStats] = useState({ count: 0, total: 0 })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
@@ -61,7 +58,6 @@ export default function ProfilePage() {
       return
     }
     fetchProfile()
-    fetchAchievements()
   }, [session, router])
 
   const fetchProfile = async () => {
@@ -75,19 +71,6 @@ export default function ProfilePage() {
       setError("Не удалось загрузить профиль")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchAchievements = async () => {
-    try {
-      const res = await fetch("/api/achievements")
-      if (res.ok) {
-        const data = await res.json()
-        setAchievements(data.all || [])
-        setAchievementStats({ count: data.count || 0, total: data.total || 0 })
-      }
-    } catch (err) {
-      console.error("Error fetching achievements:", err)
     }
   }
 
@@ -382,15 +365,6 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-
-      {/* Achievements Section */}
-      <div className="mt-8">
-        <AchievementsGrid
-          achievements={achievements}
-          stats={achievementStats}
-          showTitle={true}
-        />
       </div>
     </div>
   )

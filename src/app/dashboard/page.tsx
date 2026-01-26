@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { TrailCard } from "@/components/trail-card"
 import { AchievementsGrid } from "@/components/achievements-grid"
+import { SubmissionsChart } from "@/components/submissions-chart"
+import { CertificatesShowcase } from "@/components/certificates-showcase"
 import {
   Star,
   Trophy,
@@ -62,14 +64,30 @@ export default async function DashboardPage() {
         where: { status: "COMPLETED" },
       },
       submissions: {
-        where: { status: "PENDING" },
-        take: 5,
         orderBy: { createdAt: "desc" },
         include: {
           module: {
             select: { title: true },
           },
         },
+      },
+      certificates: {
+        select: {
+          id: true,
+          code: true,
+          issuedAt: true,
+          totalXP: true,
+          level: true,
+          trail: {
+            select: {
+              title: true,
+              slug: true,
+              color: true,
+              icon: true,
+            },
+          },
+        },
+        orderBy: { issuedAt: "desc" },
       },
     },
   })
@@ -107,6 +125,16 @@ export default async function DashboardPage() {
   const achievementStats = {
     count: userAchievements.length,
     total: Object.keys(ACHIEVEMENTS).length,
+  }
+
+  // Calculate submissions stats
+  const pendingSubmissions = user.submissions.filter((s: { status: string }) => s.status === "PENDING")
+  const submissionStats = {
+    approved: user.submissions.filter((s: { status: string }) => s.status === "APPROVED").length,
+    pending: pendingSubmissions.length,
+    revision: user.submissions.filter((s: { status: string }) => s.status === "REVISION").length,
+    failed: user.submissions.filter((s: { status: string }) => s.status === "FAILED").length,
+    total: user.submissions.length,
   }
 
   // Get user's trail access
@@ -241,15 +269,15 @@ export default async function DashboardPage() {
                 Продолжайте обучение и развивайте свои навыки
               </p>
 
-              {user.submissions.length > 0 && (
+              {pendingSubmissions.length > 0 && (
                 <Card className="bg-orange-50 border-orange-200">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 text-orange-700 mb-2">
                       <Clock className="h-4 w-4" />
-                      <span className="font-medium">На проверке</span>
+                      <span className="font-medium">На проверке ({pendingSubmissions.length})</span>
                     </div>
                     <div className="space-y-2">
-                      {user.submissions.map((sub) => (
+                      {pendingSubmissions.slice(0, 5).map((sub: { id: string; module: { title: string } }) => (
                         <div
                           key={sub.id}
                           className="text-sm text-orange-600"
@@ -257,6 +285,11 @@ export default async function DashboardPage() {
                           {sub.module.title}
                         </div>
                       ))}
+                      {pendingSubmissions.length > 5 && (
+                        <div className="text-xs text-orange-500">
+                          и ещё {pendingSubmissions.length - 5}...
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -268,15 +301,35 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        {/* Achievements Section */}
-        <section className="mb-12">
-          <AchievementsGrid
-            achievements={allAchievements}
-            stats={achievementStats}
-            showTitle={true}
-            compact={false}
-          />
-        </section>
+        {/* Achievements and Submissions Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+          {/* Achievements Section */}
+          <section>
+            <AchievementsGrid
+              achievements={allAchievements}
+              stats={achievementStats}
+              showTitle={true}
+              compact={false}
+            />
+          </section>
+
+          {/* Submissions Chart */}
+          <section>
+            <SubmissionsChart stats={submissionStats} showTitle={true} />
+          </section>
+        </div>
+
+        {/* Certificates Section */}
+        {user.certificates.length > 0 && (
+          <section className="mb-12">
+            <CertificatesShowcase
+              certificates={user.certificates}
+              showTitle={true}
+              compact={false}
+              linkToFullPage={true}
+            />
+          </section>
+        )}
 
         {/* Enrolled Trails */}
         {enrolledTrails.length > 0 && (

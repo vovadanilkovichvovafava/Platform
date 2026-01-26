@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { AchievementsGrid } from "@/components/achievements-grid"
+import { CertificatesShowcase } from "@/components/certificates-showcase"
 import {
   Star,
   Trophy,
@@ -59,10 +60,15 @@ export default async function PublicDashboardPage({ params }: PageProps) {
       certificates: {
         select: {
           id: true,
+          code: true,
           issuedAt: true,
+          totalXP: true,
+          level: true,
           trail: {
             select: {
               title: true,
+              slug: true,
+              color: true,
               icon: true,
             },
           },
@@ -223,34 +229,16 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                 Профиль {user.name}
               </h1>
               <p className="text-gray-600 mb-6">
-                Публичная страница достижений и статистики
+                Достижения и статистика
               </p>
 
               {/* Certificates */}
               {user.certificates.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">
-                      Сертификаты ({user.certificates.length})
-                    </h3>
-                    <div className="space-y-2">
-                      {user.certificates.map((cert) => (
-                        <div
-                          key={cert.id}
-                          className="flex items-center gap-3 p-2 bg-amber-50 rounded-lg"
-                        >
-                          <span className="text-2xl">{cert.trail.icon || "📜"}</span>
-                          <div>
-                            <p className="font-medium text-sm">{cert.trail.title}</p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(cert.issuedAt).toLocaleDateString("ru-RU")}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <CertificatesShowcase
+                  certificates={user.certificates}
+                  showTitle={true}
+                  compact={false}
+                />
               )}
             </div>
           </div>
