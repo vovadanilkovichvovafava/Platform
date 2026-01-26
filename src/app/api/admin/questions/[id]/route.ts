@@ -9,6 +9,7 @@ const questionUpdateSchema = z.object({
   options: z.array(z.string()).min(2).max(10).optional(),
   correctAnswer: z.number().min(0).optional(),
   order: z.number().optional(),
+  data: z.any().optional(), // Data for MATCHING, ORDERING, CASE_ANALYSIS types
 }).refine(
   (data) => {
     // If both options and correctAnswer provided, validate
@@ -83,6 +84,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     if (data.options) updateData.options = JSON.stringify(data.options)
     if (data.correctAnswer !== undefined) updateData.correctAnswer = data.correctAnswer
     if (data.order !== undefined) updateData.order = data.order
+    if (data.data !== undefined) updateData.data = data.data ? JSON.stringify(data.data) : null
 
     const question = await prisma.question.update({
       where: { id },
