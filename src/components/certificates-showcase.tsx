@@ -99,7 +99,7 @@ export function CertificatesShowcase({
                 className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 hover:shadow-sm transition-all duration-200 group"
               >
                 <span className="text-2xl group-hover:scale-110 transition-transform duration-200">
-                  {cert.trail.icon || getLevelEmoji(cert.level)}
+                  {getLevelEmoji(cert.level)}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate group-hover:text-amber-800 transition-colors">
