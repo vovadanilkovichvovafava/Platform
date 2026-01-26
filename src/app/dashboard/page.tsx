@@ -2,17 +2,20 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { ACHIEVEMENTS, getAchievement } from "@/lib/achievements"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { TrailCard } from "@/components/trail-card"
+import { AchievementsGrid } from "@/components/achievements-grid"
 import {
   Star,
   Trophy,
   BookOpen,
   Clock,
+  Medal,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -74,6 +77,35 @@ export default async function DashboardPage() {
   }
 
   const rank = getRank(user.totalXP)
+
+  // Get leaderboard position
+  const higherRanked = await prisma.user.count({
+    where: {
+      role: "STUDENT",
+      totalXP: { gt: user.totalXP },
+    },
+  })
+  const leaderboardRank = higherRanked + 1
+
+  // Get user achievements
+  const userAchievements = await prisma.userAchievement.findMany({
+    where: { userId: session.user.id },
+    orderBy: { earnedAt: "desc" },
+  })
+
+  const allAchievements = Object.values(ACHIEVEMENTS).map((def) => {
+    const userAch = userAchievements.find((ua: { achievementId: string }) => ua.achievementId === def.id)
+    return {
+      ...def,
+      earned: !!userAch,
+      earnedAt: userAch?.earnedAt.toISOString() || null,
+    }
+  })
+
+  const achievementStats = {
+    count: userAchievements.length,
+    total: Object.keys(ACHIEVEMENTS).length,
+  }
 
   // Get user's trail access
   const userAccess = await prisma.studentTrailAccess.findMany({
@@ -181,6 +213,19 @@ export default async function DashboardPage() {
                       {user.moduleProgress.length}
                     </span>
                   </div>
+
+                  <Link
+                    href="/leaderboard"
+                    className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Medal className="h-5 w-5 text-blue-500" />
+                      <span className="text-sm font-medium">Место в рейтинге</span>
+                    </div>
+                    <span className="font-bold text-lg text-blue-600">
+                      #{leaderboardRank}
+                    </span>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -221,6 +266,16 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
+        {/* Achievements Section */}
+        <section className="mb-12">
+          <AchievementsGrid
+            achievements={allAchievements}
+            stats={achievementStats}
+            showTitle={true}
+            compact={false}
+          />
+        </section>
+
         {/* Enrolled Trails */}
         {enrolledTrails.length > 0 && (
           <section className="mb-12">
