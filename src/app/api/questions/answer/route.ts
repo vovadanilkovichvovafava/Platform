@@ -9,6 +9,10 @@ import { recordActivity } from "@/lib/activity"
 const answerSchema = z.object({
   questionId: z.string().min(1, "ID вопроса обязателен"),
   selectedAnswer: z.number().min(0, "Ответ должен быть числом"),
+  // Fields for interactive question types (MATCHING, ORDERING, CASE_ANALYSIS)
+  isInteractive: z.boolean().optional(),
+  interactiveResult: z.boolean().optional(),
+  interactiveAttempts: z.number().optional(),
 })
 
 // Scoring based on attempts: 1st = 100%, 2nd = 65%, 3rd = 35%
@@ -35,7 +39,7 @@ export async function POST(request: NextRequest) {
     await recordActivity(session.user.id)
 
     const body = await request.json()
-    const { questionId, selectedAnswer } = answerSchema.parse(body)
+    const { questionId, selectedAnswer, isInteractive, interactiveResult } = answerSchema.parse(body)
 
     // Get question with module info
     const question = await prisma.question.findUnique({
@@ -57,7 +61,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const isCorrect = selectedAnswer === question.correctAnswer
+    // For interactive types (MATCHING, ORDERING, CASE_ANALYSIS) use the result from client
+    // For SINGLE_CHOICE compare selectedAnswer with correctAnswer
+    const isCorrect = isInteractive ? (interactiveResult === true) : (selectedAnswer === question.correctAnswer)
 
     if (attempt) {
       // Already answered correctly - no more attempts allowed

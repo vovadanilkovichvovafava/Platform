@@ -16,6 +16,7 @@ interface CaseAnalysisExerciseProps {
   caseContent: string
   caseLabel?: string
   options: CaseOption[]
+  minCorrectRequired?: number // Fallback for when no isCorrect flags are set
   onComplete: (isCorrect: boolean, attempts: number) => void
   disabled?: boolean
 }
@@ -25,6 +26,7 @@ export function CaseAnalysisExercise({
   caseContent,
   caseLabel = "Пример",
   options,
+  minCorrectRequired,
   onComplete,
   disabled = false,
 }: CaseAnalysisExerciseProps) {
@@ -34,7 +36,8 @@ export function CaseAnalysisExercise({
   const [isCorrect, setIsCorrect] = useState(false)
 
   const correctOptionIds = options.filter((o) => o.isCorrect).map((o) => o.id)
-  const correctCount = correctOptionIds.length
+  // Use correctOptionIds.length if available, otherwise fall back to minCorrectRequired or default to 1
+  const correctCount = correctOptionIds.length > 0 ? correctOptionIds.length : (minCorrectRequired || 1)
   const maxSelections = correctCount // Cannot select more than correct answers exist
 
   const toggleOption = useCallback((id: string) => {
@@ -58,6 +61,19 @@ export function CaseAnalysisExercise({
     const newAttempts = attempts + 1
     setAttempts(newAttempts)
 
+    // If no correct answers are marked in data, accept any selection of minCorrectRequired items
+    // This allows the exercise to work even with incomplete data
+    if (correctOptionIds.length === 0) {
+      // No correct answers defined - accept the user's selection if they selected the required amount
+      const allCorrect = selectedOptions.size === correctCount
+      setIsCorrect(allCorrect)
+      setShowResult(true)
+      if (allCorrect) {
+        onComplete(true, newAttempts)
+      }
+      return
+    }
+
     const selectedCorrect = correctOptionIds.filter((id) => selectedOptions.has(id))
     const selectedIncorrect = [...selectedOptions].filter((id) => !correctOptionIds.includes(id))
 
@@ -69,7 +85,7 @@ export function CaseAnalysisExercise({
     if (allCorrect) {
       onComplete(true, newAttempts)
     }
-  }, [attempts, correctOptionIds, selectedOptions, onComplete])
+  }, [attempts, correctOptionIds, selectedOptions, onComplete, correctCount])
 
   const handleRetry = useCallback(() => {
     setShowResult(false)
@@ -83,6 +99,11 @@ export function CaseAnalysisExercise({
   const getOptionStatus = (option: CaseOption) => {
     if (!showResult) return null
     const isSelected = selectedOptions.has(option.id)
+
+    // If no correct answers are defined in data, show selected as accepted
+    if (correctOptionIds.length === 0) {
+      return isSelected ? "correct" : "neutral"
+    }
 
     if (option.isCorrect && isSelected) return "correct"
     if (option.isCorrect && !isSelected) return "missed"
