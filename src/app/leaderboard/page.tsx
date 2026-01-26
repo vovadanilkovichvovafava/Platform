@@ -51,7 +51,7 @@ function getRankIcon(rank: number) {
 function getRankStyle(rank: number) {
   if (rank === 1) return "bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200"
   if (rank === 2) return "bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200"
-  if (rank === 3) return "bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200"
+  if (rank === 3) return "bg-gradient-to-r from-orange-50/50 to-white border-orange-100"
   return "bg-white border-gray-100"
 }
 
@@ -123,22 +123,18 @@ export default function LeaderboardPage() {
         />
 
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 mb-8 shadow-xl">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50" />
-          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
-
+        <div className="relative overflow-hidden rounded-2xl bg-white p-8 mb-8 shadow-lg border border-gray-100">
           <div className="relative z-10">
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 shadow-lg">
                 <Trophy className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
                   Лидерборд
-                  <Sparkles className="h-6 w-6 text-yellow-300 animate-pulse" />
+                  <Sparkles className="h-6 w-6 text-yellow-500 animate-pulse" />
                 </h1>
-                <p className="text-white/80">
+                <p className="text-gray-500">
                   Топ студентов по заработанным очкам опыта
                 </p>
               </div>
@@ -146,26 +142,26 @@ export default function LeaderboardPage() {
 
             {/* Stats cards */}
             <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-colors">
-                <div className="flex items-center gap-2 text-white/70 mb-1">
-                  <Zap className="h-4 w-4" />
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-md transition-all">
+                <div className="flex items-center gap-2 text-gray-500 mb-1">
+                  <Zap className="h-4 w-4 text-yellow-500" />
                   <span className="text-sm">Общий XP</span>
                 </div>
-                <p className="text-2xl font-bold text-white">{totalXP.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{totalXP.toLocaleString()}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-colors">
-                <div className="flex items-center gap-2 text-white/70 mb-1">
-                  <Target className="h-4 w-4" />
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-md transition-all">
+                <div className="flex items-center gap-2 text-gray-500 mb-1">
+                  <Target className="h-4 w-4 text-blue-500" />
                   <span className="text-sm">Модулей</span>
                 </div>
-                <p className="text-2xl font-bold text-white">{totalModules}</p>
+                <p className="text-2xl font-bold text-gray-900">{totalModules}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-colors">
-                <div className="flex items-center gap-2 text-white/70 mb-1">
-                  <Award className="h-4 w-4" />
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-md transition-all">
+                <div className="flex items-center gap-2 text-gray-500 mb-1">
+                  <Award className="h-4 w-4 text-purple-500" />
                   <span className="text-sm">Сертификатов</span>
                 </div>
-                <p className="text-2xl font-bold text-white">{totalCertificates}</p>
+                <p className="text-2xl font-bold text-gray-900">{totalCertificates}</p>
               </div>
             </div>
           </div>
@@ -291,35 +287,35 @@ export default function LeaderboardPage() {
             {/* 3rd place */}
             <Link href={`/dashboard/${leaderboard[2].id}`} className="group">
               <Card
-                className={`text-center bg-gradient-to-b from-amber-100 to-white border-2 border-amber-200 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-amber-300 ${
+                className={`text-center bg-gradient-to-b from-orange-50/70 to-white border border-orange-200/60 overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-orange-300/70 ${
                   animateIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                 }`}
                 style={{ transitionDelay: "300ms" }}
               >
                 <CardContent className="p-5 pt-10">
                   <div className="relative">
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center text-amber-700 font-bold text-sm shadow-sm">
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600/80 font-bold text-sm shadow-sm">
                       3
                     </div>
-                    <div className="w-14 h-14 mx-auto rounded-full bg-gradient-to-br from-amber-200 to-amber-300 flex items-center justify-center text-lg font-bold text-amber-800 mb-3 shadow-inner ring-4 ring-amber-100 group-hover:ring-amber-200 transition-all">
+                    <div className="w-14 h-14 mx-auto rounded-full bg-gradient-to-br from-orange-200/70 to-amber-300/60 flex items-center justify-center text-lg font-bold text-orange-700/80 mb-3 shadow-inner ring-4 ring-orange-50 group-hover:ring-orange-100 transition-all">
                       {getInitials(leaderboard[2].name)}
                     </div>
                   </div>
-                  <Medal className="h-5 w-5 text-amber-600 mx-auto mb-2" />
-                  <p className="font-semibold text-gray-900 truncate group-hover:text-amber-800">
+                  <Medal className="h-5 w-5 text-orange-400 mx-auto mb-2" />
+                  <p className="font-semibold text-gray-900 truncate group-hover:text-orange-700">
                     {leaderboard[2].name}
                   </p>
-                  <p className="text-lg font-bold text-amber-600 mt-1">
+                  <p className="text-lg font-bold text-orange-500/80 mt-1">
                     {leaderboard[2].totalXP.toLocaleString()}
-                    <span className="text-sm font-normal text-amber-400 ml-1">XP</span>
+                    <span className="text-sm font-normal text-orange-400/70 ml-1">XP</span>
                   </p>
-                  <div className="flex items-center justify-center gap-3 mt-3 text-xs text-amber-600">
+                  <div className="flex items-center justify-center gap-3 mt-3 text-xs text-orange-500/70">
                     <span className="flex items-center gap-1">
                       <Target className="h-3 w-3" />
                       {leaderboard[2].modulesCompleted}
                     </span>
                     {leaderboard[2].streak > 0 && (
-                      <span className="flex items-center gap-1 text-orange-500">
+                      <span className="flex items-center gap-1 text-orange-400">
                         <Flame className="h-3 w-3" />
                         {leaderboard[2].streak}
                       </span>
@@ -364,7 +360,7 @@ export default function LeaderboardPage() {
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold shadow-sm transition-transform duration-200 group-hover:scale-110 ${
                       entry.rank === 1 ? "bg-gradient-to-br from-yellow-200 to-amber-300 text-yellow-800" :
                       entry.rank === 2 ? "bg-gradient-to-br from-slate-200 to-slate-300 text-slate-700" :
-                      entry.rank === 3 ? "bg-gradient-to-br from-amber-200 to-amber-300 text-amber-800" :
+                      entry.rank === 3 ? "bg-gradient-to-br from-orange-100 to-orange-200/80 text-orange-700/80" :
                       "bg-gray-100 text-gray-600"
                     }`}>
                       {getInitials(entry.name)}
@@ -411,7 +407,7 @@ export default function LeaderboardPage() {
                         <p className={`font-bold ${entry.rank <= 3 ? "text-lg" : ""} ${
                           entry.rank === 1 ? "text-yellow-600" :
                           entry.rank === 2 ? "text-slate-500" :
-                          entry.rank === 3 ? "text-amber-600" :
+                          entry.rank === 3 ? "text-orange-500/80" :
                           "text-gray-700"
                         }`}>
                           {entry.totalXP.toLocaleString()}
