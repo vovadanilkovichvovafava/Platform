@@ -73,7 +73,10 @@ export function AchievementsGrid({
     : achievements
 
   const earnedCount = achievements.filter((a) => a.earned).length
-  const progressPercent = Math.round((earnedCount / achievements.length) * 100)
+  // Use stats.total for percentage calculation when available (for public dashboard)
+  // to correctly account for hidden achievements
+  const totalCount = stats?.total ?? achievements.length
+  const progressPercent = Math.round((earnedCount / totalCount) * 100)
 
   return (
     <div>
