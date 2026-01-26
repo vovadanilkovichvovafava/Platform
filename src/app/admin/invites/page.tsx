@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3 } from "lucide-react"
+import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban } from "lucide-react"
 import Link from "next/link"
 
 interface Invite {
@@ -182,6 +182,37 @@ export default function AdminInvitesPage() {
           </div>
         </div>
 
+        {/* Statistics */}
+        {invites.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="text-2xl font-bold text-slate-900">{invites.length}</div>
+              <div className="text-xs text-slate-500">Всего кодов</div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="text-2xl font-bold text-green-600">
+                {invites.filter(i => {
+                  const isExpired = i.expiresAt && new Date(i.expiresAt) < new Date()
+                  return !isExpired && i.usedCount < i.maxUses
+                }).length}
+              </div>
+              <div className="text-xs text-slate-500">Активных</div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="text-2xl font-bold text-blue-600">
+                {invites.reduce((sum, i) => sum + i.usedCount, 0)}
+              </div>
+              <div className="text-xs text-slate-500">Использовано</div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="text-2xl font-bold text-slate-400">
+                {invites.filter(i => i.usedCount >= i.maxUses).length}
+              </div>
+              <div className="text-xs text-slate-500">Исчерпано</div>
+            </div>
+          </div>
+        )}
+
         {/* Create New Invite */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Создать приглашение</h2>
@@ -260,60 +291,111 @@ export default function AdminInvitesPage() {
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {invites.map((invite) => (
-                <div key={invite.id} className="p-4 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <code className="px-3 py-1 bg-slate-100 rounded-lg font-mono text-sm font-semibold text-slate-900">
-                          {invite.code}
-                        </code>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          invite.usedCount >= invite.maxUses
-                            ? "bg-red-100 text-red-600"
-                            : "bg-green-100 text-green-600"
-                        }`}>
-                          {invite.usedCount} / {invite.maxUses}
-                        </span>
-                        {invite.email && (
-                          <span className="text-xs text-slate-500">
-                            для {invite.email}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-400">
-                        Создан {new Date(invite.createdAt).toLocaleDateString("ru")}
-                        {invite.expiresAt && (
-                          <> · Истекает {new Date(invite.expiresAt).toLocaleDateString("ru")}</>
-                        )}
-                      </div>
-                    </div>
+              {invites.map((invite) => {
+                const isExpired = invite.expiresAt && new Date(invite.expiresAt) < new Date()
+                const isExhausted = invite.usedCount >= invite.maxUses
+                const isActive = !isExpired && !isExhausted
+                const usagePercent = Math.round((invite.usedCount / invite.maxUses) * 100)
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyInviteLink(invite.code, invite.id)}
-                        className="text-slate-600"
-                      >
-                        {copiedId === invite.id ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteInvite(invite.id)}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                return (
+                  <div key={invite.id} className={`p-4 hover:bg-slate-50 transition-colors ${
+                    !isActive ? "bg-slate-50/50" : ""
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <code className={`px-3 py-1 rounded-lg font-mono text-sm font-semibold ${
+                            isActive ? "bg-slate-100 text-slate-900" : "bg-slate-200 text-slate-500"
+                          }`}>
+                            {invite.code}
+                          </code>
+
+                          {/* Status Badge */}
+                          {isExpired ? (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                              <Clock className="h-3 w-3" />
+                              Истёк
+                            </span>
+                          ) : isExhausted ? (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                              <Ban className="h-3 w-3" />
+                              Исчерпан
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-600">
+                              <CheckCircle className="h-3 w-3" />
+                              Активен
+                            </span>
+                          )}
+
+                          {/* Usage Progress */}
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  isExhausted ? "bg-red-500" :
+                                  usagePercent >= 75 ? "bg-yellow-500" :
+                                  "bg-green-500"
+                                }`}
+                                style={{ width: `${usagePercent}%` }}
+                              />
+                            </div>
+                            <span className={`text-xs font-medium ${
+                              isExhausted ? "text-red-600" : "text-slate-600"
+                            }`}>
+                              {invite.usedCount}/{invite.maxUses}
+                            </span>
+                          </div>
+
+                          {invite.email && (
+                            <span className="text-xs text-slate-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                              🔒 {invite.email}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                          <span>Создан {new Date(invite.createdAt).toLocaleDateString("ru")}</span>
+                          {invite.expiresAt && (
+                            <span className={`flex items-center gap-1 ${
+                              isExpired ? "text-red-500" : "text-slate-400"
+                            }`}>
+                              <Clock className="h-3 w-3" />
+                              {isExpired ? "Истёк" : "Истекает"} {new Date(invite.expiresAt).toLocaleDateString("ru")}
+                            </span>
+                          )}
+                          <span className="text-slate-300">•</span>
+                          <span>от {invite.createdBy.name}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyInviteLink(invite.code, invite.id)}
+                          className="text-slate-600"
+                          disabled={!isActive}
+                          title={isActive ? "Копировать ссылку" : "Код неактивен"}
+                        >
+                          {copiedId === invite.id ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteInvite(invite.id)}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

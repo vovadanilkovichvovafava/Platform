@@ -15,6 +15,7 @@ import {
   BookOpen,
   Wrench,
   FolderGit2,
+  Pencil,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SubmitProjectForm } from "@/components/submit-project-form"
@@ -122,6 +123,9 @@ export default async function ModulePage({ params }: Props) {
   const hasQuestions = courseModule.questions.length > 0
   const TypeIcon = typeIcons[courseModule.type]
 
+  // Check if user is admin or teacher (to show edit button)
+  const isPrivileged = session?.user?.role === "ADMIN" || session?.user?.role === "TEACHER"
+
   // Find next module in the trail
   const trailModules = courseModule.trail.modules
   const currentIndex = trailModules.findIndex((m) => m.id === courseModule.id)
@@ -168,6 +172,15 @@ export default async function ModulePage({ params }: Props) {
                 <Star className="h-4 w-4" />
                 {courseModule.points} XP
               </div>
+              {/* Admin/Teacher edit button */}
+              {isPrivileged && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/admin/content/modules/${courseModule.id}`}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Редактировать
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
