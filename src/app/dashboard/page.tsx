@@ -4,9 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { TrailCard } from "@/components/trail-card"
 import {
@@ -15,11 +14,6 @@ import {
   Trophy,
   BookOpen,
   Clock,
-  TrendingUp,
-  Code,
-  Target,
-  Palette,
-  Lightbulb
 } from "lucide-react"
 import Link from "next/link"
 

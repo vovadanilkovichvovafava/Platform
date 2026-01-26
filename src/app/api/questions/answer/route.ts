@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit"
+import { z } from "zod"
+import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
+import { recordActivity } from "@/lib/activity"
+
+const answerSchema = z.object({
+  questionId: z.string().min(1, "ID вопроса обязателен"),
+  selectedAnswer: z.number().min(0, "Ответ должен быть числом"),
+})
 
 // Scoring based on attempts: 1st = 100%, 2nd = 65%, 3rd = 35%
 function calculateScore(basePoints: number, attempts: number): number {
@@ -12,33 +19,23 @@ function calculateScore(basePoints: number, attempts: number): number {
 }
 
 export async function POST(request: NextRequest) {
-  // Rate limiting - 30 answers per minute per IP
-  const ip = getClientIp(request)
-  const rateLimit = checkRateLimit(`answer:${ip}`, RATE_LIMITS.answer)
-
-  if (!rateLimit.success) {
-    return NextResponse.json(
-      { error: `Слишком много запросов. Попробуйте через ${rateLimit.resetIn} секунд` },
-      { status: 429 }
-    )
-  }
-
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    const { questionId, selectedAnswer, isInteractive, interactiveResult, interactiveAttempts } = await request.json()
-
-    if (!questionId) {
-      return NextResponse.json({ error: "Missing questionId" }, { status: 400 })
+    // Rate limiting - 60 ответов в минуту
+    const rateLimit = checkRateLimit(`answers:${session.user.id}`, RATE_LIMITS.api)
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetIn)
     }
 
-    // For non-interactive questions, selectedAnswer is required
-    if (!isInteractive && selectedAnswer === undefined) {
-      return NextResponse.json({ error: "Missing selectedAnswer" }, { status: 400 })
-    }
+    // Record daily activity
+    await recordActivity(session.user.id)
+
+    const body = await request.json()
+    const { questionId, selectedAnswer } = answerSchema.parse(body)
 
     // Get question with module info
     const question = await prisma.question.findUnique({
@@ -60,10 +57,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // For interactive exercises, use the result from client
-    // For single choice, compare with correctAnswer
-    const isCorrect = isInteractive ? interactiveResult : selectedAnswer === question.correctAnswer
-    const attemptCount = isInteractive ? interactiveAttempts : undefined
+    const isCorrect = selectedAnswer === question.correctAnswer
 
     if (attempt) {
       // Already answered correctly - no more attempts allowed
@@ -122,15 +116,14 @@ export async function POST(request: NextRequest) {
           : `Неправильно. Осталось попыток: ${3 - newAttempts}`,
       })
     } else {
-      // First attempt (or interactive exercises which track their own attempts)
-      const finalAttempts = attemptCount || 1
-      const earnedScore = isCorrect ? calculateScore(question.module.points / 3, finalAttempts) : 0
+      // First attempt
+      const earnedScore = isCorrect ? calculateScore(question.module.points / 3, 1) : 0
 
       attempt = await prisma.questionAttempt.create({
         data: {
           userId: session.user.id,
           questionId: questionId,
-          attempts: finalAttempts,
+          attempts: 1,
           isCorrect: isCorrect,
           earnedScore: earnedScore,
         },
@@ -144,22 +137,24 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      const scorePercent = finalAttempts === 1 ? "100%" : finalAttempts === 2 ? "65%" : "35%"
-
       return NextResponse.json({
         success: true,
         isCorrect,
-        attempts: finalAttempts,
+        attempts: 1,
         earnedScore,
         message: isCorrect
-          ? `Правильно! +${earnedScore} XP (${scorePercent})`
-          : isInteractive
-          ? "Попробуйте ещё раз"
+          ? `Правильно! +${earnedScore} XP (100% за первую попытку)`
           : "Неправильно. Осталось попыток: 2",
       })
     }
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
     console.error("Error answering question:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Внутренняя ошибка сервера" }, { status: 500 })
   }
 }

@@ -1,6 +1,8 @@
 import { HeroSection } from "@/components/hero-section"
 import { TrailCard } from "@/components/trail-card"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { Target, Users, TrendingUp } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -18,11 +20,16 @@ async function getTrails() {
 }
 
 export default async function HomePage() {
-  const trails = await getTrails()
+  const [trails, session] = await Promise.all([
+    getTrails(),
+    getServerSession(authOptions),
+  ])
+
+  const isLoggedIn = !!session?.user
 
   return (
     <div className="min-h-screen bg-white">
-      <HeroSection />
+      <HeroSection isLoggedIn={isLoggedIn} />
 
       {/* Why Prometheus */}
       <section className="py-20 bg-slate-50">
@@ -205,16 +212,16 @@ export default async function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Готов проверить свои навыки?
+              {isLoggedIn ? "Продолжи обучение" : "Готов проверить свои навыки?"}
             </h2>
             <p className="text-slate-400 text-lg mb-8">
-              Войди в систему и начни оценку
+              {isLoggedIn ? "Выбери trail и развивай навыки" : "Войди в систему и начни оценку"}
             </p>
             <a
-              href="/login"
+              href={isLoggedIn ? "/dashboard" : "/login"}
               className="inline-flex items-center justify-center h-12 px-10 text-base font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all shadow-lg shadow-orange-500/30"
             >
-              Войти
+              {isLoggedIn ? "В Dashboard" : "Войти"}
             </a>
           </div>
         </div>

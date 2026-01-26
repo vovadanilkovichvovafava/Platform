@@ -26,6 +26,8 @@ interface Question {
   options: string
   correctAnswer: number
   order: number
+  type?: string
+  data?: string
 }
 
 interface Module {
@@ -40,6 +42,7 @@ interface Module {
   points: number
   duration: string
   order: number
+  requiresSubmission: boolean
   trail: {
     id: string
     title: string
@@ -73,6 +76,7 @@ export default function TeacherModuleEditorPage({ params }: Props) {
   const [requirements, setRequirements] = useState("")
   const [points, setPoints] = useState(0)
   const [duration, setDuration] = useState("")
+  const [requiresSubmission, setRequiresSubmission] = useState(false)
 
   // Questions state
   const [questions, setQuestions] = useState<Array<{
@@ -80,8 +84,20 @@ export default function TeacherModuleEditorPage({ params }: Props) {
     question: string
     options: string[]
     correctAnswer: number
+    type: string
+    data?: Record<string, unknown>
     isNew?: boolean
   }>>([])
+
+  // Dropdown state for adding questions
+  const [showAddMenu, setShowAddMenu] = useState(false)
+
+  const questionTypes = [
+    { value: "SINGLE_CHOICE", label: "Выбор ответа", icon: "📝" },
+    { value: "MATCHING", label: "Сопоставление", icon: "🔗" },
+    { value: "ORDERING", label: "Упорядочивание", icon: "📊" },
+    { value: "CASE_ANALYSIS", label: "Анализ кейса", icon: "📋" },
+  ]
 
   const fetchModule = async () => {
     try {
@@ -99,12 +115,15 @@ export default function TeacherModuleEditorPage({ params }: Props) {
       setRequirements(data.requirements || "")
       setPoints(data.points)
       setDuration(data.duration || "")
+      setRequiresSubmission(data.requiresSubmission || false)
       setQuestions(
         data.questions.map((q) => ({
           id: q.id,
           question: q.question,
           options: safeJsonParse<string[]>(q.options, []),
           correctAnswer: q.correctAnswer,
+          type: q.type || "SINGLE_CHOICE",
+          data: q.data ? safeJsonParse(q.data, {}) : undefined,
         }))
       )
     } catch (err) {
@@ -116,6 +135,7 @@ export default function TeacherModuleEditorPage({ params }: Props) {
 
   useEffect(() => {
     fetchModule()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const saveModule = async () => {
@@ -135,6 +155,7 @@ export default function TeacherModuleEditorPage({ params }: Props) {
           requirements,
           points,
           duration,
+          requiresSubmission,
         }),
       })
 
@@ -155,6 +176,8 @@ export default function TeacherModuleEditorPage({ params }: Props) {
               question: q.question,
               options: q.options,
               correctAnswer: q.correctAnswer,
+              type: q.type,
+              data: q.data,
             }),
           })
         } else if (q.id) {
@@ -166,6 +189,8 @@ export default function TeacherModuleEditorPage({ params }: Props) {
               question: q.question,
               options: q.options,
               correctAnswer: q.correctAnswer,
+              type: q.type,
+              data: q.data,
             }),
           })
         }
@@ -181,13 +206,23 @@ export default function TeacherModuleEditorPage({ params }: Props) {
     }
   }
 
-  const addQuestion = () => {
+  const addQuestion = (type: string) => {
+    setShowAddMenu(false)
+
+    const defaultOptions: Record<string, string[]> = {
+      SINGLE_CHOICE: ["", "", "", ""],
+      MATCHING: ["", ""],
+      ORDERING: ["", "", "", ""],
+      CASE_ANALYSIS: ["", "", "", ""],
+    }
+
     setQuestions([
       ...questions,
       {
         question: "",
-        options: ["", "", "", ""],
+        options: defaultOptions[type] || ["", "", "", ""],
         correctAnswer: 0,
+        type,
         isNew: true,
       },
     ])
@@ -344,6 +379,27 @@ export default function TeacherModuleEditorPage({ params }: Props) {
                     />
                   </div>
                 </div>
+
+                {/* Требует отправки работы */}
+                {!isProject && (
+                  <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <input
+                      type="checkbox"
+                      id="requiresSubmission"
+                      checked={requiresSubmission}
+                      onChange={(e) => setRequiresSubmission(e.target.checked)}
+                      className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <div>
+                      <label htmlFor="requiresSubmission" className="text-sm font-medium text-purple-900 cursor-pointer">
+                        Требует отправки практической работы
+                      </label>
+                      <p className="text-xs text-purple-700">
+                        Студенты смогут отправить ссылку на файл (Google Drive, Notion и т.д.)
+                      </p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -394,10 +450,33 @@ export default function TeacherModuleEditorPage({ params }: Props) {
                     <CardTitle className="text-lg">
                       Вопросы ({questions.length})
                     </CardTitle>
-                    <Button size="sm" variant="outline" onClick={addQuestion}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Добавить
-                    </Button>
+                    <div className="relative">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowAddMenu(!showAddMenu)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Добавить
+                      </Button>
+                      {showAddMenu && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border z-50">
+                          <div className="p-2">
+                            <p className="text-xs text-gray-500 px-2 py-1">Выберите тип вопроса</p>
+                            {questionTypes.map((type) => (
+                              <button
+                                key={type.value}
+                                onClick={() => addQuestion(type.value)}
+                                className="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <span>{type.icon}</span>
+                                {type.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -415,9 +494,14 @@ export default function TeacherModuleEditorPage({ params }: Props) {
                           <GripVertical className="h-5 w-5 text-gray-400 mt-2 shrink-0" />
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-gray-700">
-                                Вопрос {qIndex + 1}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Вопрос {qIndex + 1}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {questionTypes.find(t => t.value === q.type)?.label || "Выбор ответа"}
+                                </Badge>
+                              </div>
                               {q.isNew && (
                                 <Badge variant="secondary" className="text-xs">
                                   Новый

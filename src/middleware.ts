@@ -24,7 +24,7 @@ function checkAuthRateLimit(request: NextRequest): NextResponse | null {
     const ip = getClientIp(request)
     const rateLimit = checkRateLimit(`auth:${ip}`, RATE_LIMITS.auth)
 
-    if (!rateLimit.success) {
+    if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: `Слишком много попыток входа. Попробуйте через ${rateLimit.resetIn} секунд` },
         { status: 429 }

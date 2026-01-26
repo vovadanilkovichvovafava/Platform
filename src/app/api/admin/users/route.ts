@@ -30,6 +30,7 @@ export async function GET() {
           select: {
             enrollments: true,
             submissions: true,
+            activityDays: true,
           },
         },
       },
@@ -39,6 +40,56 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching users:", error)
     return NextResponse.json({ error: "Ошибка при получении пользователей" }, { status: 500 })
+  }
+}
+
+// DELETE - Delete user
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("id")
+
+    if (!userId) {
+      return NextResponse.json({ error: "ID пользователя не указан" }, { status: 400 })
+    }
+
+    // Don't allow deleting yourself
+    if (userId === session.user.id) {
+      return NextResponse.json({ error: "Нельзя удалить свой аккаунт" }, { status: 400 })
+    }
+
+    // Delete in transaction to ensure consistency
+    await prisma.$transaction(async (tx) => {
+      // First delete invites created by this user (no cascade)
+      await tx.invite.deleteMany({
+        where: { createdById: userId },
+      })
+
+      // Delete reviews made by this user (reviewer relation)
+      await tx.review.deleteMany({
+        where: { reviewerId: userId },
+      })
+
+      // Now delete the user (other relations have cascade)
+      await tx.user.delete({
+        where: { id: userId },
+      })
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting user:", error)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json({
+      error: "Ошибка при удалении пользователя",
+      details: errorMessage
+    }, { status: 500 })
   }
 }
 

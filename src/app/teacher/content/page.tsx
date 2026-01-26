@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/components/ui/toast"
+import { useConfirm } from "@/components/ui/confirm-dialog"
 import {
   BookOpen,
   Wrench,
@@ -26,6 +28,7 @@ import {
   Check,
   AlertCircle,
 } from "lucide-react"
+import { CreateModuleModal } from "@/components/create-module-modal"
 
 interface Module {
   id: string
@@ -83,6 +86,8 @@ export default function TeacherContentPage() {
   const [assignedTrailIds, setAssignedTrailIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
 
   const [showTrailModal, setShowTrailModal] = useState(false)
   const [showModuleModal, setShowModuleModal] = useState(false)
@@ -98,15 +103,6 @@ export default function TeacherContentPage() {
     duration: "2-4 недели",
   })
 
-  // Module form state
-  const [moduleForm, setModuleForm] = useState({
-    title: "",
-    description: "",
-    type: "THEORY",
-    level: "Middle",
-    points: 50,
-    duration: "15 мин",
-  })
 
   const fetchData = async () => {
     try {
@@ -172,52 +168,54 @@ export default function TeacherContentPage() {
     }
   }
 
-  const createModule = async () => {
+  const createModule = async (data: {
+    title: string
+    description: string
+    type: "THEORY" | "PRACTICE" | "PROJECT"
+    level: string
+    points: number
+    duration: string
+  }) => {
     if (!selectedTrailId) return
 
-    try {
-      const slug = moduleForm.title
-        .toLowerCase()
-        .replace(/[^a-zа-яё0-9]+/gi, "-")
-        .replace(/(^-|-$)/g, "")
+    const slug = data.title
+      .toLowerCase()
+      .replace(/[^a-zа-яё0-9]+/gi, "-")
+      .replace(/(^-|-$)/g, "")
 
-      const trail = assignedTrails.find((t) => t.id === selectedTrailId)
-      const order = trail ? trail.modules.length : 0
+    const trail = assignedTrails.find((t) => t.id === selectedTrailId)
+    const order = trail ? trail.modules.length : 0
 
-      const res = await fetch("/api/admin/modules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...moduleForm,
-          slug,
-          trailId: selectedTrailId,
-          order,
-        }),
-      })
+    const res = await fetch("/api/admin/modules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...data,
+        slug,
+        trailId: selectedTrailId,
+        order,
+      }),
+    })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to create module")
-      }
-
-      setShowModuleModal(false)
-      setSelectedTrailId("")
-      setModuleForm({
-        title: "",
-        description: "",
-        type: "THEORY",
-        level: "Middle",
-        points: 50,
-        duration: "15 мин",
-      })
-      fetchData()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка создания модуля")
+    if (!res.ok) {
+      const resData = await res.json()
+      throw new Error(resData.error || "Failed to create module")
     }
+
+    setShowModuleModal(false)
+    setSelectedTrailId("")
+    fetchData()
   }
 
   const deleteTrail = async (trailId: string, title: string) => {
-    if (!confirm(`Удалить trail "${title}" и все его модули?`)) return
+    const confirmed = await confirm({
+      title: "Удалить trail?",
+      message: `Вы уверены, что хотите удалить "${title}" и все его модули?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       const res = await fetch(`/api/admin/trails/${trailId}`, {
@@ -229,13 +227,21 @@ export default function TeacherContentPage() {
         throw new Error(data.error || "Failed to delete trail")
       }
       fetchData()
+      showToast("Trail удалён", "success")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка удаления trail")
+      showToast(err instanceof Error ? err.message : "Ошибка удаления trail", "error")
     }
   }
 
   const deleteModule = async (moduleId: string, title: string) => {
-    if (!confirm(`Удалить модуль "${title}"?`)) return
+    const confirmed = await confirm({
+      title: "Удалить модуль?",
+      message: `Вы уверены, что хотите удалить "${title}"?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
 
     try {
       const res = await fetch(`/api/admin/modules/${moduleId}`, {
@@ -247,8 +253,9 @@ export default function TeacherContentPage() {
         throw new Error(data.error || "Failed to delete module")
       }
       fetchData()
+      showToast("Модуль удалён", "success")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка удаления модуля")
+      showToast(err instanceof Error ? err.message : "Ошибка удаления модуля", "error")
     }
   }
 
@@ -261,53 +268,49 @@ export default function TeacherContentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Управление контентом
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Редактирование назначенных trails и модулей
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setShowTrailModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Новый Trail
-              </Button>
-              <Button onClick={fetchData} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
+    <div className="bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b px-4 py-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-gray-900 truncate">
+              Управление контентом
+            </h1>
+            <p className="text-gray-500 text-sm truncate">
+              Редактирование trails и модулей
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button onClick={() => setShowTrailModal(true)} size="sm">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button onClick={fetchData} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      {/* Content */}
+      <div className="p-4">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between text-red-700">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
-              {error}
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between text-red-700 text-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{error}</span>
             </div>
-            <button onClick={() => setError("")}>
+            <button onClick={() => setError("")} className="flex-shrink-0">
               <X className="h-4 w-4" />
             </button>
           </div>
         )}
 
-        <div className="space-y-8">
+        <div className="space-y-6">
           {assignedTrails.length === 0 ? (
             <Card>
-              <CardContent className="p-12 text-center">
-                <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500 mb-2">Нет назначенных trails</p>
-                <p className="text-sm text-gray-400">
-                  Обратитесь к администратору для назначения trails
-                </p>
+              <CardContent className="p-8 text-center">
+                <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500 text-sm">Нет назначенных trails</p>
               </CardContent>
             </Card>
           ) : (
@@ -315,51 +318,41 @@ export default function TeacherContentPage() {
               const Icon = iconMap[trail.icon] || Code
 
               return (
-                <Card key={trail.id} className="overflow-hidden">
-                  <CardHeader
-                    className="pb-4"
-                    style={{
-                      background: `linear-gradient(135deg, ${trail.color}10 0%, ${trail.color}05 100%)`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div
-                          className="flex h-12 w-12 items-center justify-center rounded-xl"
-                          style={{
-                            background: `linear-gradient(135deg, ${trail.color} 0%, ${trail.color}99 100%)`,
-                          }}
-                        >
-                          <Icon className="h-6 w-6 text-white" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">
-                            {trail.title}
-                          </CardTitle>
-                          <p className="text-sm text-gray-500">
-                            {trail.subtitle}
-                          </p>
-                        </div>
+                <Card key={trail.id}>
+                  {/* Trail Header */}
+                  <CardHeader className="p-4" style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, ${trail.color}05 100%)` }}>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0"
+                        style={{ background: trail.color }}
+                      >
+                        <Icon className="h-5 w-5 text-white" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={trail.isPublished ? "default" : "secondary"}>
-                          {trail.isPublished ? "Опубликован" : "Черновик"}
-                        </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base truncate">{trail.title}</CardTitle>
+                          <Badge variant={trail.isPublished ? "default" : "secondary"} className="flex-shrink-0 text-xs">
+                            {trail.isPublished ? "✓" : "○"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">{trail.subtitle}</p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
                           variant="outline"
                           size="sm"
+                          className="h-8 w-8 p-0"
                           onClick={() => {
                             setSelectedTrailId(trail.id)
                             setShowModuleModal(true)
                           }}
                         >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Модуль
+                          <Plus className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           onClick={() => deleteTrail(trail.id, trail.title)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -367,67 +360,44 @@ export default function TeacherContentPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-4">
+
+                  {/* Modules List */}
+                  <CardContent className="p-0">
                     {trail.modules.length === 0 ? (
-                      <p className="text-gray-400 text-sm text-center py-4">
-                        Нет модулей
-                      </p>
+                      <p className="text-gray-400 text-sm text-center py-6">Нет модулей</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="divide-y">
                         {trail.modules.map((module, index) => {
                           const TypeIcon = typeIcons[module.type]
 
                           return (
                             <div
                               key={module.id}
-                              className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 group"
+                              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 group"
                             >
-                              <div className="flex items-center gap-3 flex-1">
-                                <span className="text-gray-400 text-sm w-6">
-                                  {index + 1}.
-                                </span>
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
-                                  <TypeIcon className="h-4 w-4 text-gray-500" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900 truncate">
-                                      {module.title}
-                                    </span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {typeLabels[module.type]}
-                                    </Badge>
-                                    {module.type === "THEORY" && (
-                                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                                        <HelpCircle className="h-3 w-3" />
-                                        {module._count?.questions || 0} вопросов
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-500 truncate">
-                                    {module.description}
-                                  </p>
-                                </div>
+                              <span className="text-gray-400 text-xs w-4 flex-shrink-0">{index + 1}</span>
+                              <div className="flex h-7 w-7 items-center justify-center rounded bg-gray-100 flex-shrink-0">
+                                <TypeIcon className="h-3.5 w-3.5 text-gray-500" />
                               </div>
-                              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm text-gray-900 truncate">{module.title}</div>
+                                <div className="text-xs text-gray-500 truncate">{module.description}</div>
+                              </div>
+                              <div className="text-xs text-gray-400 flex-shrink-0">{module.points}xp</div>
+                              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                                 <Link href={`/teacher/content/modules/${module.id}`}>
-                                  <Button variant="ghost" size="sm">
-                                    <Edit className="h-4 w-4" />
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                    <Edit className="h-3.5 w-3.5" />
                                   </Button>
                                 </Link>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-red-600 hover:text-red-700"
+                                  className="h-7 w-7 p-0 text-red-600"
                                   onClick={() => deleteModule(module.id, module.title)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-gray-400">
-                                <span>{module.duration}</span>
-                                <span>{module.points} XP</span>
-                                <ChevronRight className="h-4 w-4" />
                               </div>
                             </div>
                           )
@@ -547,110 +517,12 @@ export default function TeacherContentPage() {
       )}
 
       {/* Create Module Modal */}
-      {showModuleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-lg mx-4">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Добавить модуль</CardTitle>
-                <button onClick={() => setShowModuleModal(false)}>
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="moduleTitle">Название</Label>
-                <Input
-                  id="moduleTitle"
-                  value={moduleForm.title}
-                  onChange={(e) =>
-                    setModuleForm({ ...moduleForm, title: e.target.value })
-                  }
-                  placeholder="Например: Основы JavaScript"
-                />
-              </div>
-              <div>
-                <Label htmlFor="moduleDescription">Описание</Label>
-                <Textarea
-                  id="moduleDescription"
-                  value={moduleForm.description}
-                  onChange={(e) =>
-                    setModuleForm({ ...moduleForm, description: e.target.value })
-                  }
-                  placeholder="Описание модуля"
-                  rows={2}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="moduleType">Тип</Label>
-                  <select
-                    id="moduleType"
-                    value={moduleForm.type}
-                    onChange={(e) =>
-                      setModuleForm({ ...moduleForm, type: e.target.value })
-                    }
-                    className="w-full p-2 border rounded-lg"
-                  >
-                    <option value="THEORY">Теория</option>
-                    <option value="PRACTICE">Практика</option>
-                    <option value="PROJECT">Проект</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="moduleLevel">Уровень</Label>
-                  <select
-                    id="moduleLevel"
-                    value={moduleForm.level}
-                    onChange={(e) =>
-                      setModuleForm({ ...moduleForm, level: e.target.value })
-                    }
-                    className="w-full p-2 border rounded-lg"
-                  >
-                    <option value="Junior">Junior</option>
-                    <option value="Middle">Middle</option>
-                    <option value="Senior">Senior</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="modulePoints">Очки XP</Label>
-                  <Input
-                    id="modulePoints"
-                    type="number"
-                    value={moduleForm.points}
-                    onChange={(e) =>
-                      setModuleForm({ ...moduleForm, points: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="moduleDuration">Длительность</Label>
-                  <Input
-                    id="moduleDuration"
-                    value={moduleForm.duration}
-                    onChange={(e) =>
-                      setModuleForm({ ...moduleForm, duration: e.target.value })
-                    }
-                    placeholder="15 мин"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowModuleModal(false)}>
-                  Отмена
-                </Button>
-                <Button onClick={createModule}>
-                  <Check className="h-4 w-4 mr-2" />
-                  Создать
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <CreateModuleModal
+        open={showModuleModal}
+        onClose={() => setShowModuleModal(false)}
+        onSubmit={createModule}
+        trailId={selectedTrailId}
+      />
     </div>
   )
 }

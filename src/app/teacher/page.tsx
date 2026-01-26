@@ -1,24 +1,17 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Clock,
   CheckCircle2,
   AlertCircle,
   XCircle,
-  Github,
-  Globe,
-  Eye,
-  ClipboardList,
-  History,
 } from "lucide-react"
+import { SubmissionsFilter } from "@/components/submissions-filter"
 
 export default async function TeacherDashboard() {
   const session = await getServerSession(authOptions)
@@ -52,7 +45,7 @@ export default async function TeacherDashboard() {
       },
       module: {
         include: {
-          trail: true,
+          trail: { select: { title: true } },
         },
       },
     },
@@ -65,6 +58,7 @@ export default async function TeacherDashboard() {
       ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
     },
     orderBy: { updatedAt: "desc" },
+    take: 50, // Limit history to last 50
     include: {
       user: {
         select: { id: true, name: true, email: true },
@@ -96,6 +90,31 @@ export default async function TeacherDashboard() {
   const approvedCount = stats.find((s) => s.status === "APPROVED")?._count || 0
   const revisionCount = stats.find((s) => s.status === "REVISION")?._count || 0
   const failedCount = stats.find((s) => s.status === "FAILED")?._count || 0
+
+  // Get unique trails for filter
+  const allTrails = new Set<string>()
+  pendingSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
+  reviewedSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
+  const trails = Array.from(allTrails).sort()
+
+  // Serialize dates for client component
+  const serializedPending = pendingSubmissions.map((s) => ({
+    ...s,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+  }))
+
+  const serializedReviewed = reviewedSubmissions.map((s) => ({
+    ...s,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+    review: s.review
+      ? {
+          ...s.review,
+          createdAt: s.review.createdAt.toISOString(),
+        }
+      : null,
+  }))
 
   return (
     <div className="p-8">
@@ -167,206 +186,12 @@ export default async function TeacherDashboard() {
         </Card>
       </div>
 
-      {/* Pending Submissions */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            Работы на проверку
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {pendingSubmissions.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Все работы проверены!
-              </h3>
-              <p className="text-gray-600">
-                Новые работы появятся здесь автоматически
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingSubmissions.map((submission) => (
-                <div
-                  key={submission.id}
-                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {submission.module.trail.title}
-                      </Badge>
-                      <Badge className="bg-blue-100 text-blue-700 border-0">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Ожидает проверки
-                      </Badge>
-                    </div>
-                    <h3 className="font-medium text-gray-900">
-                      {submission.module.title}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {submission.user.name} ({submission.user.email})
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Отправлено{" "}
-                      {new Date(submission.createdAt).toLocaleDateString(
-                        "ru-RU",
-                        {
-                          day: "numeric",
-                          month: "long",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="flex gap-2">
-                      {submission.githubUrl && (
-                        <a
-                          href={submission.githubUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                        >
-                          <Github className="h-4 w-4" />
-                        </a>
-                      )}
-                      {submission.deployUrl && (
-                        <a
-                          href={submission.deployUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                        >
-                          <Globe className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-
-                    <Button asChild>
-                      <Link href={`/teacher/reviews/${submission.id}`}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Проверить
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* History of reviewed submissions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            История проверок
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {reviewedSubmissions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Пока нет проверенных работ
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {reviewedSubmissions.map((submission) => (
-                <div
-                  key={submission.id}
-                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {submission.module.trail.title}
-                      </Badge>
-                      <Badge
-                        className={
-                          submission.status === "APPROVED"
-                            ? "bg-green-100 text-green-700 border-0"
-                            : submission.status === "FAILED"
-                            ? "bg-red-100 text-red-700 border-0"
-                            : "bg-orange-100 text-orange-700 border-0"
-                        }
-                      >
-                        {submission.status === "APPROVED" ? (
-                          <>
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Принято
-                          </>
-                        ) : submission.status === "FAILED" ? (
-                          <>
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Провал
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            На доработку
-                          </>
-                        )}
-                      </Badge>
-                    </div>
-                    <h3 className="font-medium text-gray-900">
-                      {submission.module.title}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {submission.user.name}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    {submission.review && (
-                      <div className="text-center px-4">
-                        <div className="text-2xl font-bold text-[#0176D3]">
-                          {submission.review.score}/10
-                        </div>
-                        <div className="text-xs text-gray-500">Оценка</div>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      {submission.githubUrl && (
-                        <a
-                          href={submission.githubUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                        >
-                          <Github className="h-4 w-4" />
-                        </a>
-                      )}
-                      {submission.deployUrl && (
-                        <a
-                          href={submission.deployUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                        >
-                          <Globe className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/teacher/reviews/${submission.id}`}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        Детали
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Submissions with filter */}
+      <SubmissionsFilter
+        pendingSubmissions={serializedPending}
+        reviewedSubmissions={serializedReviewed}
+        trails={trails}
+      />
     </div>
   )
 }

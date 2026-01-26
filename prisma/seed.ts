@@ -559,11 +559,11 @@ Vibe Coding — **контроль результата**. Если AI пред�
     },
   }
 
-  for (const module of vibeCoderModules) {
-    const createdModule = await prisma.module.create({ data: { ...module, trailId: vibeCoder.id } })
+  for (const mod of vibeCoderModules) {
+    const createdModule = await prisma.module.create({ data: { ...mod, trailId: vibeCoder.id } })
 
     // Add regular single-choice questions
-    const questions = vibeCoderQuestions[module.slug]
+    const questions = vibeCoderQuestions[mod.slug]
     if (questions) {
       for (let i = 0; i < questions.length; i++) {
         await prisma.question.create({
@@ -580,7 +580,7 @@ Vibe Coding — **контроль результата**. Если AI пред�
     }
 
     // Add interactive exercises for new practice modules
-    const interactiveExercise = vibeCoderInteractiveExercises[module.slug]
+    const interactiveExercise = vibeCoderInteractiveExercises[mod.slug]
     if (interactiveExercise) {
       await prisma.question.create({
         data: {
@@ -622,6 +622,7 @@ Vibe Coding — **контроль результата**. Если AI пред�
       points: 50,
       duration: "20 мин",
       order: 1,
+      requiresSubmission: true,
       content: `# Основы конверсионного маркетинга
 
 ## Что такое конверсия?
@@ -641,7 +642,56 @@ Vibe Coding — **контроль результата**. Если AI пред�
 - Понимание ЦА
 - Копирайтинг
 - Визуальный дизайн
-- A/B мышление`,
+- A/B мышление
+
+---
+
+## ПРАКТИКА: Закрепление знаний
+
+### Задание 1: Глоссарий своими словами
+
+Создай свой словарь терминов:
+- Выпиши все термины из теории
+- Объясни каждый СВОИМИ словами (как бы объяснял другу)
+
+Результат: Google Doc со словарем (минимум 15 терминов)
+
+### Задание 2: Калькулятор маркетолога (2 часа)
+
+Реши 3 задачи с расчетами:
+
+**Задача 1:**
+Потрачено на рекламу: 5,000$
+Получено кликов: 2,500
+Количество покупок: 100
+Средний чек: 80$
+
+Рассчитай: CPC, CTR, CR, CPA, ROAS, ROI (себестоимость 30$)
+
+**Задача 2:**
+Кампания А: CPC = 2$, CR = 3%, средний чек = 150$
+Кампания Б: CPC = 5$, CR = 8%, средний чек = 150$
+
+Какая кампания выгоднее? Докажи почему.
+
+**Задача 3:**
+Тебе нужно получить 50 покупок.
+Конверсия лендинга = 5%
+Сколько кликов нужно купить?
+Если CPC = 3$, сколько нужно бюджета?
+
+### Задание 3: Построй свою воронку
+
+Выбери любой продукт (наш или известный тебе)
+
+Построй воронку от показа рекламы до покупки:
+1. Опиши каждый этап (что происходит)
+2. Придумай реалистичные цифры для каждого этапа
+3. Рассчитай процент "отвала" на каждом шаге
+4. Найди самое узкое место в воронке
+5. Предложи 3 способа улучшить это узкое место
+
+Оформи всё в Google Docs и пришли ссылку.`,
     },
     {
       slug: "marketing-audience",
@@ -652,6 +702,7 @@ Vibe Coding — **контроль результата**. Если AI пред�
       points: 75,
       duration: "30 мин",
       order: 2,
+      requiresSubmission: true,
       content: `# Анализ целевой аудитории
 
 ## Jobs To Be Done
@@ -668,7 +719,18 @@ Vibe Coding — **контроль результата**. Если AI пред�
 Ценности, страхи, мотивации
 
 ### Поведение
-Где ищет информацию, как принимает решения`,
+Где ищет информацию, как принимает решения
+
+## Практическое задание
+
+Создайте персону вашей целевой аудитории для любого продукта:
+
+1. Выберите продукт (реальный или придуманный)
+2. Опишите демографику персоны
+3. Опишите психографику (страхи, желания, ценности)
+4. Определите Jobs To Be Done — какую "работу" делает продукт
+
+Оформите в Google Docs или Notion и пришлите ссылку.`,
     },
     {
       slug: "marketing-copywriting",
@@ -679,6 +741,7 @@ Vibe Coding — **контроль результата**. Если AI пред�
       points: 100,
       duration: "45 мин",
       order: 3,
+      requiresSubmission: true,
       content: `# Копирайтинг для лендингов
 
 ## Структура лендинга
@@ -694,7 +757,19 @@ Vibe Coding — **контроль результата**. Если AI пред�
 
 - Как [результат] без [боли]
 - [Число] способов [решить проблему]
-- Почему [результат] проще, чем вы думаете`,
+- Почему [результат] проще, чем вы думаете
+
+## Практическое задание
+
+Напишите текст для Hero-секции лендинга:
+
+1. Выберите продукт (приложение, сервис, курс)
+2. Напишите УТП (главный заголовок)
+3. Напишите подзаголовок (раскрытие пользы)
+4. Напишите текст для CTA-кнопки
+5. Добавьте 3 буллета с преимуществами
+
+Оформите в Google Docs и пришлите ссылку.`,
     },
     {
       slug: "marketing-project-junior",
@@ -814,10 +889,10 @@ Vibe Coding — **контроль результата**. Если AI пред�
     ],
   }
 
-  for (const module of marketerModules) {
-    const createdModule = await prisma.module.create({ data: { ...module, trailId: marketer.id } })
+  for (const mod of marketerModules) {
+    const createdModule = await prisma.module.create({ data: { ...mod, trailId: marketer.id } })
 
-    const questions = marketerQuestions[module.slug]
+    const questions = marketerQuestions[mod.slug]
     if (questions) {
       for (let i = 0; i < questions.length; i++) {
         await prisma.question.create({
@@ -1057,10 +1132,10 @@ Atoms → Molecules → Organisms → Templates → Pages`,
     ],
   }
 
-  for (const module of uiDesignerModules) {
-    const createdModule = await prisma.module.create({ data: { ...module, trailId: uiDesigner.id } })
+  for (const mod of uiDesignerModules) {
+    const createdModule = await prisma.module.create({ data: { ...mod, trailId: uiDesigner.id } })
 
-    const questions = uiDesignerQuestions[module.slug]
+    const questions = uiDesignerQuestions[mod.slug]
     if (questions) {
       for (let i = 0; i < questions.length; i++) {
         await prisma.question.create({
@@ -1322,10 +1397,10 @@ AI для HR / маркетинга / продаж / образования / ф
     ],
   }
 
-  for (const module of rndCreatorModules) {
-    const createdModule = await prisma.module.create({ data: { ...module, trailId: rndCreator.id } })
+  for (const mod of rndCreatorModules) {
+    const createdModule = await prisma.module.create({ data: { ...mod, trailId: rndCreator.id } })
 
-    const questions = rndCreatorQuestions[module.slug]
+    const questions = rndCreatorQuestions[mod.slug]
     if (questions) {
       for (let i = 0; i < questions.length; i++) {
         await prisma.question.create({

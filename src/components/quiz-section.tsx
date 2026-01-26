@@ -23,10 +23,9 @@ interface QuestionAttempt {
 interface QuizSectionProps {
   questions: Question[]
   attempts: QuestionAttempt[]
-  moduleSlug: string
 }
 
-export function QuizSection({ questions, attempts, moduleSlug }: QuizSectionProps) {
+export function QuizSection({ questions, attempts }: QuizSectionProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
