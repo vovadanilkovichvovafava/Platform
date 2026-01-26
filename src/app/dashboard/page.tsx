@@ -129,10 +129,24 @@ export default async function DashboardPage() {
 
   // Calculate submissions stats
   const pendingSubmissions = user.submissions.filter((s: { status: string }) => s.status === "PENDING")
+
+  // Get moduleIds that have approved submissions
+  const approvedModuleIds = new Set(
+    user.submissions
+      .filter((s: { status: string; moduleId: string }) => s.status === "APPROVED")
+      .map((s: { moduleId: string }) => s.moduleId)
+  )
+
+  // Count revision only for modules that don't have an approved submission
+  const actualRevisionCount = user.submissions.filter(
+    (s: { status: string; moduleId: string }) =>
+      s.status === "REVISION" && !approvedModuleIds.has(s.moduleId)
+  ).length
+
   const submissionStats = {
     approved: user.submissions.filter((s: { status: string }) => s.status === "APPROVED").length,
     pending: pendingSubmissions.length,
-    revision: user.submissions.filter((s: { status: string }) => s.status === "REVISION").length,
+    revision: actualRevisionCount,
     failed: user.submissions.filter((s: { status: string }) => s.status === "FAILED").length,
     total: user.submissions.length,
   }
@@ -261,13 +275,15 @@ export default async function DashboardPage() {
             </Card>
 
             {/* Welcome Message */}
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Добро пожаловать, {user.name.split(" ")[0]}!
-              </h1>
-              <p className="text-gray-600 mb-6">
-                Продолжайте обучение и развивайте свои навыки
-              </p>
+            <div className="flex-1 space-y-6">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                  Добро пожаловать, {user.name.split(" ")[0]}!
+                </h1>
+                <p className="text-gray-600">
+                  Продолжайте обучение и развивайте свои навыки
+                </p>
+              </div>
 
               {pendingSubmissions.length > 0 && (
                 <Card className="bg-orange-50 border-orange-200">
@@ -294,6 +310,19 @@ export default async function DashboardPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Submissions Stats */}
+              <SubmissionsChart stats={submissionStats} showTitle={true} />
+
+              {/* Certificates */}
+              {user.certificates.length > 0 && (
+                <CertificatesShowcase
+                  certificates={user.certificates}
+                  showTitle={true}
+                  compact={true}
+                  linkToFullPage={true}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -301,35 +330,15 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        {/* Achievements and Submissions Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-          {/* Achievements Section */}
-          <section>
-            <AchievementsGrid
-              achievements={allAchievements}
-              stats={achievementStats}
-              showTitle={true}
-              compact={false}
-            />
-          </section>
-
-          {/* Submissions Chart */}
-          <section>
-            <SubmissionsChart stats={submissionStats} showTitle={true} />
-          </section>
-        </div>
-
-        {/* Certificates Section */}
-        {user.certificates.length > 0 && (
-          <section className="mb-12">
-            <CertificatesShowcase
-              certificates={user.certificates}
-              showTitle={true}
-              compact={false}
-              linkToFullPage={true}
-            />
-          </section>
-        )}
+        {/* Achievements Section */}
+        <section className="mb-12">
+          <AchievementsGrid
+            achievements={allAchievements}
+            stats={achievementStats}
+            showTitle={true}
+            compact={false}
+          />
+        </section>
 
         {/* Enrolled Trails */}
         {enrolledTrails.length > 0 && (
