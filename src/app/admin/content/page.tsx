@@ -41,8 +41,10 @@ import {
   AlertTriangle,
   Zap,
   Info,
+  Pencil,
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
+import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
 
 interface Module {
   id: string
@@ -112,6 +114,10 @@ export default function AdminContentPage() {
   const [newTrailTitle, setNewTrailTitle] = useState("")
   const [newTrailSubtitle, setNewTrailSubtitle] = useState("")
   const [creatingTrail, setCreatingTrail] = useState(false)
+
+  // Edit trail modal
+  const [showEditTrailModal, setShowEditTrailModal] = useState(false)
+  const [editingTrail, setEditingTrail] = useState<TrailFormData | null>(null)
 
   // Create module modal
   const [showModuleModal, setShowModuleModal] = useState(false)
@@ -285,6 +291,26 @@ export default function AdminContentPage() {
   const openModuleModal = (trailId: string) => {
     setSelectedTrailId(trailId)
     setShowModuleModal(true)
+  }
+
+  // Open edit trail modal
+  const openEditTrailModal = (trail: Trail) => {
+    setEditingTrail({
+      id: trail.id,
+      title: trail.title,
+      subtitle: trail.subtitle,
+      description: trail.description,
+      icon: trail.icon,
+      color: trail.color,
+      duration: trail.duration,
+      isPublished: trail.isPublished,
+    })
+    setShowEditTrailModal(true)
+  }
+
+  // Handle trail save
+  const handleTrailSave = () => {
+    fetchTrails()
   }
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -988,6 +1014,15 @@ export default function AdminContentPage() {
                           className={isAllSelectedInTrail(trail.id) ? "bg-blue-600 hover:bg-blue-700" : ""}
                         >
                           <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEditTrailModal(trail)}
+                          title="Редактировать trail"
+                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
@@ -1897,6 +1932,17 @@ export default function AdminContentPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Trail Modal */}
+      <EditTrailModal
+        open={showEditTrailModal}
+        trail={editingTrail}
+        onClose={() => {
+          setShowEditTrailModal(false)
+          setEditingTrail(null)
+        }}
+        onSave={handleTrailSave}
+      />
     </div>
   )
 }

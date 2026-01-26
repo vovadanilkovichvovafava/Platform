@@ -1,9 +1,12 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const trailFilter = searchParams.get("trail") || "all"
+  const periodFilter = searchParams.get("period") || "30" // days
   try {
     const session = await getServerSession(authOptions)
 
@@ -175,9 +178,114 @@ export async function GET() {
       }
     })
 
-    // 5. Student Progress Statistics (для графиков развития)
+    // 5. Get list of trails for filter dropdown
+    const trailsList = await prisma.trail.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+      },
+      orderBy: { title: "asc" },
+    })
+
+    // 6. Module Drop-off Analysis (по каждому trail)
+    // Shows where students stop progressing
+    const periodDays = parseInt(periodFilter) || 30
+    const periodStart = new Date()
+    periodStart.setDate(periodStart.getDate() - periodDays)
+
+    const moduleDropoffData = await prisma.trail.findMany({
+      where: trailFilter !== "all" ? { id: trailFilter } : {},
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        modules: {
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            title: true,
+            order: true,
+            type: true,
+            _count: {
+              select: {
+                progress: { where: { status: "COMPLETED" } },
+              },
+            },
+            progress: {
+              select: {
+                status: true,
+                startedAt: true,
+                completedAt: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: { enrollments: true },
+        },
+      },
+    })
+
+    type ModuleDropoffTrail = typeof moduleDropoffData[number]
+    type ModuleDropoffModule = ModuleDropoffTrail["modules"][number]
+
+    const dropoffAnalysis = moduleDropoffData.map((trail: ModuleDropoffTrail) => {
+      const totalEnrolled = trail._count.enrollments
+      const moduleStats = trail.modules.map((module: ModuleDropoffModule, index: number) => {
+        const completedCount = module._count.progress
+        const startedCount = module.progress.filter(p => p.status !== "NOT_STARTED").length
+        const inProgressCount = module.progress.filter(p => p.status === "IN_PROGRESS").length
+
+        // Calculate avg completion time
+        const completedWithTimes = module.progress.filter(
+          p => p.status === "COMPLETED" && p.startedAt && p.completedAt
+        )
+        const avgTimeMs = completedWithTimes.length > 0
+          ? completedWithTimes.reduce((sum, p) => {
+              const start = new Date(p.startedAt!).getTime()
+              const end = new Date(p.completedAt!).getTime()
+              return sum + (end - start)
+            }, 0) / completedWithTimes.length
+          : 0
+        const avgTimeDays = Math.round(avgTimeMs / (1000 * 60 * 60 * 24) * 10) / 10
+
+        // Drop rate from previous module
+        const prevModule = index > 0 ? trail.modules[index - 1] : null
+        const prevCompleted = prevModule ? prevModule._count.progress : totalEnrolled
+        const dropRate = prevCompleted > 0
+          ? Math.round(((prevCompleted - completedCount) / prevCompleted) * 100)
+          : 0
+
+        return {
+          id: module.id,
+          title: module.title,
+          order: module.order,
+          type: module.type,
+          totalEnrolled,
+          startedCount,
+          inProgressCount,
+          completedCount,
+          completionRate: totalEnrolled > 0 ? Math.round((completedCount / totalEnrolled) * 100) : 0,
+          dropRate: Math.max(0, dropRate),
+          avgTimeDays,
+          isBottleneck: dropRate > 30, // Mark as bottleneck if >30% drop
+        }
+      })
+
+      return {
+        trailId: trail.id,
+        trailTitle: trail.title,
+        trailSlug: trail.slug,
+        totalEnrolled,
+        modules: moduleStats,
+      }
+    })
+
+    // 7. Student Progress Statistics (для графиков развития)
     // Trail progress analysis
     const trails = await prisma.trail.findMany({
+      where: trailFilter !== "all" ? { id: trailFilter } : {},
       select: {
         id: true,
         title: true,
@@ -298,6 +406,7 @@ export async function GET() {
         highCount: churnRisk.high.length,
         medium: churnRisk.medium.slice(0, 20),
         mediumCount: churnRisk.medium.length,
+        low: churnRisk.low.slice(0, 30),
         lowCount: churnRisk.low.length,
       },
       funnel,
@@ -313,6 +422,14 @@ export async function GET() {
       trailProgress,
       topStudents: topStudentsData,
       scoreDistribution,
+      // Module drop-off analysis
+      dropoffAnalysis,
+      // Filters data
+      filters: {
+        trails: trailsList,
+        currentTrail: trailFilter,
+        currentPeriod: periodFilter,
+      },
     })
   } catch (error) {
     console.error("Advanced analytics error:", error)
