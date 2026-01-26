@@ -191,12 +191,16 @@ export default async function DashboardPage() {
       s.status === "REVISION" && !approvedModuleIds.has(s.moduleId)
   ).length
 
+  const approvedCount = user.submissions.filter((s: { status: string }) => s.status === "APPROVED").length
+  const pendingCount = pendingSubmissions.length
+  const failedCount = user.submissions.filter((s: { status: string }) => s.status === "FAILED").length
+
   const submissionStats = {
-    approved: user.submissions.filter((s: { status: string }) => s.status === "APPROVED").length,
-    pending: pendingSubmissions.length,
+    approved: approvedCount,
+    pending: pendingCount,
     revision: actualRevisionCount,
-    failed: user.submissions.filter((s: { status: string }) => s.status === "FAILED").length,
-    total: user.submissions.length,
+    failed: failedCount,
+    total: approvedCount + pendingCount + actualRevisionCount + failedCount,
   }
 
   // Get user's trail access

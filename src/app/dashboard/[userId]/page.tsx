@@ -136,12 +136,16 @@ export default async function PublicDashboardPage({ params }: PageProps) {
       s.status === "REVISION" && !approvedModuleIds.has(s.moduleId)
   ).length
 
+  const approvedCount = user.submissions.filter((s: { status: string }) => s.status === "APPROVED").length
+  const pendingCount = user.submissions.filter((s: { status: string }) => s.status === "PENDING").length
+  const failedCount = user.submissions.filter((s: { status: string }) => s.status === "FAILED").length
+
   const submissionStats = {
-    approved: user.submissions.filter((s: { status: string }) => s.status === "APPROVED").length,
-    pending: user.submissions.filter((s: { status: string }) => s.status === "PENDING").length,
+    approved: approvedCount,
+    pending: pendingCount,
     revision: actualRevisionCount,
-    failed: user.submissions.filter((s: { status: string }) => s.status === "FAILED").length,
-    total: user.submissions.length,
+    failed: failedCount,
+    total: approvedCount + pendingCount + actualRevisionCount + failedCount,
   }
 
   return (
