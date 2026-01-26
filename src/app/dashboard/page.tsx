@@ -2,18 +2,22 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { ACHIEVEMENTS, getAchievement } from "@/lib/achievements"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { TrailCard } from "@/components/trail-card"
+import { AchievementsGrid } from "@/components/achievements-grid"
 import {
-  Flame,
   Star,
   Trophy,
   BookOpen,
   Clock,
+  Medal,
+  GraduationCap,
+  Compass,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -75,6 +79,35 @@ export default async function DashboardPage() {
   }
 
   const rank = getRank(user.totalXP)
+
+  // Get leaderboard position
+  const higherRanked = await prisma.user.count({
+    where: {
+      role: "STUDENT",
+      totalXP: { gt: user.totalXP },
+    },
+  })
+  const leaderboardRank = higherRanked + 1
+
+  // Get user achievements
+  const userAchievements = await prisma.userAchievement.findMany({
+    where: { userId: session.user.id },
+    orderBy: { earnedAt: "desc" },
+  })
+
+  const allAchievements = Object.values(ACHIEVEMENTS).map((def) => {
+    const userAch = userAchievements.find((ua: { achievementId: string }) => ua.achievementId === def.id)
+    return {
+      ...def,
+      earned: !!userAch,
+      earnedAt: userAch?.earnedAt.toISOString() || null,
+    }
+  })
+
+  const achievementStats = {
+    count: userAchievements.length,
+    total: Object.keys(ACHIEVEMENTS).length,
+  }
 
   // Get user's trail access
   const userAccess = await prisma.studentTrailAccess.findMany({
@@ -173,16 +206,6 @@ export default async function DashboardPage() {
                     <span className="font-bold text-lg">{user.totalXP}</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-5 w-5 text-orange-500" />
-                      <span className="text-sm font-medium">Streak</span>
-                    </div>
-                    <span className="font-bold text-lg">
-                      {user.currentStreak} дней
-                    </span>
-                  </div>
-
                   <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-green-500" />
@@ -192,6 +215,19 @@ export default async function DashboardPage() {
                       {user.moduleProgress.length}
                     </span>
                   </div>
+
+                  <Link
+                    href="/leaderboard"
+                    className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Medal className="h-5 w-5 text-blue-500" />
+                      <span className="text-sm font-medium">Место в рейтинге</span>
+                    </div>
+                    <span className="font-bold text-lg text-blue-600">
+                      #{leaderboardRank}
+                    </span>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -232,13 +268,33 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
+        {/* Achievements Section */}
+        <section className="mb-12">
+          <AchievementsGrid
+            achievements={allAchievements}
+            stats={achievementStats}
+            showTitle={true}
+            compact={false}
+          />
+        </section>
+
         {/* Enrolled Trails */}
         {enrolledTrails.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                Мои trails
-              </h2>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600">
+                  <GraduationCap className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Мои trails
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {enrolledTrails.length} активных курсов
+                  </p>
+                </div>
+              </div>
               <Link
                 href="/trails"
                 className="text-sm text-[#0176D3] hover:underline"
@@ -262,10 +318,18 @@ export default async function DashboardPage() {
         {/* Available Trails */}
         {availableTrails.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                Доступные trails
-              </h2>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600">
+                <Compass className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Доступные trails
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {availableTrails.length} курсов для изучения
+                </p>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {availableTrails.map((trail) => (
