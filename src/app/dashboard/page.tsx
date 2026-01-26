@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { TrailCard } from "@/components/trail-card"
 import {
-  Flame,
   Star,
   Trophy,
   BookOpen,
@@ -171,16 +170,6 @@ export default async function DashboardPage() {
                       <span className="text-sm font-medium">Total XP</span>
                     </div>
                     <span className="font-bold text-lg">{user.totalXP}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-5 w-5 text-orange-500" />
-                      <span className="text-sm font-medium">Streak</span>
-                    </div>
-                    <span className="font-bold text-lg">
-                      {user.currentStreak} дней
-                    </span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
