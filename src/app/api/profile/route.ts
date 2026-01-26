@@ -28,7 +28,6 @@ export async function GET() {
         email: true,
         role: true,
         totalXP: true,
-        currentStreak: true,
         createdAt: true,
         _count: {
           select: {
