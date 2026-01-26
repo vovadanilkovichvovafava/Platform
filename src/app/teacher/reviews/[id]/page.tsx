@@ -261,6 +261,12 @@ export default async function ReviewPage({ params }: Props) {
                   <span className="text-gray-500">Total XP</span>
                   <span className="font-medium">{submission.user.totalXP}</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Streak</span>
+                  <span className="font-medium">
+                    {submission.user.currentStreak} дней
+                  </span>
+                </div>
               </div>
 
               <div className="mt-4 pt-4 border-t">

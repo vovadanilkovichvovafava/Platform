@@ -103,6 +103,32 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     rarity: "legendary",
   },
 
+  // Streaks
+  STREAK_3: {
+    id: "STREAK_3",
+    name: "Разогрев",
+    description: "Активность 3 дня подряд",
+    icon: "🔥",
+    color: "bg-orange-100 text-orange-700",
+    rarity: "common",
+  },
+  STREAK_7: {
+    id: "STREAK_7",
+    name: "Недельный марафон",
+    description: "Активность 7 дней подряд",
+    icon: "🔥",
+    color: "bg-red-100 text-red-700",
+    rarity: "uncommon",
+  },
+  STREAK_30: {
+    id: "STREAK_30",
+    name: "Месячный челлендж",
+    description: "Активность 30 дней подряд",
+    icon: "💪",
+    color: "bg-red-100 text-red-700",
+    rarity: "epic",
+  },
+
   // Perfect scores
   PERFECT_10: {
     id: "PERFECT_10",
