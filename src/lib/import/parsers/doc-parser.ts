@@ -78,14 +78,6 @@ export function parseDocFromText(content: string): ParseResult {
 // Извлечение текста из OLE Compound Document
 function extractTextFromOle(data: Uint8Array): string {
   try {
-    // OLE Header
-    const sectorSize = 1 << (data[30] | (data[31] << 8)) // Обычно 512
-    const miniSectorSize = 1 << (data[32] | (data[33] << 8)) // Обычно 64
-
-    const numFatSectors = data[44] | (data[45] << 8) | (data[46] << 16) | (data[47] << 24)
-    const firstDirectorySectorLocation = data[48] | (data[49] << 8) | (data[50] << 16) | (data[51] << 24)
-    const firstMiniFatSectorLocation = data[60] | (data[61] << 8) | (data[62] << 16) | (data[63] << 24)
-
     // Для простоты, просто ищем текстовые данные в файле
     // Полный парсинг OLE слишком сложен без библиотеки
 

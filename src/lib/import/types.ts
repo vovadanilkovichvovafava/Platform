@@ -202,7 +202,6 @@ export function generateSlug(text: string): string {
 export function detectModuleType(title: string, content: string = ""): "THEORY" | "PRACTICE" | "PROJECT" {
   const lowerTitle = title.toLowerCase()
   const lowerContent = content.toLowerCase()
-  const fullText = lowerTitle + " " + lowerContent
 
   // PROJECT - создание чего-то большого
   const projectKeywords = ["проект", "project", "создай", "разработай", "построй", "build", "create", "develop"]
@@ -476,7 +475,7 @@ export function parseMatchingOptions(options: string[]): MatchingData {
 }
 
 // Генерация данных для MATCHING вопроса (совместимость)
-export function generateMatchingData(questionText: string): MatchingData {
+export function generateMatchingData(_questionText: string): MatchingData {
   return {
     leftLabel: "Термин",
     rightLabel: "Определение",
@@ -526,7 +525,7 @@ export function parseOrderingOptions(options: string[]): OrderingData {
 }
 
 // Генерация данных для ORDERING вопроса (совместимость)
-export function generateOrderingData(questionText: string): OrderingData {
+export function generateOrderingData(_questionText: string): OrderingData {
   return {
     items: [
       { id: "s1", text: "" },
@@ -541,7 +540,7 @@ export function generateOrderingData(questionText: string): OrderingData {
 // Парсинг опций для CASE_ANALYSIS вопроса
 // Формат: текст варианта, с * для правильных ответов
 // Может содержать несколько правильных ответов
-export function parseCaseAnalysisOptions(options: string[], questionText: string = ""): CaseAnalysisData {
+export function parseCaseAnalysisOptions(options: string[], _questionText: string = ""): CaseAnalysisData {
   const parsedOptions: { id: string; text: string; isCorrect: boolean; explanation: string }[] = []
 
   for (let i = 0; i < options.length; i++) {

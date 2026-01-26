@@ -14,8 +14,6 @@ import {
   BookOpen,
   Wrench,
   FolderGit2,
-  ChevronRight,
-  HelpCircle,
   Code,
   Target,
   Palette,
@@ -73,12 +71,6 @@ const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
   PRACTICE: Wrench,
   PROJECT: FolderGit2,
-}
-
-const typeLabels: Record<string, string> = {
-  THEORY: "Теория",
-  PRACTICE: "Практика",
-  PROJECT: "Проект",
 }
 
 export default function TeacherContentPage() {

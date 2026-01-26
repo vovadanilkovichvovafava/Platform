@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         rows.push([
           student.name,
           student.email,
-          student.enrollments.map((e: { trail: { title: string } }) => e.trail.title).join("; ") || "-",
+          student.enrollments.map((e) => e.trail.title).join("; ") || "-",
           "-",
           "-",
           "-",

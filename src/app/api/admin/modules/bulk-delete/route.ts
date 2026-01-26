@@ -31,15 +31,15 @@ export async function POST(request: NextRequest) {
     })
 
     // Create audit logs
-    for (const mod of modules) {
+    for (const module of modules) {
       await prisma.auditLog.create({
         data: {
           userId: session.user.id,
           userName: session.user.name || session.user.email || "Unknown",
           action: "DELETE",
           entityType: "MODULE",
-          entityId: mod.id,
-          entityName: mod.title,
+          entityId: module.id,
+          entityName: module.title,
           details: JSON.stringify({ bulkDelete: true, count: moduleIds.length }),
         },
       })

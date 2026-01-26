@@ -112,7 +112,7 @@ export default async function ModulePage({ params }: Props) {
   const questionAttempts = await prisma.questionAttempt.findMany({
     where: {
       userId: session.user.id,
-      questionId: { in: courseModule.questions.map((q: { id: string }) => q.id) },
+      questionId: { in: courseModule.questions.map((q) => q.id) },
     },
   })
 
@@ -124,7 +124,7 @@ export default async function ModulePage({ params }: Props) {
 
   // Find next module in the trail
   const trailModules = courseModule.trail.modules
-  const currentIndex = trailModules.findIndex((m: { id: string }) => m.id === courseModule.id)
+  const currentIndex = trailModules.findIndex((m) => m.id === courseModule.id)
   const nextModule = currentIndex < trailModules.length - 1 ? trailModules[currentIndex + 1] : null
 
   return (
@@ -354,7 +354,7 @@ export default async function ModulePage({ params }: Props) {
               <>
                 {/* Assessment Section - handles quiz */}
                 <AssessmentSection
-                  questions={courseModule.questions.map((q: { id: string; type: string | null; question: string; options: string; data: string | null; order: number }) => ({
+                  questions={courseModule.questions.map((q) => ({
                     id: q.id,
                     type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
                     question: q.question,
@@ -362,7 +362,7 @@ export default async function ModulePage({ params }: Props) {
                     data: q.data ? safeJsonParse(q.data, null) : null,
                     order: q.order,
                   }))}
-                  initialAttempts={questionAttempts.map((a: { questionId: string; isCorrect: boolean; attempts: number; earnedScore: number }) => ({
+                  initialAttempts={questionAttempts.map((a) => ({
                     questionId: a.questionId,
                     isCorrect: a.isCorrect,
                     attempts: a.attempts,
@@ -455,7 +455,7 @@ export default async function ModulePage({ params }: Props) {
             ) : (
               /* THEORY: AssessmentSection (квиз или "Теоретический материал") */
               <AssessmentSection
-                questions={courseModule.questions.map((q: { id: string; type: string | null; question: string; options: string; data: string | null; order: number }) => ({
+                questions={courseModule.questions.map((q) => ({
                   id: q.id,
                   type: (q.type || "SINGLE_CHOICE") as "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS",
                   question: q.question,
@@ -463,7 +463,7 @@ export default async function ModulePage({ params }: Props) {
                   data: q.data ? safeJsonParse(q.data, null) : null,
                   order: q.order,
                 }))}
-                initialAttempts={questionAttempts.map((a: { questionId: string; isCorrect: boolean; attempts: number; earnedScore: number }) => ({
+                initialAttempts={questionAttempts.map((a) => ({
                   questionId: a.questionId,
                   isCorrect: a.isCorrect,
                   attempts: a.attempts,

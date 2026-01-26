@@ -39,12 +39,12 @@ export async function POST(request: NextRequest) {
       const attempts = await prisma.questionAttempt.findMany({
         where: {
           userId: session.user.id,
-          questionId: { in: questions.map((q: { id: string }) => q.id) },
+          questionId: { in: questions.map((q) => q.id) },
         },
       })
 
       const answeredCount = attempts.filter(
-        (a: { isCorrect: boolean; attempts: number }) => a.isCorrect || a.attempts >= 3
+        (a) => a.isCorrect || a.attempts >= 3
       ).length
 
       if (answeredCount < questions.length) {
@@ -72,10 +72,10 @@ export async function POST(request: NextRequest) {
       const quizAttempts = await prisma.questionAttempt.findMany({
         where: {
           userId: session.user.id,
-          questionId: { in: questions.map((q: { id: string }) => q.id) },
+          questionId: { in: questions.map((q) => q.id) },
         },
       })
-      earnedXP = quizAttempts.reduce((sum: number, a: { earnedScore: number }) => sum + a.earnedScore, 0)
+      earnedXP = quizAttempts.reduce((sum, a) => sum + a.earnedScore, 0)
     }
 
     // Update or create progress

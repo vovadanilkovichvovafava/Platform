@@ -323,26 +323,26 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
       trail.slug = generateSlug(trail.title)
     }
 
-    for (const mod of trail.modules) {
-      if (!mod.title) {
+    for (const module of trail.modules) {
+      if (!module.title) {
         warnings.push(`Модуль без названия в trail "${trail.title}"`)
-        mod.title = "Без названия"
+        module.title = "Без названия"
       }
-      if (!mod.slug) {
-        mod.slug = generateSlug(mod.title)
+      if (!module.slug) {
+        module.slug = generateSlug(module.title)
       }
       // Установка requiresSubmission на основе типа и содержимого
-      if (mod.requiresSubmission === undefined) {
-        mod.requiresSubmission = detectRequiresSubmission(
-          mod.type,
-          mod.title,
-          mod.content
+      if (module.requiresSubmission === undefined) {
+        module.requiresSubmission = detectRequiresSubmission(
+          module.type,
+          module.title,
+          module.content
         )
       }
 
       // Заполнение data для MATCHING, ORDERING и CASE_ANALYSIS вопросов из опций
       // ВАЖНО: Для этих типов data создаётся ВСЕГДА, даже если опций нет
-      for (const question of mod.questions) {
+      for (const question of module.questions) {
         if (question.type === "MATCHING") {
           // Фильтруем пустые опции
           const nonEmptyOptions = question.options.filter(opt => opt.trim() !== "")

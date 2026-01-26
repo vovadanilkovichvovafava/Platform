@@ -9,6 +9,7 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
       where: { id: userId },
       select: {
         totalXP: true,
+        currentStreak: true,
         _count: {
           select: {
             moduleProgress: { where: { status: "COMPLETED" } },
@@ -49,7 +50,7 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
       where: { userId },
       select: { achievementId: true },
     })
-    const existingIds = new Set(existing.map((e: { achievementId: string }) => e.achievementId))
+    const existingIds = new Set(existing.map((e) => e.achievementId))
 
     // Determine which achievements to award
     const toAward: string[] = []
@@ -93,6 +94,17 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
       toAward.push("XP_5000")
     }
 
+    // Streak achievements
+    if (user.currentStreak >= 3 && !existingIds.has("STREAK_3")) {
+      toAward.push("STREAK_3")
+    }
+    if (user.currentStreak >= 7 && !existingIds.has("STREAK_7")) {
+      toAward.push("STREAK_7")
+    }
+    if (user.currentStreak >= 30 && !existingIds.has("STREAK_30")) {
+      toAward.push("STREAK_30")
+    }
+
     // Perfect scores
     if (perfectScores >= 1 && !existingIds.has("PERFECT_10")) {
       toAward.push("PERFECT_10")
@@ -129,7 +141,7 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
           type: "ACHIEVEMENT_EARNED",
           title: `Достижение: ${def?.name || achievementId}`,
           message: def?.description || "Вы получили новое достижение!",
-          link: "/dashboard",
+          link: "/profile",
         }
       })
 

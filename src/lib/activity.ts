@@ -53,5 +53,5 @@ export async function getActiveDays(userId: string): Promise<Date[]> {
     select: { date: true },
     orderBy: { date: "desc" },
   })
-  return activities.map((a: { date: Date }) => a.date)
+  return activities.map(a => a.date)
 }

@@ -1,6 +1,5 @@
 // AI парсер для умного определения структуры через Claude (Anthropic)
 // Поддерживает chunked parsing для больших файлов
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
   ParsedTrail,
@@ -439,10 +438,10 @@ export async function parseWithAI(
     }
 
     // Берём всё от первой { до конца (без поиска закрывающей - она может быть обрезана)
-    const jsonCandidate = jsonStr.substring(jsonStartIndex)
+    let jsonCandidate = jsonStr.substring(jsonStartIndex)
 
     // Пытаемся распарсить JSON, при ошибке - пробуем починить
-    let parsed: unknown
+    let parsed: any
     try {
       parsed = JSON.parse(jsonCandidate)
     } catch (parseError) {
@@ -498,8 +497,7 @@ export async function parseWithAI(
         }
       }
     }
-    const parsedData = parsed as { trails?: unknown[] }
-    const trails = parsedData.trails || [parsed]
+    const trails = parsed.trails || [parsed]
 
     // Валидация результата
     const validatedTrails = validateAndFixTrails(trails, warnings)
@@ -845,10 +843,10 @@ async function parseChunkWithAI(
       return { modules: [], error: "Невалидный JSON - не найдена открывающая скобка" }
     }
 
-    const jsonCandidate = jsonStr.substring(jsonStartIndex)
+    let jsonCandidate = jsonStr.substring(jsonStartIndex)
 
     // Пытаемся распарсить JSON
-    let parsed: unknown
+    let parsed: any
     try {
       parsed = JSON.parse(jsonCandidate)
     } catch (parseError) {
@@ -884,8 +882,7 @@ async function parseChunkWithAI(
       }
     }
 
-    const parsedData = parsed as { modules?: unknown[] }
-    const modules = parsedData.modules || []
+    const modules = parsed.modules || []
     console.log(`[AI-Parser] Часть ${chunk.index + 1}: успешно получено ${modules.length} модулей`)
     return { modules }
   } catch (e) {
@@ -1808,10 +1805,10 @@ function extractPartialJSON(jsonStr: string): any | null {
     const trailsMatch = jsonStr.match(/"trails"\s*:\s*\[([\s\S]*)/i)
     if (!trailsMatch) return null
 
-    const trailsContent = trailsMatch[1]
+    let trailsContent = trailsMatch[1]
 
     // Ищем завершённые объекты trail
-    const trails: unknown[] = []
+    const trails: any[] = []
     let depth = 0
     let currentTrail = ""
     let inString = false

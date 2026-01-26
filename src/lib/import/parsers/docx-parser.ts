@@ -120,8 +120,6 @@ async function extractDocumentXml(zipData: Uint8Array): Promise<string | null> {
         const compressionMethod = zipData[offset + 8] | (zipData[offset + 9] << 8)
         const compressedSize = zipData[offset + 18] | (zipData[offset + 19] << 8) |
           (zipData[offset + 20] << 16) | (zipData[offset + 21] << 24)
-        const uncompressedSize = zipData[offset + 22] | (zipData[offset + 23] << 8) |
-          (zipData[offset + 24] << 16) | (zipData[offset + 25] << 24)
         const fileNameLength = zipData[offset + 26] | (zipData[offset + 27] << 8)
         const extraFieldLength = zipData[offset + 28] | (zipData[offset + 29] << 8)
 
@@ -178,7 +176,7 @@ async function extractDocumentXml(zipData: Uint8Array): Promise<string | null> {
 }
 
 // Парсинг DOCX XML (OOXML формат)
-function parseDocxXml(xml: string, warnings: string[]): ParsedTrail[] {
+function parseDocxXml(xml: string, _warnings: string[]): ParsedTrail[] {
   const trails: ParsedTrail[] = []
 
   // Извлекаем параграфы

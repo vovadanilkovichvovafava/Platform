@@ -98,7 +98,7 @@ export function parseJson(text: string): ParseResult {
 }
 
 // Конвертация JSON в trails
-function convertJsonToTrails(data: unknown, warnings: string[]): ParsedTrail[] {
+function convertJsonToTrails(data: any, warnings: string[]): ParsedTrail[] {
   const trails: ParsedTrail[] = []
 
   // Массив trails
@@ -110,17 +110,9 @@ function convertJsonToTrails(data: unknown, warnings: string[]): ParsedTrail[] {
     return trails
   }
 
-  // Проверка что data - объект
-  if (typeof data !== "object" || data === null) {
-    warnings.push("Не удалось распознать структуру JSON")
-    return trails
-  }
-
-  const obj = data as Record<string, unknown>
-
   // Объект с полем trails/courses
-  if (obj.trails || obj.courses || obj.курсы || obj.трейлы) {
-    const trailsArray = (obj.trails || obj.courses || obj.курсы || obj.трейлы) as JsonTrail[]
+  if (data.trails || data.courses || data.курсы || data.трейлы) {
+    const trailsArray = data.trails || data.courses || data.курсы || data.трейлы
     for (const item of trailsArray) {
       const trail = convertJsonTrail(item, warnings)
       if (trail) trails.push(trail)
@@ -129,25 +121,25 @@ function convertJsonToTrails(data: unknown, warnings: string[]): ParsedTrail[] {
   }
 
   // Один trail
-  if (obj.title || obj.name || obj.название || obj.modules || obj.модули) {
-    const trail = convertJsonTrail(obj as JsonTrail, warnings)
+  if (data.title || data.name || data.название || data.modules || data.модули) {
+    const trail = convertJsonTrail(data, warnings)
     if (trail) trails.push(trail)
     return trails
   }
 
   // Попытка интерпретировать как модули
-  if (obj.lessons || obj.уроки || Array.isArray(obj.content)) {
+  if (data.lessons || data.уроки || Array.isArray(data.content)) {
     warnings.push("JSON интерпретирован как список модулей")
-    const modules = convertJsonModules((obj.lessons || obj.уроки || obj.content) as JsonModule[], warnings)
+    const modules = convertJsonModules(data.lessons || data.уроки || data.content, warnings)
 
     if (modules.length > 0) {
       trails.push({
-        title: String(obj.title || obj.название || "Импортированный курс"),
-        slug: String(obj.slug || generateSlug(String(obj.title || "imported"))),
-        subtitle: String(obj.subtitle || obj.подзаголовок || ""),
-        description: String(obj.description || obj.описание || ""),
-        icon: String(obj.icon || obj.иконка || "📚"),
-        color: String(obj.color || obj.цвет || "#6366f1"),
+        title: data.title || data.название || "Импортированный курс",
+        slug: data.slug || generateSlug(data.title || "imported"),
+        subtitle: data.subtitle || data.подзаголовок || "",
+        description: data.description || data.описание || "",
+        icon: data.icon || data.иконка || "📚",
+        color: data.color || data.цвет || "#6366f1",
         modules,
       })
     }
@@ -188,8 +180,8 @@ function convertJsonModules(data: JsonModule[], warnings: string[]): ParsedModul
   const modules: ParsedModule[] = []
 
   for (const item of data) {
-    const mod = convertJsonModule(item, warnings)
-    if (mod) modules.push(mod)
+    const module = convertJsonModule(item, warnings)
+    if (module) modules.push(module)
   }
 
   return modules

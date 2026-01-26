@@ -12,6 +12,7 @@ export async function GET() {
         id: true,
         name: true,
         totalXP: true,
+        currentStreak: true,
         avatarUrl: true,
         _count: {
           select: {
@@ -25,11 +26,12 @@ export async function GET() {
     })
 
     // Add rank
-    const leaderboard = students.map((student: typeof students[number], index: number) => ({
+    const leaderboard = students.map((student, index) => ({
       rank: index + 1,
       id: student.id,
       name: student.name,
       totalXP: student.totalXP,
+      streak: student.currentStreak,
       avatarUrl: student.avatarUrl,
       modulesCompleted: student._count.moduleProgress,
       certificates: student._count.certificates,

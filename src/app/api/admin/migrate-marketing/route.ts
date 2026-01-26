@@ -651,7 +651,7 @@ export async function GET() {
         title: trail.title,
         slug: trail.slug,
         modulesCount: trail.modules.length,
-        modules: trail.modules.map((m: { id: string; title: string; type: string; order: number; questions: unknown[] }) => ({
+        modules: trail.modules.map((m) => ({
           id: m.id,
           title: m.title,
           type: m.type,
