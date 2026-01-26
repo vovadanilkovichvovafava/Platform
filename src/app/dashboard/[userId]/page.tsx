@@ -220,7 +220,10 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <Link
+                    href="/leaderboard"
+                    className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
                     <div className="flex items-center gap-2">
                       <Medal className="h-5 w-5 text-blue-500" />
                       <span className="text-sm font-medium">Место в рейтинге</span>
@@ -228,7 +231,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                     <span className="font-bold text-lg text-blue-600">
                       #{leaderboardRank}
                     </span>
-                  </div>
+                  </Link>
 
                   <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                     <div className="flex items-center gap-2">
