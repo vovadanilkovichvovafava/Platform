@@ -175,6 +175,123 @@ export async function GET() {
       }
     })
 
+    // 5. Student Progress Statistics (для графиков развития)
+    // Trail progress analysis
+    const trails = await prisma.trail.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        modules: {
+          select: { id: true },
+        },
+        _count: {
+          select: {
+            enrollments: true,
+            certificates: true,
+          },
+        },
+      },
+    })
+
+    type TrailType = typeof trails[number]
+    type TrailModuleType = { id: string }
+    const trailProgress = await Promise.all(
+      trails.map(async (trail: TrailType) => {
+        const moduleIds = trail.modules.map((m: TrailModuleType) => m.id)
+        const totalModules = moduleIds.length
+
+        // Get completed modules count for this trail
+        const completedProgress = await prisma.moduleProgress.count({
+          where: {
+            moduleId: { in: moduleIds },
+            status: "COMPLETED",
+          },
+        })
+
+        // Get submissions for this trail
+        const trailSubmissions = await prisma.submission.count({
+          where: {
+            moduleId: { in: moduleIds },
+          },
+        })
+
+        // Get approved submissions
+        const approvedSubmissions = await prisma.submission.count({
+          where: {
+            moduleId: { in: moduleIds },
+            status: "APPROVED",
+          },
+        })
+
+        return {
+          id: trail.id,
+          title: trail.title,
+          slug: trail.slug,
+          enrollments: trail._count.enrollments,
+          certificates: trail._count.certificates,
+          totalModules,
+          completedModules: completedProgress,
+          submissionsCount: trailSubmissions,
+          approvedSubmissions,
+          completionRate: trail._count.enrollments > 0 && totalModules > 0
+            ? Math.round((completedProgress / (trail._count.enrollments * totalModules)) * 100)
+            : 0,
+          approvalRate: trailSubmissions > 0
+            ? Math.round((approvedSubmissions / trailSubmissions) * 100)
+            : 0,
+        }
+      })
+    )
+
+    // Top performing students
+    const topStudents = await prisma.user.findMany({
+      where: { role: "STUDENT" },
+      select: {
+        id: true,
+        name: true,
+        totalXP: true,
+        currentStreak: true,
+        _count: {
+          select: {
+            moduleProgress: { where: { status: "COMPLETED" } },
+            submissions: { where: { status: "APPROVED" } },
+            certificates: true,
+          },
+        },
+      },
+      orderBy: { totalXP: "desc" },
+      take: 10,
+    })
+
+    type TopStudentType = typeof topStudents[number]
+    const topStudentsData = topStudents.map((s: TopStudentType) => ({
+      id: s.id,
+      name: s.name,
+      totalXP: s.totalXP,
+      currentStreak: s.currentStreak,
+      modulesCompleted: s._count.moduleProgress,
+      approvedWorks: s._count.submissions,
+      certificates: s._count.certificates,
+    }))
+
+    // Score distribution (for all reviewed submissions)
+    const allReviews = await prisma.review.findMany({
+      select: { score: true },
+    })
+
+    type ReviewType = { score: number }
+    const scoreDistribution = {
+      excellent: allReviews.filter((r: ReviewType) => r.score >= 9).length,  // 9-10
+      good: allReviews.filter((r: ReviewType) => r.score >= 7 && r.score < 9).length, // 7-8
+      average: allReviews.filter((r: ReviewType) => r.score >= 5 && r.score < 7).length, // 5-6
+      poor: allReviews.filter((r: ReviewType) => r.score < 5).length, // 0-4
+      total: allReviews.length,
+      avgScore: allReviews.length > 0
+        ? Math.round((allReviews.reduce((a: number, r: ReviewType) => a + r.score, 0) / allReviews.length) * 10) / 10
+        : null,
+    }
+
     return NextResponse.json({
       churnRisk: {
         high: churnRisk.high.slice(0, 20),
@@ -192,6 +309,10 @@ export async function GET() {
         conversionRate: totalStudents > 0 ? Math.round((completedModule / totalStudents) * 100) : 0,
         avgDailyActiveUsers: trends.length > 0 ? Math.round(trends.reduce((a: number, b: { activeUsers: number }) => a + b.activeUsers, 0) / trends.length) : 0,
       },
+      // New: Student progress analytics
+      trailProgress,
+      topStudents: topStudentsData,
+      scoreDistribution,
     })
   } catch (error) {
     console.error("Advanced analytics error:", error)

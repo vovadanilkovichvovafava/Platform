@@ -5,6 +5,7 @@ import { z } from "zod"
 import { checkRateLimit, getClientIP, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
 
 const registerSchema = z.object({
+  inviteCode: z.string().min(1, "Код приглашения обязателен"),
   email: z.string().email("Некорректный email"),
   password: z.string().min(6, "Пароль должен быть минимум 6 символов"),
   name: z.string().min(2, "Имя должно быть минимум 2 символа"),
@@ -21,8 +22,45 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { email, password, name } = registerSchema.parse(body)
+    const { inviteCode, email, password, name } = registerSchema.parse(body)
 
+    // 1. Validate invite code
+    const invite = await prisma.invite.findUnique({
+      where: { code: inviteCode.toUpperCase() },
+    })
+
+    if (!invite) {
+      return NextResponse.json(
+        { error: "Недействительный код приглашения" },
+        { status: 400 }
+      )
+    }
+
+    // 2. Check if code is expired
+    if (invite.expiresAt && new Date() > invite.expiresAt) {
+      return NextResponse.json(
+        { error: "Код приглашения истёк" },
+        { status: 400 }
+      )
+    }
+
+    // 3. Check usage limit
+    if (invite.usedCount >= invite.maxUses) {
+      return NextResponse.json(
+        { error: "Код приглашения уже использован максимальное количество раз" },
+        { status: 400 }
+      )
+    }
+
+    // 4. Check if code is restricted to specific email
+    if (invite.email && invite.email.toLowerCase() !== email.toLowerCase()) {
+      return NextResponse.json(
+        { error: "Этот код приглашения предназначен для другого email" },
+        { status: 400 }
+      )
+    }
+
+    // 5. Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     })
@@ -36,13 +74,24 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        role: "STUDENT",
-      },
+    // Use transaction to ensure atomicity
+    const user = await prisma.$transaction(async (tx) => {
+      // Increment invite usage
+      await tx.invite.update({
+        where: { id: invite.id },
+        data: { usedCount: { increment: 1 } },
+      })
+
+      // Create user
+      return tx.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          role: "STUDENT",
+          invitedBy: invite.createdById,
+        },
+      })
     })
 
     return NextResponse.json({
