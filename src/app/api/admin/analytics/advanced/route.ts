@@ -436,7 +436,7 @@ export async function GET(request: NextRequest) {
         slug: true,
         enrollments: {
           take: 50, // Limit to prevent large payloads
-          orderBy: { enrolledAt: "desc" },
+          orderBy: { createdAt: "desc" },
           select: {
             user: {
               select: {
