@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { AchievementsGrid } from "@/components/achievements-grid"
 import { CertificatesShowcase } from "@/components/certificates-showcase"
+import { SubmissionsChart } from "@/components/submissions-chart"
 import {
   Star,
   Trophy,
@@ -56,6 +57,13 @@ export default async function PublicDashboardPage({ params }: PageProps) {
       moduleProgress: {
         where: { status: "COMPLETED" },
         select: { id: true },
+      },
+      submissions: {
+        select: {
+          id: true,
+          status: true,
+          moduleId: true,
+        },
       },
       certificates: {
         select: {
@@ -113,6 +121,27 @@ export default async function PublicDashboardPage({ params }: PageProps) {
   const achievementStats = {
     count: earnedAchievements.length,
     total: Object.keys(ACHIEVEMENTS).length,
+  }
+
+  // Calculate submissions stats with corrected revision logic
+  const approvedModuleIds = new Set(
+    user.submissions
+      .filter((s: { status: string; moduleId: string }) => s.status === "APPROVED")
+      .map((s: { moduleId: string }) => s.moduleId)
+  )
+
+  // Count revision only for modules that don't have an approved submission
+  const actualRevisionCount = user.submissions.filter(
+    (s: { status: string; moduleId: string }) =>
+      s.status === "REVISION" && !approvedModuleIds.has(s.moduleId)
+  ).length
+
+  const submissionStats = {
+    approved: user.submissions.filter((s: { status: string }) => s.status === "APPROVED").length,
+    pending: user.submissions.filter((s: { status: string }) => s.status === "PENDING").length,
+    revision: actualRevisionCount,
+    failed: user.submissions.filter((s: { status: string }) => s.status === "FAILED").length,
+    total: user.submissions.length,
   }
 
   return (
@@ -191,7 +220,10 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <Link
+                    href="/leaderboard"
+                    className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
                     <div className="flex items-center gap-2">
                       <Medal className="h-5 w-5 text-blue-500" />
                       <span className="text-sm font-medium">Место в рейтинге</span>
@@ -199,7 +231,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                     <span className="font-bold text-lg text-blue-600">
                       #{leaderboardRank}
                     </span>
-                  </div>
+                  </Link>
 
                   <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                     <div className="flex items-center gap-2">
@@ -224,20 +256,25 @@ export default async function PublicDashboardPage({ params }: PageProps) {
             </Card>
 
             {/* Info Section */}
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Профиль {user.name}
-              </h1>
-              <p className="text-gray-600 mb-6">
-                Достижения и статистика
-              </p>
+            <div className="flex-1 space-y-6">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                  Профиль {user.name}
+                </h1>
+                <p className="text-gray-600">
+                  Достижения и статистика
+                </p>
+              </div>
+
+              {/* Submissions Stats */}
+              <SubmissionsChart stats={submissionStats} showTitle={true} />
 
               {/* Certificates */}
               {user.certificates.length > 0 && (
                 <CertificatesShowcase
                   certificates={user.certificates}
                   showTitle={true}
-                  compact={false}
+                  compact={true}
                 />
               )}
             </div>

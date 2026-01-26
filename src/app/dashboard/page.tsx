@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { TrailCard } from "@/components/trail-card"
 import { AchievementsGrid } from "@/components/achievements-grid"
 import { SubmissionsChart } from "@/components/submissions-chart"
@@ -20,6 +21,7 @@ import {
   Medal,
   GraduationCap,
   Compass,
+  TrendingUp,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -28,6 +30,51 @@ function getRank(xp: number) {
   if (xp >= 500) return { name: "Expert", color: "text-blue-600", bg: "bg-blue-100" }
   if (xp >= 200) return { name: "Intermediate", color: "text-green-600", bg: "bg-green-100" }
   return { name: "Beginner", color: "text-gray-600", bg: "bg-gray-100" }
+}
+
+function getRankProgress(xp: number) {
+  // Define rank thresholds
+  const ranks = [
+    { name: "Beginner", minXP: 0, maxXP: 200 },
+    { name: "Intermediate", minXP: 200, maxXP: 500 },
+    { name: "Expert", minXP: 500, maxXP: 1000 },
+    { name: "Master", minXP: 1000, maxXP: null },
+  ]
+
+  // Find current rank
+  let currentRankIndex = 0
+  for (let i = ranks.length - 1; i >= 0; i--) {
+    if (xp >= ranks[i].minXP) {
+      currentRankIndex = i
+      break
+    }
+  }
+
+  const currentRank = ranks[currentRankIndex]
+  const nextRank = ranks[currentRankIndex + 1]
+
+  // If Master (max rank)
+  if (!nextRank) {
+    return {
+      currentRank: currentRank.name,
+      nextRank: null,
+      xpToNext: 0,
+      progress: 100,
+      isMaxRank: true,
+    }
+  }
+
+  const xpInCurrentRank = xp - currentRank.minXP
+  const xpNeededForNext = nextRank.minXP - currentRank.minXP
+  const progress = Math.round((xpInCurrentRank / xpNeededForNext) * 100)
+
+  return {
+    currentRank: currentRank.name,
+    nextRank: nextRank.name,
+    xpToNext: nextRank.minXP - xp,
+    progress,
+    isMaxRank: false,
+  }
 }
 
 function getInitials(name: string) {
@@ -97,6 +144,7 @@ export default async function DashboardPage() {
   }
 
   const rank = getRank(user.totalXP)
+  const rankProgress = getRankProgress(user.totalXP)
 
   // Get leaderboard position
   const higherRanked = await prisma.user.count({
@@ -129,10 +177,24 @@ export default async function DashboardPage() {
 
   // Calculate submissions stats
   const pendingSubmissions = user.submissions.filter((s: { status: string }) => s.status === "PENDING")
+
+  // Get moduleIds that have approved submissions
+  const approvedModuleIds = new Set(
+    user.submissions
+      .filter((s: { status: string; moduleId: string }) => s.status === "APPROVED")
+      .map((s: { moduleId: string }) => s.moduleId)
+  )
+
+  // Count revision only for modules that don't have an approved submission
+  const actualRevisionCount = user.submissions.filter(
+    (s: { status: string; moduleId: string }) =>
+      s.status === "REVISION" && !approvedModuleIds.has(s.moduleId)
+  ).length
+
   const submissionStats = {
     approved: user.submissions.filter((s: { status: string }) => s.status === "APPROVED").length,
     pending: pendingSubmissions.length,
-    revision: user.submissions.filter((s: { status: string }) => s.status === "REVISION").length,
+    revision: actualRevisionCount,
     failed: user.submissions.filter((s: { status: string }) => s.status === "FAILED").length,
     total: user.submissions.length,
   }
@@ -257,11 +319,35 @@ export default async function DashboardPage() {
                     </span>
                   </Link>
                 </div>
+
+                {/* Progress to next rank */}
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {rankProgress.isMaxRank
+                        ? "Максимальный ранг достигнут!"
+                        : `До ${rankProgress.nextRank}`}
+                    </span>
+                  </div>
+                  <Progress
+                    value={rankProgress.progress}
+                    className="h-2"
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-xs text-gray-500">{rank.name}</span>
+                    {!rankProgress.isMaxRank && (
+                      <span className="text-xs text-purple-600 font-medium">
+                        ещё {rankProgress.xpToNext} XP
+                      </span>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             {/* Welcome Message */}
-            <div className="flex-1">
+            <div className="flex-1 flex flex-col justify-center">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                 Добро пожаловать, {user.name.split(" ")[0]}!
               </h1>
@@ -301,35 +387,41 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        {/* Achievements and Submissions Stats */}
+        {/* Stats and Certificates Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-          {/* Achievements Section */}
-          <section>
-            <AchievementsGrid
-              achievements={allAchievements}
-              stats={achievementStats}
-              showTitle={true}
-              compact={false}
-            />
-          </section>
+          {/* Submissions Stats */}
+          <SubmissionsChart stats={submissionStats} showTitle={true} />
 
-          {/* Submissions Chart */}
-          <section>
-            <SubmissionsChart stats={submissionStats} showTitle={true} />
-          </section>
-        </div>
-
-        {/* Certificates Section */}
-        {user.certificates.length > 0 && (
-          <section className="mb-12">
+          {/* Certificates */}
+          {user.certificates.length > 0 ? (
             <CertificatesShowcase
               certificates={user.certificates}
               showTitle={true}
-              compact={false}
+              compact={true}
               linkToFullPage={true}
             />
-          </section>
-        )}
+          ) : (
+            <Card>
+              <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
+                <GraduationCap className="h-12 w-12 text-gray-300 mb-3" />
+                <h3 className="font-semibold text-gray-900 mb-1">Сертификаты</h3>
+                <p className="text-sm text-gray-500">
+                  Завершите trail, чтобы получить сертификат
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Achievements Section */}
+        <section className="mb-12">
+          <AchievementsGrid
+            achievements={allAchievements}
+            stats={achievementStats}
+            showTitle={true}
+            compact={false}
+          />
+        </section>
 
         {/* Enrolled Trails */}
         {enrolledTrails.length > 0 && (
