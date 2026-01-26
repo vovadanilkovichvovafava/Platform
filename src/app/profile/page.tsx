@@ -13,7 +13,6 @@ import {
   User,
   Mail,
   Trophy,
-  Flame,
   Calendar,
   BookOpen,
   FileText,
@@ -28,7 +27,6 @@ interface UserProfile {
   email: string
   role: string
   totalXP: number
-  currentStreak: number
   createdAt: string
   _count: {
     submissions: number
@@ -220,20 +218,13 @@ export default function ProfilePage() {
                 {getRoleName(profile.role)}
               </Badge>
 
-              <div className="w-full mt-6 pt-6 border-t grid grid-cols-2 gap-4">
+              <div className="w-full mt-6 pt-6 border-t">
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-yellow-500">
                     <Trophy className="h-5 w-5" />
                     <span className="text-lg font-bold">{profile.totalXP}</span>
                   </div>
                   <p className="text-xs text-gray-500">XP</p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 text-orange-500">
-                    <Flame className="h-5 w-5" />
-                    <span className="text-lg font-bold">{profile.currentStreak}</span>
-                  </div>
-                  <p className="text-xs text-gray-500">дней подряд</p>
                 </div>
               </div>
 
