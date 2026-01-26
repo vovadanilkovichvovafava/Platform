@@ -69,7 +69,7 @@ export async function smartImport(
             parseMethod: "ai",
           }
         }
-      } catch (e) {
+      } catch {
         // Fallback to txt parser
       }
     }
@@ -105,7 +105,7 @@ export async function smartImport(
         }
         // Если AI не справился, продолжаем с code парсером
         result.warnings.push("AI парсер не справился, используется кодовый парсер")
-      } catch (e) {
+      } catch {
         // Fallback to code parser
       }
     }
@@ -156,7 +156,7 @@ export async function smartImport(
             warnings: [...result.warnings, ...aiResult.warnings, "Кодовый парсер не справился, использован AI"],
           }
         }
-      } catch (e) {
+      } catch {
         // Return code parser result
       }
     }
@@ -199,7 +199,7 @@ export async function hybridImport(
             parseMethod: "ai",
           }
         }
-      } catch (e) {
+      } catch {
         // Fallback to txt parser
       }
     }
@@ -286,7 +286,7 @@ export async function hybridImport(
           confidenceDetails: structureAnalysis.confidenceDetails,
         }
       }
-    } catch (e) {
+    } catch {
       // Return code result
     }
   }

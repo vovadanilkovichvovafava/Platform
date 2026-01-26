@@ -60,7 +60,7 @@ export function parseHtml(content: string): ParseResult {
 }
 
 // Парсинг структуры HTML
-function parseHtmlStructure(html: string, pageTitle: string, warnings: string[]): ParsedTrail[] {
+function parseHtmlStructure(html: string, pageTitle: string, _warnings: string[]): ParsedTrail[] {
   const trails: ParsedTrail[] = []
 
   // Ищем заголовки и структуру

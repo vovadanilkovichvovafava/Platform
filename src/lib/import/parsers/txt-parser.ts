@@ -73,13 +73,6 @@ function parseStructuredFormat(text: string, warnings: string[]): ParsedTrail[] 
   let contentBuffer: string[] = []
   let inContentBlock = false
 
-  // Функция проверки маркера секции (для определения конца контента)
-  const isSectionMarker = (line: string): boolean => {
-    return DEFAULT_PATTERNS.trailMarkers.some(p => p.test(line)) ||
-           DEFAULT_PATTERNS.moduleMarkers.some(p => p.test(line)) ||
-           /^={3,}\s*(QUESTIONS?|ВОПРОС[ЫА]?)\s*={3,}$/i.test(line)
-  }
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     const trimmedLine = line.trim()

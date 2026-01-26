@@ -189,7 +189,6 @@ function detectFreeFormStructure(text: string): { modules: number; questions: nu
 
 // Умный парсинг неструктурированного текста
 export function smartParseUnstructured(text: string): ParsedTrail[] {
-  const lines = text.split("\n")
   const trails: ParsedTrail[] = []
 
   // Сначала попробуем найти inline вопросы и преобразовать их
@@ -204,12 +203,10 @@ export function smartParseUnstructured(text: string): ParsedTrail[] {
   let currentQuestions: ParsedQuestion[] = []
   let inQuestionSection = false
   let currentQuestion: ParsedQuestion | null = null
-  let lineIndex = 0
 
   for (let i = 0; i < processedLines.length; i++) {
     const line = processedLines[i]
     const trimmed = line.trim()
-    lineIndex++
 
     // Пропуск пустых строк
     if (!trimmed) {
@@ -358,7 +355,7 @@ function preprocessInlineQuestions(text: string): string {
 }
 
 // Извлечение заголовка trail
-function extractTrailTitle(line: string, index: number, allLines: string[]): string | null {
+function extractTrailTitle(line: string, index: number, _allLines: string[]): string | null {
   // Markdown заголовок H1
   if (line.startsWith("# ")) {
     return line.replace(/^#+\s*/, "").trim()

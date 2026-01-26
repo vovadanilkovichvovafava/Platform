@@ -468,7 +468,6 @@ export default async function TrailPage({ params }: Props) {
 
                 return projectsToShow.map(({ project, status }) => {
                   const isProjectCompleted = status === "PASSED" || moduleProgressMap[project.id] === "COMPLETED"
-                  const isPending = status === "PENDING" && !isProjectCompleted
 
                   return (
                     <Card

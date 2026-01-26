@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth"
 import {
   getAIConfig,
   SUPPORTED_FORMATS,
-  requiresAIParser,
 } from "@/lib/import"
 
 // Увеличиваем лимит времени выполнения для AI парсинга
@@ -63,7 +62,6 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const needsAI = requiresAIParser(filename)
   const text = await file.text()
 
   if (!text.trim()) {

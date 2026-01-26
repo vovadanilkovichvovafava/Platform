@@ -106,8 +106,6 @@ export default async function ModulePage({ params }: Props) {
     })
   }
 
-  const requiresSubmission = courseModule.requiresSubmission
-
   // Get question attempts for quiz
   const questionAttempts = await prisma.questionAttempt.findMany({
     where: {

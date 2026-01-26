@@ -175,16 +175,6 @@ export async function GET() {
       }
     })
 
-    // 5. Weekly retention (cohort analysis simplified)
-    const weeklyNew = await prisma.user.groupBy({
-      by: ["createdAt"],
-      where: {
-        role: "STUDENT",
-        createdAt: { gte: thirtyDaysAgo },
-      },
-      _count: true,
-    })
-
     return NextResponse.json({
       churnRisk: {
         high: churnRisk.high.slice(0, 20),

@@ -808,7 +808,6 @@ async function parseChunkWithAI(
     })
 
     if (!response.ok) {
-      const errorText = await response.text()
       console.log(`[AI-Parser] Часть ${chunk.index + 1}: API ошибка ${response.status}`)
       return { modules: [], error: `API ошибка: ${response.status}` }
     }
@@ -862,7 +861,7 @@ async function parseChunkWithAI(
         try {
           parsed = JSON.parse(repaired)
           console.log(`[AI-Parser] Часть ${chunk.index + 1}: JSON успешно восстановлен`)
-        } catch (repairError) {
+        } catch {
           // Пробуем извлечь модули напрямую из текста
           console.log(`[AI-Parser] Часть ${chunk.index + 1}: repairJSON не помог, пробуем extractModulesFromText...`)
           const extractedModules = extractModulesFromText(jsonCandidate)
@@ -1683,7 +1682,6 @@ function recoverCompletedTrails(jsonStr: string): any[] {
     let inString = false
     let prevChar = ""
     let trailStart = -1
-    let braceDepth = 0
 
     for (let i = startPos; i < jsonStr.length; i++) {
       const char = jsonStr[i]
@@ -1698,10 +1696,8 @@ function recoverCompletedTrails(jsonStr: string): any[] {
             trailStart = i
           }
           depth++
-          braceDepth++
         } else if (char === "}") {
           depth--
-          braceDepth--
 
           if (depth === 0 && trailStart !== -1) {
             // Завершён один trail

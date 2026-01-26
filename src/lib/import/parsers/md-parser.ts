@@ -219,7 +219,7 @@ function createTrailFromSection(section: MarkdownSection, warnings: string[]): P
 }
 
 // Создание модуля из секции
-function createModuleFromSection(section: MarkdownSection, warnings: string[]): ParsedModule {
+function createModuleFromSection(section: MarkdownSection, _warnings: string[]): ParsedModule {
   const content = section.content.join("\n").trim()
   const cleanTitle = section.title.replace(/^\d+[\.\)]\s*/, "")
   const type = detectModuleType(cleanTitle, content)
@@ -381,7 +381,6 @@ function parseQuestionsFromContent(content: string): ParsedQuestion[] {
 
 // Извлечение подзаголовка
 function extractSubtitle(content: string[]): string {
-  const text = content.join("\n")
   // Первая строка после заголовка, если она короткая
   const firstLine = content.find(l => l.trim() && !l.startsWith("#") && !l.startsWith("-"))
   if (firstLine && firstLine.length < 150) {
