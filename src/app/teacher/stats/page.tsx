@@ -1,7 +1,9 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { StatsTrailExplorer } from "@/components/stats-trail-explorer"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +15,7 @@ import {
   Trophy,
   TrendingUp,
   BookOpen,
+  ExternalLink,
 } from "lucide-react"
 
 export default async function TeacherStatsPage() {
@@ -39,37 +42,13 @@ export default async function TeacherStatsPage() {
   const approvedCount = submissionsByStatus.find((s) => s.status === "APPROVED")?._count || 0
   const revisionCount = submissionsByStatus.find((s) => s.status === "REVISION")?._count || 0
 
-  // Get submissions by trail
-  const submissionsByTrail = await prisma.submission.findMany({
-    include: {
-      module: {
-        include: {
-          trail: {
-            select: { title: true, color: true },
-          },
-        },
-      },
-    },
-  })
-
-  const trailStats = submissionsByTrail.reduce((acc, sub) => {
-    const trail = sub.module.trail.title
-    if (!acc[trail]) {
-      acc[trail] = { total: 0, approved: 0, pending: 0, revision: 0, color: sub.module.trail.color }
-    }
-    acc[trail].total++
-    if (sub.status === "APPROVED") acc[trail].approved++
-    if (sub.status === "PENDING") acc[trail].pending++
-    if (sub.status === "REVISION") acc[trail].revision++
-    return acc
-  }, {} as Record<string, { total: number; approved: number; pending: number; revision: number; color: string }>)
-
   // Get top students by XP
   const topStudents = await prisma.user.findMany({
     where: { role: "STUDENT", totalXP: { gt: 0 } },
     orderBy: { totalXP: "desc" },
     take: 5,
     select: {
+      id: true,
       name: true,
       totalXP: true,
       _count: {
@@ -77,6 +56,58 @@ export default async function TeacherStatsPage() {
       },
     },
   })
+
+  // Get trails with modules and submissions for drill-down navigation
+  const trailsWithDetails = await prisma.trail.findMany({
+    where: { isPublished: true },
+    orderBy: { order: "asc" },
+    include: {
+      modules: {
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          type: true,
+          submissions: {
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              status: true,
+              createdAt: true,
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+              review: {
+                select: { score: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  // Serialize data for client component
+  const serializedTrails = trailsWithDetails.map((trail) => ({
+    id: trail.id,
+    title: trail.title,
+    slug: trail.slug,
+    color: trail.color,
+    modules: trail.modules.map((module) => ({
+      id: module.id,
+      title: module.title,
+      slug: module.slug,
+      type: module.type,
+      submissions: module.submissions.map((sub) => ({
+        id: sub.id,
+        status: sub.status,
+        createdAt: sub.createdAt.toISOString(),
+        user: sub.user,
+        review: sub.review,
+      })),
+    })),
+  }))
 
   // Get recent activity (last 7 days)
   const weekAgo = new Date()
@@ -260,91 +291,74 @@ export default async function TeacherStatsPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Stats by Trail */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">По направлениям</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {Object.keys(trailStats).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Нет данных</p>
-            ) : (
-              <div className="space-y-4">
-                {Object.entries(trailStats).map(([trail, stats]) => (
-                  <div key={trail} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">{trail}</span>
-                      <span className="text-sm text-gray-500">
-                        {stats.total} работ
-                      </span>
+      {/* Top Students */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            Топ учеников
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {topStudents.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Нет данных</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {topStudents.map((student, idx) => (
+                <Link
+                  key={student.id}
+                  href={`/teacher/students/${student.id}`}
+                  className="block"
+                >
+                  <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-sm transition-all">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        idx === 0
+                          ? "bg-yellow-400 text-yellow-900"
+                          : idx === 1
+                          ? "bg-gray-300 text-gray-700"
+                          : idx === 2
+                          ? "bg-orange-300 text-orange-800"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {idx + 1}
                     </div>
-                    <div className="flex gap-2 text-xs">
-                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                        {stats.approved} принято
-                      </span>
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
-                        {stats.pending} ожидает
-                      </span>
-                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded">
-                        {stats.revision} доработка
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Students */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-              Топ учеников
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {topStudents.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Нет данных</p>
-            ) : (
-              <div className="space-y-3">
-                {topStudents.map((student, idx) => (
-                  <div
-                    key={student.name}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                          idx === 0
-                            ? "bg-yellow-400 text-yellow-900"
-                            : idx === 1
-                            ? "bg-gray-300 text-gray-700"
-                            : idx === 2
-                            ? "bg-orange-300 text-orange-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {idx + 1}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-gray-900 truncate">
+                          {student.name}
+                        </span>
+                        <ExternalLink className="h-3 w-3 text-gray-400 flex-shrink-0" />
                       </div>
-                      <span className="font-medium">{student.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-yellow-600">
-                        {student.totalXP} XP
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {student._count.submissions} работ
-                      </p>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="font-bold text-yellow-600">
+                          {student.totalXP} XP
+                        </span>
+                        <span className="text-gray-400">|</span>
+                        <span className="text-gray-500">
+                          {student._count.submissions} работ
+                        </span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Detailed Trail Stats with Drill-Down */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-purple-500" />
+          Статистика по направлениям
+          <span className="text-sm font-normal text-gray-500">
+            (клик для раскрытия)
+          </span>
+        </h2>
+        <StatsTrailExplorer trails={serializedTrails} />
       </div>
     </div>
   )
