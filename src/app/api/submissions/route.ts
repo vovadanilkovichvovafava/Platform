@@ -115,6 +115,24 @@ export async function POST(request: Request) {
       },
     })
 
+    // Notify teachers assigned to this trail about new submission
+    const trailTeachers = await prisma.trailTeacher.findMany({
+      where: { trailId: courseModule.trailId },
+      select: { teacherId: true },
+    })
+
+    if (trailTeachers.length > 0) {
+      await prisma.notification.createMany({
+        data: trailTeachers.map((tt) => ({
+          userId: tt.teacherId,
+          type: "SUBMISSION_PENDING",
+          title: "Новая работа на проверку",
+          message: `${session.user.name} отправил(а) работу "${courseModule.title}"`,
+          link: `/teacher/reviews/${submission.id}`,
+        })),
+      })
+    }
+
     // Update module progress to in_progress if not already
     await prisma.moduleProgress.upsert({
       where: {

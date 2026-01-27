@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { TeacherStatsDrilldown } from "@/components/teacher-stats-drilldown"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -98,6 +99,68 @@ export default async function TeacherStatsPage() {
   const approvalRate = totalSubmissions > 0
     ? Math.round((approvedCount / totalSubmissions) * 100)
     : 0
+
+  // Get trails with detailed stats for drill-down
+  const isAdmin = session.user.role === "ADMIN"
+  const teacherAssignments = isAdmin ? [] : await prisma.trailTeacher.findMany({
+    where: { teacherId: session.user.id },
+    select: { trailId: true },
+  })
+  const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
+
+  const trailsWithStats = await prisma.trail.findMany({
+    where: isAdmin ? {} : { id: { in: assignedTrailIds } },
+    include: {
+      modules: {
+        orderBy: { order: "asc" },
+        include: {
+          submissions: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+          progress: {
+            where: { status: "COMPLETED" },
+            select: { id: true },
+          },
+        },
+      },
+    },
+    orderBy: { order: "asc" },
+  })
+
+  // Transform data for client component
+  const trailsForDrilldown = trailsWithStats.map((trail) => {
+    const modulesWithStats = trail.modules.map((module) => ({
+      id: module.id,
+      title: module.title,
+      type: module.type,
+      points: module.points,
+      submissions: module.submissions.map((sub) => ({
+        id: sub.id,
+        status: sub.status,
+        createdAt: sub.createdAt.toISOString(),
+        user: sub.user,
+      })),
+      completedCount: module.progress.length,
+      avgScore: null as number | null, // Will be calculated if reviews are needed
+    }))
+
+    const allSubmissions = modulesWithStats.flatMap((m) => m.submissions)
+
+    return {
+      id: trail.id,
+      title: trail.title,
+      color: trail.color,
+      modules: modulesWithStats,
+      totalSubmissions: allSubmissions.length,
+      pendingCount: allSubmissions.filter((s) => s.status === "PENDING").length,
+      approvedCount: allSubmissions.filter((s) => s.status === "APPROVED").length,
+    }
+  })
 
   return (
     <div className="p-8">
@@ -345,6 +408,15 @@ export default async function TeacherStatsPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Trail Drill-Down Section */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Детальная статистика по направлениям
+        </h2>
+        <TeacherStatsDrilldown trails={trailsForDrilldown} />
       </div>
     </div>
   )
