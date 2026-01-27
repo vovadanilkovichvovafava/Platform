@@ -70,15 +70,16 @@ export async function DELETE(
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
+        userName: session.user.name || "Unknown",
         action: "DELETE",
         entityType: "SUBMISSION",
         entityId: id,
         entityName: `${submission.user.name}: ${submission.module.title}`,
-        details: {
+        details: JSON.stringify({
           deletedBy: session.user.name,
           reason: "teacher_cleanup",
           originalStatus: submission.status,
-        },
+        }),
       },
     })
 
