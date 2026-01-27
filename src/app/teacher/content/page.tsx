@@ -377,7 +377,7 @@ export default function TeacherContentPage() {
                               </div>
                               <div className="text-xs text-gray-400 flex-shrink-0">{module.points}xp</div>
                               <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
-                                <Link href={`/teacher/content/modules/${module.id}`}>
+                                <Link href={`/content/modules/${module.id}`}>
                                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
                                     <Edit className="h-3.5 w-3.5" />
                                   </Button>
