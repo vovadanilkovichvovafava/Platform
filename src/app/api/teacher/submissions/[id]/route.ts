@@ -44,6 +44,7 @@ export async function DELETE(
 
     // Check if teacher has access to this trail (or is admin)
     if (session.user.role === "TEACHER") {
+      // Check 1: Is teacher specifically assigned to this trail?
       const teacherAssignment = await prisma.trailTeacher.findUnique({
         where: {
           trailId_teacherId: {
@@ -53,7 +54,15 @@ export async function DELETE(
         },
       })
 
-      if (!teacherAssignment) {
+      // Check 2: Is trail visible to all teachers?
+      const trail = await prisma.trail.findUnique({
+        where: { id: submission.module.trailId },
+        select: { teacherVisibility: true },
+      })
+
+      const hasAccess = teacherAssignment || trail?.teacherVisibility === "ALL_TEACHERS"
+
+      if (!hasAccess) {
         return NextResponse.json(
           { error: "У вас нет доступа к этому направлению" },
           { status: 403 }

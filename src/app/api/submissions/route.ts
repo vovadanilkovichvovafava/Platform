@@ -115,16 +115,37 @@ export async function POST(request: Request) {
       },
     })
 
-    // Notify teachers assigned to this trail about new submission
+    // Notify teachers about new submission
+    // Get trail to check teacherVisibility
+    const trail = await prisma.trail.findUnique({
+      where: { id: courseModule.trailId },
+      select: { teacherVisibility: true },
+    })
+
+    // Collect teacher IDs to notify
+    const teacherIdsToNotify = new Set<string>()
+
+    // 1. Always notify specifically assigned teachers
     const trailTeachers = await prisma.trailTeacher.findMany({
       where: { trailId: courseModule.trailId },
       select: { teacherId: true },
     })
+    trailTeachers.forEach((tt) => teacherIdsToNotify.add(tt.teacherId))
 
-    if (trailTeachers.length > 0) {
+    // 2. If trail is visible to all teachers, notify all teachers
+    if (trail?.teacherVisibility === "ALL_TEACHERS") {
+      const allTeachers = await prisma.user.findMany({
+        where: { role: "TEACHER" },
+        select: { id: true },
+      })
+      allTeachers.forEach((t) => teacherIdsToNotify.add(t.id))
+    }
+
+    // Create notifications for all teachers
+    if (teacherIdsToNotify.size > 0) {
       await prisma.notification.createMany({
-        data: trailTeachers.map((tt) => ({
-          userId: tt.teacherId,
+        data: Array.from(teacherIdsToNotify).map((teacherId) => ({
+          userId: teacherId,
           type: "SUBMISSION_PENDING",
           title: "Новая работа на проверку",
           message: `${session.user.name} отправил(а) работу "${courseModule.title}"`,
