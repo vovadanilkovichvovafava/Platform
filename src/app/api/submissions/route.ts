@@ -122,15 +122,15 @@ export async function POST(request: Request) {
       select: { teacherVisibility: true },
     })
 
-    // Collect teacher IDs to notify
-    const teacherIdsToNotify = new Set<string>()
+    // Collect user IDs to notify (teachers and admins)
+    const userIdsToNotify = new Set<string>()
 
     // 1. Always notify specifically assigned teachers
     const trailTeachers = await prisma.trailTeacher.findMany({
       where: { trailId: courseModule.trailId },
       select: { teacherId: true },
     })
-    trailTeachers.forEach((tt) => teacherIdsToNotify.add(tt.teacherId))
+    trailTeachers.forEach((tt) => userIdsToNotify.add(tt.teacherId))
 
     // 2. If trail is visible to all teachers, notify all teachers
     if (trail?.teacherVisibility === "ALL_TEACHERS") {
@@ -138,14 +138,21 @@ export async function POST(request: Request) {
         where: { role: "TEACHER" },
         select: { id: true },
       })
-      allTeachers.forEach((t) => teacherIdsToNotify.add(t.id))
+      allTeachers.forEach((t) => userIdsToNotify.add(t.id))
     }
 
-    // Create notifications for all teachers
-    if (teacherIdsToNotify.size > 0) {
+    // 3. Always notify all admins
+    const allAdmins = await prisma.user.findMany({
+      where: { role: "ADMIN" },
+      select: { id: true },
+    })
+    allAdmins.forEach((a) => userIdsToNotify.add(a.id))
+
+    // Create notifications for all teachers and admins
+    if (userIdsToNotify.size > 0) {
       await prisma.notification.createMany({
-        data: Array.from(teacherIdsToNotify).map((teacherId) => ({
-          userId: teacherId,
+        data: Array.from(userIdsToNotify).map((userId) => ({
+          userId: userId,
           type: "SUBMISSION_PENDING",
           title: "Новая работа на проверку",
           message: `${session.user.name} отправил(а) работу "${courseModule.title}"`,
