@@ -13,8 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useToast } from "@/components/ui/toast"
-import { useConfirm } from "@/components/ui/confirm-dialog"
 import {
   Clock,
   CheckCircle2,
@@ -28,7 +26,6 @@ import {
   Search,
   Filter,
   AlertTriangle,
-  Trash2,
 } from "lucide-react"
 
 interface Submission {
@@ -82,52 +79,13 @@ function getDaysWaitingLabel(days: number): { label: string; color: string } {
 }
 
 export function SubmissionsFilter({
-  pendingSubmissions: initialPending,
+  pendingSubmissions,
   reviewedSubmissions,
   trails,
 }: SubmissionsFilterProps) {
-  const [pendingSubmissions, setPendingSubmissions] = useState(initialPending)
   const [search, setSearch] = useState("")
   const [trailFilter, setTrailFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-
-  const { showToast } = useToast()
-  const { confirm } = useConfirm()
-
-  const deleteSubmission = async (submission: Submission) => {
-    const confirmed = await confirm({
-      title: "Удалить работу?",
-      message: `Вы уверены, что хотите удалить работу "${submission.module.title}" от ${submission.user.name}? Это действие необратимо.`,
-      confirmText: "Удалить",
-      variant: "danger",
-    })
-
-    if (!confirmed) return
-
-    try {
-      setDeletingId(submission.id)
-      const res = await fetch(`/api/teacher/submissions/${submission.id}`, {
-        method: "DELETE",
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Ошибка удаления")
-      }
-
-      // Remove from local state
-      setPendingSubmissions((prev) => prev.filter((s) => s.id !== submission.id))
-      showToast("Работа удалена", "success")
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Ошибка удаления",
-        "error"
-      )
-    } finally {
-      setDeletingId(null)
-    }
-  }
 
   const filteredPending = useMemo(() => {
     return pendingSubmissions.filter((sub) => {
@@ -308,16 +266,6 @@ export function SubmissionsFilter({
                           <Eye className="h-4 w-4 mr-2" />
                           Проверить
                         </Link>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => deleteSubmission(submission)}
-                        disabled={deletingId === submission.id}
-                      >
-                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

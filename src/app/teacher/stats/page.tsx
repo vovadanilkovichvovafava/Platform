@@ -2,9 +2,18 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { TeacherStats } from "@/components/teacher-stats"
 
 export const dynamic = "force-dynamic"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  BarChart3,
+  Users,
+  FileText,
+  CheckCircle2,
+  Trophy,
+  TrendingUp,
+  BookOpen,
+} from "lucide-react"
 
 export default async function TeacherStatsPage() {
   const session = await getServerSession(authOptions)
@@ -14,43 +23,53 @@ export default async function TeacherStatsPage() {
     redirect("/dashboard")
   }
 
-  // Get all submissions with related data
-  const submissions = await prisma.submission.findMany({
-    include: {
-      module: {
-        include: {
-          trail: {
-            select: { id: true, title: true, color: true },
-          },
-        },
-      },
-      user: {
-        select: { id: true, name: true },
-      },
-      review: {
-        select: { score: true, createdAt: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  })
-
-  // Get total students count
+  // Get overall stats
   const totalStudents = await prisma.user.count({
     where: { role: "STUDENT" },
   })
 
-  // Get completed modules count
-  const completedModules = await prisma.moduleProgress.count({
-    where: { status: "COMPLETED" },
+  const totalSubmissions = await prisma.submission.count()
+
+  const submissionsByStatus = await prisma.submission.groupBy({
+    by: ["status"],
+    _count: true,
   })
+
+  const pendingCount = submissionsByStatus.find((s) => s.status === "PENDING")?._count || 0
+  const approvedCount = submissionsByStatus.find((s) => s.status === "APPROVED")?._count || 0
+  const revisionCount = submissionsByStatus.find((s) => s.status === "REVISION")?._count || 0
+
+  // Get submissions by trail
+  const submissionsByTrail = await prisma.submission.findMany({
+    include: {
+      module: {
+        include: {
+          trail: {
+            select: { title: true, color: true },
+          },
+        },
+      },
+    },
+  })
+
+  const trailStats = submissionsByTrail.reduce((acc, sub) => {
+    const trail = sub.module.trail.title
+    if (!acc[trail]) {
+      acc[trail] = { total: 0, approved: 0, pending: 0, revision: 0, color: sub.module.trail.color }
+    }
+    acc[trail].total++
+    if (sub.status === "APPROVED") acc[trail].approved++
+    if (sub.status === "PENDING") acc[trail].pending++
+    if (sub.status === "REVISION") acc[trail].revision++
+    return acc
+  }, {} as Record<string, { total: number; approved: number; pending: number; revision: number; color: string }>)
 
   // Get top students by XP
   const topStudents = await prisma.user.findMany({
     where: { role: "STUDENT", totalXP: { gt: 0 } },
     orderBy: { totalXP: "desc" },
-    take: 9,
+    take: 5,
     select: {
-      id: true,
       name: true,
       totalXP: true,
       _count: {
@@ -59,53 +78,274 @@ export default async function TeacherStatsPage() {
     },
   })
 
-  // Transform data for the component
-  const formattedSubmissions = []
-  for (const sub of submissions) {
-    formattedSubmissions.push({
-      id: sub.id,
-      status: sub.status,
-      createdAt: sub.createdAt.toISOString(),
-      module: {
-        id: sub.moduleId,
-        title: sub.module.title,
-        trail: {
-          id: sub.module.trail.id,
-          title: sub.module.trail.title,
-          color: sub.module.trail.color,
-        },
-      },
-      user: {
-        id: sub.user.id,
-        name: sub.user.name,
-      },
-      review: sub.review
-        ? {
-            score: sub.review.score,
-            createdAt: sub.review.createdAt.toISOString(),
-          }
-        : null,
-    })
-  }
+  // Get recent activity (last 7 days)
+  const weekAgo = new Date()
+  weekAgo.setDate(weekAgo.getDate() - 7)
 
-  const formattedTopStudents = []
-  for (const s of topStudents) {
-    formattedTopStudents.push({
-      id: s.id,
-      name: s.name,
-      totalXP: s.totalXP,
-      submissionsCount: s._count.submissions,
-    })
-  }
+  const recentSubmissions = await prisma.submission.count({
+    where: { createdAt: { gte: weekAgo } },
+  })
+
+  const recentReviews = await prisma.review.count({
+    where: { createdAt: { gte: weekAgo } },
+  })
+
+  // Module completion stats
+  const completedModules = await prisma.moduleProgress.count({
+    where: { status: "COMPLETED" },
+  })
+
+  const approvalRate = totalSubmissions > 0
+    ? Math.round((approvedCount / totalSubmissions) * 100)
+    : 0
 
   return (
     <div className="p-8">
-      <TeacherStats
-        submissions={formattedSubmissions}
-        topStudents={formattedTopStudents}
-        totalStudents={totalStudents}
-        completedModules={completedModules}
-      />
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+          <BarChart3 className="h-6 w-6" />
+          Статистика
+        </h1>
+        <p className="text-gray-600">
+          Общая статистика платформы и прогресс обучения
+        </p>
+      </div>
+
+      {/* Main Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalStudents}</p>
+                <p className="text-xs text-gray-500">Учеников</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <FileText className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalSubmissions}</p>
+                <p className="text-xs text-gray-500">Работ сдано</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{approvalRate}%</p>
+                <p className="text-xs text-gray-500">Принято</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <BookOpen className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{completedModules}</p>
+                <p className="text-xs text-gray-500">Модулей пройдено</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Submissions by Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Статус работ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500" />
+                  <span className="text-sm">На проверке</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{pendingCount}</span>
+                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500"
+                      style={{ width: `${totalSubmissions > 0 ? (pendingCount / totalSubmissions) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <span className="text-sm">Принято</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{approvedCount}</span>
+                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500"
+                      style={{ width: `${totalSubmissions > 0 ? (approvedCount / totalSubmissions) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-orange-500" />
+                  <span className="text-sm">На доработку</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{revisionCount}</span>
+                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-orange-500"
+                      style={{ width: `${totalSubmissions > 0 ? (revisionCount / totalSubmissions) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Активность за неделю</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm">Новых работ</span>
+                </div>
+                <span className="text-xl font-bold text-blue-600">
+                  {recentSubmissions}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <span className="text-sm">Проверено</span>
+                </div>
+                <span className="text-xl font-bold text-green-600">
+                  {recentReviews}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Stats by Trail */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">По направлениям</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {Object.keys(trailStats).length === 0 ? (
+              <p className="text-gray-500 text-center py-4">Нет данных</p>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(trailStats).map(([trail, stats]) => (
+                  <div key={trail} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{trail}</span>
+                      <span className="text-sm text-gray-500">
+                        {stats.total} работ
+                      </span>
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                        {stats.approved} принято
+                      </span>
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                        {stats.pending} ожидает
+                      </span>
+                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded">
+                        {stats.revision} доработка
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Students */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              Топ учеников
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topStudents.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">Нет данных</p>
+            ) : (
+              <div className="space-y-3">
+                {topStudents.map((student, idx) => (
+                  <div
+                    key={student.name}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          idx === 0
+                            ? "bg-yellow-400 text-yellow-900"
+                            : idx === 1
+                            ? "bg-gray-300 text-gray-700"
+                            : idx === 2
+                            ? "bg-orange-300 text-orange-800"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {idx + 1}
+                      </div>
+                      <span className="font-medium">{student.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-yellow-600">
+                        {student.totalXP} XP
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {student._count.submissions} работ
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

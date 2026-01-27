@@ -8,19 +8,17 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  password        String
-  name            String
-  role            String    @default("STUDENT") // STUDENT, TEACHER, ADMIN
-  totalXP         Int       @default(0)
-  currentStreak   Int       @default(0)
-  avatarUrl       String?
-  invitedBy       String?   // ID of user who invited
-  telegramChatId  String?   // Telegram chat ID for notifications
-  telegramLinkCode String?  // Temporary code for linking Telegram account
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          String    @default("STUDENT") // STUDENT, TEACHER, ADMIN
+  totalXP       Int       @default(0)
+  currentStreak Int       @default(0)
+  avatarUrl     String?
+  invitedBy     String?   // ID of user who invited
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   enrollments      Enrollment[]
   moduleProgress   ModuleProgress[]
@@ -36,7 +34,6 @@ model User {
   notifications    Notification[]
   certificates     Certificate[]
   achievements     UserAchievement[]
-  comments         Comment[]          @relation("CommentAuthor")
 }
 
 // Track daily user activity (one record per day per user)
@@ -235,10 +232,9 @@ model Submission {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  module   Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  review   Review?
-  comments Comment[]
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  review Review?
 
   @@index([userId])
   @@index([moduleId])
@@ -386,25 +382,4 @@ model UserAchievement {
 
   @@unique([userId, achievementId])
   @@index([userId])
-}
-
-// Comments on submissions (tree structure, max 4 levels)
-model Comment {
-  id           String   @id @default(cuid())
-  submissionId String
-  authorId     String
-  parentId     String?  // For tree structure (null = root comment)
-  depth        Int      @default(0) // 0-3 (max 4 levels)
-  content      String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  author     User       @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  parent     Comment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    Comment[]  @relation("CommentReplies")
-
-  @@index([submissionId])
-  @@index([authorId])
-  @@index([parentId])
 }

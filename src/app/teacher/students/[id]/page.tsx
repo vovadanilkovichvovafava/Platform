@@ -241,71 +241,62 @@ export default async function StudentDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Activity Calendar - Full Width */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-            <CalendarDays className="h-5 w-5" />
-            Активность
-            <Badge variant="secondary" className="ml-1 text-xs">
-              {student.activityDays.length} активных дней
-            </Badge>
-          </h2>
-          <ActivityCalendar activityDays={activityDaysWithDetails} />
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Left: Trails & Progress */}
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-              <Target className="h-5 w-5" />
-              Trails и прогресс
+        <div className="flex-1 space-y-6">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Trails и прогресс
+          </h2>
+
+          <StudentModuleList
+            studentId={student.id}
+            enrollments={student.enrollments.map((e) => ({
+              trailId: e.trailId,
+              trail: {
+                title: e.trail.title,
+                modules: e.trail.modules,
+              },
+            }))}
+            progressMap={progressMap}
+          />
+        </div>
+
+        {/* Right: Calendar + History */}
+        <div className="lg:w-[300px] space-y-6">
+          {/* Activity Calendar */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <CalendarDays className="h-5 w-5" />
+              Активность
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {student.activityDays.length} дн.
+              </Badge>
             </h2>
+            <ActivityCalendar activityDays={activityDaysWithDetails} />
+          </div>
 
-            <StudentModuleList
-              studentId={student.id}
-              enrollments={student.enrollments.map((e) => ({
-                trailId: e.trailId,
-                trail: {
-                  title: e.trail.title,
-                  modules: e.trail.modules,
-                },
-              }))}
-              progressMap={progressMap}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Right: Submissions History */}
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
+          {/* Submissions History */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-3">
               <FileText className="h-5 w-5" />
               История работ
-              {student.submissions.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs">
-                  {student.submissions.length}
-                </Badge>
-              )}
             </h2>
 
-            {student.submissions.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p>Нет отправленных работ</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                {student.submissions.map((submission) => (
-                  <div
-                    key={submission.id}
-                    className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
+          {student.submissions.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-gray-500">
+                Нет отправленных работ
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {student.submissions.map((submission) => (
+                <Card key={submission.id}>
+                  <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
                           <h4 className="font-medium text-gray-900">
                             {submission.module.title}
                           </h4>
@@ -315,8 +306,6 @@ export default async function StudentDetailPage({ params }: Props) {
                                 ? "bg-green-100 text-green-700"
                                 : submission.status === "PENDING"
                                 ? "bg-blue-100 text-blue-700"
-                                : submission.status === "FAILED"
-                                ? "bg-red-100 text-red-700"
                                 : "bg-orange-100 text-orange-700"
                             }`}
                           >
@@ -324,15 +313,11 @@ export default async function StudentDetailPage({ params }: Props) {
                               ? "Принято"
                               : submission.status === "PENDING"
                               ? "На проверке"
-                              : submission.status === "FAILED"
-                              ? "Провал"
                               : "На доработку"}
                           </Badge>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          <Badge variant="outline" className="text-xs mr-2">
-                            {submission.module.trail.title}
-                          </Badge>
+                          {submission.module.trail.title} •{" "}
                           {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
                             day: "numeric",
                             month: "short",
@@ -344,15 +329,11 @@ export default async function StudentDetailPage({ params }: Props) {
 
                         {/* Review info */}
                         {submission.review && (
-                          <div className="mt-3 p-3 bg-white rounded border border-gray-200">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium text-gray-700">Оценка</span>
-                              <span className="text-lg font-bold text-[#0176D3]">
-                                {submission.review.score}/10
-                              </span>
-                            </div>
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                            <span className="font-medium">Оценка: </span>
+                            <span className="text-blue-600">{submission.review.score}/10</span>
                             {submission.review.comment && (
-                              <p className="text-sm text-gray-600 mt-2 border-t pt-2">
+                              <p className="text-gray-600 mt-1 text-xs">
                                 {submission.review.comment}
                               </p>
                             )}
@@ -363,18 +344,19 @@ export default async function StudentDetailPage({ params }: Props) {
                       {/* Link to review page */}
                       <Link
                         href={`/teacher/reviews/${submission.id}`}
-                        className="ml-3 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg flex-shrink-0"
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                         title="Открыть работу"
                       >
-                        <ExternalLink className="h-5 w-5" />
+                        <ExternalLink className="h-4 w-4" />
                       </Link>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          </div>
+        </div>
       </div>
     </div>
   )

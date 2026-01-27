@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
 import { recordActivity } from "@/lib/activity"
-import { notifyTeachersAboutSubmission } from "@/lib/notifications"
 
 const submissionSchema = z.object({
   moduleId: z.string().min(1),
@@ -131,14 +130,6 @@ export async function POST(request: Request) {
         status: "IN_PROGRESS",
         startedAt: new Date(),
       },
-    })
-
-    // Notify teachers about new submission
-    await notifyTeachersAboutSubmission({
-      trailId: courseModule.trailId,
-      studentName: session.user.name || "Студент",
-      moduleTitle: courseModule.title,
-      submissionId: submission.id,
     })
 
     return NextResponse.json(submission)
