@@ -102,11 +102,29 @@ export default async function TeacherStatsPage() {
 
   // Get trails with detailed stats for drill-down
   const isAdmin = session.user.role === "ADMIN"
-  const teacherAssignments = isAdmin ? [] : await prisma.trailTeacher.findMany({
-    where: { teacherId: session.user.id },
-    select: { trailId: true },
-  })
-  const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
+  let assignedTrailIds: string[] = []
+
+  if (!isAdmin) {
+    // Get all trails visible to all teachers
+    const allTeacherTrails = await prisma.trail.findMany({
+      where: { teacherVisibility: "ALL_TEACHERS" },
+      select: { id: true },
+    })
+
+    // Get specifically assigned trails
+    const specificAssignments = await prisma.trailTeacher.findMany({
+      where: { teacherId: session.user.id },
+      select: { trailId: true },
+    })
+
+    // Combine both lists (removing duplicates)
+    const allTrailIds = new Set([
+      ...allTeacherTrails.map(t => t.id),
+      ...specificAssignments.map(a => a.trailId),
+    ])
+
+    assignedTrailIds = Array.from(allTrailIds)
+  }
 
   const trailsWithStats = await prisma.trail.findMany({
     where: isAdmin ? {} : { id: { in: assignedTrailIds } },
