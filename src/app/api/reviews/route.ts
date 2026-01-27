@@ -16,14 +16,25 @@ const reviewSchema = z.object({
   modulePoints: z.number().default(0),
 })
 
-// Helper to check if teacher is assigned to trail
+// Helper to check if teacher has access to trail
+// Access is granted if:
+// 1. Teacher is specifically assigned to the trail (in TrailTeacher)
+// 2. Trail has teacherVisibility = "ALL_TEACHERS"
 async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Promise<boolean> {
+  // Check 1: Is teacher specifically assigned?
   const assignment = await prisma.trailTeacher.findUnique({
     where: {
       trailId_teacherId: { trailId, teacherId },
     },
   })
-  return !!assignment
+  if (assignment) return true
+
+  // Check 2: Is trail visible to all teachers?
+  const trail = await prisma.trail.findUnique({
+    where: { id: trailId },
+    select: { teacherVisibility: true },
+  })
+  return trail?.teacherVisibility === "ALL_TEACHERS"
 }
 
 // Helper to update TaskProgress based on project level and result
