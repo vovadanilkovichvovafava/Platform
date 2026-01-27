@@ -17,8 +17,6 @@ model User {
   currentStreak   Int       @default(0)
   avatarUrl       String?
   invitedBy       String?   // ID of user who invited
-  telegramChatId  String?   // Telegram chat ID for notifications
-  telegramLinkCode String?  // Temporary code for linking Telegram account
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
