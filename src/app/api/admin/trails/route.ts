@@ -54,6 +54,17 @@ export async function GET() {
             },
           },
         },
+        teachers: {
+          include: {
+            teacher: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     })
 
