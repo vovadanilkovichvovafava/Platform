@@ -61,6 +61,14 @@ interface Module {
   }
 }
 
+interface TrailTeacherAssignment {
+  teacher: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
 interface Trail {
   id: string
   slug: string
@@ -71,6 +79,8 @@ interface Trail {
   color: string
   duration: string
   isPublished: boolean
+  teacherVisibility: string
+  teachers: TrailTeacherAssignment[]
   modules: Module[]
 }
 
@@ -295,6 +305,11 @@ export default function AdminContentPage() {
 
   // Open edit trail modal
   const openEditTrailModal = (trail: Trail) => {
+    // Get assigned teacher ID if visibility is SPECIFIC
+    const assignedTeacherId = trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0
+      ? trail.teachers[0].teacher.id
+      : null
+
     setEditingTrail({
       id: trail.id,
       title: trail.title,
@@ -304,6 +319,8 @@ export default function AdminContentPage() {
       color: trail.color,
       duration: trail.duration,
       isPublished: trail.isPublished,
+      teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
+      assignedTeacherId,
     })
     setShowEditTrailModal(true)
   }
@@ -998,6 +1015,18 @@ export default function AdminContentPage() {
                           <CardTitle>{trail.title}</CardTitle>
                           {!trail.isPublished && (
                             <Badge variant="secondary">Скрыт</Badge>
+                          )}
+                          {trail.teacherVisibility === "ALL_TEACHERS" && (
+                            <Badge className="bg-blue-100 text-blue-700 border-0">
+                              <Users className="h-3 w-3 mr-1" />
+                              Все учителя
+                            </Badge>
+                          )}
+                          {trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0 && (
+                            <Badge className="bg-purple-100 text-purple-700 border-0">
+                              <Users className="h-3 w-3 mr-1" />
+                              {trail.teachers[0].teacher.name}
+                            </Badge>
                           )}
                         </div>
                         <p className="text-sm text-gray-500">{trail.subtitle}</p>

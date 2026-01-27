@@ -71,19 +71,20 @@ model Invite {
 }
 
 model Trail {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  subtitle    String
-  description String
-  icon        String
-  color       String
-  duration    String
-  order       Int      @default(0)
-  isPublished Boolean  @default(true)
-  isRestricted Boolean @default(false) // If true, only specific students can access
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  title             String
+  subtitle          String
+  description       String
+  icon              String
+  color             String
+  duration          String
+  order             Int      @default(0)
+  isPublished       Boolean  @default(true)
+  isRestricted      Boolean  @default(false) // If true, only specific students can access
+  teacherVisibility String   @default("ADMIN_ONLY") // ADMIN_ONLY, ALL_TEACHERS, SPECIFIC
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   modules       Module[]
   enrollments   Enrollment[]

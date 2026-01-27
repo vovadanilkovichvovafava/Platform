@@ -13,7 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // ADMIN sees all trails, TEACHER sees only assigned trails
+    // ADMIN sees all trails
     if (session.user.role === "ADMIN") {
       const allTrails = await prisma.trail.findMany({
         select: { id: true },
@@ -21,12 +21,29 @@ export async function GET() {
       return NextResponse.json(allTrails.map(t => ({ trailId: t.id })))
     }
 
-    const assignments = await prisma.trailTeacher.findMany({
+    // For TEACHER role:
+    // 1. Get trails with teacherVisibility = "ALL_TEACHERS"
+    // 2. Get trails where teacher is specifically assigned (teacherVisibility = "SPECIFIC")
+
+    // Get all trails visible to all teachers
+    const allTeacherTrails = await prisma.trail.findMany({
+      where: { teacherVisibility: "ALL_TEACHERS" },
+      select: { id: true },
+    })
+
+    // Get specifically assigned trails
+    const specificAssignments = await prisma.trailTeacher.findMany({
       where: { teacherId: session.user.id },
       select: { trailId: true },
     })
 
-    return NextResponse.json(assignments)
+    // Combine both lists (removing duplicates)
+    const allTrailIds = new Set([
+      ...allTeacherTrails.map(t => t.id),
+      ...specificAssignments.map(a => a.trailId),
+    ])
+
+    return NextResponse.json(Array.from(allTrailIds).map(id => ({ trailId: id })))
   } catch (error) {
     console.error("Error fetching teacher assignments:", error)
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 })

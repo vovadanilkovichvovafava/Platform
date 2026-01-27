@@ -12,6 +12,8 @@ const trailUpdateSchema = z.object({
   color: z.string().optional(),
   duration: z.string().optional(),
   isPublished: z.boolean().optional(),
+  teacherVisibility: z.enum(["ADMIN_ONLY", "ALL_TEACHERS", "SPECIFIC"]).optional(),
+  assignedTeacherId: z.string().nullable().optional(), // For SPECIFIC visibility
 })
 
 interface Props {
@@ -36,6 +38,17 @@ export async function GET(request: NextRequest, { params }: Props) {
           include: {
             questions: {
               orderBy: { order: "asc" },
+            },
+          },
+        },
+        teachers: {
+          include: {
+            teacher: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
             },
           },
         },
@@ -84,10 +97,44 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const body = await request.json()
     const data = trailUpdateSchema.parse(body)
 
+    // Extract teacher assignment data
+    const { assignedTeacherId, ...trailData } = data
+
+    // Update trail
     const trail = await prisma.trail.update({
       where: { id },
-      data,
+      data: trailData,
     })
+
+    // Handle teacher assignment for SPECIFIC visibility (Admin only)
+    if (session.user.role === "ADMIN" && data.teacherVisibility === "SPECIFIC") {
+      // Clear existing assignments for this trail
+      await prisma.trailTeacher.deleteMany({
+        where: { trailId: id },
+      })
+
+      // Add new assignment if teacher specified
+      if (assignedTeacherId) {
+        // Verify teacher exists and has TEACHER role
+        const teacher = await prisma.user.findUnique({
+          where: { id: assignedTeacherId },
+        })
+
+        if (teacher && teacher.role === "TEACHER") {
+          await prisma.trailTeacher.create({
+            data: {
+              trailId: id,
+              teacherId: assignedTeacherId,
+            },
+          })
+        }
+      }
+    } else if (session.user.role === "ADMIN" && data.teacherVisibility && data.teacherVisibility !== "SPECIFIC") {
+      // Clear assignments when switching away from SPECIFIC
+      await prisma.trailTeacher.deleteMany({
+        where: { trailId: id },
+      })
+    }
 
     return NextResponse.json(trail)
   } catch (error) {
