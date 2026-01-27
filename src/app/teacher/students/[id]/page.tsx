@@ -241,159 +241,122 @@ export default async function StudentDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Activity and History - Full Width Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Activity Calendar - Expanded */}
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-              <CalendarDays className="h-5 w-5 text-purple-500" />
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left: Trails & Progress */}
+        <div className="flex-1 space-y-6">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Trails и прогресс
+          </h2>
+
+          <StudentModuleList
+            studentId={student.id}
+            enrollments={student.enrollments.map((e) => ({
+              trailId: e.trailId,
+              trail: {
+                title: e.trail.title,
+                modules: e.trail.modules,
+              },
+            }))}
+            progressMap={progressMap}
+          />
+        </div>
+
+        {/* Right: Calendar + History */}
+        <div className="lg:w-[300px] space-y-6">
+          {/* Activity Calendar */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <CalendarDays className="h-5 w-5" />
               Активность
               <Badge variant="secondary" className="ml-1 text-xs">
                 {student.activityDays.length} дн.
               </Badge>
             </h2>
             <ActivityCalendar activityDays={activityDaysWithDetails} />
-          </CardContent>
-        </Card>
-
-        {/* Submissions Stats Summary */}
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-              <FileText className="h-5 w-5 text-blue-500" />
-              Сводка по работам
-            </h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-green-50 rounded-xl">
-                <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-green-600">{submissionStats.approved}</p>
-                <p className="text-xs text-gray-500">Принято</p>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-xl">
-                <Clock className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-blue-600">{submissionStats.pending}</p>
-                <p className="text-xs text-gray-500">Ожидает</p>
-              </div>
-              <div className="text-center p-4 bg-orange-50 rounded-xl">
-                <FileText className="h-8 w-8 text-orange-500 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-orange-600">{submissionStats.revision}</p>
-                <p className="text-xs text-gray-500">Доработка</p>
-              </div>
-            </div>
-            <p className="text-center text-sm text-gray-500 mt-4">
-              Всего работ: {student.submissions.length}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Trails & Progress with Collapsible */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-          <Target className="h-5 w-5 text-blue-500" />
-          Trails и прогресс
-        </h2>
-
-        <StudentModuleList
-          studentId={student.id}
-          enrollments={student.enrollments.map((e) => ({
-            trailId: e.trailId,
-            trail: {
-              title: e.trail.title,
-              modules: e.trail.modules,
-            },
-          }))}
-          progressMap={progressMap}
-        />
-      </div>
-
-      {/* Submissions History - Full Width */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-          <FileText className="h-5 w-5 text-purple-500" />
-          История работ
-          {student.submissions.length > 0 && (
-            <Badge variant="secondary" className="ml-1">
-              {student.submissions.length}
-            </Badge>
-          )}
-        </h2>
-
-        {student.submissions.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              Нет отправленных работ
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {student.submissions.map((submission) => (
-              <Card key={submission.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <Badge
-                      className={`text-xs border-0 ${
-                        submission.status === "APPROVED"
-                          ? "bg-green-100 text-green-700"
-                          : submission.status === "PENDING"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-orange-100 text-orange-700"
-                      }`}
-                    >
-                      {submission.status === "APPROVED"
-                        ? "Принято"
-                        : submission.status === "PENDING"
-                        ? "На проверке"
-                        : "На доработку"}
-                    </Badge>
-                    <Link
-                      href={`/teacher/reviews/${submission.id}`}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Открыть работу"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Link>
-                  </div>
-
-                  <h4 className="font-medium text-gray-900 mb-1 line-clamp-2">
-                    {submission.module.title}
-                  </h4>
-
-                  <p className="text-xs text-gray-500 mb-2">
-                    {submission.module.trail.title}
-                  </p>
-
-                  <p className="text-xs text-gray-400">
-                    {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-
-                  {/* Review info */}
-                  {submission.review && (
-                    <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">Оценка:</span>
-                        <span className="font-bold text-blue-600">{submission.review.score}/10</span>
-                      </div>
-                      {submission.review.comment && (
-                        <p className="text-gray-600 mt-1 text-xs line-clamp-2">
-                          {submission.review.comment}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
           </div>
-        )}
+
+          {/* Submissions History */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <FileText className="h-5 w-5" />
+              История работ
+            </h2>
+
+          {student.submissions.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-gray-500">
+                Нет отправленных работ
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {student.submissions.map((submission) => (
+                <Card key={submission.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-gray-900">
+                            {submission.module.title}
+                          </h4>
+                          <Badge
+                            className={`text-xs border-0 ${
+                              submission.status === "APPROVED"
+                                ? "bg-green-100 text-green-700"
+                                : submission.status === "PENDING"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-orange-100 text-orange-700"
+                            }`}
+                          >
+                            {submission.status === "APPROVED"
+                              ? "Принято"
+                              : submission.status === "PENDING"
+                              ? "На проверке"
+                              : "На доработку"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {submission.module.trail.title} •{" "}
+                          {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+
+                        {/* Review info */}
+                        {submission.review && (
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                            <span className="font-medium">Оценка: </span>
+                            <span className="text-blue-600">{submission.review.score}/10</span>
+                            {submission.review.comment && (
+                              <p className="text-gray-600 mt-1 text-xs">
+                                {submission.review.comment}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Link to review page */}
+                      <Link
+                        href={`/teacher/reviews/${submission.id}`}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                        title="Открыть работу"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          </div>
+        </div>
       </div>
     </div>
   )
