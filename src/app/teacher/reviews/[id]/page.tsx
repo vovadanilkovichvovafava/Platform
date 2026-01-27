@@ -230,7 +230,6 @@ export default async function ReviewPage({ params }: Props) {
               </CardContent>
             </Card>
           )}
-
         </div>
 
         {/* Sidebar */}
