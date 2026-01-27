@@ -32,7 +32,7 @@ export default async function TeacherDashboard() {
     select: { trailId: true },
   })
 
-  const assignedTrailIds = teacherAssignments.map((a: { trailId: string }) => a.trailId)
+  const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
   const hasAssignments = !isAdmin && assignedTrailIds.length > 0
 
   // ADMIN sees all submissions, TEACHER only sees assigned trails
@@ -89,26 +89,25 @@ export default async function TeacherDashboard() {
     _count: true,
   })
 
-  type StatusCount = { status: string; _count: number }
-  const pendingCount = stats.find((s: StatusCount) => s.status === "PENDING")?._count || 0
-  const approvedCount = stats.find((s: StatusCount) => s.status === "APPROVED")?._count || 0
-  const revisionCount = stats.find((s: StatusCount) => s.status === "REVISION")?._count || 0
-  const failedCount = stats.find((s: StatusCount) => s.status === "FAILED")?._count || 0
+  const pendingCount = stats.find((s) => s.status === "PENDING")?._count || 0
+  const approvedCount = stats.find((s) => s.status === "APPROVED")?._count || 0
+  const revisionCount = stats.find((s) => s.status === "REVISION")?._count || 0
+  const failedCount = stats.find((s) => s.status === "FAILED")?._count || 0
 
   // Get unique trails for filter
   const allTrails = new Set<string>()
-  pendingSubmissions.forEach((s: typeof pendingSubmissions[number]) => allTrails.add(s.module.trail.title))
-  reviewedSubmissions.forEach((s: typeof reviewedSubmissions[number]) => allTrails.add(s.module.trail.title))
+  pendingSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
+  reviewedSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
   const trails = Array.from(allTrails).sort()
 
   // Serialize dates for client component
-  const serializedPending = pendingSubmissions.map((s: typeof pendingSubmissions[number]) => ({
+  const serializedPending = pendingSubmissions.map((s) => ({
     ...s,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   }))
 
-  const serializedReviewed = reviewedSubmissions.map((s: typeof reviewedSubmissions[number]) => ({
+  const serializedReviewed = reviewedSubmissions.map((s) => ({
     ...s,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),

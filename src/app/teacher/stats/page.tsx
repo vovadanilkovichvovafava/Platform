@@ -38,10 +38,9 @@ export default async function TeacherStatsPage() {
     _count: true,
   })
 
-  type StatusCount = { status: string; _count: number }
-  const pendingCount = submissionsByStatus.find((s: StatusCount) => s.status === "PENDING")?._count || 0
-  const approvedCount = submissionsByStatus.find((s: StatusCount) => s.status === "APPROVED")?._count || 0
-  const revisionCount = submissionsByStatus.find((s: StatusCount) => s.status === "REVISION")?._count || 0
+  const pendingCount = submissionsByStatus.find((s) => s.status === "PENDING")?._count || 0
+  const approvedCount = submissionsByStatus.find((s) => s.status === "APPROVED")?._count || 0
+  const revisionCount = submissionsByStatus.find((s) => s.status === "REVISION")?._count || 0
 
   // Get top students by XP
   const topStudents = await prisma.user.findMany({
@@ -90,17 +89,17 @@ export default async function TeacherStatsPage() {
   })
 
   // Serialize data for client component
-  const serializedTrails = trailsWithDetails.map((trail: typeof trailsWithDetails[number]) => ({
+  const serializedTrails = trailsWithDetails.map((trail) => ({
     id: trail.id,
     title: trail.title,
     slug: trail.slug,
     color: trail.color,
-    modules: trail.modules.map((module: typeof trail.modules[number]) => ({
+    modules: trail.modules.map((module) => ({
       id: module.id,
       title: module.title,
       slug: module.slug,
       type: module.type,
-      submissions: module.submissions.map((sub: typeof module.submissions[number]) => ({
+      submissions: module.submissions.map((sub) => ({
         id: sub.id,
         status: sub.status,
         createdAt: sub.createdAt.toISOString(),
@@ -305,7 +304,7 @@ export default async function TeacherStatsPage() {
             <p className="text-gray-500 text-center py-4">Нет данных</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {topStudents.map((student: typeof topStudents[number], idx: number) => (
+              {topStudents.map((student, idx) => (
                 <Link
                   key={student.id}
                   href={`/teacher/students/${student.id}`}
