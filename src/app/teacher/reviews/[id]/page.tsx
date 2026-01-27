@@ -249,7 +249,12 @@ export default async function ReviewPage({ params }: Props) {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">{submission.user.name}</div>
+                  <Link
+                    href={`/dashboard/${submission.user.id}`}
+                    className="font-medium hover:text-[#0176D3] hover:underline transition-colors"
+                  >
+                    {submission.user.name}
+                  </Link>
                   <div className="text-sm text-gray-500">
                     {submission.user.email}
                   </div>
@@ -260,12 +265,6 @@ export default async function ReviewPage({ params }: Props) {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Total XP</span>
                   <span className="font-medium">{submission.user.totalXP}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Streak</span>
-                  <span className="font-medium">
-                    {submission.user.currentStreak} дней
-                  </span>
                 </div>
               </div>
 
