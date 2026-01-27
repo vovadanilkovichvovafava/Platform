@@ -15,7 +15,6 @@ export const NotificationType = {
 
   // Teacher notifications
   SUBMISSION_PENDING: "SUBMISSION_PENDING",
-  COMMENT_RECEIVED: "COMMENT_RECEIVED",
 } as const
 
 export type NotificationTypeValue = typeof NotificationType[keyof typeof NotificationType]
@@ -190,113 +189,6 @@ export async function notifyStudentAboutReview({
   }
 
   return notification
-}
-
-/**
- * Creates notifications when a comment is posted on a submission
- * Notifies:
- * 1. Submission owner (if not the author)
- * 2. Parent comment author (if replying, and not the author)
- */
-export async function notifyAboutComment({
-  submissionId,
-  moduleTitle,
-  commentAuthorId,
-  commentAuthorName,
-  commentContent,
-  submissionOwnerId,
-  parentCommentAuthorId,
-  parentCommentAuthorName,
-}: {
-  submissionId: string
-  moduleTitle: string
-  commentAuthorId: string
-  commentAuthorName: string
-  commentContent: string
-  submissionOwnerId: string
-  parentCommentAuthorId?: string | null
-  parentCommentAuthorName?: string | null
-}) {
-  const notifications: Promise<unknown>[] = []
-  const truncatedContent = commentContent.length > 50
-    ? commentContent.substring(0, 50) + "..."
-    : commentContent
-
-  // Get submission owner info for correct link
-  const submissionOwner = await prisma.user.findUnique({
-    where: { id: submissionOwnerId },
-    select: { role: true, telegramChatId: true },
-  })
-
-  const isOwnerTeacherOrAdmin =
-    submissionOwner?.role === "TEACHER" || submissionOwner?.role === "ADMIN"
-
-  // 1. Notify submission owner (if they didn't write the comment)
-  if (submissionOwnerId !== commentAuthorId) {
-    notifications.push(
-      createNotification({
-        userId: submissionOwnerId,
-        type: NotificationType.COMMENT_RECEIVED,
-        title: "Новый комментарий",
-        message: `${commentAuthorName}: "${truncatedContent}"`,
-        link: isOwnerTeacherOrAdmin
-          ? `/teacher/reviews/${submissionId}`
-          : `/dashboard/submissions/${submissionId}`,
-      })
-    )
-
-    // Telegram notification for submission owner
-    if (submissionOwner?.telegramChatId) {
-      const telegramMsg = `💬 Новый комментарий к работе "${moduleTitle}"\n\n${commentAuthorName}: "${truncatedContent}"`
-      notifications.push(
-        sendTelegramMessage(submissionOwner.telegramChatId, telegramMsg).catch(
-          (e) => console.error("Error sending Telegram:", e)
-        )
-      )
-    }
-  }
-
-  // 2. Notify parent comment author (if replying, and they're different from owner and author)
-  if (
-    parentCommentAuthorId &&
-    parentCommentAuthorId !== commentAuthorId &&
-    parentCommentAuthorId !== submissionOwnerId
-  ) {
-    const parentAuthor = await prisma.user.findUnique({
-      where: { id: parentCommentAuthorId },
-      select: { role: true, telegramChatId: true },
-    })
-
-    const isParentTeacherOrAdmin =
-      parentAuthor?.role === "TEACHER" || parentAuthor?.role === "ADMIN"
-
-    notifications.push(
-      createNotification({
-        userId: parentCommentAuthorId,
-        type: NotificationType.COMMENT_RECEIVED,
-        title: "Ответ на ваш комментарий",
-        message: `${commentAuthorName}: "${truncatedContent}"`,
-        link: isParentTeacherOrAdmin
-          ? `/teacher/reviews/${submissionId}`
-          : `/dashboard/submissions/${submissionId}`,
-      })
-    )
-
-    // Telegram notification for parent comment author
-    if (parentAuthor?.telegramChatId) {
-      const telegramMsg = `💬 ${commentAuthorName} ответил на ваш комментарий к работе "${moduleTitle}":\n\n"${truncatedContent}"`
-      notifications.push(
-        sendTelegramMessage(parentAuthor.telegramChatId, telegramMsg).catch(
-          (e) => console.error("Error sending Telegram:", e)
-        )
-      )
-    }
-  }
-
-  // Fire all notifications
-  await Promise.all(notifications).catch((error) =>
-    console.error("Error sending comment notifications:", error)
-  )
 }
 
 /**
