@@ -431,7 +431,7 @@ export default async function TrailPage({ params }: Props) {
                         {/* Admin/Teacher edit button */}
                         {isPrivileged && (
                           <Link
-                            href={`/admin/content/modules/${module.id}`}
+                            href={`/content/modules/${module.id}`}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
                             title="Редактировать модуль"
                           >

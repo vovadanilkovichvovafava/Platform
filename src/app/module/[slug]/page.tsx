@@ -175,7 +175,7 @@ export default async function ModulePage({ params }: Props) {
               {/* Admin/Teacher edit button */}
               {isPrivileged && (
                 <Button asChild variant="outline" size="sm">
-                  <Link href={`/admin/content/modules/${courseModule.id}`}>
+                  <Link href={`/content/modules/${courseModule.id}`}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Редактировать
                   </Link>

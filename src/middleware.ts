@@ -51,6 +51,11 @@ const authMiddleware = withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
+    // Protect shared content editing routes (allow both TEACHER and ADMIN)
+    if (path.startsWith("/content/modules/") && token?.role !== "TEACHER" && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
     return NextResponse.next()
   },
   {

@@ -295,7 +295,7 @@ export default function AdminContentPage() {
     const newModule = await res.json()
     setShowModuleModal(false)
     // Navigate to edit the new module
-    router.push(`/admin/content/modules/${newModule.id}`)
+    router.push(`/content/modules/${newModule.id}`)
   }
 
   const openModuleModal = (trailId: string) => {
@@ -1126,7 +1126,7 @@ export default function AdminContentPage() {
                                       checked={selectedModules.has(module.id)}
                                       onCheckedChange={() => toggleModuleSelection(module.id)}
                                     />
-                                    <Link href={`/admin/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                                    <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 shrink-0">
                                         <TypeIcon className="h-5 w-5 text-gray-600" />
                                       </div>
@@ -1203,7 +1203,7 @@ export default function AdminContentPage() {
                                       checked={selectedModules.has(module.id)}
                                       onCheckedChange={() => toggleModuleSelection(module.id)}
                                     />
-                                    <Link href={`/admin/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                                    <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 shrink-0">
                                         <FolderGit2 className="h-5 w-5 text-blue-600" />
                                       </div>
