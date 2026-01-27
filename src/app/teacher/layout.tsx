@@ -27,21 +27,30 @@ export default async function TeacherLayout({
       where: { status: "PENDING" },
     })
   } else {
-    // Teacher sees only assigned trails
-    const teacherAssignments = await prisma.trailTeacher.findMany({
+    // Teacher sees trails with teacherVisibility = "ALL_TEACHERS" + specifically assigned trails
+    const allTeacherTrails = await prisma.trail.findMany({
+      where: { teacherVisibility: "ALL_TEACHERS" },
+      select: { id: true },
+    })
+
+    const specificAssignments = await prisma.trailTeacher.findMany({
       where: { teacherId: session.user.id },
       select: { trailId: true },
     })
-    const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
 
-    if (assignedTrailIds.length > 0) {
-      pendingCount = await prisma.submission.count({
-        where: {
-          status: "PENDING",
-          module: { trailId: { in: assignedTrailIds } },
-        },
-      })
-    }
+    const allTrailIds = new Set([
+      ...allTeacherTrails.map(t => t.id),
+      ...specificAssignments.map(a => a.trailId),
+    ])
+
+    const assignedTrailIds = Array.from(allTrailIds)
+
+    pendingCount = await prisma.submission.count({
+      where: {
+        status: "PENDING",
+        module: { trailId: { in: assignedTrailIds } },
+      },
+    })
   }
 
   return (

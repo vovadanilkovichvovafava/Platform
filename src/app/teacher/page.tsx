@@ -24,19 +24,38 @@ export default async function TeacherDashboard() {
   const isAdmin = session.user.role === "ADMIN"
 
   // Get teacher's assigned trails (ADMIN sees all)
-  const teacherAssignments = isAdmin ? [] : await prisma.trailTeacher.findMany({
-    where: { teacherId: session.user.id },
-    select: { trailId: true },
-  })
+  // For TEACHER role:
+  // 1. Get trails with teacherVisibility = "ALL_TEACHERS"
+  // 2. Get trails where teacher is specifically assigned (in TrailTeacher)
+  let assignedTrailIds: string[] = []
 
-  const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
-  const hasAssignments = !isAdmin && assignedTrailIds.length > 0
+  if (!isAdmin) {
+    // Get all trails visible to all teachers
+    const allTeacherTrails = await prisma.trail.findMany({
+      where: { teacherVisibility: "ALL_TEACHERS" },
+      select: { id: true },
+    })
+
+    // Get specifically assigned trails
+    const specificAssignments = await prisma.trailTeacher.findMany({
+      where: { teacherId: session.user.id },
+      select: { trailId: true },
+    })
+
+    // Combine both lists (removing duplicates)
+    const allTrailIds = new Set([
+      ...allTeacherTrails.map(t => t.id),
+      ...specificAssignments.map(a => a.trailId),
+    ])
+
+    assignedTrailIds = Array.from(allTrailIds)
+  }
 
   // ADMIN sees all submissions, TEACHER only sees assigned trails
   const pendingSubmissions = await prisma.submission.findMany({
     where: {
       status: "PENDING",
-      ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(!isAdmin ? { module: { trailId: { in: assignedTrailIds } } } : {}),
     },
     orderBy: { createdAt: "asc" },
     include: {
@@ -55,7 +74,7 @@ export default async function TeacherDashboard() {
   const reviewedSubmissions = await prisma.submission.findMany({
     where: {
       status: { in: ["APPROVED", "REVISION", "FAILED"] },
-      ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(!isAdmin ? { module: { trailId: { in: assignedTrailIds } } } : {}),
     },
     orderBy: { updatedAt: "desc" },
     take: 50, // Limit history to last 50
@@ -82,7 +101,7 @@ export default async function TeacherDashboard() {
   // Stats - only for assigned trails
   const stats = await prisma.submission.groupBy({
     by: ["status"],
-    where: hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {},
+    where: !isAdmin ? { module: { trailId: { in: assignedTrailIds } } } : {},
     _count: true,
   })
 
