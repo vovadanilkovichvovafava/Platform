@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { ClipboardList, Users, BarChart3, BookOpen } from "lucide-react"
 
 export default async function TeacherLayout({
@@ -14,6 +15,33 @@ export default async function TeacherLayout({
   // Allow both TEACHER and ADMIN roles
   if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
     redirect("/dashboard")
+  }
+
+  // Get pending submissions count for this teacher
+  const isAdmin = session.user.role === "ADMIN"
+
+  let pendingCount = 0
+  if (isAdmin) {
+    // Admin sees all pending submissions
+    pendingCount = await prisma.submission.count({
+      where: { status: "PENDING" },
+    })
+  } else {
+    // Teacher sees only assigned trails
+    const teacherAssignments = await prisma.trailTeacher.findMany({
+      where: { teacherId: session.user.id },
+      select: { trailId: true },
+    })
+    const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
+
+    if (assignedTrailIds.length > 0) {
+      pendingCount = await prisma.submission.count({
+        where: {
+          status: "PENDING",
+          module: { trailId: { in: assignedTrailIds } },
+        },
+      })
+    }
   }
 
   return (
@@ -37,7 +65,12 @@ export default async function TeacherLayout({
                 className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
               >
                 <ClipboardList className="h-5 w-5" />
-                Работы на проверку
+                <span className="flex-1">Работы на проверку</span>
+                {pendingCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-bold text-white">
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
               </Link>
               <Link
                 href="/teacher/students"
