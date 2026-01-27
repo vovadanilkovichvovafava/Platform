@@ -141,7 +141,7 @@ export async function POST(request: Request) {
     if (trailTeachers.length > 0) {
       const studentName = session.user.name || session.user.email || "Студент"
       await prisma.notification.createMany({
-        data: trailTeachers.map((tt) => ({
+        data: trailTeachers.map((tt: { teacherId: string }) => ({
           userId: tt.teacherId,
           type: "SUBMISSION_RECEIVED",
           title: "Новая работа на проверку",
