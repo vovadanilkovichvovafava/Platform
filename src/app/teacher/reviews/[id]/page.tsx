@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { ReviewForm } from "@/components/review-form"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { SubmissionComments } from "@/components/submission-comments"
 
 interface Props {
   params: Promise<{ id: string }>
@@ -231,6 +232,16 @@ export default async function ReviewPage({ params }: Props) {
             </Card>
           )}
 
+          {/* Comments Section */}
+          <Card>
+            <CardContent className="pt-6">
+              <SubmissionComments
+                submissionId={submission.id}
+                currentUserId={session.user.id}
+                currentUserRole={session.user.role}
+              />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}

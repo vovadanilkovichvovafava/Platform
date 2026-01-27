@@ -72,11 +72,9 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
-        userName: session.user.name || session.user.email || "Unknown",
         action: "SUBMISSION_DELETED",
         entityType: "Submission",
         entityId: id,
-        entityName: `${submission.user.name || "Student"} - ${submission.module.title}`,
         details: JSON.stringify({
           studentName: submission.user.name,
           studentEmail: submission.user.email,

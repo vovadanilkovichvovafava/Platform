@@ -13,6 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
   BarChart3,
   Users,
   FileText,
@@ -553,21 +558,23 @@ export function TeacherStats({
             <p className="text-gray-500 text-center py-8">Нет данных за выбранный период</p>
           ) : (
             <div className="space-y-3">
-              {trailStats.map((trail) => {
-                const isTrailExpanded = expandedTrails.has(trail.trailId)
-                return (
-                  <div key={trail.trailId}>
+              {trailStats.map((trail) => (
+                <Collapsible
+                  key={trail.trailId}
+                  open={expandedTrails.has(trail.trailId)}
+                  onOpenChange={() => toggleTrail(trail.trailId)}
+                >
+                  <CollapsibleTrigger asChild>
                     <div
                       className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => toggleTrail(trail.trailId)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <ChevronDown
-                            className={`h-4 w-4 text-gray-500 transition-transform duration-300 ${
-                              isTrailExpanded ? "rotate-0" : "-rotate-90"
-                            }`}
-                          />
+                          {expandedTrails.has(trail.trailId) ? (
+                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-gray-500" />
+                          )}
                           <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: trail.color }}
@@ -599,94 +606,88 @@ export function TeacherStats({
                         </div>
                       </div>
                     </div>
+                  </CollapsibleTrigger>
 
-                    <div
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        isTrailExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      <div className="ml-8 mt-2 space-y-2">
-                        {trail.modules.map((module) => {
-                          const isModuleExpanded = expandedModules.has(module.moduleId)
-                          return (
-                            <div key={module.moduleId}>
-                              <div
-                                className="p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 transition-colors"
-                                onClick={() => toggleModule(module.moduleId)}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <ChevronDown
-                                      className={`h-3 w-3 text-gray-400 transition-transform duration-300 ${
-                                        isModuleExpanded ? "rotate-0" : "-rotate-90"
-                                      }`}
-                                    />
-                                    <span className="text-sm font-medium">{module.moduleTitle}</span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex gap-1 text-xs">
-                                      <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
-                                        {module.approved}
-                                      </span>
-                                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                                        {module.pending}
-                                      </span>
-                                      <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
-                                        {module.revision}
-                                      </span>
-                                    </div>
-                                    <span className="text-sm text-gray-500">{module.total} работ</span>
-                                    {module.avgScore > 0 && (
-                                      <span className="text-sm font-medium text-yellow-600">
-                                        {module.avgScore.toFixed(1)}
-                                      </span>
-                                    )}
-                                  </div>
+                  <CollapsibleContent>
+                    <div className="ml-8 mt-2 space-y-2">
+                      {trail.modules.map((module) => (
+                        <Collapsible
+                          key={module.moduleId}
+                          open={expandedModules.has(module.moduleId)}
+                          onOpenChange={() => toggleModule(module.moduleId)}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <div
+                              className="p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {expandedModules.has(module.moduleId) ? (
+                                    <ChevronDown className="h-3 w-3 text-gray-400" />
+                                  ) : (
+                                    <ChevronRight className="h-3 w-3 text-gray-400" />
+                                  )}
+                                  <span className="text-sm font-medium">{module.moduleTitle}</span>
                                 </div>
-                              </div>
-
-                              <div
-                                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                  isModuleExpanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-                                }`}
-                              >
-                                <div className="ml-6 mt-2 space-y-1">
-                                  {module.submissions.map((sub) => (
-                                    <Link
-                                      key={sub.id}
-                                      href={`/teacher/reviews/${sub.id}`}
-                                      className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors"
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-sm">{sub.studentName}</span>
-                                        {getStatusBadge(sub.status)}
-                                      </div>
-                                      <div className="flex items-center gap-3 text-sm text-gray-500">
-                                        {sub.score !== undefined && (
-                                          <span className="font-medium text-yellow-600">
-                                            {sub.score}/10
-                                          </span>
-                                        )}
-                                        <span>
-                                          {new Date(sub.createdAt).toLocaleDateString("ru-RU", {
-                                            day: "numeric",
-                                            month: "short",
-                                          })}
-                                        </span>
-                                        <ExternalLink className="h-3 w-3" />
-                                      </div>
-                                    </Link>
-                                  ))}
+                                <div className="flex items-center gap-3">
+                                  <div className="flex gap-1 text-xs">
+                                    <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
+                                      {module.approved}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                      {module.pending}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
+                                      {module.revision}
+                                    </span>
+                                  </div>
+                                  <span className="text-sm text-gray-500">{module.total} работ</span>
+                                  {module.avgScore > 0 && (
+                                    <span className="text-sm font-medium text-yellow-600">
+                                      {module.avgScore.toFixed(1)}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
-                          )
-                        })}
-                      </div>
+                          </CollapsibleTrigger>
+
+                          <CollapsibleContent>
+                            <div className="ml-6 mt-2 space-y-1">
+                              {module.submissions.map((sub) => (
+                                <Link
+                                  key={sub.id}
+                                  href={`/teacher/reviews/${sub.id}`}
+                                  className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm">{sub.studentName}</span>
+                                    {getStatusBadge(sub.status)}
+                                  </div>
+                                  <div className="flex items-center gap-3 text-sm text-gray-500">
+                                    {sub.score !== undefined && (
+                                      <span className="font-medium text-yellow-600">
+                                        {sub.score}/10
+                                      </span>
+                                    )}
+                                    <span>
+                                      {new Date(sub.createdAt).toLocaleDateString("ru-RU", {
+                                        day: "numeric",
+                                        month: "short",
+                                      })}
+                                    </span>
+                                    <ExternalLink className="h-3 w-3" />
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
                     </div>
-                  </div>
-                )
-              })}
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
             </div>
           )}
         </CardContent>
