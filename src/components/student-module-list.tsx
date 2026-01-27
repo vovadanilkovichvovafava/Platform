@@ -1,11 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   CheckCircle2,
   Clock,
@@ -13,6 +17,7 @@ import {
   SkipForward,
   Undo2,
   RefreshCw,
+  ChevronDown,
 } from "lucide-react"
 
 interface Module {
@@ -128,16 +133,15 @@ export function StudentModuleList({
 
   if (enrollments.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-6 text-center text-gray-500">
-          Студент не записан ни на один trail
-        </CardContent>
-      </Card>
+      <div className="p-8 text-center text-gray-500">
+        <XCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+        <p>Студент не записан ни на один trail</p>
+      </div>
     )
   }
 
   return (
-    <>
+    <div className="space-y-3">
       {enrollments.map((enrollment) => {
         const trailModules = enrollment.trail.modules
         const completedModules = trailModules.filter(
@@ -150,119 +154,149 @@ export function StudentModuleList({
             : 0
 
         return (
-          <Card key={enrollment.trailId}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center justify-between">
-                <span>{enrollment.trail.title}</span>
-                <Badge variant="secondary">
-                  {completedModules.length}/{trailModules.length} модулей
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Progress bar */}
-              <div className="mb-4">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>{trailProgress}% завершено</span>
-                  <span>{trailMaxXP} XP макс.</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
-                    style={{ width: `${trailProgress}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Module list */}
-              <div className="space-y-2">
-                {trailModules.map((module) => {
-                  const progress = progressMap.get(module.id)
-                  const isCompleted = progress?.status === "COMPLETED"
-                  const isInProgress = progress?.status === "IN_PROGRESS"
-                  const isSkipped = progress?.skippedByTeacher
-                  const isLoading = loading === module.id
-
-                  return (
-                    <div
-                      key={module.id}
-                      className={`flex items-center justify-between p-2 rounded-lg group ${
-                        isCompleted
-                          ? isSkipped
-                            ? "bg-purple-50"
-                            : "bg-green-50"
-                          : isInProgress
-                          ? "bg-blue-50"
-                          : "bg-gray-50"
-                      }`}
+          <Collapsible key={enrollment.trailId} defaultOpen>
+            <div className="bg-gray-50 rounded-lg overflow-hidden">
+              <CollapsibleTrigger asChild>
+                <button className="w-full p-4 flex items-center justify-between hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <ChevronDown className="h-4 w-4 text-gray-500 transition-transform [[data-state=closed]_&]:-rotate-90" />
+                    <span className="font-medium text-gray-900">
+                      {enrollment.trail.title}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge
+                      variant="secondary"
+                      className={
+                        trailProgress === 100
+                          ? "bg-green-100 text-green-700"
+                          : trailProgress > 0
+                          ? "bg-blue-100 text-blue-700"
+                          : ""
+                      }
                     >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {isCompleted ? (
-                          isSkipped ? (
-                            <SkipForward className="h-4 w-4 text-purple-500 flex-shrink-0" />
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                          )
-                        ) : isInProgress ? (
-                          <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-gray-300 flex-shrink-0" />
-                        )}
-                        <span
-                          className={`text-sm truncate ${
+                      {completedModules.length}/{trailModules.length}
+                    </Badge>
+                    <span className="text-sm text-gray-500">{trailProgress}%</span>
+                  </div>
+                </button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent>
+                <div className="px-4 pb-4">
+                  {/* Progress bar */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>{trailProgress}% завершено</span>
+                      <span>{trailMaxXP} XP макс.</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          trailProgress === 100
+                            ? "bg-gradient-to-r from-green-400 to-green-600"
+                            : "bg-gradient-to-r from-blue-400 to-blue-600"
+                        }`}
+                        style={{ width: `${trailProgress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Module list */}
+                  <div className="space-y-2">
+                    {trailModules.map((module) => {
+                      const progress = progressMap.get(module.id)
+                      const isCompleted = progress?.status === "COMPLETED"
+                      const isInProgress = progress?.status === "IN_PROGRESS"
+                      const isSkipped = progress?.skippedByTeacher
+                      const isLoading = loading === module.id
+
+                      return (
+                        <div
+                          key={module.id}
+                          className={`flex items-center justify-between p-3 rounded-lg group transition-colors ${
                             isCompleted
                               ? isSkipped
-                                ? "text-purple-700"
-                                : "text-green-700"
+                                ? "bg-purple-50 hover:bg-purple-100"
+                                : "bg-green-50 hover:bg-green-100"
                               : isInProgress
-                              ? "text-blue-700"
-                              : "text-gray-500"
+                              ? "bg-blue-50 hover:bg-blue-100"
+                              : "bg-white hover:bg-gray-50 border border-gray-100"
                           }`}
                         >
-                          {module.title}
-                        </span>
-                        {isSkipped && (
-                          <Badge variant="outline" className="text-xs text-purple-600 border-purple-300 ml-1 flex-shrink-0">
-                            пропущен
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">{module.points} XP</span>
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {isCompleted ? (
+                              isSkipped ? (
+                                <SkipForward className="h-5 w-5 text-purple-500 flex-shrink-0" />
+                              ) : (
+                                <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                              )
+                            ) : isInProgress ? (
+                              <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                            ) : (
+                              <div className="h-5 w-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <span
+                                className={`text-sm font-medium truncate block ${
+                                  isCompleted
+                                    ? isSkipped
+                                      ? "text-purple-700"
+                                      : "text-green-700"
+                                    : isInProgress
+                                    ? "text-blue-700"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                {module.title}
+                              </span>
+                              {isSkipped && (
+                                <span className="text-xs text-purple-600">
+                                  Закрыт преподавателем
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {module.points} XP
+                            </Badge>
 
-                        {/* Skip/Revert button */}
-                        {isLoading ? (
-                          <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
-                        ) : isSkipped ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                            onClick={() => revertSkip(module.id, module.title)}
-                          >
-                            <Undo2 className="h-3 w-3 mr-1" />
-                            Отменить
-                          </Button>
-                        ) : !isCompleted ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100"
-                            onClick={() => skipModule(module.id, module.title)}
-                          >
-                            <SkipForward className="h-3 w-3 mr-1" />
-                            Закрыть
-                          </Button>
-                        ) : null}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                            {/* Skip/Revert button */}
+                            {isLoading ? (
+                              <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
+                            ) : isSkipped ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
+                                onClick={() => revertSkip(module.id, module.title)}
+                              >
+                                <Undo2 className="h-3 w-3 mr-1" />
+                                Отменить
+                              </Button>
+                            ) : !isCompleted ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100"
+                                onClick={() => skipModule(module.id, module.title)}
+                              >
+                                <SkipForward className="h-3 w-3 mr-1" />
+                                Закрыть
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
         )
       })}
-    </>
+    </div>
   )
 }
