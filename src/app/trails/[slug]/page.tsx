@@ -106,10 +106,10 @@ export default async function TrailPage({ params }: Props) {
       const progress = await prisma.moduleProgress.findMany({
         where: {
           userId: session.user.id,
-          moduleId: { in: trail.modules.map((m: { id: string }) => m.id) },
+          moduleId: { in: trail.modules.map((m) => m.id) },
         },
       })
-      progress.forEach((p: { moduleId: string; status: string }) => {
+      progress.forEach((p) => {
         moduleProgressMap[p.moduleId] = p.status
       })
 
@@ -143,19 +143,18 @@ export default async function TrailPage({ params }: Props) {
   }
 
   // Separate assessment modules and project modules
-  type ModuleType = typeof trail.modules[number]
-  const assessmentModules = trail.modules.filter((m: ModuleType) => m.type !== "PROJECT")
-  const projectModules = trail.modules.filter((m: ModuleType) => m.type === "PROJECT")
+  const assessmentModules = trail.modules.filter(m => m.type !== "PROJECT")
+  const projectModules = trail.modules.filter(m => m.type === "PROJECT")
 
   // Check if all assessments are completed
   const assessmentCompletedCount = assessmentModules.filter(
-    (m: ModuleType) => moduleProgressMap[m.id] === "COMPLETED"
+    m => moduleProgressMap[m.id] === "COMPLETED"
   ).length
   const allAssessmentsCompleted = assessmentModules.length > 0 && assessmentCompletedCount === assessmentModules.length
 
   // Check if at least one project is completed
   const completedProjectCount = projectModules.filter(
-    (m: ModuleType) => moduleProgressMap[m.id] === "COMPLETED"
+    m => moduleProgressMap[m.id] === "COMPLETED"
   ).length
   const hasCompletedProject = completedProjectCount > 0
 
@@ -166,7 +165,7 @@ export default async function TrailPage({ params }: Props) {
     ? Math.round((assessmentCompletedCount / assessmentModules.length) * 100)
     : 0
 
-  const totalXP = trail.modules.reduce((sum: number, m: ModuleType) => sum + m.points, 0)
+  const totalXP = trail.modules.reduce((sum, m) => sum + m.points, 0)
   const Icon = iconMap[trail.icon] || Code
 
   // Check if user is admin or teacher (to show level badges)

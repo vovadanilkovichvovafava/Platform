@@ -132,25 +132,6 @@ export async function POST(request: Request) {
       },
     })
 
-    // Notify teachers assigned to this trail about new submission
-    const trailTeachers = await prisma.trailTeacher.findMany({
-      where: { trailId: courseModule.trailId },
-      select: { teacherId: true },
-    })
-
-    if (trailTeachers.length > 0) {
-      const studentName = session.user.name || session.user.email || "Студент"
-      await prisma.notification.createMany({
-        data: trailTeachers.map((tt: { teacherId: string }) => ({
-          userId: tt.teacherId,
-          type: "SUBMISSION_RECEIVED",
-          title: "Новая работа на проверку",
-          message: `${studentName} отправил работу по модулю "${courseModule.title}"`,
-          link: `/teacher/reviews/${submission.id}`,
-        })),
-      })
-    }
-
     return NextResponse.json(submission)
   } catch (error) {
     if (error instanceof z.ZodError) {

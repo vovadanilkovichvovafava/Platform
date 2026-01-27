@@ -5,14 +5,11 @@ import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   Clock,
   CheckCircle2,
   AlertCircle,
   XCircle,
-  Bell,
-  AlertTriangle,
 } from "lucide-react"
 import { SubmissionsFilter } from "@/components/submissions-filter"
 
@@ -32,7 +29,7 @@ export default async function TeacherDashboard() {
     select: { trailId: true },
   })
 
-  const assignedTrailIds = teacherAssignments.map((a: { trailId: string }) => a.trailId)
+  const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
   const hasAssignments = !isAdmin && assignedTrailIds.length > 0
 
   // ADMIN sees all submissions, TEACHER only sees assigned trails
@@ -89,26 +86,25 @@ export default async function TeacherDashboard() {
     _count: true,
   })
 
-  type StatusCount = { status: string; _count: number }
-  const pendingCount = stats.find((s: StatusCount) => s.status === "PENDING")?._count || 0
-  const approvedCount = stats.find((s: StatusCount) => s.status === "APPROVED")?._count || 0
-  const revisionCount = stats.find((s: StatusCount) => s.status === "REVISION")?._count || 0
-  const failedCount = stats.find((s: StatusCount) => s.status === "FAILED")?._count || 0
+  const pendingCount = stats.find((s) => s.status === "PENDING")?._count || 0
+  const approvedCount = stats.find((s) => s.status === "APPROVED")?._count || 0
+  const revisionCount = stats.find((s) => s.status === "REVISION")?._count || 0
+  const failedCount = stats.find((s) => s.status === "FAILED")?._count || 0
 
   // Get unique trails for filter
   const allTrails = new Set<string>()
-  pendingSubmissions.forEach((s: typeof pendingSubmissions[number]) => allTrails.add(s.module.trail.title))
-  reviewedSubmissions.forEach((s: typeof reviewedSubmissions[number]) => allTrails.add(s.module.trail.title))
+  pendingSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
+  reviewedSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
   const trails = Array.from(allTrails).sort()
 
   // Serialize dates for client component
-  const serializedPending = pendingSubmissions.map((s: typeof pendingSubmissions[number]) => ({
+  const serializedPending = pendingSubmissions.map((s) => ({
     ...s,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   }))
 
-  const serializedReviewed = reviewedSubmissions.map((s: typeof reviewedSubmissions[number]) => ({
+  const serializedReviewed = reviewedSubmissions.map((s) => ({
     ...s,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
@@ -130,86 +126,6 @@ export default async function TeacherDashboard() {
           Управляйте проверкой работ и отслеживайте прогресс учеников
         </p>
       </div>
-
-      {/* Pending Alert Banner */}
-      {pendingCount > 0 && (
-        <div
-          className={`mb-6 p-4 rounded-xl flex items-center gap-4 ${
-            pendingCount >= 10
-              ? "bg-red-50 border border-red-200"
-              : pendingCount >= 5
-              ? "bg-orange-50 border border-orange-200"
-              : "bg-blue-50 border border-blue-200"
-          }`}
-        >
-          <div
-            className={`p-2 rounded-lg ${
-              pendingCount >= 10
-                ? "bg-red-100"
-                : pendingCount >= 5
-                ? "bg-orange-100"
-                : "bg-blue-100"
-            }`}
-          >
-            {pendingCount >= 5 ? (
-              <AlertTriangle
-                className={`h-6 w-6 ${
-                  pendingCount >= 10 ? "text-red-600" : "text-orange-600"
-                }`}
-              />
-            ) : (
-              <Bell className="h-6 w-6 text-blue-600" />
-            )}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span
-                className={`font-semibold ${
-                  pendingCount >= 10
-                    ? "text-red-900"
-                    : pendingCount >= 5
-                    ? "text-orange-900"
-                    : "text-blue-900"
-                }`}
-              >
-                {pendingCount >= 10
-                  ? "Требуется внимание!"
-                  : pendingCount >= 5
-                  ? "Накопились работы"
-                  : "Новые работы"}
-              </span>
-              <Badge
-                className={`${
-                  pendingCount >= 10
-                    ? "bg-red-100 text-red-700"
-                    : pendingCount >= 5
-                    ? "bg-orange-100 text-orange-700"
-                    : "bg-blue-100 text-blue-700"
-                } border-0`}
-              >
-                {pendingCount}
-              </Badge>
-            </div>
-            <p
-              className={`text-sm ${
-                pendingCount >= 10
-                  ? "text-red-600"
-                  : pendingCount >= 5
-                  ? "text-orange-600"
-                  : "text-blue-600"
-              }`}
-            >
-              {pendingCount === 1
-                ? "Есть 1 работа, ожидающая проверки"
-                : `Есть ${pendingCount} ${
-                    pendingCount < 5
-                      ? "работы"
-                      : "работ"
-                  }, ожидающих проверки`}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
