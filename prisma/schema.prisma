@@ -8,17 +8,17 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  role          String    @default("STUDENT") // STUDENT, TEACHER, ADMIN
-  totalXP       Int       @default(0)
-  currentStreak Int       @default(0)
-  avatarUrl     String?
-  invitedBy     String?   // ID of user who invited
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String
+  name            String
+  role            String    @default("STUDENT") // STUDENT, TEACHER, ADMIN
+  totalXP         Int       @default(0)
+  currentStreak   Int       @default(0)
+  avatarUrl       String?
+  invitedBy       String?   // ID of user who invited
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   enrollments      Enrollment[]
   moduleProgress   ModuleProgress[]
@@ -383,3 +383,4 @@ model UserAchievement {
   @@unique([userId, achievementId])
   @@index([userId])
 }
+
