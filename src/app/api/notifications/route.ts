@@ -15,10 +15,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const unreadOnly = searchParams.get("unread") === "true"
 
+    // SECURITY: Не возвращаем userId - клиенту это поле не нужно
     const notifications = await prisma.notification.findMany({
       where: {
         userId: session.user.id,
         ...(unreadOnly ? { isRead: false } : {}),
+      },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        message: true,
+        link: true,
+        isRead: true,
+        createdAt: true,
       },
       orderBy: { createdAt: "desc" },
       take: 20,
