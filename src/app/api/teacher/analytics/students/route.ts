@@ -79,7 +79,7 @@ export async function GET() {
           where: { moduleId: { in: moduleIds } },
           select: {
             status: true,
-            reviews: {
+            review: {
               select: { score: true },
             },
           },
@@ -98,9 +98,9 @@ export async function GET() {
 
       // Calculate avg score from reviews
       const scores = student.submissions
-        .flatMap((s) => s.reviews)
-        .filter((r) => r.score !== null)
-        .map((r) => r.score!)
+        .map((s) => s.review)
+        .filter((r): r is { score: number } => r !== null && r.score !== null)
+        .map((r) => r.score)
 
       const avgScore =
         scores.length > 0
