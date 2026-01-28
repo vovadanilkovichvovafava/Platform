@@ -184,14 +184,19 @@ export default async function StudentDetailPage({ params }: Props) {
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <Link
-                    href={`/dashboard/${student.id}`}
-                    className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
-                    title="Открыть дашборд студента"
-                  >
+                  <h1 className="text-2xl font-bold text-gray-900">
                     {student.name}
-                  </Link>
-                  <ExportStatsButton studentId={student.id} studentName={student.name} />
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/dashboard/${student.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Дашборд
+                    </Link>
+                    <ExportStatsButton studentId={student.id} studentName={student.name} />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-gray-500 mt-1">
                   <Mail className="h-4 w-4" />

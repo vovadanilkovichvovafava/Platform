@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   ChevronRight,
+  ChevronDown,
   BookOpen,
   Wrench,
   FolderGit2,
@@ -263,19 +264,17 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
         trails.map((trail) => (
           <Card key={trail.id} className="overflow-hidden">
             <Collapsible>
-              <CollapsibleTrigger asChild>
-                <button
-                  className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
-                  style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, transparent 100%)` }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: trail.color }}
-                    />
-                    <span className="font-semibold text-gray-900">{trail.title}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
+              <CollapsibleTrigger
+                className="w-full p-4 hover:bg-gray-50 transition-colors"
+                style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, transparent 100%)` }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: trail.color }}
+                  />
+                  <span className="font-semibold text-gray-900">{trail.title}</span>
+                  <div className="flex items-center gap-2 ml-auto mr-2">
                     <Badge variant="secondary">
                       {trail.modules.length} модулей
                     </Badge>
@@ -288,7 +287,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                       </Badge>
                     )}
                   </div>
-                </button>
+                </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="px-4 pb-4 pt-2">

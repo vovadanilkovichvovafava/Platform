@@ -26,12 +26,16 @@ import {
   ListOrdered,
   Search,
   CircleDot,
+  CheckSquare,
+  TextCursorInput,
 } from "lucide-react"
 import type {
   QuestionType,
   MatchingData,
   OrderingData,
   CaseAnalysisData,
+  TrueFalseData,
+  FillBlankData,
   Module,
   QuestionFormData,
   ModuleEditorProps,
@@ -48,9 +52,11 @@ const questionTypeLabels: Record<QuestionType, { label: string; icon: typeof Cir
   MATCHING: { label: "Сопоставление", icon: Link2 },
   ORDERING: { label: "Порядок действий", icon: ListOrdered },
   CASE_ANALYSIS: { label: "Анализ кейса", icon: Search },
+  TRUE_FALSE: { label: "Верно/Неверно", icon: CheckSquare },
+  FILL_BLANK: { label: "Заполни пропуск", icon: TextCursorInput },
 }
 
-function getDefaultDataForType(type: QuestionType): MatchingData | OrderingData | CaseAnalysisData | null {
+function getDefaultDataForType(type: QuestionType): MatchingData | OrderingData | CaseAnalysisData | TrueFalseData | FillBlankData | null {
   switch (type) {
     case "MATCHING":
       return {
@@ -87,6 +93,22 @@ function getDefaultDataForType(type: QuestionType): MatchingData | OrderingData 
           { id: "o3", text: "", isCorrect: false, explanation: "" },
         ],
         minCorrectRequired: 2,
+      }
+    case "TRUE_FALSE":
+      return {
+        statements: [
+          { id: "t1", text: "", isTrue: true, explanation: "" },
+          { id: "t2", text: "", isTrue: false, explanation: "" },
+          { id: "t3", text: "", isTrue: true, explanation: "" },
+        ],
+      }
+    case "FILL_BLANK":
+      return {
+        textWithBlanks: "Текст с {{1}} и {{2}}.",
+        blanks: [
+          { id: "1", correctAnswer: "", options: ["", "", "", ""] },
+          { id: "2", correctAnswer: "", options: ["", "", "", ""] },
+        ],
       }
     default:
       return null
@@ -135,15 +157,19 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
       setQuestions(
         data.questions.map((q) => {
           const questionType = (q.type as QuestionType) || "SINGLE_CHOICE"
-          let questionData: MatchingData | OrderingData | CaseAnalysisData | null = q.data ? safeJsonParse(q.data, null) : null
+          let questionData: MatchingData | OrderingData | CaseAnalysisData | TrueFalseData | FillBlankData | null = q.data ? safeJsonParse(q.data, null) : null
 
-          // Для MATCHING и ORDERING создаём дефолтные данные если их нет
+          // Для специальных типов создаём дефолтные данные если их нет
           if (questionType === "MATCHING" && (!questionData || !("leftItems" in questionData))) {
             questionData = getDefaultDataForType("MATCHING")
           } else if (questionType === "ORDERING" && (!questionData || !("correctOrder" in questionData))) {
             questionData = getDefaultDataForType("ORDERING")
           } else if (questionType === "CASE_ANALYSIS" && (!questionData || !("caseContent" in questionData))) {
             questionData = getDefaultDataForType("CASE_ANALYSIS")
+          } else if (questionType === "TRUE_FALSE" && (!questionData || !("statements" in questionData))) {
+            questionData = getDefaultDataForType("TRUE_FALSE")
+          } else if (questionType === "FILL_BLANK" && (!questionData || !("blanks" in questionData))) {
+            questionData = getDefaultDataForType("FILL_BLANK")
           }
 
           return {
@@ -251,9 +277,9 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
     setQuestions(updated)
   }
 
-  const updateQuestionData = (index: number, newData: Partial<MatchingData | OrderingData | CaseAnalysisData>) => {
+  const updateQuestionData = (index: number, newData: Partial<MatchingData | OrderingData | CaseAnalysisData | TrueFalseData | FillBlankData>) => {
     const updated = [...questions]
-    updated[index] = { ...updated[index], data: { ...updated[index].data, ...newData } as MatchingData | OrderingData | CaseAnalysisData }
+    updated[index] = { ...updated[index], data: { ...updated[index].data, ...newData } as MatchingData | OrderingData | CaseAnalysisData | TrueFalseData | FillBlankData }
     setQuestions(updated)
   }
 
@@ -854,6 +880,182 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
                                 }}
                                 className="text-sm w-20"
                               />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* TRUE_FALSE Editor */}
+                        {q.type === "TRUE_FALSE" && q.data && "statements" in q.data && (
+                          <div className="ml-7 space-y-3">
+                            <p className="text-xs text-gray-500 mb-2">
+                              Добавьте утверждения и отметьте, какие из них верные
+                            </p>
+                            {(q.data as TrueFalseData).statements.map((stmt, idx) => (
+                              <div key={stmt.id} className="border rounded p-2 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const data = q.data as TrueFalseData
+                                      const newStatements = [...data.statements]
+                                      newStatements[idx] = { ...newStatements[idx], isTrue: !newStatements[idx].isTrue }
+                                      updateQuestionData(qIndex, { statements: newStatements })
+                                    }}
+                                    className={`px-2 py-1 rounded text-xs font-semibold shrink-0 ${
+                                      stmt.isTrue
+                                        ? "bg-green-100 text-green-700 border border-green-300"
+                                        : "bg-red-100 text-red-700 border border-red-300"
+                                    }`}
+                                  >
+                                    {stmt.isTrue ? "Верно" : "Неверно"}
+                                  </button>
+                                  <Input
+                                    value={stmt.text}
+                                    onChange={(e) => {
+                                      const data = q.data as TrueFalseData
+                                      const newStatements = [...data.statements]
+                                      newStatements[idx] = { ...newStatements[idx], text: e.target.value }
+                                      updateQuestionData(qIndex, { statements: newStatements })
+                                    }}
+                                    placeholder={`Утверждение ${idx + 1}`}
+                                    className="text-sm"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-red-500 hover:text-red-700 shrink-0 p-1"
+                                    onClick={() => {
+                                      const data = q.data as TrueFalseData
+                                      if (data.statements.length > 1) {
+                                        updateQuestionData(qIndex, {
+                                          statements: data.statements.filter((_, i) => i !== idx)
+                                        })
+                                      }
+                                    }}
+                                    disabled={(q.data as TrueFalseData).statements.length <= 1}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <Input
+                                  value={stmt.explanation || ""}
+                                  onChange={(e) => {
+                                    const data = q.data as TrueFalseData
+                                    const newStatements = [...data.statements]
+                                    newStatements[idx] = { ...newStatements[idx], explanation: e.target.value }
+                                    updateQuestionData(qIndex, { statements: newStatements })
+                                  }}
+                                  placeholder="Объяснение (необязательно)"
+                                  className="text-xs"
+                                />
+                              </div>
+                            ))}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs"
+                              onClick={() => {
+                                const data = q.data as TrueFalseData
+                                const newId = `t${data.statements.length + 1}`
+                                updateQuestionData(qIndex, {
+                                  statements: [...data.statements, { id: newId, text: "", isTrue: true, explanation: "" }],
+                                })
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" /> Утверждение
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* FILL_BLANK Editor */}
+                        {q.type === "FILL_BLANK" && q.data && "blanks" in q.data && (
+                          <div className="ml-7 space-y-3">
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 block mb-1">
+                                Текст с пропусками (используйте {`{{1}}`}, {`{{2}}`} и т.д.)
+                              </label>
+                              <textarea
+                                value={(q.data as FillBlankData).textWithBlanks}
+                                onChange={(e) => {
+                                  updateQuestionData(qIndex, { textWithBlanks: e.target.value })
+                                }}
+                                className="w-full p-2 text-sm border rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                rows={3}
+                                placeholder="Пример: JavaScript — это {{1}} язык программирования, который работает в {{2}}."
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 block mb-2">
+                                Пропуски и варианты ответов
+                              </label>
+                              {(q.data as FillBlankData).blanks.map((blank, idx) => (
+                                <div key={blank.id} className="border rounded p-2 mb-2 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-gray-500 shrink-0">
+                                      Пропуск {`{{${blank.id}}}`}
+                                    </span>
+                                    <Input
+                                      value={blank.correctAnswer}
+                                      onChange={(e) => {
+                                        const data = q.data as FillBlankData
+                                        const newBlanks = [...data.blanks]
+                                        newBlanks[idx] = { ...newBlanks[idx], correctAnswer: e.target.value }
+                                        updateQuestionData(qIndex, { blanks: newBlanks })
+                                      }}
+                                      placeholder="Правильный ответ"
+                                      className="text-sm flex-1"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-red-500 hover:text-red-700 shrink-0 p-1"
+                                      onClick={() => {
+                                        const data = q.data as FillBlankData
+                                        if (data.blanks.length > 1) {
+                                          updateQuestionData(qIndex, {
+                                            blanks: data.blanks.filter((_, i) => i !== idx)
+                                          })
+                                        }
+                                      }}
+                                      disabled={(q.data as FillBlankData).blanks.length <= 1}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {blank.options.map((opt, oIdx) => (
+                                      <Input
+                                        key={oIdx}
+                                        value={opt}
+                                        onChange={(e) => {
+                                          const data = q.data as FillBlankData
+                                          const newBlanks = [...data.blanks]
+                                          const newOptions = [...newBlanks[idx].options]
+                                          newOptions[oIdx] = e.target.value
+                                          newBlanks[idx] = { ...newBlanks[idx], options: newOptions }
+                                          updateQuestionData(qIndex, { blanks: newBlanks })
+                                        }}
+                                        placeholder={`Вариант ${oIdx + 1}`}
+                                        className="text-xs"
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs"
+                                onClick={() => {
+                                  const data = q.data as FillBlankData
+                                  const newId = String(data.blanks.length + 1)
+                                  updateQuestionData(qIndex, {
+                                    blanks: [...data.blanks, { id: newId, correctAnswer: "", options: ["", "", "", ""] }],
+                                  })
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" /> Пропуск
+                              </Button>
                             </div>
                           </div>
                         )}

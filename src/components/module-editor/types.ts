@@ -1,4 +1,4 @@
-export type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+export type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS" | "TRUE_FALSE" | "FILL_BLANK"
 
 export interface MatchingData {
   leftLabel: string
@@ -18,6 +18,24 @@ export interface CaseAnalysisData {
   caseLabel: string
   options: { id: string; text: string; isCorrect: boolean; explanation: string }[]
   minCorrectRequired: number
+}
+
+export interface TrueFalseData {
+  statements: {
+    id: string
+    text: string
+    isTrue: boolean
+    explanation?: string
+  }[]
+}
+
+export interface FillBlankData {
+  textWithBlanks: string
+  blanks: {
+    id: string
+    correctAnswer: string
+    options: string[]
+  }[]
 }
 
 export interface Question {
@@ -67,7 +85,7 @@ export interface QuestionFormData {
   question: string
   options: string[]
   correctAnswer: number
-  data: MatchingData | OrderingData | CaseAnalysisData | null
+  data: MatchingData | OrderingData | CaseAnalysisData | TrueFalseData | FillBlankData | null
   isNew?: boolean
 }
 
