@@ -68,18 +68,24 @@ export default async function ModulePage({ params }: Props) {
     notFound()
   }
 
-  // Check enrollment
-  const enrollment = await prisma.enrollment.findUnique({
-    where: {
-      userId_trailId: {
-        userId: session.user.id,
-        trailId: courseModule.trailId,
-      },
-    },
-  })
+  // Check if user is admin or teacher (privileged users can view any module)
+  const isPrivileged = session.user.role === "ADMIN" || session.user.role === "TEACHER"
 
-  if (!enrollment) {
-    redirect(`/trails/${courseModule.trail.slug}`)
+  // Check enrollment for students only
+  let enrollment = null
+  if (!isPrivileged) {
+    enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_trailId: {
+          userId: session.user.id,
+          trailId: courseModule.trailId,
+        },
+      },
+    })
+
+    if (!enrollment) {
+      redirect(`/trails/${courseModule.trail.slug}`)
+    }
   }
 
   // Get progress
@@ -122,9 +128,6 @@ export default async function ModulePage({ params }: Props) {
   const isPractice = courseModule.type === "PRACTICE"
   const hasQuestions = courseModule.questions.length > 0
   const TypeIcon = typeIcons[courseModule.type]
-
-  // Check if user is admin or teacher (to show edit button)
-  const isPrivileged = session?.user?.role === "ADMIN" || session?.user?.role === "TEACHER"
 
   // Find next module in the trail
   const trailModules = courseModule.trail.modules

@@ -30,6 +30,13 @@ export interface Question {
   order: number
 }
 
+export interface AdjacentModule {
+  id: string
+  title: string
+  slug: string
+  order: number
+}
+
 export interface Module {
   id: string
   slug: string
@@ -47,8 +54,11 @@ export interface Module {
     id: string
     title: string
     slug: string
+    modules: AdjacentModule[]
   }
   questions: Question[]
+  prevModule: AdjacentModule | null
+  nextModule: AdjacentModule | null
 }
 
 export interface QuestionFormData {

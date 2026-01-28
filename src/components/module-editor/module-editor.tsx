@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft,
+  ArrowRight,
   Save,
   RefreshCw,
   Plus,
@@ -19,6 +20,8 @@ import {
   FolderGit2,
   GripVertical,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Link2,
   ListOrdered,
   Search,
@@ -873,6 +876,41 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
             </Card>
           </div>
         </div>
+
+        {/* Module Navigation Footer */}
+        {(module.prevModule || module.nextModule) && (
+          <div className="mt-8 border-t pt-6">
+            <div className="flex items-center justify-between gap-4">
+              {module.prevModule ? (
+                <Link
+                  href={`/content/modules/${module.prevModule.id}`}
+                  className="flex items-center gap-2 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors flex-1 max-w-md"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500">Предыдущий модуль</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{module.prevModule.title}</p>
+                  </div>
+                </Link>
+              ) : (
+                <div className="flex-1" />
+              )}
+
+              {module.nextModule && (
+                <Link
+                  href={`/content/modules/${module.nextModule.id}`}
+                  className="flex items-center gap-2 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors flex-1 max-w-md text-right justify-end"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500">Следующий модуль</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{module.nextModule.title}</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400 shrink-0" />
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
