@@ -264,10 +264,12 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
         trails.map((trail) => (
           <Card key={trail.id} className="overflow-hidden">
             <Collapsible>
-              <CollapsibleTrigger
-                className="w-full p-4 hover:bg-gray-50 transition-colors"
-                style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, transparent 100%)` }}
-              >
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center justify-between"
+                  style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, transparent 100%)` }}
+                >
                 <div className="flex items-center gap-3">
                   <div
                     className="w-3 h-3 rounded-full"
@@ -288,6 +290,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                     )}
                   </div>
                 </div>
+                </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="px-4 pb-4 pt-2">
