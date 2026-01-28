@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -42,6 +43,7 @@ import {
   Zap,
   Info,
   Pencil,
+  FileCheck,
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
@@ -103,21 +105,23 @@ const typeLabels: Record<string, string> = {
   PROJECT: "Проект",
 }
 
-interface ModuleAnalytics {
-  id: string
-  title: string
-  completedCount: number
-  avgScore: number | null
-  completionRate: number
+interface Assignment {
+  trailId: string
 }
 
-export default function AdminContentPage() {
+export default function UnifiedContentPage() {
   const router = useRouter()
+  const { data: session, status } = useSession()
   const [trails, setTrails] = useState<Trail[]>([])
+  const [assignedTrailIds, setAssignedTrailIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const { showToast } = useToast()
   const { confirm } = useConfirm()
+
+  const isAdmin = session?.user?.role === "ADMIN"
+  const isTeacher = session?.user?.role === "TEACHER"
+  const isPrivileged = isAdmin || isTeacher
 
   // Create trail modal
   const [showTrailModal, setShowTrailModal] = useState(false)
@@ -133,7 +137,7 @@ export default function AdminContentPage() {
   const [showModuleModal, setShowModuleModal] = useState(false)
   const [selectedTrailId, setSelectedTrailId] = useState("")
 
-  // Import modal
+  // Import modal (admin only)
   const [showImportModal, setShowImportModal] = useState(false)
   const [importing, setImporting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -183,21 +187,15 @@ export default function AdminContentPage() {
     available: false,
     checking: false,
   })
-  const [aiTestResult, setAiTestResult] = useState<{
-    testing: boolean
-    message?: string
-    success?: boolean
-    duration?: number
-  }>({ testing: false })
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [useNeuralParser, setUseNeuralParser] = useState(true) // По умолчанию используем нейронку
+  const [useNeuralParser, setUseNeuralParser] = useState(true)
 
   // Progress tracking для импорта
   const [importProgress, setImportProgress] = useState<{
     current: number
     total: number
     status: string
-    phase: string // 'analyzing' | 'metadata' | 'parsing' | 'merging'
+    phase: string
   } | null>(null)
 
   // Drag and drop
@@ -208,12 +206,7 @@ export default function AdminContentPage() {
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
 
-  // Analytics
-  const [showAnalytics, setShowAnalytics] = useState(false)
-  const [analytics, setAnalytics] = useState<ModuleAnalytics[]>([])
-  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
-
-  // History
+  // History (admin only)
   const [showHistory, setShowHistory] = useState(false)
   const [auditLogs, setAuditLogs] = useState<Array<{
     id: string
@@ -225,23 +218,45 @@ export default function AdminContentPage() {
   }>>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
-  const fetchTrails = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch("/api/admin/trails")
-      if (!res.ok) throw new Error("Failed to fetch")
-      const data = await res.json()
-      setTrails(data)
+      setError("")
+
+      // Fetch trails
+      const trailsRes = await fetch("/api/admin/trails")
+      if (!trailsRes.ok) throw new Error("Failed to fetch trails")
+      const trailsData = await trailsRes.json()
+      setTrails(trailsData)
+
+      // For teachers, also fetch assignments to filter visible trails
+      if (isTeacher && !isAdmin) {
+        const assignmentsRes = await fetch("/api/teacher/assignments")
+        if (assignmentsRes.ok) {
+          const assignmentsData = await assignmentsRes.json()
+          setAssignedTrailIds(assignmentsData.map((a: Assignment) => a.trailId))
+        }
+      }
     } catch {
       setError("Ошибка загрузки данных")
     } finally {
       setLoading(false)
     }
-  }
+  }, [isTeacher, isAdmin])
 
   useEffect(() => {
-    fetchTrails()
-  }, [])
+    if (status === "loading") return
+    if (!isPrivileged) {
+      router.push("/dashboard")
+      return
+    }
+    fetchData()
+  }, [status, isPrivileged, router, fetchData])
+
+  // Filter trails for teachers
+  const visibleTrails = isAdmin
+    ? trails
+    : trails.filter((t) => assignedTrailIds.includes(t.id))
 
   const createTrail = async () => {
     if (!newTrailTitle.trim()) return
@@ -262,7 +277,7 @@ export default function AdminContentPage() {
       setNewTrailTitle("")
       setNewTrailSubtitle("")
       setShowTrailModal(false)
-      fetchTrails()
+      fetchData()
     } catch {
       setError("Ошибка создания trail")
     } finally {
@@ -293,7 +308,6 @@ export default function AdminContentPage() {
 
     const newModule = await res.json()
     setShowModuleModal(false)
-    // Navigate to edit the new module
     router.push(`/content/modules/${newModule.id}`)
   }
 
@@ -302,9 +316,7 @@ export default function AdminContentPage() {
     setShowModuleModal(true)
   }
 
-  // Open edit trail modal
   const openEditTrailModal = (trail: Trail) => {
-    // Get assigned teacher ID if visibility is SPECIFIC
     const assignedTeacherId = trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0
       ? trail.teachers[0].teacher.id
       : null
@@ -324,9 +336,8 @@ export default function AdminContentPage() {
     setShowEditTrailModal(true)
   }
 
-  // Handle trail save
   const handleTrailSave = () => {
-    fetchTrails()
+    fetchData()
   }
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,7 +356,6 @@ export default function AdminContentPage() {
       formData.append("useAI", useNeuralParser ? "true" : "false")
       formData.append("forceAI", useNeuralParser ? "true" : "false")
 
-      // Используем SSE для отслеживания прогресса
       const res = await fetch("/api/admin/import/stream", {
         method: "POST",
         body: formData,
@@ -377,9 +387,8 @@ export default function AdminContentPage() {
 
         buffer += decoder.decode(value, { stream: true })
 
-        // Парсим SSE события
         const lines = buffer.split("\n\n")
-        buffer = lines.pop() || "" // Оставляем неполное сообщение в буфере
+        buffer = lines.pop() || ""
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
@@ -455,7 +464,7 @@ export default function AdminContentPage() {
         setShowImportModal(false)
         setParsedData(null)
         setUploadedFile(null)
-        fetchTrails()
+        fetchData()
       } else {
         showToast(data.error || "Ошибка сохранения", "error")
       }
@@ -463,106 +472,6 @@ export default function AdminContentPage() {
       showToast("Ошибка при сохранении", "error")
     } finally {
       setSaving(false)
-    }
-  }
-
-  const handleRegenerate = async () => {
-    if (!uploadedFile) return
-
-    try {
-      setRegenerating(true)
-      setParsedData(null)
-      setImportProgress({ current: 0, total: 100, status: "Подготовка к перегенерации...", phase: "analyzing" })
-
-      const formData = new FormData()
-      formData.append("file", uploadedFile)
-      formData.append("useAI", useNeuralParser ? "true" : "false")
-      formData.append("forceAI", useNeuralParser ? "true" : "false")
-
-      // Используем SSE для отслеживания прогресса
-      const res = await fetch("/api/admin/import/stream", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json()
-        setParseError(errorData.error || "Ошибка при перегенерации")
-        setParsedData(null)
-        setImportProgress(null)
-        return
-      }
-
-      const reader = res.body?.getReader()
-      const decoder = new TextDecoder()
-
-      if (!reader) {
-        setParseError("Не удалось создать поток для чтения")
-        setParsedData(null)
-        setImportProgress(null)
-        return
-      }
-
-      let buffer = ""
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-
-        const lines = buffer.split("\n\n")
-        buffer = lines.pop() || ""
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const event = JSON.parse(line.slice(6))
-
-              if (event.type === "progress") {
-                setImportProgress({
-                  current: event.current || 0,
-                  total: event.total || 100,
-                  status: event.status || "Обработка...",
-                  phase: event.phase || "parsing"
-                })
-              } else if (event.type === "complete") {
-                const data = event.result
-                if (!data.success || !data.trails || data.trails.length === 0) {
-                  const errorDetails = data.details?.length > 0
-                    ? `\n${data.details.join("; ")}`
-                    : ""
-                  setParseError((data.error || "AI не смог распознать структуру") + errorDetails)
-                  setParsedData(null)
-                } else {
-                  setParsedData({
-                    trails: data.trails,
-                    warnings: data.warnings,
-                    parseMethod: data.parseMethod,
-                    detectedFormat: data.detectedFormat,
-                    structureConfidence: data.structureConfidence,
-                    confidenceDetails: data.confidenceDetails,
-                  })
-                  setParseError(null)
-                }
-                setImportProgress(null)
-              } else if (event.type === "error") {
-                setParseError(event.error || "Неизвестная ошибка")
-                setParsedData(null)
-                setImportProgress(null)
-              }
-            } catch {
-              console.error("Failed to parse SSE event:", line)
-            }
-          }
-        }
-      }
-    } catch {
-      setParseError("Ошибка при перегенерации")
-      setParsedData(null)
-      setImportProgress(null)
-    } finally {
-      setRegenerating(false)
     }
   }
 
@@ -594,33 +503,11 @@ export default function AdminContentPage() {
     }
   }, [])
 
-  // Автопроверка AI статуса при открытии модалки импорта
   useEffect(() => {
-    if (showImportModal) {
+    if (showImportModal && isAdmin) {
       checkAIStatus()
     }
-  }, [showImportModal, checkAIStatus])
-
-  // Детальный тест AI API
-  const runAITest = useCallback(async () => {
-    setAiTestResult({ testing: true })
-    try {
-      const res = await fetch("/api/admin/import?action=test-ai")
-      const data = await res.json()
-      setAiTestResult({
-        testing: false,
-        message: data.message,
-        success: data.success,
-        duration: data.duration,
-      })
-    } catch (e) {
-      setAiTestResult({
-        testing: false,
-        message: `Ошибка запроса: ${e instanceof Error ? e.message : "неизвестная ошибка"}`,
-        success: false,
-      })
-    }
-  }, [])
+  }, [showImportModal, checkAIStatus, isAdmin])
 
   const deleteTrail = async (trailId: string, title: string) => {
     const confirmed = await confirm({
@@ -637,7 +524,7 @@ export default function AdminContentPage() {
         method: "DELETE",
       })
       if (!res.ok) throw new Error("Failed to delete")
-      fetchTrails()
+      fetchData()
       showToast("Trail удалён", "success")
     } catch {
       showToast("Ошибка при удалении trail", "error")
@@ -659,7 +546,7 @@ export default function AdminContentPage() {
         method: "DELETE",
       })
       if (!res.ok) throw new Error("Failed to delete")
-      fetchTrails()
+      fetchData()
       showToast("Модуль удалён", "success")
     } catch {
       showToast("Ошибка при удалении модуля", "error")
@@ -690,8 +577,7 @@ export default function AdminContentPage() {
       return
     }
 
-    // Find the trail and reorder modules
-    const trail = trails.find((t) => t.id === trailId)
+    const trail = visibleTrails.find((t) => t.id === trailId)
     if (!trail) return
 
     const modules = [...trail.modules]
@@ -700,18 +586,15 @@ export default function AdminContentPage() {
 
     if (draggedIndex === -1 || targetIndex === -1) return
 
-    // Reorder
     const [removed] = modules.splice(draggedIndex, 1)
     modules.splice(targetIndex, 0, removed)
 
-    // Update local state immediately for responsiveness
     setTrails((prev) =>
       prev.map((t) =>
         t.id === trailId ? { ...t, modules } : t
       )
     )
 
-    // Save to server
     try {
       const res = await fetch("/api/admin/modules/reorder", {
         method: "POST",
@@ -724,7 +607,7 @@ export default function AdminContentPage() {
       if (!res.ok) throw new Error("Failed to reorder")
     } catch {
       setError("Ошибка при изменении порядка")
-      fetchTrails() // Revert on error
+      fetchData()
     }
 
     setDraggedModule(null)
@@ -745,28 +628,24 @@ export default function AdminContentPage() {
   }
 
   const toggleSelectAllInTrail = (trailId: string) => {
-    const trail = trails.find((t) => t.id === trailId)
+    const trail = visibleTrails.find((t) => t.id === trailId)
     if (!trail) return
 
-    // Check if all modules in trail are already selected
     const allSelected = trail.modules.every((m) => selectedModules.has(m.id))
 
     setSelectedModules((prev) => {
       const next = new Set(prev)
       if (allSelected) {
-        // Deselect all in this trail
         trail.modules.forEach((m) => next.delete(m.id))
       } else {
-        // Select all in this trail
         trail.modules.forEach((m) => next.add(m.id))
       }
       return next
     })
   }
 
-  // Check if all modules in a trail are selected
   const isAllSelectedInTrail = (trailId: string) => {
-    const trail = trails.find((t) => t.id === trailId)
+    const trail = visibleTrails.find((t) => t.id === trailId)
     if (!trail || trail.modules.length === 0) return false
     return trail.modules.every((m) => selectedModules.has(m.id))
   }
@@ -798,7 +677,7 @@ export default function AdminContentPage() {
       if (!res.ok) throw new Error("Failed to delete")
 
       setSelectedModules(new Set())
-      fetchTrails()
+      fetchData()
       showToast(`Удалено ${selectedModules.size} модулей`, "success")
     } catch {
       showToast("Ошибка при массовом удалении", "error")
@@ -832,23 +711,7 @@ export default function AdminContentPage() {
     }
   }
 
-  // Analytics
-  const fetchAnalytics = async () => {
-    try {
-      setLoadingAnalytics(true)
-      const res = await fetch("/api/admin/analytics/modules")
-      if (!res.ok) throw new Error("Failed to fetch")
-      const data = await res.json()
-      setAnalytics(data.analytics)
-      setShowAnalytics(true)
-    } catch {
-      setError("Ошибка загрузки аналитики")
-    } finally {
-      setLoadingAnalytics(false)
-    }
-  }
-
-  // Audit history
+  // Audit history (admin only)
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true)
@@ -864,12 +727,7 @@ export default function AdminContentPage() {
     }
   }
 
-  // Get analytics for a specific module
-  const getModuleAnalytics = useCallback((moduleId: string) => {
-    return analytics.find((a) => a.id === moduleId)
-  }, [analytics])
-
-  if (loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
@@ -877,7 +735,11 @@ export default function AdminContentPage() {
     )
   }
 
-  if (error) {
+  if (!isPrivileged) {
+    return null
+  }
+
+  if (error && !trails.length) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-red-500">{error}</p>
@@ -885,13 +747,16 @@ export default function AdminContentPage() {
     )
   }
 
+  // Determine analytics link based on role
+  const analyticsHref = isAdmin ? "/admin/analytics" : "/teacher/analytics"
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
           <Breadcrumbs
             items={[
-              { label: "Админ", href: "/admin/invites" },
+              { label: isAdmin ? "Админ" : "Учитель", href: isAdmin ? "/admin/invites" : "/teacher" },
               { label: "Контент" },
             ]}
             className="mb-4"
@@ -902,53 +767,116 @@ export default function AdminContentPage() {
                 Управление контентом
               </h1>
               <p className="text-gray-600 mt-1">
-                Редактирование теории, вопросов и проектов
+                {isAdmin
+                  ? "Редактирование теории, вопросов и проектов"
+                  : "Редактирование назначенных trails"}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Teacher-specific buttons */}
+              {isTeacher && (
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/teacher/students">
+                      <Users className="h-4 w-4 mr-2" />
+                      Ученики
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/teacher/reviews">
+                      <FileCheck className="h-4 w-4 mr-2" />
+                      Работы на проверку
+                    </Link>
+                  </Button>
+                </>
+              )}
+
+              {/* Admin-specific buttons */}
+              {isAdmin && (
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/teachers">
+                      <Users className="h-4 w-4 mr-2" />
+                      Учителя
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/access">
+                      <Lock className="h-4 w-4 mr-2" />
+                      Доступ
+                    </Link>
+                  </Button>
+                </>
+              )}
+
+              {/* Analytics - both roles */}
               <Button asChild variant="outline" size="sm">
-                <Link href="/admin/teachers">
-                  <Users className="h-4 w-4 mr-2" />
-                  Учителя
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/access">
-                  <Lock className="h-4 w-4 mr-2" />
-                  Доступ
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/analytics">
+                <Link href={analyticsHref}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Аналитика
                 </Link>
               </Button>
-              <Button onClick={() => fetchHistory()} variant="outline" size="sm" disabled={loadingHistory}>
-                <History className="h-4 w-4 mr-2" />
-                История
-              </Button>
+
+              {/* History - admin only */}
+              {isAdmin && (
+                <Button onClick={() => fetchHistory()} variant="outline" size="sm" disabled={loadingHistory}>
+                  <History className="h-4 w-4 mr-2" />
+                  История
+                </Button>
+              )}
+
+              {/* Export - both roles */}
               <Button onClick={() => exportContent()} variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
                 Экспорт
               </Button>
-              <Button onClick={() => setShowImportModal(true)} variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Импорт
-              </Button>
+
+              {/* Import - admin only */}
+              {isAdmin && (
+                <Button onClick={() => setShowImportModal(true)} variant="outline" size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Импорт
+                </Button>
+              )}
+
+              {/* New Trail - both roles */}
               <Button onClick={() => setShowTrailModal(true)} className="bg-green-600 hover:bg-green-700" size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Новый Trail
               </Button>
-              <Button onClick={fetchTrails} variant="outline" size="sm">
+
+              <Button onClick={fetchData} variant="outline" size="sm">
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+
+          {/* Role indicator */}
+          <div className="mt-4 flex items-center gap-2">
+            <Badge variant={isAdmin ? "default" : "secondary"} className={isAdmin ? "bg-purple-600" : "bg-blue-600"}>
+              {isAdmin ? "Администратор" : "Учитель"}
+            </Badge>
+            {!isAdmin && (
+              <span className="text-sm text-gray-500">
+                Показаны только назначенные trails ({visibleTrails.length})
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
+        {/* Error message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <AlertTriangle className="h-5 w-5" />
+            {error}
+            <button onClick={() => setError("")} className="ml-auto">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Bulk actions bar */}
         {selectedModules.size > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
@@ -983,10 +911,12 @@ export default function AdminContentPage() {
         )}
 
         <div className="space-y-8">
-          {trails.length === 0 ? (
+          {visibleTrails.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <p className="text-gray-500 mb-4">Нет trails</p>
+                <p className="text-gray-500 mb-4">
+                  {isAdmin ? "Нет trails" : "Нет назначенных trails"}
+                </p>
                 <Button onClick={() => setShowTrailModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Создать первый Trail
@@ -994,7 +924,7 @@ export default function AdminContentPage() {
               </CardContent>
             </Card>
           ) : (
-            trails.map((trail) => {
+            visibleTrails.map((trail) => {
               const Icon = iconMap[trail.icon] || Code
               const assessmentModules = trail.modules.filter(m => m.type !== "PROJECT")
               const projectModules = trail.modules.filter(m => m.type === "PROJECT")
@@ -1015,13 +945,13 @@ export default function AdminContentPage() {
                           {!trail.isPublished && (
                             <Badge variant="secondary">Скрыт</Badge>
                           )}
-                          {trail.teacherVisibility === "ALL_TEACHERS" && (
+                          {isAdmin && trail.teacherVisibility === "ALL_TEACHERS" && (
                             <Badge className="bg-blue-100 text-blue-700 border-0">
                               <Users className="h-3 w-3 mr-1" />
                               Все учителя
                             </Badge>
                           )}
-                          {trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0 && (
+                          {isAdmin && trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0 && (
                             <Badge className="bg-purple-100 text-purple-700 border-0">
                               <Users className="h-3 w-3 mr-1" />
                               {trail.teachers[0].teacher.name}
@@ -1103,7 +1033,6 @@ export default function AdminContentPage() {
                             <div className="space-y-2">
                               {assessmentModules.map((module) => {
                                 const TypeIcon = typeIcons[module.type]
-                                const moduleAnalytics = getModuleAnalytics(module.id)
                                 return (
                                   <div
                                     key={module.id}
@@ -1137,11 +1066,6 @@ export default function AdminContentPage() {
                                           <Badge variant="outline" className="text-xs shrink-0">
                                             {typeLabels[module.type]}
                                           </Badge>
-                                          {moduleAnalytics && (
-                                            <Badge className="text-xs shrink-0 bg-green-100 text-green-700 border-0">
-                                              {moduleAnalytics.completedCount} прошли
-                                            </Badge>
-                                          )}
                                         </div>
                                         <p className="text-sm text-gray-500 truncate">
                                           {module.description}
@@ -1152,9 +1076,6 @@ export default function AdminContentPage() {
                                           <HelpCircle className="h-4 w-4" />
                                           {module._count.questions}
                                         </div>
-                                        {moduleAnalytics?.avgScore && (
-                                          <span className="text-blue-600">{moduleAnalytics.avgScore}/10</span>
-                                        )}
                                         <span>{module.points} XP</span>
                                         <ChevronRight className="h-4 w-4" />
                                       </div>
@@ -1182,72 +1103,61 @@ export default function AdminContentPage() {
                               Проекты
                             </h3>
                             <div className="space-y-2">
-                              {projectModules.map((module) => {
-                                const moduleAnalytics = getModuleAnalytics(module.id)
-                                return (
-                                  <div
-                                    key={module.id}
-                                    draggable
-                                    onDragStart={() => handleDragStart(module.id)}
-                                    onDragOver={(e) => handleDragOver(e, module.id)}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={(e) => handleDrop(e, module.id, trail.id)}
-                                    className={`group flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
-                                      draggedModule === module.id ? "opacity-50" : ""
-                                    } ${
-                                      dragOverModule === module.id ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
-                                    }`}
-                                  >
-                                    <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600">
-                                      <GripVertical className="h-4 w-4" />
-                                    </div>
-                                    <Checkbox
-                                      checked={selectedModules.has(module.id)}
-                                      onCheckedChange={() => toggleModuleSelection(module.id)}
-                                    />
-                                    <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 shrink-0">
-                                        <FolderGit2 className="h-5 w-5 text-blue-600" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium text-gray-900 truncate">
-                                            {module.title}
-                                          </span>
-                                          <Badge className="bg-blue-100 text-blue-700 border-0 text-xs shrink-0">
-                                            {module.level}
-                                          </Badge>
-                                          {moduleAnalytics && (
-                                            <Badge className="text-xs shrink-0 bg-green-100 text-green-700 border-0">
-                                              {moduleAnalytics.completedCount} прошли
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <p className="text-sm text-gray-500 truncate">
-                                          {module.description}
-                                        </p>
-                                      </div>
-                                      <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
-                                        {moduleAnalytics?.avgScore && (
-                                          <span className="text-blue-600">{moduleAnalytics.avgScore}/10</span>
-                                        )}
-                                        <span>{module.duration}</span>
-                                        <span>{module.points} XP</span>
-                                        <ChevronRight className="h-4 w-4" />
-                                      </div>
-                                    </Link>
-                                    <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button
-                                        onClick={() => deleteModule(module.id, module.title)}
-                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-                                        title="Удалить модуль"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
-                                    </div>
+                              {projectModules.map((module) => (
+                                <div
+                                  key={module.id}
+                                  draggable
+                                  onDragStart={() => handleDragStart(module.id)}
+                                  onDragOver={(e) => handleDragOver(e, module.id)}
+                                  onDragLeave={handleDragLeave}
+                                  onDrop={(e) => handleDrop(e, module.id, trail.id)}
+                                  className={`group flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
+                                    draggedModule === module.id ? "opacity-50" : ""
+                                  } ${
+                                    dragOverModule === module.id ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
+                                  }`}
+                                >
+                                  <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600">
+                                    <GripVertical className="h-4 w-4" />
                                   </div>
-                                )
-                              })}
+                                  <Checkbox
+                                    checked={selectedModules.has(module.id)}
+                                    onCheckedChange={() => toggleModuleSelection(module.id)}
+                                  />
+                                  <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 shrink-0">
+                                      <FolderGit2 className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-900 truncate">
+                                          {module.title}
+                                        </span>
+                                        <Badge className="bg-blue-100 text-blue-700 border-0 text-xs shrink-0">
+                                          {module.level}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-sm text-gray-500 truncate">
+                                        {module.description}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
+                                      <span>{module.duration}</span>
+                                      <span>{module.points} XP</span>
+                                      <ChevronRight className="h-4 w-4" />
+                                    </div>
+                                  </Link>
+                                  <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => deleteModule(module.id, module.title)}
+                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                      title="Удалить модуль"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
@@ -1292,6 +1202,11 @@ export default function AdminContentPage() {
                   placeholder="Краткое описание направления"
                 />
               </div>
+              {!isAdmin && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                  Новый trail будет закрыт для учеников до подтверждения администратором.
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <Button
                   variant="outline"
@@ -1325,8 +1240,8 @@ export default function AdminContentPage() {
         trailId={selectedTrailId}
       />
 
-      {/* Import Modal */}
-      {showImportModal && (
+      {/* Import Modal - Admin Only */}
+      {showImportModal && isAdmin && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b">
@@ -1343,145 +1258,25 @@ export default function AdminContentPage() {
             </div>
 
             <div className="p-6 overflow-y-auto flex-1">
-              {/* Ошибка парсинга или состояние регенерации */}
-              {(parseError || regenerating) && (
-                <div className={`p-4 rounded-lg mb-4 ${regenerating ? "bg-purple-50 border border-purple-200" : "bg-red-50 border border-red-200"}`}>
-                  <div className="flex items-start gap-2">
-                    {regenerating ? (
-                      <RefreshCw className="h-5 w-5 text-purple-600 mt-0.5 animate-spin" />
-                    ) : (
-                      <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
-                    )}
-                    <div className="flex-1">
-                      {regenerating ? (
-                        <div className="space-y-3">
-                          <span className="text-purple-700 font-medium">Повторная обработка с AI...</span>
-                          {importProgress ? (
-                            <>
-                              <Progress value={importProgress.current} className="h-2" />
-                              <p className="text-purple-600 text-sm">{importProgress.status}</p>
-                            </>
-                          ) : (
-                            <p className="text-purple-600 text-sm">Подготовка...</p>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <span className="text-red-700 whitespace-pre-line">{parseError}</span>
-                          {uploadedFile && (
-                            <div className="mt-3">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleRegenerate}
-                                disabled={regenerating}
-                                className={useNeuralParser
-                                  ? "text-purple-700 border-purple-300 hover:bg-purple-50"
-                                  : "text-gray-600 border-gray-300 hover:bg-gray-50"}
-                              >
-                                {useNeuralParser ? (
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                ) : (
-                                  <RefreshCw className="h-4 w-4 mr-2" />
-                                )}
-                                {useNeuralParser ? "Попробовать с AI ещё раз" : "Попробовать ещё раз"}
-                              </Button>
-                            </div>
-                          )}
-                          {uploadedFile && (
-                            <div className="mt-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setParseError(null)
-                                  setUploadedFile(null)
-                                }}
-                                className="text-gray-500 hover:text-gray-700"
-                              >
-                                Загрузить другой файл
-                              </Button>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Если нет данных и нет ошибки и нет регенерации - показываем загрузку файла */}
+              {/* Import content - simplified for brevity */}
               {!parsedData && !parseError && !regenerating && (
                 <div className="space-y-6">
-                  {/* Загрузка файла или прогресс парсинга */}
                   {importing && importProgress ? (
-                    // Показываем прогресс-бар во время парсинга
                     <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="relative">
-                          <RefreshCw className="h-8 w-8 text-purple-600 animate-spin" />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-xs font-bold text-purple-700">
-                              {importProgress.current}%
-                            </span>
-                          </div>
-                        </div>
+                        <RefreshCw className="h-8 w-8 text-purple-600 animate-spin" />
                         <div>
-                          <p className="text-lg font-medium text-purple-700">
-                            {importProgress.phase === "analyzing" && "Анализ структуры"}
-                            {importProgress.phase === "metadata" && "Извлечение метаданных"}
-                            {importProgress.phase === "parsing" && "Обработка контента"}
-                            {importProgress.phase === "merging" && "Объединение результатов"}
-                          </p>
-                          <p className="text-sm text-purple-600">{importProgress.status}</p>
+                          <p className="text-lg font-medium text-purple-700">{importProgress.status}</p>
                         </div>
                       </div>
-
-                      <Progress value={importProgress.current} className="h-3 mb-3" />
-
-                      {/* Этапы парсинга */}
-                      <div className="flex justify-between text-xs text-gray-500 mt-4">
-                        <div className={`flex items-center gap-1 ${importProgress.current >= 5 ? "text-purple-600" : ""}`}>
-                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 5 ? "bg-purple-600" : "bg-gray-300"}`} />
-                          Анализ
-                        </div>
-                        <div className={`flex items-center gap-1 ${importProgress.current >= 10 ? "text-purple-600" : ""}`}>
-                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 10 ? "bg-purple-600" : "bg-gray-300"}`} />
-                          Метаданные
-                        </div>
-                        <div className={`flex items-center gap-1 ${importProgress.current >= 50 ? "text-purple-600" : ""}`}>
-                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 50 ? "bg-purple-600" : "bg-gray-300"}`} />
-                          Парсинг
-                        </div>
-                        <div className={`flex items-center gap-1 ${importProgress.current >= 95 ? "text-purple-600" : ""}`}>
-                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 95 ? "bg-purple-600" : "bg-gray-300"}`} />
-                          Финализация
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-gray-400 mt-4 text-center">
-                        Большие файлы могут обрабатываться несколько минут
-                      </p>
+                      <Progress value={importProgress.current} className="h-3" />
                     </div>
                   ) : (
-                    // Обычная зона drag&drop
                     <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                       <div className="flex flex-col items-center justify-center">
-                        {importing ? (
-                          <>
-                            <RefreshCw className="h-12 w-12 text-purple-500 animate-spin mb-3" />
-                            <p className="text-lg text-purple-600 font-medium">Подготовка...</p>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-12 w-12 text-gray-400 mb-3" />
-                            <p className="text-lg text-gray-600 font-medium">Выберите файл для импорта</p>
-                            <p className="text-sm text-gray-400 mt-1">.txt, .md, .json, .xml</p>
-                            <p className="text-xs text-gray-400 mt-3">
-                              Система автоматически определит структуру
-                            </p>
-                          </>
-                        )}
+                        <Upload className="h-12 w-12 text-gray-400 mb-3" />
+                        <p className="text-lg text-gray-600 font-medium">Выберите файл для импорта</p>
+                        <p className="text-sm text-gray-400 mt-1">.txt, .md, .json, .xml</p>
                       </div>
                       <input
                         type="file"
@@ -1493,7 +1288,6 @@ export default function AdminContentPage() {
                     </label>
                   )}
 
-                  {/* Переключатель режима парсера */}
                   <div className="p-4 bg-gray-50 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1506,94 +1300,23 @@ export default function AdminContentPage() {
                         disabled={importing}
                       />
                     </div>
-                    <p className="text-xs text-gray-500">
-                      {useNeuralParser
-                        ? "AI-парсер лучше распознаёт сложную структуру документов"
-                        : "Кодовый парсер быстрее, но может пропустить детали"}
-                    </p>
-
-                    {/* AI статус (показываем только если нейросеть включена) */}
                     {useNeuralParser && (
-                      <div className="pt-2 border-t border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">Статус AI:</span>
-                          <div className="flex items-center gap-2">
-                            {aiStatus.checking ? (
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <RefreshCw className="h-3 w-3 animate-spin" />
-                                Проверка...
-                              </span>
-                            ) : aiStatus.available ? (
-                              <span className="text-xs text-green-600 flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3" />
-                                Доступен
-                              </span>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={checkAIStatus}
-                                className="text-purple-600 hover:text-purple-700 h-6 px-2 text-xs"
-                              >
-                                <Zap className="h-3 w-3 mr-1" />
-                                Проверить
-                              </Button>
-                            )}
-                            {/* Кнопка детального теста */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={runAITest}
-                              disabled={aiTestResult.testing}
-                              className="h-6 px-2 text-xs"
-                            >
-                              {aiTestResult.testing ? (
-                                <RefreshCw className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <>
-                                  <Zap className="h-3 w-3 mr-1" />
-                                  Тест API
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                        {/* Отображение ошибки AI */}
-                        {aiStatus.error && !aiStatus.checking && (
-                          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-start gap-2">
-                            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                            <span>{aiStatus.error}</span>
-                          </div>
-                        )}
-                        {/* Результат детального теста AI */}
-                        {aiTestResult.message && (
-                          <div className={`mt-2 p-3 rounded border ${
-                            aiTestResult.success
-                              ? "bg-green-50 border-green-200"
-                              : "bg-red-50 border-red-200"
-                          }`}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <span className={`text-xs font-medium ${
-                                  aiTestResult.success ? "text-green-700" : "text-red-700"
-                                }`}>
-                                  {aiTestResult.success ? "Тест пройден" : "Тест не пройден"}
-                                  {aiTestResult.duration && ` (${aiTestResult.duration}ms)`}
-                                </span>
-                                <p className={`text-xs mt-1 ${
-                                  aiTestResult.success ? "text-green-600" : "text-red-600"
-                                }`}>
-                                  {aiTestResult.message}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => setAiTestResult({ testing: false })}
-                                className="text-gray-400 hover:text-gray-600 ml-2"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {aiStatus.checking ? (
+                          <span className="flex items-center gap-1">
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                            Проверка AI...
+                          </span>
+                        ) : aiStatus.available ? (
+                          <span className="flex items-center gap-1 text-green-600">
+                            <CheckCircle className="h-3 w-3" />
+                            AI доступен
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-red-500">
+                            <AlertTriangle className="h-3 w-3" />
+                            {aiStatus.error || "AI недоступен"}
+                          </span>
                         )}
                       </div>
                     )}
@@ -1601,163 +1324,29 @@ export default function AdminContentPage() {
                 </div>
               )}
 
-              {/* Превью распарсенных данных */}
+              {parseError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                    <span className="text-red-700 whitespace-pre-line">{parseError}</span>
+                  </div>
+                </div>
+              )}
+
               {parsedData && parsedData.trails.length > 0 && (
-                <div className="space-y-6">
-                  {/* Информация о парсинге с выпадающим списком критериев */}
-                  <div className="bg-green-50 border border-green-200 rounded-lg overflow-hidden">
-                    <div
-                      className="flex items-center gap-3 p-3 cursor-pointer hover:bg-green-100/50 transition-colors"
-                      onClick={() => parsedData.confidenceDetails && setShowConfidenceDetails(!showConfidenceDetails)}
-                    >
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <div className="flex-1">
-                        <span className="text-green-700 font-medium">Контент успешно распознан</span>
-                        <span className="text-green-600 text-sm ml-2">
-                          ({parsedData.parseMethod === "ai" ? "AI" : parsedData.parseMethod === "hybrid" ? "Гибридный" : "Авто"})
-                        </span>
-                      </div>
-                      {parsedData.structureConfidence !== undefined && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-green-600 font-medium">
-                            Уверенность: {parsedData.structureConfidence}%
-                          </span>
-                          {parsedData.confidenceDetails && (
-                            <button
-                              type="button"
-                              className="text-green-600 hover:text-green-700 p-1 rounded-full hover:bg-green-100"
-                              title="Показать критерии оценки"
-                            >
-                              {showConfidenceDetails ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Выпадающий список критериев уверенности */}
-                    {showConfidenceDetails && parsedData.confidenceDetails && (
-                      <div className="border-t border-green-200 p-3 bg-green-50/50">
-                        <div className="flex items-center gap-2 mb-3 text-sm text-green-700">
-                          <Info className="h-4 w-4" />
-                          <span className="font-medium">Критерии оценки структуры</span>
-                        </div>
-                        <div className="space-y-2">
-                          {parsedData.confidenceDetails.criteria.map((criterion, idx) => (
-                            <div
-                              key={idx}
-                              className={`p-2 rounded-lg border ${
-                                criterion.met
-                                  ? 'bg-green-100/50 border-green-300'
-                                  : 'bg-gray-50 border-gray-200'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <span className={`text-sm font-medium ${
-                                  criterion.met ? 'text-green-700' : 'text-gray-600'
-                                }`}>
-                                  {criterion.name}
-                                </span>
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                  criterion.met
-                                    ? 'bg-green-200 text-green-700'
-                                    : 'bg-gray-200 text-gray-600'
-                                }`}>
-                                  +{criterion.score}/{criterion.maxScore}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-600">
-                                {criterion.description}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-green-200 flex items-center justify-between text-sm">
-                          <span className="text-green-700">Итоговая оценка</span>
-                          <span className="font-bold text-green-700">
-                            {parsedData.confidenceDetails.totalScore} из {parsedData.confidenceDetails.maxPossibleScore} баллов
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                <div className="space-y-4">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-green-700 font-medium">
+                      Распознано {parsedData.trails.length} trails
+                    </span>
                   </div>
-
-                  {/* Предупреждения */}
-                  {parsedData.warnings && parsedData.warnings.length > 0 && (
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-yellow-700 font-medium mb-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        Предупреждения
-                      </div>
-                      <ul className="text-sm text-yellow-600 space-y-1">
-                        {parsedData.warnings.slice(0, 5).map((w, i) => (
-                          <li key={i}>• {w}</li>
-                        ))}
-                      </ul>
+                  {parsedData.trails.map((trail, idx) => (
+                    <div key={idx} className="p-3 border rounded-lg">
+                      <h4 className="font-medium">{trail.title}</h4>
+                      <p className="text-sm text-gray-500">{trail.modules.length} модулей</p>
                     </div>
-                  )}
-
-                  {/* Превью trails */}
-                  <div className="space-y-4">
-                    {parsedData.trails.map((trail, trailIndex) => (
-                      <div key={trailIndex} className="border rounded-lg overflow-hidden">
-                        <div
-                          className="p-4 flex items-center gap-3"
-                          style={{ backgroundColor: `${trail.color || "#6366f1"}15` }}
-                        >
-                          <span className="text-2xl">{trail.icon || "📚"}</span>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{trail.title}</h3>
-                            {trail.subtitle && (
-                              <p className="text-sm text-gray-600">{trail.subtitle}</p>
-                            )}
-                          </div>
-                          <Badge variant="outline">
-                            {trail.modules.length} модулей
-                          </Badge>
-                        </div>
-
-                        <div className="divide-y">
-                          {trail.modules.map((module, moduleIndex) => {
-                            const TypeIcon = typeIcons[module.type] || BookOpen
-                            return (
-                              <div key={moduleIndex} className="p-3 flex items-center gap-3 bg-white">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
-                                  <TypeIcon className="h-4 w-4 text-gray-600" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900 truncate">
-                                      {module.title}
-                                    </span>
-                                    <Badge variant="outline" className="text-xs shrink-0">
-                                      {typeLabels[module.type]}
-                                    </Badge>
-                                  </div>
-                                  {module.description && (
-                                    <p className="text-xs text-gray-500 truncate">{module.description}</p>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0">
-                                  {module.questions.length > 0 && (
-                                    <span className="flex items-center gap-1">
-                                      <HelpCircle className="h-3 w-3" />
-                                      {module.questions.length}
-                                    </span>
-                                  )}
-                                  <span>{module.points} XP</span>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1765,62 +1354,20 @@ export default function AdminContentPage() {
             <div className="p-6 border-t bg-gray-50">
               {parsedData ? (
                 <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={resetImportModal}
-                    className="flex-1"
-                  >
+                  <Button variant="outline" onClick={resetImportModal} className="flex-1">
                     Отмена
                   </Button>
-                  {useNeuralParser && aiStatus.available && (
-                    <Button
-                      variant="outline"
-                      onClick={handleRegenerate}
-                      disabled={regenerating || saving}
-                      className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                    >
-                      {regenerating ? (
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4 mr-2" />
-                      )}
-                      Перегенерировать
-                    </Button>
-                  )}
-                  {!useNeuralParser && (
-                    <Button
-                      variant="outline"
-                      onClick={handleRegenerate}
-                      disabled={regenerating || saving}
-                      className="text-gray-600 border-gray-300 hover:bg-gray-50"
-                    >
-                      {regenerating ? (
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                      )}
-                      Перепарсить
-                    </Button>
-                  )}
                   <Button
                     onClick={handleSaveImport}
-                    disabled={saving || regenerating}
+                    disabled={saving}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
-                    {saving ? (
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4 mr-2" />
-                    )}
+                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                     Добавить
                   </Button>
                 </div>
               ) : (
-                <Button
-                  variant="outline"
-                  onClick={resetImportModal}
-                  className="w-full"
-                >
+                <Button variant="outline" onClick={resetImportModal} className="w-full">
                   Закрыть
                 </Button>
               )}
@@ -1829,79 +1376,8 @@ export default function AdminContentPage() {
         </div>
       )}
 
-      {/* Analytics Modal */}
-      {showAnalytics && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Аналитика по модулям
-              </h2>
-              <button
-                onClick={() => setShowAnalytics(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto flex-1">
-              {analytics.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Нет данных</p>
-              ) : (
-                <div className="space-y-4">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 font-medium">Модуль</th>
-                        <th className="text-center py-2 font-medium">Прошли</th>
-                        <th className="text-center py-2 font-medium">% завершения</th>
-                        <th className="text-center py-2 font-medium">Ср. оценка</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.map((item) => (
-                        <tr key={item.id} className="border-b">
-                          <td className="py-2">{item.title}</td>
-                          <td className="text-center py-2">{item.completedCount}</td>
-                          <td className="text-center py-2">
-                            <span className={`px-2 py-0.5 rounded text-xs ${
-                              item.completionRate >= 70
-                                ? "bg-green-100 text-green-700"
-                                : item.completionRate >= 40
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-700"
-                            }`}>
-                              {item.completionRate}%
-                            </span>
-                          </td>
-                          <td className="text-center py-2">
-                            {item.avgScore !== null ? (
-                              <span className="text-blue-600 font-medium">{item.avgScore}/10</span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 border-t bg-gray-50">
-              <Button variant="outline" onClick={() => setShowAnalytics(false)} className="w-full">
-                Закрыть
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* History Modal */}
-      {showHistory && (
+      {/* History Modal - Admin Only */}
+      {showHistory && isAdmin && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b">

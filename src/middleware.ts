@@ -61,6 +61,21 @@ const authMiddleware = withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
+    // Protect /content main page (allow both TEACHER and ADMIN)
+    if (path === "/content" && token?.role !== "TEACHER" && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
+    // Redirects for backward compatibility: /admin/content → /content
+    if (path === "/admin/content" && token?.role === "ADMIN") {
+      return NextResponse.redirect(new URL("/content", req.url))
+    }
+
+    // Redirects for backward compatibility: /teacher/content → /content
+    if (path === "/teacher/content" && (token?.role === "TEACHER" || token?.role === "ADMIN")) {
+      return NextResponse.redirect(new URL("/content", req.url))
+    }
+
     return NextResponse.next()
   },
   {

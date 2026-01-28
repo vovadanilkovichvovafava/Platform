@@ -400,14 +400,24 @@ export default async function TrailPage({ params }: Props) {
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100">
                           <Lock className="h-6 w-6 text-gray-400" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-400">{module.title}</h3>
-                          <p className="text-sm text-gray-400">{module.description}</p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-400 truncate">{module.title}</h3>
+                          <p className="text-sm text-gray-400 line-clamp-1">{module.description}</p>
                         </div>
+                        {/* Admin/Teacher edit button - доступна даже на заблокированных модулях */}
+                        {isPrivileged && (
+                          <Link
+                            href={`/content/modules/${module.id}`}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
+                            title="Редактировать модуль"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-4 p-4">
-                        <Link href={`/module/${module.slug}`} className="flex items-center gap-4 flex-1">
+                        <Link href={`/module/${module.slug}`} className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
                             isCompleted ? "bg-green-100" : isInProgress ? "bg-blue-100" : "bg-gray-100"
                           }`}>
@@ -419,13 +429,13 @@ export default async function TrailPage({ params }: Props) {
                               <TypeIcon className="h-6 w-6 text-gray-500" />
                             )}
                           </div>
-                          <div className="flex-1">
-                            <h3 className="font-medium text-gray-900">{module.title}</h3>
-                            <p className="text-sm text-gray-500">{module.description}</p>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-gray-900 truncate">{module.title}</h3>
+                            <p className="text-sm text-gray-500 line-clamp-1">{module.description}</p>
                           </div>
-                          <div className="hidden sm:flex items-center gap-4 text-sm text-gray-500">
-                            <span>{module.duration}</span>
-                            <span>{module.points} XP</span>
+                          <div className="hidden sm:flex items-center gap-4 text-sm text-gray-500 shrink-0 ml-4">
+                            <span className="whitespace-nowrap">{module.duration}</span>
+                            <span className="whitespace-nowrap">{module.points} XP</span>
                           </div>
                         </Link>
                         {/* Admin/Teacher edit button */}
