@@ -16,7 +16,6 @@ interface StudentAnalyticsPayload {
   // Aggregated metrics only
   metrics: {
     totalXP: number
-    currentStreak: number
     totalModulesCompleted: number
     totalModulesAvailable: number
     averageScore: number | null
@@ -103,7 +102,7 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true, // Only for response display, not sent to AI
         totalXP: true,
-        currentStreak: true,
+        // Note: currentStreak removed - not included in AI analysis payload
         activityDays: {
           orderBy: { date: "desc" },
           take: 1,
@@ -250,7 +249,6 @@ export async function POST(request: NextRequest) {
       studentId: studentId.substring(0, 8) + "...", // Truncated for AI
       metrics: {
         totalXP: student.totalXP,
-        currentStreak: student.currentStreak,
         totalModulesCompleted: student.moduleProgress.length,
         totalModulesAvailable,
         averageScore,

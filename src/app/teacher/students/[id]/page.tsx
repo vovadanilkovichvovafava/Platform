@@ -22,7 +22,6 @@ import {
   ExternalLink,
   CalendarDays,
   AlertCircle,
-  ChevronDown,
 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -185,7 +184,13 @@ export default async function StudentDetailPage({ params }: Props) {
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
+                  <Link
+                    href={`/dashboard/${student.id}`}
+                    className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+                    title="Открыть дашборд студента"
+                  >
+                    {student.name}
+                  </Link>
                   <ExportStatsButton studentId={student.id} studentName={student.name} />
                 </div>
                 <div className="flex items-center gap-2 text-gray-500 mt-1">

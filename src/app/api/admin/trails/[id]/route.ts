@@ -98,16 +98,28 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const data = trailUpdateSchema.parse(body)
 
     // Extract teacher assignment data
-    const { assignedTeacherId, ...trailData } = data
+    const { assignedTeacherId, teacherVisibility, ...trailData } = data
 
-    // Update trail
+    // RBAC: Teachers cannot change teacherVisibility
+    if (session.user.role === "TEACHER" && teacherVisibility !== undefined) {
+      return NextResponse.json(
+        { error: "Учителям запрещено изменять видимость для учителей" },
+        { status: 403 }
+      )
+    }
+
+    // Update trail (include teacherVisibility only for admins)
+    const updateData = session.user.role === "ADMIN"
+      ? { ...trailData, ...(teacherVisibility !== undefined && { teacherVisibility }) }
+      : trailData
+
     const trail = await prisma.trail.update({
       where: { id },
-      data: trailData,
+      data: updateData,
     })
 
     // Handle teacher assignment for SPECIFIC visibility (Admin only)
-    if (session.user.role === "ADMIN" && data.teacherVisibility === "SPECIFIC") {
+    if (session.user.role === "ADMIN" && teacherVisibility === "SPECIFIC") {
       // Clear existing assignments for this trail
       await prisma.trailTeacher.deleteMany({
         where: { trailId: id },
@@ -129,7 +141,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
           })
         }
       }
-    } else if (session.user.role === "ADMIN" && data.teacherVisibility && data.teacherVisibility !== "SPECIFIC") {
+    } else if (session.user.role === "ADMIN" && teacherVisibility && teacherVisibility !== "SPECIFIC") {
       // Clear assignments when switching away from SPECIFIC
       await prisma.trailTeacher.deleteMany({
         where: { trailId: id },

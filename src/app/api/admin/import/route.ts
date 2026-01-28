@@ -381,6 +381,7 @@ async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
         color: trailData.color,
         duration: "4 недели",
         isPublished: true,
+        isRestricted: true, // New trails are restricted by default - students need explicit access
       },
     })
     imported.trails++

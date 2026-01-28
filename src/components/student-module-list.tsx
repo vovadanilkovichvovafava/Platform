@@ -14,7 +14,6 @@ import {
   SkipForward,
   Undo2,
   RefreshCw,
-  ChevronDown,
 } from "lucide-react"
 
 interface Module {
@@ -156,32 +155,33 @@ export function StudentModuleList({
             <Collapsible defaultOpen>
               <CardContent className="p-0">
                 {/* Trail header with collapsible trigger */}
-                <CollapsibleTrigger className="w-full p-4 hover:bg-gray-50 transition-colors rounded-t-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <ChevronDown className="h-5 w-5 text-gray-400 transition-transform duration-200 [[data-state=closed]_&]:rotate-[-90deg]" />
-                      <span className="font-semibold text-gray-900">{enrollment.trail.title}</span>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full p-4 pb-2 hover:bg-gray-50 transition-colors rounded-t-lg text-left">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold text-gray-900">{enrollment.trail.title}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="text-sm">
+                          {completedModules.length}/{trailModules.length}
+                        </Badge>
+                        <span className="text-sm text-gray-500">{trailProgress}%</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="secondary" className="text-sm">
-                        {completedModules.length}/{trailModules.length}
-                      </Badge>
-                      <span className="text-sm text-gray-500">{trailProgress}%</span>
+                    {/* Progress bar */}
+                    <div className="mt-3">
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-300"
+                          style={{ width: `${trailProgress}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>{completedModules.reduce((s, m) => s + m.points, 0)} XP заработано</span>
+                        <span>{trailMaxXP} XP максимум</span>
+                      </div>
                     </div>
-                  </div>
-                  {/* Progress bar */}
-                  <div className="mt-3 ml-8">
-                    <div className="w-full bg-gray-100 rounded-full h-2">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-300"
-                        style={{ width: `${trailProgress}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-400 mt-1">
-                      <span>{completedModules.reduce((s, m) => s + m.points, 0)} XP заработано</span>
-                      <span>{trailMaxXP} XP максимум</span>
-                    </div>
-                  </div>
+                  </button>
                 </CollapsibleTrigger>
 
                 {/* Module list (collapsible content) */}

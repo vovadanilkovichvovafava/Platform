@@ -783,7 +783,7 @@ export default function UnifiedContentPage() {
                     </Link>
                   </Button>
                   <Button asChild variant="outline" size="sm">
-                    <Link href="/teacher/reviews">
+                    <Link href="/teacher">
                       <FileCheck className="h-4 w-4 mr-2" />
                       Работы на проверку
                     </Link>
