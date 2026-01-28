@@ -36,7 +36,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
-  const { data: session, update: updateSession } = useSession()
+  const { data: session, status, update: updateSession } = useSession()
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,12 +51,20 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("")
 
   useEffect(() => {
-    if (!session) {
+    // Ждём пока сессия загрузится
+    if (status === "loading") {
+      return
+    }
+    // Редирект только если точно не авторизован
+    if (status === "unauthenticated") {
       router.push("/login")
       return
     }
-    fetchProfile()
-  }, [session, router])
+    // Сессия есть - загружаем профиль
+    if (session) {
+      fetchProfile()
+    }
+  }, [session, status, router])
 
   const fetchProfile = async () => {
     try {
@@ -167,7 +175,8 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) {
+  // Показываем загрузку пока сессия определяется или профиль загружается
+  if (status === "loading" || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />

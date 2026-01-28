@@ -32,7 +32,7 @@ const moduleSchema = z.object({
   requirements: z.string().default(""),
   type: z.enum(["THEORY", "PRACTICE", "PROJECT"]).default("THEORY"),
   level: z.enum(["Beginner", "Intermediate", "Junior", "Middle", "Senior"]).default("Beginner"),
-  points: z.number().default(50),
+  points: z.number().min(0, "Баллы не могут быть отрицательными").default(50),
   duration: z.string().default("15 мин"),
 })
 

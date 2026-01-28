@@ -41,6 +41,11 @@ const authMiddleware = withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
+    // Redirect authenticated users away from login/register pages
+    if (token && (path === "/login" || path === "/register")) {
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
     // Protect teacher routes (allow both TEACHER and ADMIN)
     if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))

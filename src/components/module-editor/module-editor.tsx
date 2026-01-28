@@ -384,9 +384,16 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
                     </label>
                     <Input
                       type="number"
+                      min={0}
                       value={points}
-                      onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0
+                        setPoints(Math.max(0, value))
+                      }}
                     />
+                    {points < 0 && (
+                      <p className="text-xs text-red-500 mt-1">Баллы не могут быть отрицательными</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">

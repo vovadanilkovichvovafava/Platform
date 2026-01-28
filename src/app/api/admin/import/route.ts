@@ -252,45 +252,31 @@ export async function GET(request: NextRequest) {
     }
 
     // Детальный тест AI API с реальным запросом
+    // SECURITY: Не возвращаем конфигурацию (endpoint, apiKey, model) в ответе
     if (action === "test-ai") {
       const aiConfig = getAIConfig()
       const startTime = Date.now()
-      const logs: string[] = []
-
-      logs.push(`[${new Date().toISOString()}] Начало теста AI API`)
-      logs.push(`Конфигурация:`)
-      logs.push(`  - AI_PARSER_ENABLED: ${aiConfig.enabled}`)
-      logs.push(`  - AI_API_ENDPOINT: ${aiConfig.apiEndpoint || "(не задан)"}`)
-      logs.push(`  - AI_API_KEY: ${aiConfig.apiKey ? "***" + aiConfig.apiKey.slice(-4) : "(не задан)"}`)
-      logs.push(`  - AI_MODEL: ${aiConfig.model || "(не задан)"}`)
 
       if (!aiConfig.enabled) {
-        logs.push(`\n❌ ОШИБКА: AI_PARSER_ENABLED не установлен в "true"`)
         return NextResponse.json({
           success: false,
-          logs: logs.join("\n"),
-          error: "AI парсер отключен. Установите AI_PARSER_ENABLED=true",
+          message: "AI парсер отключен",
           duration: Date.now() - startTime,
         })
       }
 
       if (!aiConfig.apiKey) {
-        logs.push(`\n❌ ОШИБКА: AI_API_KEY не задан`)
         return NextResponse.json({
           success: false,
-          logs: logs.join("\n"),
-          error: "API ключ не настроен. Установите AI_API_KEY",
+          message: "API ключ не настроен",
           duration: Date.now() - startTime,
         })
       }
-
-      logs.push(`\n[${new Date().toISOString()}] Отправка тестового запроса к Claude API...`)
 
       try {
         const controller = new AbortController()
         const timeoutMs = 30000 // 30 секунд для теста
         const timeoutId = setTimeout(() => {
-          logs.push(`\n⏱️ Таймаут ${timeoutMs / 1000} секунд, отменяем запрос...`)
           controller.abort()
         }, timeoutMs)
 
@@ -312,57 +298,43 @@ export async function GET(request: NextRequest) {
         clearTimeout(timeoutId)
 
         const responseTime = Date.now() - startTime
-        logs.push(`[${new Date().toISOString()}] Ответ получен за ${responseTime}ms`)
-        logs.push(`HTTP статус: ${response.status} ${response.statusText}`)
 
         if (!response.ok) {
+          // Логируем детали ошибки только на сервере
           const errorText = await response.text()
-          logs.push(`\n❌ ОШИБКА API:`)
-          logs.push(errorText.substring(0, 500))
+          console.error("AI API test failed:", response.status, errorText.substring(0, 200))
 
           return NextResponse.json({
             success: false,
-            logs: logs.join("\n"),
-            error: `API вернул ошибку: ${response.status}`,
+            message: `Ошибка API: ${response.status}`,
             duration: responseTime,
           })
         }
 
         const data = await response.json()
-        const aiResponse = data.content?.[0]?.text || "(пустой ответ)"
-
-        logs.push(`\n✅ УСПЕХ!`)
-        logs.push(`Модель: ${data.model}`)
-        logs.push(`Ответ AI: "${aiResponse}"`)
-        logs.push(`Использовано токенов: input=${data.usage?.input_tokens}, output=${data.usage?.output_tokens}`)
 
         return NextResponse.json({
           success: true,
-          logs: logs.join("\n"),
-          response: aiResponse,
-          model: data.model,
+          message: "AI API работает корректно",
           duration: responseTime,
         })
       } catch (e) {
         const responseTime = Date.now() - startTime
 
+        // Логируем детали только на сервере
+        console.error("AI API test error:", e instanceof Error ? e.message : String(e))
+
         if (e instanceof Error && e.name === "AbortError") {
-          logs.push(`\n❌ ТАЙМАУТ: Запрос не завершился за 30 секунд`)
           return NextResponse.json({
             success: false,
-            logs: logs.join("\n"),
-            error: "Таймаут: API не ответил за 30 секунд",
+            message: "Таймаут: API не ответил за 30 секунд",
             duration: responseTime,
           })
         }
 
-        logs.push(`\n❌ ОШИБКА СЕТИ:`)
-        logs.push(e instanceof Error ? e.message : String(e))
-
         return NextResponse.json({
           success: false,
-          logs: logs.join("\n"),
-          error: e instanceof Error ? e.message : "Неизвестная ошибка",
+          message: "Ошибка подключения к API",
           duration: responseTime,
         })
       }

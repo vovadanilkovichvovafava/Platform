@@ -11,7 +11,7 @@ const moduleUpdateSchema = z.object({
   requirements: z.string().optional(),
   type: z.enum(["THEORY", "PRACTICE", "PROJECT"]).optional(),
   level: z.enum(["Beginner", "Intermediate", "Junior", "Middle", "Senior"]).optional(),
-  points: z.number().optional(),
+  points: z.number().min(0, "Баллы не могут быть отрицательными").optional(),
   duration: z.string().optional(),
   requiresSubmission: z.boolean().optional(),
 })

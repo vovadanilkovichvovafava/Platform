@@ -185,9 +185,8 @@ export default function AdminContentPage() {
   })
   const [aiTestResult, setAiTestResult] = useState<{
     testing: boolean
-    logs?: string
+    message?: string
     success?: boolean
-    error?: string
     duration?: number
   }>({ testing: false })
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -610,17 +609,15 @@ export default function AdminContentPage() {
       const data = await res.json()
       setAiTestResult({
         testing: false,
-        logs: data.logs,
+        message: data.message,
         success: data.success,
-        error: data.error,
         duration: data.duration,
       })
     } catch (e) {
       setAiTestResult({
         testing: false,
-        logs: `Ошибка запроса: ${e instanceof Error ? e.message : "неизвестная ошибка"}`,
+        message: `Ошибка запроса: ${e instanceof Error ? e.message : "неизвестная ошибка"}`,
         success: false,
-        error: "Ошибка сети",
       })
     }
   }, [])
@@ -1561,29 +1558,33 @@ export default function AdminContentPage() {
                           </div>
                         )}
                         {/* Результат детального теста AI */}
-                        {aiTestResult.logs && (
+                        {aiTestResult.message && (
                           <div className={`mt-2 p-3 rounded border ${
                             aiTestResult.success
                               ? "bg-green-50 border-green-200"
                               : "bg-red-50 border-red-200"
                           }`}>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className={`text-xs font-medium ${
-                                aiTestResult.success ? "text-green-700" : "text-red-700"
-                              }`}>
-                                {aiTestResult.success ? "Тест пройден" : "Тест не пройден"}
-                                {aiTestResult.duration && ` (${aiTestResult.duration}ms)`}
-                              </span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <span className={`text-xs font-medium ${
+                                  aiTestResult.success ? "text-green-700" : "text-red-700"
+                                }`}>
+                                  {aiTestResult.success ? "Тест пройден" : "Тест не пройден"}
+                                  {aiTestResult.duration && ` (${aiTestResult.duration}ms)`}
+                                </span>
+                                <p className={`text-xs mt-1 ${
+                                  aiTestResult.success ? "text-green-600" : "text-red-600"
+                                }`}>
+                                  {aiTestResult.message}
+                                </p>
+                              </div>
                               <button
                                 onClick={() => setAiTestResult({ testing: false })}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-gray-400 hover:text-gray-600 ml-2"
                               >
                                 <X className="h-3 w-3" />
                               </button>
                             </div>
-                            <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono bg-white/50 p-2 rounded max-h-48 overflow-y-auto">
-                              {aiTestResult.logs}
-                            </pre>
                           </div>
                         )}
                       </div>
