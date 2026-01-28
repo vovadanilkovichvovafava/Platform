@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         name: true, // Only for response display, not sent to AI
         totalXP: true,
         currentStreak: true,
-        activities: {
+        activityDays: {
           orderBy: { date: "desc" },
           take: 1,
           select: { date: true },
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate days since last activity
-    const lastActivity = student.activities[0]?.date
+    const lastActivity = student.activityDays[0]?.date
     const daysSinceLastActivity = lastActivity
       ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24))
       : null
