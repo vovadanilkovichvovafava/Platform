@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { ACHIEVEMENTS, getAchievement } from "@/lib/achievements"
+import { ACHIEVEMENTS } from "@/lib/achievements"
+import { getLevelInfo, getRankInfo, formatXP } from "@/lib/levels"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,60 +23,9 @@ import {
   GraduationCap,
   Compass,
   TrendingUp,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
-
-function getRank(xp: number) {
-  if (xp >= 1000) return { name: "Master", color: "text-purple-600", bg: "bg-purple-100" }
-  if (xp >= 500) return { name: "Expert", color: "text-blue-600", bg: "bg-blue-100" }
-  if (xp >= 200) return { name: "Intermediate", color: "text-green-600", bg: "bg-green-100" }
-  return { name: "Beginner", color: "text-gray-600", bg: "bg-gray-100" }
-}
-
-function getRankProgress(xp: number) {
-  // Define rank thresholds
-  const ranks = [
-    { name: "Beginner", minXP: 0, maxXP: 200 },
-    { name: "Intermediate", minXP: 200, maxXP: 500 },
-    { name: "Expert", minXP: 500, maxXP: 1000 },
-    { name: "Master", minXP: 1000, maxXP: null },
-  ]
-
-  // Find current rank
-  let currentRankIndex = 0
-  for (let i = ranks.length - 1; i >= 0; i--) {
-    if (xp >= ranks[i].minXP) {
-      currentRankIndex = i
-      break
-    }
-  }
-
-  const currentRank = ranks[currentRankIndex]
-  const nextRank = ranks[currentRankIndex + 1]
-
-  // If Master (max rank)
-  if (!nextRank) {
-    return {
-      currentRank: currentRank.name,
-      nextRank: null,
-      xpToNext: 0,
-      progress: 100,
-      isMaxRank: true,
-    }
-  }
-
-  const xpInCurrentRank = xp - currentRank.minXP
-  const xpNeededForNext = nextRank.minXP - currentRank.minXP
-  const progress = Math.round((xpInCurrentRank / xpNeededForNext) * 100)
-
-  return {
-    currentRank: currentRank.name,
-    nextRank: nextRank.name,
-    xpToNext: nextRank.minXP - xp,
-    progress,
-    isMaxRank: false,
-  }
-}
 
 function getInitials(name: string) {
   return name
@@ -143,8 +93,9 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  const rank = getRank(user.totalXP)
-  const rankProgress = getRankProgress(user.totalXP)
+  // Используем единый модуль уровней/рангов
+  const levelInfo = getLevelInfo(user.totalXP)
+  const rankInfo = getRankInfo(user.totalXP)
 
   // Get leaderboard position
   const higherRanked = await prisma.user.count({
@@ -285,9 +236,12 @@ export default async function DashboardPage() {
                   </Avatar>
                   <div>
                     <h2 className="font-semibold text-lg">{user.name}</h2>
-                    <Badge className={`${rank.bg} ${rank.color} border-0`}>
-                      {rank.name}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${levelInfo.current.bgColor} ${levelInfo.current.color} border-0`}>
+                        {levelInfo.current.icon} {levelInfo.current.name}
+                      </Badge>
+                      <span className="text-xs text-gray-400">Ур. {levelInfo.current.level}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -324,25 +278,30 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
 
-                {/* Progress to next rank */}
+                {/* Progress to next level */}
                 <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {rankProgress.isMaxRank
-                        ? "Максимальный ранг достигнут!"
-                        : `До ${rankProgress.nextRank}`}
-                    </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm font-medium text-gray-700">
+                        {levelInfo.isMaxLevel
+                          ? "Максимальный уровень!"
+                          : `До ${levelInfo.next?.name}`}
+                      </span>
+                    </div>
+                    {levelInfo.isMaxLevel && (
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                    )}
                   </div>
                   <Progress
-                    value={rankProgress.progress}
+                    value={levelInfo.progressPercent}
                     className="h-2"
                   />
                   <div className="flex justify-between mt-1">
-                    <span className="text-xs text-gray-500">{rank.name}</span>
-                    {!rankProgress.isMaxRank && (
+                    <span className="text-xs text-gray-500">{levelInfo.current.name}</span>
+                    {!levelInfo.isMaxLevel && levelInfo.next && (
                       <span className="text-xs text-purple-600 font-medium">
-                        ещё {rankProgress.xpToNext} XP
+                        ещё {levelInfo.xpToNext} XP
                       </span>
                     )}
                   </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, XCircle, HelpCircle, RotateCcw, BookOpen } from "lucide-react"
 import Link from "next/link"
-import { MatchingExercise, OrderingExercise, CaseAnalysisExercise } from "@/components/exercises"
+import { MatchingExercise, OrderingExercise, CaseAnalysisExercise, TrueFalseExercise, FillBlankExercise } from "@/components/exercises"
 
 // Remove emojis from text (clean data that may have emojis)
 const stripEmojis = (text: string): string => {
@@ -69,7 +69,7 @@ const IMPROVED_CASE_ANALYSIS: CaseAnalysisData = {
 }
 
 // Question types
-type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS" | "TRUE_FALSE" | "FILL_BLANK"
 
 interface MatchingData {
   leftItems: { id: string; text: string }[]
@@ -91,12 +91,30 @@ interface CaseAnalysisData {
   minCorrectRequired?: number
 }
 
+interface TrueFalseData {
+  statements: {
+    id: string
+    text: string
+    isTrue: boolean
+    explanation?: string
+  }[]
+}
+
+interface FillBlankData {
+  textWithBlanks: string
+  blanks: {
+    id: string
+    correctAnswer: string
+    options: string[]
+  }[]
+}
+
 interface Question {
   id: string
   type: QuestionType
   question: string
   options: string[]
-  data?: MatchingData | OrderingData | CaseAnalysisData | null
+  data?: MatchingData | OrderingData | CaseAnalysisData | TrueFalseData | FillBlankData | null
   order: number
 }
 
@@ -441,6 +459,33 @@ export function AssessmentSection({
       )
     }
 
+    if (questionType === "TRUE_FALSE" && question.data) {
+      const data = question.data as TrueFalseData
+      return (
+        <TrueFalseExercise
+          key={question.id}
+          question={question.question}
+          statements={data.statements}
+          onComplete={handleExerciseComplete}
+          disabled={isQuestionFinished}
+        />
+      )
+    }
+
+    if (questionType === "FILL_BLANK" && question.data) {
+      const data = question.data as FillBlankData
+      return (
+        <FillBlankExercise
+          key={question.id}
+          question={question.question}
+          textWithBlanks={data.textWithBlanks}
+          blanks={data.blanks}
+          onComplete={handleExerciseComplete}
+          disabled={isQuestionFinished}
+        />
+      )
+    }
+
     // Default: SINGLE_CHOICE - original rendering
     return (
       <div className="space-y-3">
@@ -482,7 +527,7 @@ export function AssessmentSection({
   }
 
   // Check if current question is interactive type
-  const isInteractiveQuestion = question && ["MATCHING", "ORDERING", "CASE_ANALYSIS"].includes(question.type || "")
+  const isInteractiveQuestion = question && ["MATCHING", "ORDERING", "CASE_ANALYSIS", "TRUE_FALSE", "FILL_BLANK"].includes(question.type || "")
 
   const handleReset = async () => {
     if (isResetting) return

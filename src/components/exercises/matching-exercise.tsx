@@ -121,7 +121,7 @@ export function MatchingExercise({
         </div>
 
         {/* Left items as rows with their matches */}
-        {leftItems.map((item) => {
+        {leftItems.map((item, index) => {
           const isMatched = !!matches[item.id]
           const isSelected = selectedLeft === item.id
           const colorIndex = getColorIndex(item.id)
@@ -132,14 +132,14 @@ export function MatchingExercise({
           const isPairWrong = showResult && isMatched && correctPairs[item.id] !== matches[item.id]
 
           return (
-            <div key={item.id} className="grid grid-cols-2 gap-3 items-center">
-              {/* Left item */}
+            <div key={item.id} className="grid grid-cols-2 gap-3 items-stretch">
+              {/* Left item with number */}
               <button
                 onClick={() => handleLeftClick(item.id)}
                 disabled={disabled || showResult}
                 className={cn(
                   "w-full p-3 rounded-lg text-left text-sm font-medium transition-all",
-                  "border-2",
+                  "border-2 overflow-hidden",
                   !isMatched && !isSelected && "bg-white border-gray-200 hover:border-blue-300",
                   isSelected && "bg-blue-50 border-blue-500 shadow-md",
                   isMatched && !showResult && colors && `bg-white ${colors.border}`,
@@ -148,20 +148,31 @@ export function MatchingExercise({
                   (disabled || showResult) && "cursor-default"
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
+                  {/* Номер вопроса */}
+                  <span className={cn(
+                    "flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                    isSelected ? "bg-blue-500 text-white" :
+                    isPairCorrect ? "bg-green-500 text-white" :
+                    isPairWrong ? "bg-red-500 text-white" :
+                    isMatched && colors ? colors.bg + " text-white" :
+                    "bg-gray-200 text-gray-600"
+                  )}>
+                    {index + 1}
+                  </span>
                   {isMatched && colors && !showResult && (
-                    <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", colors.bg)} />
+                    <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1", colors.bg)} />
                   )}
-                  {isPairCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                  {isPairCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />}
                   {isPairWrong && <span className="text-red-600 font-bold flex-shrink-0">✕</span>}
-                  <span className="leading-tight">{item.text}</span>
+                  <span className="leading-tight break-words overflow-wrap-anywhere min-w-0">{item.text}</span>
                 </div>
               </button>
 
               {/* Right side - show match or placeholder */}
               <div
                 className={cn(
-                  "w-full p-3 rounded-lg text-sm font-medium transition-all border-2 min-h-[44px]",
+                  "w-full p-3 rounded-lg text-sm font-medium transition-all border-2 min-h-[44px] overflow-hidden",
                   isMatched && !showResult && colors && `bg-white ${colors.border}`,
                   isPairCorrect && "bg-green-50 border-green-500",
                   isPairWrong && "bg-red-50 border-red-500",
@@ -169,13 +180,13 @@ export function MatchingExercise({
                 )}
               >
                 {matchedText ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     {isMatched && colors && !showResult && (
-                      <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", colors.bg)} />
+                      <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1", colors.bg)} />
                     )}
-                    {isPairCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                    {isPairCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />}
                     {isPairWrong && <span className="text-red-600 font-bold flex-shrink-0">✕</span>}
-                    <span className="leading-tight">{matchedText}</span>
+                    <span className="leading-tight break-words overflow-wrap-anywhere min-w-0">{matchedText}</span>
                   </div>
                 ) : (
                   <span className="text-gray-400">—</span>
@@ -204,12 +215,13 @@ export function MatchingExercise({
                 disabled={disabled || showResult || !selectedLeft}
                 className={cn(
                   "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border-2 relative",
+                  "max-w-full break-words text-left",
                   !canClick && "bg-white border-gray-200 text-gray-700",
                   canClick && "bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer shadow-sm hover:shadow",
                   (disabled || showResult) && "cursor-default"
                 )}
               >
-                {item.text}
+                <span className="break-words overflow-wrap-anywhere">{item.text}</span>
                 {useCount > 0 && (
                   <span className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                     {useCount}
