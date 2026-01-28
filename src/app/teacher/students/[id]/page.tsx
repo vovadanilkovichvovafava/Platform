@@ -243,10 +243,10 @@ export default async function StudentDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Main content - full width layout */}
-      <div className="space-y-8">
-        {/* Trails & Progress Section */}
-        <section>
+      {/* Main content - 50/50 layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column: Trails & Progress */}
+        <section className="lg:self-start">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
             <Target className="h-6 w-6 text-blue-600" />
             Trails и прогресс
@@ -265,116 +265,111 @@ export default async function StudentDetailPage({ params }: Props) {
           />
         </section>
 
-        {/* Activity Section - Full Width */}
-        <section>
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
-            <CalendarDays className="h-6 w-6 text-purple-600" />
-            Активность за год
-            <Badge variant="secondary" className="ml-2 text-sm">
-              {student.activityDays.length} активных дней
-            </Badge>
-          </h2>
-          <Card>
-            <CardContent className="p-6">
-              <ActivityCalendar activityDays={activityDaysWithDetails} />
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Submissions History Section - Full Width & Larger */}
-        <section>
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
-            <FileText className="h-6 w-6 text-orange-600" />
-            История работ
-            <Badge variant="secondary" className="ml-2 text-sm">
-              {student.submissions.length} работ
-            </Badge>
-          </h2>
-
-          {student.submissions.length === 0 ? (
+        {/* Right column: Activity + Submissions stacked */}
+        <div className="space-y-6">
+          {/* Activity Section */}
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+              <CalendarDays className="h-6 w-6 text-purple-600" />
+              Активность за год
+              <Badge variant="secondary" className="ml-2 text-sm">
+                {student.activityDays.length} активных дней
+              </Badge>
+            </h2>
             <Card>
-              <CardContent className="p-8 text-center">
-                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-lg">Нет отправленных работ</p>
-                <p className="text-gray-400 text-sm mt-1">Работы появятся здесь после отправки</p>
+              <CardContent className="p-4">
+                <ActivityCalendar activityDays={activityDaysWithDetails} />
               </CardContent>
             </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-0 divide-y">
-                {student.submissions.map((submission) => (
-                  <Link
-                    key={submission.id}
-                    href={`/teacher/reviews/${submission.id}`}
-                    className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
-                  >
-                    {/* Status icon */}
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                      submission.status === "APPROVED"
-                        ? "bg-green-100"
-                        : submission.status === "PENDING"
-                        ? "bg-blue-100"
-                        : submission.status === "FAILED"
-                        ? "bg-red-100"
-                        : "bg-orange-100"
-                    }`}>
-                      {submission.status === "APPROVED" && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-                      {submission.status === "PENDING" && <Clock className="h-5 w-5 text-blue-600" />}
-                      {submission.status === "REVISION" && <AlertCircle className="h-5 w-5 text-orange-600" />}
-                      {submission.status === "FAILED" && <AlertCircle className="h-5 w-5 text-red-600" />}
-                    </div>
+          </section>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-gray-900 truncate">{submission.module.title}</h4>
-                        <Badge variant="secondary" className="shrink-0 text-xs">
-                          {submission.module.trail.title}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                        {submission.review && (
-                          <span className="ml-2 text-blue-600 font-medium">
-                            Оценка: {submission.review.score}/10
-                          </span>
-                        )}
-                      </p>
-                    </div>
+          {/* Submissions History Section */}
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+              <FileText className="h-6 w-6 text-orange-600" />
+              История работ
+              <Badge variant="secondary" className="ml-2 text-sm">
+                {student.submissions.length} работ
+              </Badge>
+            </h2>
 
-                    {/* Status badge */}
-                    <Badge
-                      className={`shrink-0 text-xs border-0 ${
-                        submission.status === "APPROVED"
-                          ? "bg-green-100 text-green-700"
-                          : submission.status === "PENDING"
-                          ? "bg-blue-100 text-blue-700"
-                          : submission.status === "FAILED"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-orange-100 text-orange-700"
-                      }`}
+            {student.submissions.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500">Нет отправленных работ</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-0 divide-y max-h-[500px] overflow-y-auto">
+                  {student.submissions.map((submission) => (
+                    <Link
+                      key={submission.id}
+                      href={`/teacher/reviews/${submission.id}`}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors"
                     >
-                      {submission.status === "APPROVED"
-                        ? "Принято"
-                        : submission.status === "PENDING"
-                        ? "На проверке"
-                        : submission.status === "FAILED"
-                        ? "Провал"
-                        : "На доработку"}
-                    </Badge>
+                      {/* Status icon */}
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                        submission.status === "APPROVED"
+                          ? "bg-green-100"
+                          : submission.status === "PENDING"
+                          ? "bg-blue-100"
+                          : submission.status === "FAILED"
+                          ? "bg-red-100"
+                          : "bg-orange-100"
+                      }`}>
+                        {submission.status === "APPROVED" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        {submission.status === "PENDING" && <Clock className="h-4 w-4 text-blue-600" />}
+                        {submission.status === "REVISION" && <AlertCircle className="h-4 w-4 text-orange-600" />}
+                        {submission.status === "FAILED" && <AlertCircle className="h-4 w-4 text-red-600" />}
+                      </div>
 
-                    <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
-                  </Link>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-        </section>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 text-sm truncate">{submission.module.title}</h4>
+                        <p className="text-xs text-gray-500">
+                          {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                          {submission.review && (
+                            <span className="ml-2 text-blue-600 font-medium">
+                              {submission.review.score}/10
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Status badge */}
+                      <Badge
+                        className={`shrink-0 text-xs border-0 ${
+                          submission.status === "APPROVED"
+                            ? "bg-green-100 text-green-700"
+                            : submission.status === "PENDING"
+                            ? "bg-blue-100 text-blue-700"
+                            : submission.status === "FAILED"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-orange-100 text-orange-700"
+                        }`}
+                      >
+                        {submission.status === "APPROVED"
+                          ? "Принято"
+                          : submission.status === "PENDING"
+                          ? "Ожидает"
+                          : submission.status === "FAILED"
+                          ? "Провал"
+                          : "Доработка"}
+                      </Badge>
+
+                      <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   )

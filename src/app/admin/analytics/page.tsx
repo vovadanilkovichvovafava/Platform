@@ -49,6 +49,7 @@ import {
   X,
 } from "lucide-react"
 import Link from "next/link"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
 
 interface ChurnRiskStudent {
   id: string
@@ -553,7 +554,7 @@ export default function AdvancedAnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 pb-24">
         <Breadcrumbs
           items={[
             { label: "Админ", href: "/admin/invites" },
@@ -2183,15 +2184,14 @@ export default function AdvancedAnalyticsPage() {
                           <div className="relative p-4 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
                             <button
                               onClick={() => setAiAnalysis({ analysis: "", studentName: "", loading: false, error: null })}
-                              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 rounded"
+                              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 rounded z-10"
                             >
                               <X className="h-4 w-4" />
                             </button>
-                            <div className="prose prose-sm max-w-none text-gray-700">
-                              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                                {aiAnalysis.analysis}
-                              </div>
-                            </div>
+                            <MarkdownRenderer
+                              content={aiAnalysis.analysis}
+                              className="text-sm text-gray-700"
+                            />
                           </div>
                         )}
 
