@@ -1,6 +1,6 @@
 // Типы для системы импорта
 
-export type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+export type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS" | "TRUE_FALSE" | "FILL_BLANK"
 
 export interface MatchingData {
   leftLabel: string
@@ -22,12 +22,32 @@ export interface CaseAnalysisData {
   minCorrectRequired: number
 }
 
+// Новый тип: TRUE_FALSE - серия утверждений, нужно выбрать верно/неверно
+export interface TrueFalseData {
+  statements: {
+    id: string
+    text: string
+    isTrue: boolean
+    explanation?: string
+  }[]
+}
+
+// Новый тип: FILL_BLANK - текст с пропусками
+export interface FillBlankData {
+  textWithBlanks: string // Текст с маркерами пропусков: "Программа состоит из {{1}} и {{2}}"
+  blanks: {
+    id: string // "1", "2", etc - соответствует маркеру
+    correctAnswer: string
+    options: string[] // варианты ответов для выбора
+  }[]
+}
+
 export interface ParsedQuestion {
   question: string
   type?: QuestionType
   options: string[]
   correctAnswer: number
-  data?: MatchingData | OrderingData | CaseAnalysisData | null
+  data?: MatchingData | OrderingData | CaseAnalysisData | TrueFalseData | FillBlankData | null
   explanation?: string
 }
 
@@ -389,6 +409,32 @@ export function detectQuestionType(questionText: string): QuestionType {
   ]
   if (caseAnalysisKeywords.some(k => lowerText.includes(k))) {
     return "CASE_ANALYSIS"
+  }
+
+  // TRUE_FALSE - верно/неверно
+  const trueFalseKeywords = [
+    "верно или неверно", "верно/неверно", "true or false", "true/false",
+    "правда или ложь", "истина или ложь",
+    "определите верность", "определите правильность",
+    "отметьте верные", "отметьте правильные утверждения",
+    "какие утверждения верны", "какие утверждения правильны",
+    "оцените утверждения", "оцените правильность утверждений",
+  ]
+  if (trueFalseKeywords.some(k => lowerText.includes(k))) {
+    return "TRUE_FALSE"
+  }
+
+  // FILL_BLANK - заполнение пропусков
+  const fillBlankKeywords = [
+    "заполните пропуск", "заполни пропуск", "заполните пробел", "заполни пробел",
+    "вставьте пропущенн", "вставь пропущенн",
+    "дополните предложен", "дополни предложен",
+    "fill in the blank", "fill the blank", "fill in the gap",
+    "___", "...", "______",
+    "выберите слово для пропуска", "подставьте правильн",
+  ]
+  if (fillBlankKeywords.some(k => lowerText.includes(k))) {
+    return "FILL_BLANK"
   }
 
   return "SINGLE_CHOICE"

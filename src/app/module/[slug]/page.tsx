@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { SubmitProjectForm } from "@/components/submit-project-form"
 import { SubmitPracticeForm } from "@/components/submit-practice-form"
+import { SubmittedWorkCard } from "@/components/submitted-work-card"
 import { AssessmentSection } from "@/components/assessment-section"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 
@@ -220,66 +221,41 @@ export default async function ModulePage({ params }: Props) {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {isProject ? (
-              /* PROJECT: только форма сдачи проекта */
+              /* PROJECT: форма сдачи проекта с возможностью редактирования */
               <Card>
                 <CardHeader>
                   <CardTitle>Сдать проект</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {submission ? (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-medium text-gray-600 mb-2">
-                          Статус работы
-                        </div>
-                        <Badge
-                          className={
-                            submission.status === "APPROVED"
-                              ? "bg-green-100 text-green-700 border-0"
-                              : submission.status === "REVISION"
-                              ? "bg-orange-100 text-orange-700 border-0"
-                              : submission.status === "FAILED"
-                              ? "bg-red-100 text-red-700 border-0"
-                              : "bg-blue-100 text-blue-700 border-0"
-                          }
-                        >
-                          {submission.status === "APPROVED"
-                            ? "Принято"
-                            : submission.status === "REVISION"
-                            ? "На доработку"
-                            : submission.status === "FAILED"
-                            ? "Провал"
-                            : "На проверке"}
-                        </Badge>
-                      </div>
-
-                      {submission.review && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Оценка</span>
-                            <span className="text-2xl font-bold text-[#0176D3]">
-                              {submission.review.score}/10
-                            </span>
-                          </div>
-                          {submission.review.comment && (
-                            <div>
-                              <div className="text-sm font-medium mb-1">
-                                Комментарий
-                              </div>
-                              <p className="text-sm text-gray-600">
-                                {submission.review.comment}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
+                    <>
+                      <SubmittedWorkCard
+                        submission={{
+                          id: submission.id,
+                          githubUrl: submission.githubUrl,
+                          deployUrl: submission.deployUrl,
+                          fileUrl: submission.fileUrl,
+                          comment: submission.comment,
+                          status: submission.status,
+                          createdAt: submission.createdAt.toISOString(),
+                          review: submission.review ? {
+                            id: submission.review.id,
+                            score: submission.review.score,
+                            comment: submission.review.comment,
+                            createdAt: submission.review.createdAt.toISOString(),
+                          } : null,
+                        }}
+                        moduleId={courseModule.id}
+                        moduleType="PROJECT"
+                      />
                       {submission.status === "REVISION" && (
-                        <SubmitProjectForm
-                          moduleId={courseModule.id}
-                        />
+                        <div className="mt-4 pt-4 border-t">
+                          <SubmitProjectForm
+                            moduleId={courseModule.id}
+                          />
+                        </div>
                       )}
-                    </div>
+                    </>
                   ) : (
                     <SubmitProjectForm
                       moduleId={courseModule.id}
@@ -288,76 +264,41 @@ export default async function ModulePage({ params }: Props) {
                 </CardContent>
               </Card>
             ) : isPractice && !hasQuestions ? (
-              /* PRACTICE БЕЗ вопросов: только форма сдачи практики (PRACTICE всегда требует сдачу) */
+              /* PRACTICE БЕЗ вопросов: форма сдачи практики с возможностью редактирования */
               <Card>
                 <CardHeader>
                   <CardTitle>Сдать практическую работу</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {submission ? (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-medium text-gray-600 mb-2">
-                          Статус работы
-                        </div>
-                        <Badge
-                          className={
-                            submission.status === "APPROVED"
-                              ? "bg-green-100 text-green-700 border-0"
-                              : submission.status === "REVISION"
-                              ? "bg-orange-100 text-orange-700 border-0"
-                              : submission.status === "FAILED"
-                              ? "bg-red-100 text-red-700 border-0"
-                              : "bg-purple-100 text-purple-700 border-0"
-                          }
-                        >
-                          {submission.status === "APPROVED"
-                            ? "Принято"
-                            : submission.status === "REVISION"
-                            ? "На доработку"
-                            : submission.status === "FAILED"
-                            ? "Провал"
-                            : "На проверке"}
-                        </Badge>
-                        {submission.fileUrl && (
-                          <a
-                            href={submission.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-purple-600 hover:underline block mt-2"
-                          >
-                            Посмотреть отправленный файл
-                          </a>
-                        )}
-                      </div>
-
-                      {submission.review && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Оценка</span>
-                            <span className="text-2xl font-bold text-purple-600">
-                              {submission.review.score}/10
-                            </span>
-                          </div>
-                          {submission.review.comment && (
-                            <div>
-                              <div className="text-sm font-medium mb-1">
-                                Комментарий
-                              </div>
-                              <p className="text-sm text-gray-600">
-                                {submission.review.comment}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
+                    <>
+                      <SubmittedWorkCard
+                        submission={{
+                          id: submission.id,
+                          githubUrl: submission.githubUrl,
+                          deployUrl: submission.deployUrl,
+                          fileUrl: submission.fileUrl,
+                          comment: submission.comment,
+                          status: submission.status,
+                          createdAt: submission.createdAt.toISOString(),
+                          review: submission.review ? {
+                            id: submission.review.id,
+                            score: submission.review.score,
+                            comment: submission.review.comment,
+                            createdAt: submission.review.createdAt.toISOString(),
+                          } : null,
+                        }}
+                        moduleId={courseModule.id}
+                        moduleType="PRACTICE"
+                      />
                       {submission.status === "REVISION" && (
-                        <SubmitPracticeForm
-                          moduleId={courseModule.id}
-                        />
+                        <div className="mt-4 pt-4 border-t">
+                          <SubmitPracticeForm
+                            moduleId={courseModule.id}
+                          />
+                        </div>
                       )}
-                    </div>
+                    </>
                   ) : (
                     <SubmitPracticeForm
                       moduleId={courseModule.id}
@@ -390,76 +331,41 @@ export default async function ModulePage({ params }: Props) {
                   isCompleted={isCompleted}
                 />
 
-                {/* Practice submission form - PRACTICE всегда требует сдачу */}
+                {/* Practice submission form - PRACTICE с возможностью редактирования */}
                 <Card>
                     <CardHeader>
                       <CardTitle>Сдать практическую работу</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {submission ? (
-                        <div className="space-y-4">
-                          <div className="p-4 bg-gray-50 rounded-lg">
-                            <div className="text-sm font-medium text-gray-600 mb-2">
-                              Статус работы
-                            </div>
-                            <Badge
-                              className={
-                                submission.status === "APPROVED"
-                                  ? "bg-green-100 text-green-700 border-0"
-                                  : submission.status === "REVISION"
-                                  ? "bg-orange-100 text-orange-700 border-0"
-                                  : submission.status === "FAILED"
-                                  ? "bg-red-100 text-red-700 border-0"
-                                  : "bg-purple-100 text-purple-700 border-0"
-                              }
-                            >
-                              {submission.status === "APPROVED"
-                                ? "Принято"
-                                : submission.status === "REVISION"
-                                ? "На доработку"
-                                : submission.status === "FAILED"
-                                ? "Провал"
-                                : "На проверке"}
-                            </Badge>
-                            {submission.fileUrl && (
-                              <a
-                                href={submission.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-purple-600 hover:underline block mt-2"
-                              >
-                                Посмотреть отправленный файл
-                              </a>
-                            )}
-                          </div>
-
-                          {submission.review && (
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">Оценка</span>
-                                <span className="text-2xl font-bold text-purple-600">
-                                  {submission.review.score}/10
-                                </span>
-                              </div>
-                              {submission.review.comment && (
-                                <div>
-                                  <div className="text-sm font-medium mb-1">
-                                    Комментарий
-                                  </div>
-                                  <p className="text-sm text-gray-600">
-                                    {submission.review.comment}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
+                        <>
+                          <SubmittedWorkCard
+                            submission={{
+                              id: submission.id,
+                              githubUrl: submission.githubUrl,
+                              deployUrl: submission.deployUrl,
+                              fileUrl: submission.fileUrl,
+                              comment: submission.comment,
+                              status: submission.status,
+                              createdAt: submission.createdAt.toISOString(),
+                              review: submission.review ? {
+                                id: submission.review.id,
+                                score: submission.review.score,
+                                comment: submission.review.comment,
+                                createdAt: submission.review.createdAt.toISOString(),
+                              } : null,
+                            }}
+                            moduleId={courseModule.id}
+                            moduleType="PRACTICE"
+                          />
                           {submission.status === "REVISION" && (
-                            <SubmitPracticeForm
-                              moduleId={courseModule.id}
-                            />
+                            <div className="mt-4 pt-4 border-t">
+                              <SubmitPracticeForm
+                                moduleId={courseModule.id}
+                              />
+                            </div>
                           )}
-                        </div>
+                        </>
                       ) : (
                         <SubmitPracticeForm
                           moduleId={courseModule.id}

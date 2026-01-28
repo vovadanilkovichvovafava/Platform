@@ -11,6 +11,8 @@ import {
   MatchingData,
   OrderingData,
   CaseAnalysisData,
+  TrueFalseData,
+  FillBlankData,
 } from "../types"
 
 // Claude API version
@@ -49,7 +51,7 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 
 ## ТИПЫ ВОПРОСОВ
 
-Поддерживаются 4 типа вопросов:
+Поддерживаются 6 типов вопросов. ОБЯЗАТЕЛЬНО используй разные типы для разнообразия!
 
 ### 1. SINGLE_CHOICE - Один правильный ответ
 Стандартный тест с одним правильным вариантом.
@@ -130,6 +132,55 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 }
 \`\`\`
 
+### 5. TRUE_FALSE - Верно/Неверно
+Серия утверждений, которые нужно оценить как верные или неверные.
+\`\`\`json
+{
+  "question": "Определите верность утверждений о JavaScript",
+  "type": "TRUE_FALSE",
+  "options": [],
+  "correctAnswer": 0,
+  "data": {
+    "statements": [
+      {"id": "t1", "text": "JavaScript - это язык программирования", "isTrue": true, "explanation": "JavaScript - полноценный язык программирования"},
+      {"id": "t2", "text": "JavaScript работает только в браузере", "isTrue": false, "explanation": "JavaScript может работать и на сервере (Node.js)"},
+      {"id": "t3", "text": "Переменные в JavaScript типизированы статически", "isTrue": false, "explanation": "JavaScript - язык с динамической типизацией"}
+    ]
+  }
+}
+\`\`\`
+
+### 6. FILL_BLANK - Заполни пропуск
+Текст с пропусками, которые нужно заполнить выбором из вариантов.
+\`\`\`json
+{
+  "question": "Заполните пропуски в описании CSS",
+  "type": "FILL_BLANK",
+  "options": [],
+  "correctAnswer": 0,
+  "data": {
+    "textWithBlanks": "CSS расшифровывается как {{1}} Style Sheets. Он используется для {{2}} веб-страниц.",
+    "blanks": [
+      {"id": "1", "correctAnswer": "Cascading", "options": ["Cascading", "Creative", "Computer", "Complex"]},
+      {"id": "2", "correctAnswer": "стилизации", "options": ["программирования", "стилизации", "разметки", "анимации"]}
+    ]
+  }
+}
+\`\`\`
+
+## РАСПРЕДЕЛЕНИЕ ТИПОВ ВОПРОСОВ
+
+ОБЯЗАТЕЛЬНО используй разные типы вопросов в каждом модуле:
+- Если 3-4 вопроса: минимум 2 разных типа
+- Если 5-6 вопросов: минимум 3 разных типа
+- Если 7+ вопросов: минимум 4 разных типа
+
+Рекомендуемое распределение по модулю:
+- 40% SINGLE_CHOICE (базовые вопросы)
+- 20% MATCHING или ORDERING (структурирование знаний)
+- 20% TRUE_FALSE (проверка понимания концепций)
+- 20% FILL_BLANK или CASE_ANALYSIS (применение знаний)
+
 ## ФОРМАТ ВЫВОДА
 
 \`\`\`json
@@ -168,15 +219,21 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 4. **Иконка**: подбери релевантный emoji по теме
 5. **Цвет**: подбери hex-цвет по тематике (#6366f1 - tech, #ec4899 - design, #10b981 - data)
 6. **Контент**: сохраняй и обогащай в Markdown (заголовки ##, списки, \`код\`, **жирный**)
-7. **Вопросы**: создавай разнообразные типы вопросов (SINGLE_CHOICE, MATCHING, ORDERING, CASE_ANALYSIS)
-8. **Улучшение**: если контент бедный - дополни примерами, пояснениями, деталями
-9. **requiresSubmission**: true для PROJECT, true для PRACTICE с практическими заданиями
-10. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
+7. **РАЗНООБРАЗИЕ ВОПРОСОВ**: ОБЯЗАТЕЛЬНО используй разные типы (SINGLE_CHOICE, MATCHING, ORDERING, CASE_ANALYSIS, TRUE_FALSE, FILL_BLANK). НЕ делай все вопросы одного типа!
+8. **Покрытие темы**: вопросы должны охватывать разные аспекты изученного материала, а не повторять одну и ту же тему
+9. **Улучшение**: если контент бедный - дополни примерами, пояснениями, деталями
+10. **requiresSubmission**: true для PROJECT, true для PRACTICE с практическими заданиями
+11. **Формулировки**: вопросы должны быть чёткими, однозначными и проверять понимание, а не запоминание
+12. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
 
 const AI_USER_PROMPT = `Преобразуй следующий образовательный контент в структурированный курс.
 
 Если контент слишком краткий - дополни его полезной информацией по теме.
-Создай разнообразные типы вопросов (SINGLE_CHOICE, MATCHING, ORDERING, CASE_ANALYSIS).
+
+ВАЖНО по вопросам:
+- Создай РАЗНООБРАЗНЫЕ типы вопросов (SINGLE_CHOICE, MATCHING, ORDERING, CASE_ANALYSIS, TRUE_FALSE, FILL_BLANK)
+- НЕ делай все вопросы типа SINGLE_CHOICE - обязательно используй минимум 2-3 разных типа
+- Вопросы должны охватывать разные аспекты темы, не повторяться
 
 ---
 {content}
@@ -1277,7 +1334,7 @@ function getDefaultPoints(type: string): number {
 
 // Валидация типа вопроса
 function validateQuestionType(type: any): QuestionType {
-  const validTypes: QuestionType[] = ["SINGLE_CHOICE", "MATCHING", "ORDERING", "CASE_ANALYSIS"]
+  const validTypes: QuestionType[] = ["SINGLE_CHOICE", "MATCHING", "ORDERING", "CASE_ANALYSIS", "TRUE_FALSE", "FILL_BLANK"]
   const upperType = String(type || "").toUpperCase() as QuestionType
   return validTypes.includes(upperType) ? upperType : "SINGLE_CHOICE"
 }
@@ -1316,6 +1373,14 @@ function validateQuestions(questions: any[], warnings: string[]): ParsedQuestion
         validQuestion.data = validateCaseAnalysisData(q.data, warnings)
         break
 
+      case "TRUE_FALSE":
+        validQuestion.data = validateTrueFalseData(q.data, warnings)
+        break
+
+      case "FILL_BLANK":
+        validQuestion.data = validateFillBlankData(q.data, warnings)
+        break
+
       case "SINGLE_CHOICE":
       default:
         const options = Array.isArray(q.options)
@@ -1335,6 +1400,14 @@ function validateQuestions(questions: any[], warnings: string[]): ParsedQuestion
     }
 
     result.push(validQuestion)
+  }
+
+  // Проверка разнообразия типов вопросов
+  if (result.length >= 3) {
+    const typeCount = new Set(result.map(q => q.type)).size
+    if (typeCount === 1) {
+      warnings.push(`Все ${result.length} вопросов имеют один тип (${result[0].type}). Рекомендуется разнообразить типы вопросов.`)
+    }
   }
 
   return result
@@ -1461,6 +1534,94 @@ function createDefaultCaseAnalysisData(): CaseAnalysisData {
       { id: "o3", text: "Вариант 3", isCorrect: false, explanation: "" },
     ],
     minCorrectRequired: 1,
+  }
+}
+
+// Валидация данных TRUE_FALSE
+function validateTrueFalseData(data: any, warnings: string[]): TrueFalseData {
+  if (!data || typeof data !== "object") {
+    return createDefaultTrueFalseData()
+  }
+
+  const statements = Array.isArray(data.statements)
+    ? data.statements.filter((s: any) => s && s.id && typeof s.text === "string" && typeof s.isTrue === "boolean")
+        .map((s: any) => ({
+          id: s.id,
+          text: s.text,
+          isTrue: Boolean(s.isTrue),
+          explanation: s.explanation || undefined,
+        }))
+    : []
+
+  if (statements.length < 2) {
+    warnings.push("TRUE_FALSE вопрос имеет недостаточно утверждений")
+    return createDefaultTrueFalseData()
+  }
+
+  return { statements }
+}
+
+function createDefaultTrueFalseData(): TrueFalseData {
+  return {
+    statements: [
+      { id: "t1", text: "Утверждение 1", isTrue: true, explanation: "Пояснение к утверждению 1" },
+      { id: "t2", text: "Утверждение 2", isTrue: false, explanation: "Пояснение к утверждению 2" },
+      { id: "t3", text: "Утверждение 3", isTrue: true, explanation: "Пояснение к утверждению 3" },
+    ],
+  }
+}
+
+// Валидация данных FILL_BLANK
+function validateFillBlankData(data: any, warnings: string[]): FillBlankData {
+  if (!data || typeof data !== "object") {
+    return createDefaultFillBlankData()
+  }
+
+  const textWithBlanks = typeof data.textWithBlanks === "string" ? data.textWithBlanks : ""
+
+  const blanks = Array.isArray(data.blanks)
+    ? data.blanks.filter((b: any) => b && b.id && typeof b.correctAnswer === "string" && Array.isArray(b.options))
+        .map((b: any) => ({
+          id: b.id,
+          correctAnswer: b.correctAnswer,
+          options: b.options.filter((o: any) => typeof o === "string"),
+        }))
+    : []
+
+  // Проверяем, что текст содержит метки для пропусков
+  const blankMarkers = textWithBlanks.match(/\{\{\d+\}\}/g) || []
+
+  if (!textWithBlanks || blanks.length < 1 || blankMarkers.length === 0) {
+    warnings.push("FILL_BLANK вопрос имеет некорректный формат")
+    return createDefaultFillBlankData()
+  }
+
+  // Проверяем, что количество меток соответствует количеству blanks
+  if (blankMarkers.length !== blanks.length) {
+    warnings.push(`FILL_BLANK: количество меток (${blankMarkers.length}) не совпадает с количеством blanks (${blanks.length})`)
+  }
+
+  // Проверяем, что каждый blank имеет минимум 2 варианта
+  for (const blank of blanks) {
+    if (blank.options.length < 2) {
+      warnings.push(`FILL_BLANK: пропуск ${blank.id} имеет менее 2 вариантов`)
+    }
+    // Проверяем, что correctAnswer есть среди options
+    if (!blank.options.includes(blank.correctAnswer)) {
+      blank.options.unshift(blank.correctAnswer)
+    }
+  }
+
+  return { textWithBlanks, blanks }
+}
+
+function createDefaultFillBlankData(): FillBlankData {
+  return {
+    textWithBlanks: "Это {{1}} текст с {{2}} пропусками.",
+    blanks: [
+      { id: "1", correctAnswer: "пример", options: ["пример", "образец", "шаблон", "тест"] },
+      { id: "2", correctAnswer: "двумя", options: ["двумя", "тремя", "несколькими", "многими"] },
+    ],
   }
 }
 
