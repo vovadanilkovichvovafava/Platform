@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { TeacherStatsDrilldown } from "@/components/teacher-stats-drilldown"
@@ -71,6 +72,7 @@ export default async function TeacherStatsPage() {
     orderBy: { totalXP: "desc" },
     take: 5,
     select: {
+      id: true,
       name: true,
       totalXP: true,
       _count: {
@@ -392,9 +394,10 @@ export default async function TeacherStatsPage() {
             ) : (
               <div className="space-y-3">
                 {topStudents.map((student, idx) => (
-                  <div
-                    key={student.name}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  <Link
+                    key={student.id}
+                    href={`/dashboard/${student.id}`}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -420,7 +423,7 @@ export default async function TeacherStatsPage() {
                         {student._count.submissions} работ
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
