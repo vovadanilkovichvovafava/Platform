@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
-  ChevronDown,
   ChevronRight,
   BookOpen,
   Wrench,
@@ -264,13 +263,12 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
         trails.map((trail) => (
           <Card key={trail.id} className="overflow-hidden">
             <Collapsible>
-              <CollapsibleTrigger className="w-full">
-                <div
-                  className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              <CollapsibleTrigger asChild>
+                <button
+                  className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
                   style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, transparent 100%)` }}
                 >
                   <div className="flex items-center gap-3">
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
                     <div
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: trail.color }}
@@ -290,7 +288,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                       </Badge>
                     )}
                   </div>
-                </div>
+                </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="px-4 pb-4 pt-2">

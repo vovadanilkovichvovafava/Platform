@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import { useToast } from "@/components/ui/toast"
 import {
-  ArrowLeft,
   RefreshCw,
   Users,
   BookOpen,
@@ -19,6 +18,8 @@ import {
   GripVertical,
   User,
   Target,
+  Check,
+  Undo2,
 } from "lucide-react"
 
 interface Teacher {
@@ -41,6 +42,15 @@ interface Assignment {
   teacher: Teacher
 }
 
+// Pending change for batch save
+interface PendingChange {
+  type: "add" | "remove"
+  teacherId: string
+  teacherName: string
+  trailId: string
+  trailTitle: string
+}
+
 export default function TeacherAssignmentsPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [trails, setTrails] = useState<Trail[]>([])
@@ -56,7 +66,41 @@ export default function TeacherAssignmentsPage() {
   // Drag states
   const [draggedTeacher, setDraggedTeacher] = useState<Teacher | null>(null)
   const [dragOverTrail, setDragOverTrail] = useState<string | null>(null)
-  const [assigning, setAssigning] = useState(false)
+
+  // Pending changes (batch save)
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
+  const [saving, setSaving] = useState(false)
+
+  // Refs for scroll containers (wheel scroll during drag)
+  const teachersScrollRef = useRef<HTMLDivElement>(null)
+  const trailsScrollRef = useRef<HTMLDivElement>(null)
+
+  // Handle wheel scroll during drag
+  const handleWheelDuringDrag = useCallback((e: WheelEvent) => {
+    if (!draggedTeacher) return
+
+    // Find which container the mouse is over
+    const teachersContainer = teachersScrollRef.current
+    const trailsContainer = trailsScrollRef.current
+
+    if (teachersContainer?.contains(e.target as Node)) {
+      teachersContainer.scrollTop += e.deltaY
+      e.preventDefault()
+    } else if (trailsContainer?.contains(e.target as Node)) {
+      trailsContainer.scrollTop += e.deltaY
+      e.preventDefault()
+    }
+  }, [draggedTeacher])
+
+  // Attach/detach wheel listener when dragging
+  useEffect(() => {
+    if (draggedTeacher) {
+      window.addEventListener("wheel", handleWheelDuringDrag, { passive: false })
+      return () => {
+        window.removeEventListener("wheel", handleWheelDuringDrag)
+      }
+    }
+  }, [draggedTeacher, handleWheelDuringDrag])
 
   const fetchData = async () => {
     try {
@@ -92,11 +136,34 @@ export default function TeacherAssignmentsPage() {
     fetchData()
   }, [])
 
-  // Get assignments for a specific trail
+  // Get assignments for a specific trail (considering pending changes)
   const getTrailAssignments = (trailId: string) => {
-    return assignments
+    // Start with current assignments
+    const currentTeachers = assignments
       .filter((a) => a.trailId === trailId)
       .map((a) => a.teacher)
+
+    // Apply pending changes
+    const result: Array<Teacher & { isPending?: boolean; isRemoving?: boolean }> = []
+
+    for (const teacher of currentTeachers) {
+      const isBeingRemoved = pendingChanges.some(
+        (c) => c.type === "remove" && c.teacherId === teacher.id && c.trailId === trailId
+      )
+      result.push({ ...teacher, isRemoving: isBeingRemoved })
+    }
+
+    // Add pending additions
+    for (const change of pendingChanges) {
+      if (change.type === "add" && change.trailId === trailId) {
+        const teacher = teachers.find((t) => t.id === change.teacherId)
+        if (teacher && !result.some((t) => t.id === teacher.id)) {
+          result.push({ ...teacher, isPending: true })
+        }
+      }
+    }
+
+    return result
   }
 
   // Check if teacher is assigned to a trail
@@ -123,58 +190,127 @@ export default function TeacherAssignmentsPage() {
     setDragOverTrail(null)
   }
 
-  const handleDrop = async (e: React.DragEvent, trailId: string) => {
+  // Add pending change for assignment
+  const handleDrop = (e: React.DragEvent, trailId: string) => {
     e.preventDefault()
     setDragOverTrail(null)
 
     if (!draggedTeacher) return
 
-    // Check if already assigned
-    if (isTeacherAssignedToTrail(draggedTeacher.id, trailId)) {
+    const trail = trails.find((t) => t.id === trailId)
+    if (!trail) return
+
+    // Check if already assigned (considering pending changes)
+    const isCurrentlyAssigned = isTeacherAssignedToTrail(draggedTeacher.id, trailId)
+    const hasPendingAdd = pendingChanges.some(
+      (c) => c.type === "add" && c.teacherId === draggedTeacher.id && c.trailId === trailId
+    )
+    const hasPendingRemove = pendingChanges.some(
+      (c) => c.type === "remove" && c.teacherId === draggedTeacher.id && c.trailId === trailId
+    )
+
+    // Effective state after pending changes
+    const effectivelyAssigned = (isCurrentlyAssigned && !hasPendingRemove) || hasPendingAdd
+
+    if (effectivelyAssigned) {
       showToast("Учитель уже назначен на этот trail", "warning")
       setDraggedTeacher(null)
       return
     }
 
-    try {
-      setAssigning(true)
-      const res = await fetch("/api/admin/trail-teachers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    // If there was a pending remove for this, cancel it instead of adding
+    if (hasPendingRemove) {
+      setPendingChanges((prev) =>
+        prev.filter((c) => !(c.type === "remove" && c.teacherId === draggedTeacher.id && c.trailId === trailId))
+      )
+    } else {
+      // Add pending change
+      setPendingChanges((prev) => [
+        ...prev,
+        {
+          type: "add",
           teacherId: draggedTeacher.id,
+          teacherName: draggedTeacher.name,
           trailId: trailId,
-        }),
-      })
+          trailTitle: trail.title,
+        },
+      ])
+    }
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed to assign")
-      }
+    setDraggedTeacher(null)
+  }
 
-      showToast(`${draggedTeacher.name} назначен на trail`, "success")
-      fetchData()
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Ошибка назначения", "error")
-    } finally {
-      setAssigning(false)
-      setDraggedTeacher(null)
+  // Add pending change for removal
+  const removeAssignment = (trailId: string, teacherId: string, teacherName: string) => {
+    const trail = trails.find((t) => t.id === trailId)
+    if (!trail) return
+
+    // Check if this is a pending add - if so, just remove it
+    const hasPendingAdd = pendingChanges.some(
+      (c) => c.type === "add" && c.teacherId === teacherId && c.trailId === trailId
+    )
+
+    if (hasPendingAdd) {
+      setPendingChanges((prev) =>
+        prev.filter((c) => !(c.type === "add" && c.teacherId === teacherId && c.trailId === trailId))
+      )
+    } else {
+      // Add pending removal
+      setPendingChanges((prev) => [
+        ...prev,
+        {
+          type: "remove",
+          teacherId,
+          teacherName,
+          trailId,
+          trailTitle: trail.title,
+        },
+      ])
     }
   }
 
-  const removeAssignment = async (trailId: string, teacherId: string, teacherName: string) => {
-    try {
-      const res = await fetch(
-        `/api/admin/trail-teachers?trailId=${trailId}&teacherId=${teacherId}`,
-        { method: "DELETE" }
-      )
+  // Save all pending changes
+  const saveChanges = async () => {
+    if (pendingChanges.length === 0) return
 
-      if (!res.ok) throw new Error("Failed to remove")
-      showToast(`${teacherName} снят с trail`, "success")
+    setSaving(true)
+    try {
+      for (const change of pendingChanges) {
+        if (change.type === "add") {
+          const res = await fetch("/api/admin/trail-teachers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              teacherId: change.teacherId,
+              trailId: change.trailId,
+            }),
+          })
+          if (!res.ok) {
+            const data = await res.json()
+            throw new Error(data.error || `Failed to assign ${change.teacherName}`)
+          }
+        } else {
+          const res = await fetch(
+            `/api/admin/trail-teachers?trailId=${change.trailId}&teacherId=${change.teacherId}`,
+            { method: "DELETE" }
+          )
+          if (!res.ok) throw new Error(`Failed to remove ${change.teacherName}`)
+        }
+      }
+
+      showToast("Изменения сохранены", "success")
+      setPendingChanges([])
       fetchData()
-    } catch {
-      showToast("Ошибка удаления", "error")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Ошибка сохранения", "error")
+    } finally {
+      setSaving(false)
     }
+  }
+
+  // Reset pending changes
+  const resetChanges = () => {
+    setPendingChanges([])
   }
 
   // Filtered lists
@@ -215,10 +351,41 @@ export default function TeacherAssignmentsPage() {
                 Перетащите учителя на trail для назначения
               </p>
             </div>
-            <Button onClick={fetchData} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Обновить
-            </Button>
+            <div className="flex items-center gap-2">
+              {pendingChanges.length > 0 && (
+                <>
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    {pendingChanges.length} несохранённых изменений
+                  </Badge>
+                  <Button
+                    onClick={resetChanges}
+                    variant="outline"
+                    size="sm"
+                    disabled={saving}
+                  >
+                    <Undo2 className="h-4 w-4 mr-2" />
+                    Сбросить
+                  </Button>
+                  <Button
+                    onClick={saveChanges}
+                    size="sm"
+                    disabled={saving}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {saving ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Подтвердить
+                  </Button>
+                </>
+              )}
+              <Button onClick={fetchData} variant="outline" size="sm" disabled={saving}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Обновить
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -264,7 +431,7 @@ export default function TeacherAssignmentsPage() {
                   />
                 </div>
               </CardHeader>
-              <CardContent className="max-h-[600px] overflow-y-auto">
+              <CardContent ref={teachersScrollRef} className="max-h-[600px] overflow-y-auto">
                 {filteredTeachers.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -348,7 +515,7 @@ export default function TeacherAssignmentsPage() {
                   />
                 </div>
               </CardHeader>
-              <CardContent className="max-h-[600px] overflow-y-auto">
+              <CardContent ref={trailsScrollRef} className="max-h-[600px] overflow-y-auto">
                 {filteredTrails.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -398,16 +565,37 @@ export default function TeacherAssignmentsPage() {
                               {trailTeachers.map((teacher) => (
                                 <div
                                   key={teacher.id}
-                                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full group"
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full group transition-all ${
+                                    teacher.isPending
+                                      ? "bg-green-100 border border-green-300 border-dashed"
+                                      : teacher.isRemoving
+                                      ? "bg-red-50 border border-red-200 border-dashed opacity-60 line-through"
+                                      : "bg-gray-100"
+                                  }`}
                                 >
-                                  <User className="h-3 w-3 text-gray-500" />
-                                  <span className="text-sm">{teacher.name}</span>
+                                  <User className={`h-3 w-3 ${
+                                    teacher.isPending ? "text-green-600" : teacher.isRemoving ? "text-red-400" : "text-gray-500"
+                                  }`} />
+                                  <span className={`text-sm ${
+                                    teacher.isPending ? "text-green-700" : teacher.isRemoving ? "text-red-500" : ""
+                                  }`}>
+                                    {teacher.name}
+                                    {teacher.isPending && <span className="text-xs ml-1">(новый)</span>}
+                                  </span>
                                   <button
                                     onClick={() => removeAssignment(trail.id, teacher.id, teacher.name)}
-                                    className="p-0.5 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors"
-                                    title="Снять назначение"
+                                    className={`p-0.5 rounded-full transition-colors ${
+                                      teacher.isRemoving
+                                        ? "text-green-500 hover:text-green-700 hover:bg-green-100"
+                                        : "text-gray-400 hover:text-red-600 hover:bg-red-100"
+                                    }`}
+                                    title={teacher.isRemoving ? "Отменить удаление" : "Снять назначение"}
                                   >
-                                    <X className="h-3 w-3" />
+                                    {teacher.isRemoving ? (
+                                      <Undo2 className="h-3 w-3" />
+                                    ) : (
+                                      <X className="h-3 w-3" />
+                                    )}
                                   </button>
                                 </div>
                               ))}

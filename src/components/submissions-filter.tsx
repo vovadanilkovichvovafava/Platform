@@ -96,8 +96,15 @@ export function SubmissionsFilter({
   const [trailFilter, setTrailFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteBlockedUntil, setDeleteBlockedUntil] = useState<number>(0) // Timestamp when block expires
 
   const handleDeleteSubmission = async (id: string, userName: string, moduleTitle: string) => {
+    // Check if delete is blocked (1.5s cooldown to prevent double clicks)
+    const now = Date.now()
+    if (now < deleteBlockedUntil) {
+      return
+    }
+
     const confirmed = await confirm({
       title: "Удалить работу?",
       message: `Вы уверены, что хотите удалить работу "${moduleTitle}" от ${userName}? Это действие необратимо. Студент получит уведомление об удалении.`,
@@ -106,6 +113,9 @@ export function SubmissionsFilter({
     })
 
     if (!confirmed) return
+
+    // Set block for 1.5 seconds BEFORE making the request (prevents double-clicks)
+    setDeleteBlockedUntil(Date.now() + 1500)
 
     try {
       setDeletingId(id)
@@ -316,8 +326,8 @@ export function SubmissionsFilter({
                           submission.user.name,
                           submission.module.title
                         )}
-                        disabled={deletingId === submission.id}
-                        title="Удалить работу (антиспам)"
+                        disabled={deletingId === submission.id || Date.now() < deleteBlockedUntil}
+                        title={Date.now() < deleteBlockedUntil ? "Подождите..." : "Удалить работу (антиспам)"}
                       >
                         {deletingId === submission.id ? (
                           <RefreshCw className="h-4 w-4 animate-spin" />

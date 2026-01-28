@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -80,10 +81,14 @@ export function EditTrailModal({
   onClose,
   onSave,
 }: EditTrailModalProps) {
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loadingTeachers, setLoadingTeachers] = useState(false)
   const { showToast } = useToast()
+
+  // Check if user is admin (only admins can change teacherVisibility)
+  const isAdmin = session?.user?.role === "ADMIN"
   const [form, setForm] = useState<TrailFormData>({
     id: "",
     title: "",
@@ -152,20 +157,27 @@ export function EditTrailModal({
     try {
       setLoading(true)
 
+      // Build update payload - only admins can change teacherVisibility
+      const updatePayload: Record<string, unknown> = {
+        title: form.title.trim(),
+        subtitle: form.subtitle.trim(),
+        description: form.description.trim(),
+        icon: form.icon,
+        color: form.color,
+        duration: form.duration.trim(),
+        isPublished: form.isPublished,
+      }
+
+      // Only include teacherVisibility for admins
+      if (isAdmin) {
+        updatePayload.teacherVisibility = form.teacherVisibility
+        updatePayload.assignedTeacherId = form.teacherVisibility === "SPECIFIC" ? form.assignedTeacherId : null
+      }
+
       const res = await fetch(`/api/admin/trails/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.title.trim(),
-          subtitle: form.subtitle.trim(),
-          description: form.description.trim(),
-          icon: form.icon,
-          color: form.color,
-          duration: form.duration.trim(),
-          isPublished: form.isPublished,
-          teacherVisibility: form.teacherVisibility,
-          assignedTeacherId: form.teacherVisibility === "SPECIFIC" ? form.assignedTeacherId : null,
-        }),
+        body: JSON.stringify(updatePayload),
       })
 
       if (!res.ok) {
@@ -333,70 +345,72 @@ export function EditTrailModal({
             />
           </div>
 
-          {/* Teacher Visibility */}
-          <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-900">Видимость для учителей</span>
-            </div>
-
-            <div className="relative">
-              <select
-                value={form.teacherVisibility}
-                onChange={(e) => setForm({
-                  ...form,
-                  teacherVisibility: e.target.value,
-                  assignedTeacherId: e.target.value !== "SPECIFIC" ? null : form.assignedTeacherId
-                })}
-                className="w-full p-2 pr-8 border border-blue-200 rounded-lg bg-white text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {visibilityOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            </div>
-
-            {/* Teacher selection for SPECIFIC visibility */}
-            {form.teacherVisibility === "SPECIFIC" && (
-              <div className="relative">
-                {loadingTeachers ? (
-                  <div className="flex items-center gap-2 p-2 text-sm text-gray-500">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Загрузка учителей...
-                  </div>
-                ) : teachers.length === 0 ? (
-                  <div className="p-2 text-sm text-amber-700 bg-amber-50 rounded-lg border border-amber-200">
-                    Нет учителей для назначения. Сначала создайте учителя в разделе "Пользователи".
-                  </div>
-                ) : (
-                  <>
-                    <select
-                      value={form.assignedTeacherId || ""}
-                      onChange={(e) => setForm({ ...form, assignedTeacherId: e.target.value || null })}
-                      className="w-full p-2 pr-8 border border-blue-200 rounded-lg bg-white text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Выберите учителя...</option>
-                      {teachers.map((teacher) => (
-                        <option key={teacher.id} value={teacher.id}>
-                          {teacher.name} ({teacher.email})
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                  </>
-                )}
+          {/* Teacher Visibility - Admin only */}
+          {isAdmin && (
+            <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Видимость для учителей</span>
               </div>
-            )}
 
-            <p className="text-xs text-blue-700">
-              {form.teacherVisibility === "ADMIN_ONLY" && "Только администраторы могут управлять этим trail"}
-              {form.teacherVisibility === "ALL_TEACHERS" && "Все учителя видят этот trail во вкладке \"Контент\""}
-              {form.teacherVisibility === "SPECIFIC" && "Только выбранный учитель видит этот trail во вкладке \"Контент\""}
-            </p>
-          </div>
+              <div className="relative">
+                <select
+                  value={form.teacherVisibility}
+                  onChange={(e) => setForm({
+                    ...form,
+                    teacherVisibility: e.target.value,
+                    assignedTeacherId: e.target.value !== "SPECIFIC" ? null : form.assignedTeacherId
+                  })}
+                  className="w-full p-2 pr-8 border border-blue-200 rounded-lg bg-white text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {visibilityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
+
+              {/* Teacher selection for SPECIFIC visibility */}
+              {form.teacherVisibility === "SPECIFIC" && (
+                <div className="relative">
+                  {loadingTeachers ? (
+                    <div className="flex items-center gap-2 p-2 text-sm text-gray-500">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Загрузка учителей...
+                    </div>
+                  ) : teachers.length === 0 ? (
+                    <div className="p-2 text-sm text-amber-700 bg-amber-50 rounded-lg border border-amber-200">
+                      Нет учителей для назначения. Сначала создайте учителя в разделе "Пользователи".
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={form.assignedTeacherId || ""}
+                        onChange={(e) => setForm({ ...form, assignedTeacherId: e.target.value || null })}
+                        className="w-full p-2 pr-8 border border-blue-200 rounded-lg bg-white text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Выберите учителя...</option>
+                        {teachers.map((teacher) => (
+                          <option key={teacher.id} value={teacher.id}>
+                            {teacher.name} ({teacher.email})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </>
+                  )}
+                </div>
+              )}
+
+              <p className="text-xs text-blue-700">
+                {form.teacherVisibility === "ADMIN_ONLY" && "Только администраторы могут управлять этим trail"}
+                {form.teacherVisibility === "ALL_TEACHERS" && "Все учителя видят этот trail во вкладке \"Контент\""}
+                {form.teacherVisibility === "SPECIFIC" && "Только выбранный учитель видит этот trail во вкладке \"Контент\""}
+              </p>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4 border-t">

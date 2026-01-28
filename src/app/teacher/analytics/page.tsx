@@ -319,7 +319,7 @@ export default function TeacherAnalyticsPage() {
         {/* Quick actions */}
         <div className="mt-6 flex items-center gap-4">
           <Button asChild variant="outline">
-            <Link href="/teacher/reviews">
+            <Link href="/teacher">
               <FileText className="h-4 w-4 mr-2" />
               Работы на проверку ({totalPending})
             </Link>
