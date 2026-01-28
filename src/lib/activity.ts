@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 /**
  * Record user activity for today.
  * Creates a new record if first activity today, or increments actions count.
+ * Also recalculates the user's current streak.
  */
 export async function recordActivity(userId: string): Promise<void> {
   if (!userId) return
@@ -27,6 +28,36 @@ export async function recordActivity(userId: string): Promise<void> {
         date: today,
         actions: 1,
       },
+    })
+
+    // Calculate and update current streak
+    const activities = await prisma.userActivity.findMany({
+      where: { userId },
+      select: { date: true },
+      orderBy: { date: "desc" },
+    })
+
+    let streak = 0
+    const now = new Date()
+    now.setUTCHours(0, 0, 0, 0)
+
+    for (let i = 0; i < activities.length; i++) {
+      const activityDate = new Date(activities[i].date)
+      activityDate.setUTCHours(0, 0, 0, 0)
+
+      const expectedDate = new Date(now)
+      expectedDate.setUTCDate(expectedDate.getUTCDate() - i)
+
+      if (activityDate.getTime() === expectedDate.getTime()) {
+        streak++
+      } else {
+        break
+      }
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { currentStreak: streak },
     })
   } catch (error) {
     // Don't fail the main operation if activity tracking fails
