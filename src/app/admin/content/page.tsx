@@ -1110,7 +1110,7 @@ export default function AdminContentPage() {
                                     onDragOver={(e) => handleDragOver(e, module.id)}
                                     onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, module.id, trail.id)}
-                                    className={`flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
+                                    className={`group flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
                                       draggedModule === module.id ? "opacity-50" : ""
                                     } ${
                                       dragOverModule === module.id ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
@@ -1157,12 +1157,15 @@ export default function AdminContentPage() {
                                         <ChevronRight className="h-4 w-4" />
                                       </div>
                                     </Link>
-                                    <button
-                                      onClick={() => deleteModule(module.id, module.title)}
-                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded shrink-0"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
+                                    <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => deleteModule(module.id, module.title)}
+                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                        title="Удалить модуль"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
                                   </div>
                                 )
                               })}
@@ -1187,7 +1190,7 @@ export default function AdminContentPage() {
                                     onDragOver={(e) => handleDragOver(e, module.id)}
                                     onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, module.id, trail.id)}
-                                    className={`flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
+                                    className={`group flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
                                       draggedModule === module.id ? "opacity-50" : ""
                                     } ${
                                       dragOverModule === module.id ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
@@ -1231,12 +1234,15 @@ export default function AdminContentPage() {
                                         <ChevronRight className="h-4 w-4" />
                                       </div>
                                     </Link>
-                                    <button
-                                      onClick={() => deleteModule(module.id, module.title)}
-                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded shrink-0"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
+                                    <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => deleteModule(module.id, module.title)}
+                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                        title="Удалить модуль"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
                                   </div>
                                 )
                               })}

@@ -300,77 +300,79 @@ export default async function StudentDetailPage({ params }: Props) {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {student.submissions.map((submission) => (
-                <Card key={submission.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <Badge
-                        className={`text-xs border-0 ${
-                          submission.status === "APPROVED"
-                            ? "bg-green-100 text-green-700"
-                            : submission.status === "PENDING"
-                            ? "bg-blue-100 text-blue-700"
-                            : submission.status === "FAILED"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-orange-100 text-orange-700"
-                        }`}
-                      >
-                        {submission.status === "APPROVED" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                        {submission.status === "PENDING" && <Clock className="h-3 w-3 mr-1" />}
-                        {submission.status === "REVISION" && <AlertCircle className="h-3 w-3 mr-1" />}
-                        {submission.status === "APPROVED"
-                          ? "Принято"
-                          : submission.status === "PENDING"
-                          ? "На проверке"
-                          : submission.status === "FAILED"
-                          ? "Провал"
-                          : "На доработку"}
-                      </Badge>
-                      <Link
-                        href={`/teacher/reviews/${submission.id}`}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Открыть работу"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Link>
+            <Card>
+              <CardContent className="p-0 divide-y">
+                {student.submissions.map((submission) => (
+                  <Link
+                    key={submission.id}
+                    href={`/teacher/reviews/${submission.id}`}
+                    className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    {/* Status icon */}
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                      submission.status === "APPROVED"
+                        ? "bg-green-100"
+                        : submission.status === "PENDING"
+                        ? "bg-blue-100"
+                        : submission.status === "FAILED"
+                        ? "bg-red-100"
+                        : "bg-orange-100"
+                    }`}>
+                      {submission.status === "APPROVED" && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                      {submission.status === "PENDING" && <Clock className="h-5 w-5 text-blue-600" />}
+                      {submission.status === "REVISION" && <AlertCircle className="h-5 w-5 text-orange-600" />}
+                      {submission.status === "FAILED" && <AlertCircle className="h-5 w-5 text-red-600" />}
                     </div>
 
-                    <h4 className="font-semibold text-gray-900 mb-1 line-clamp-2">
-                      {submission.module.title}
-                    </h4>
-                    <p className="text-sm text-gray-500 mb-3">
-                      {submission.module.trail.title}
-                    </p>
-
-                    <div className="text-xs text-gray-400 mb-3">
-                      {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-
-                    {/* Review info */}
-                    {submission.review && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Оценка</span>
-                          <span className="text-lg font-bold text-blue-600">{submission.review.score}/10</span>
-                        </div>
-                        {submission.review.comment && (
-                          <p className="text-sm text-gray-600 line-clamp-2">
-                            {submission.review.comment}
-                          </p>
-                        )}
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-gray-900 truncate">{submission.module.title}</h4>
+                        <Badge variant="secondary" className="shrink-0 text-xs">
+                          {submission.module.trail.title}
+                        </Badge>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <p className="text-sm text-gray-500">
+                        {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        {submission.review && (
+                          <span className="ml-2 text-blue-600 font-medium">
+                            Оценка: {submission.review.score}/10
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Status badge */}
+                    <Badge
+                      className={`shrink-0 text-xs border-0 ${
+                        submission.status === "APPROVED"
+                          ? "bg-green-100 text-green-700"
+                          : submission.status === "PENDING"
+                          ? "bg-blue-100 text-blue-700"
+                          : submission.status === "FAILED"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}
+                    >
+                      {submission.status === "APPROVED"
+                        ? "Принято"
+                        : submission.status === "PENDING"
+                        ? "На проверке"
+                        : submission.status === "FAILED"
+                        ? "Провал"
+                        : "На доработку"}
+                    </Badge>
+
+                    <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
           )}
         </section>
       </div>

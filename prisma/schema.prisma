@@ -81,7 +81,7 @@ model Trail {
   duration          String
   order             Int      @default(0)
   isPublished       Boolean  @default(true)
-  isRestricted      Boolean  @default(false) // If true, only specific students can access
+  isRestricted      Boolean  @default(true) // If true, only specific students can access (secure by default)
   teacherVisibility String   @default("ADMIN_ONLY") // ADMIN_ONLY, ALL_TEACHERS, SPECIFIC
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

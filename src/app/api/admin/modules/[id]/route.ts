@@ -33,7 +33,14 @@ export async function GET(request: NextRequest, { params }: Props) {
     const courseModule = await prisma.module.findUnique({
       where: { id },
       include: {
-        trail: true,
+        trail: {
+          include: {
+            modules: {
+              orderBy: { order: "asc" },
+              select: { id: true, title: true, slug: true, order: true },
+            },
+          },
+        },
         questions: {
           orderBy: { order: "asc" },
         },
@@ -44,7 +51,17 @@ export async function GET(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    return NextResponse.json(courseModule)
+    // Find adjacent modules for navigation
+    const trailModules = courseModule.trail.modules
+    const currentIndex = trailModules.findIndex((m) => m.id === id)
+    const prevModule = currentIndex > 0 ? trailModules[currentIndex - 1] : null
+    const nextModule = currentIndex < trailModules.length - 1 ? trailModules[currentIndex + 1] : null
+
+    return NextResponse.json({
+      ...courseModule,
+      prevModule,
+      nextModule,
+    })
   } catch (error) {
     console.error("Error fetching module:", error)
     return NextResponse.json({ error: "Ошибка при получении модуля" }, { status: 500 })
