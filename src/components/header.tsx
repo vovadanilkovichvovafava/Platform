@@ -11,11 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award, Trophy, BarChart3 } from "lucide-react"
+import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award, Trophy, BarChart3, Menu, X } from "lucide-react"
+import { useState } from "react"
 import { NotificationBell } from "@/components/notification-bell"
 
 export function Header() {
   const { data: session } = useSession()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const getInitials = (name: string) => {
     return name
@@ -29,12 +31,27 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 md:gap-8">
+          {/* Mobile menu button */}
+          {session && (
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
+          )}
+
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex-shrink-0">
               <Flame className="h-5 w-5 text-white" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex-col hidden sm:flex">
               <span className="text-xl font-bold text-slate-900 leading-tight">
                 Prometheus
               </span>
@@ -196,6 +213,76 @@ export function Header() {
           )}
         </div>
       </div>
+
+      {/* Mobile Navigation Menu */}
+      {session && mobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white">
+          <nav className="container mx-auto px-4 py-3 space-y-1">
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
+            >
+              <Flame className="h-4 w-4" />
+              Dashboard
+            </Link>
+            <Link
+              href="/trails"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
+            >
+              <BookOpen className="h-4 w-4" />
+              Trails
+            </Link>
+            <Link
+              href="/my-work"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Мои работы
+            </Link>
+            <Link
+              href="/leaderboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
+            >
+              <Trophy className="h-4 w-4" />
+              Лидерборд
+            </Link>
+            {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
+              <Link
+                href="/teacher"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
+              >
+                <Settings className="h-4 w-4" />
+                Панель эксперта
+              </Link>
+            )}
+            {session.user.role === "ADMIN" && (
+              <>
+                <Link
+                  href="/admin/invites"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
+                >
+                  <Shield className="h-4 w-4" />
+                  Админ панель
+                </Link>
+                <Link
+                  href="/admin/analytics"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Аналитика
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   )
 }

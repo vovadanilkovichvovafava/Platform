@@ -50,6 +50,7 @@ export default function StudentAccessPage() {
   const [selectedStudent, setSelectedStudent] = useState<string>("")
   const [selectedTrail, setSelectedTrail] = useState<string>("")
   const [assigning, setAssigning] = useState(false)
+  const [validationError, setValidationError] = useState<string>("")
 
   // Search states
   const [studentSearch, setStudentSearch] = useState("")
@@ -131,7 +132,21 @@ export default function StudentAccessPage() {
   }
 
   const grantAccess = async () => {
-    if (!selectedStudent || !selectedTrail) return
+    // Client-side validation
+    if (!selectedStudent && !selectedTrail) {
+      setValidationError("Выберите студента и trail")
+      return
+    }
+    if (!selectedStudent) {
+      setValidationError("Выберите студента")
+      return
+    }
+    if (!selectedTrail) {
+      setValidationError("Выберите trail")
+      return
+    }
+
+    setValidationError("")
 
     try {
       setAssigning(true)
@@ -405,10 +420,10 @@ export default function StudentAccessPage() {
                   )}
                 </div>
 
-                <div className="flex items-end">
+                <div className="flex flex-col items-start gap-2">
                   <Button
                     onClick={grantAccess}
-                    disabled={!selectedStudent || !selectedTrail || assigning}
+                    disabled={assigning}
                   >
                     {assigning ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
@@ -419,6 +434,12 @@ export default function StudentAccessPage() {
                       </>
                     )}
                   </Button>
+                  {validationError && (
+                    <div className="flex items-center gap-1 text-sm text-red-600">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationError}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
