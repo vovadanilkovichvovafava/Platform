@@ -153,6 +153,25 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
     return result
   }
 
+  // Render checkbox component
+  const renderCheckbox = (checked: boolean, text: string, key: string) => (
+    <li key={key} className="flex items-start gap-2 mb-1 list-none">
+      <span
+        className={cn(
+          "flex-shrink-0 w-4 h-4 mt-0.5 rounded border-2 flex items-center justify-center",
+          checked
+            ? "bg-green-500 border-green-500 text-white"
+            : "border-gray-300 bg-white"
+        )}
+      >
+        {checked && <Check className="h-3 w-3" />}
+      </span>
+      <span className={checked ? "text-gray-500 line-through" : ""}>
+        {parseInlineMarkdown(text)}
+      </span>
+    </li>
+  )
+
   // Parse the content with code blocks support
   const renderContent = (): ReactNode[] => {
     const elements: ReactNode[] = []
@@ -225,25 +244,63 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         continue
       }
 
-      // Unordered list
+      // Unordered list with checkboxes - collect all items into <ul>
       if (line.startsWith("- ")) {
+        const listItems: ReactNode[] = []
+        const startIdx = i
+
+        while (i < lines.length && lines[i].startsWith("- ")) {
+          const itemLine = lines[i]
+          const itemContent = itemLine.slice(2)
+
+          // Check for checkbox syntax - [ ] or [x]
+          if (itemContent.startsWith("[ ] ")) {
+            listItems.push(renderCheckbox(false, itemContent.slice(4), `checkbox-${i}`))
+          } else if (itemContent.startsWith("[x] ") || itemContent.startsWith("[X] ")) {
+            listItems.push(renderCheckbox(true, itemContent.slice(4), `checkbox-${i}`))
+          } else if (itemContent === "[]" || itemContent.startsWith("[] ")) {
+            // Handle [] without space as unchecked checkbox
+            const text = itemContent === "[]" ? "" : itemContent.slice(3)
+            listItems.push(renderCheckbox(false, text, `checkbox-${i}`))
+          } else {
+            listItems.push(
+              <li key={`li-${i}`} className="mb-1">
+                {parseInlineMarkdown(itemContent)}
+              </li>
+            )
+          }
+          i++
+        }
+
         elements.push(
-          <li key={`li-${i}`} className="ml-4 mb-1">
-            {parseInlineMarkdown(line.slice(2))}
-          </li>
+          <ul key={`ul-${startIdx}`} className="list-disc ml-6 my-2">
+            {listItems}
+          </ul>
         )
-        i++
         continue
       }
 
-      // Ordered list
+      // Ordered list - collect all items into <ol>
       if (/^\d+\. /.test(line)) {
+        const listItems: ReactNode[] = []
+        const startIdx = i
+
+        while (i < lines.length && /^\d+\. /.test(lines[i])) {
+          const itemLine = lines[i]
+          const itemContent = itemLine.slice(itemLine.indexOf(" ") + 1)
+          listItems.push(
+            <li key={`oli-${i}`} className="mb-1">
+              {parseInlineMarkdown(itemContent)}
+            </li>
+          )
+          i++
+        }
+
         elements.push(
-          <li key={`oli-${i}`} className="ml-4 mb-1 list-decimal">
-            {parseInlineMarkdown(line.slice(line.indexOf(" ") + 1))}
-          </li>
+          <ol key={`ol-${startIdx}`} className="list-decimal ml-6 my-2">
+            {listItems}
+          </ol>
         )
-        i++
         continue
       }
 

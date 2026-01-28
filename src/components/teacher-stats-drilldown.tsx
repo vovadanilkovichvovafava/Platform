@@ -293,16 +293,16 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="px-4 pb-4">
-                  <div className="flex gap-3 mb-4">
+                <div className="px-4 pb-4 pt-2">
+                  <div className="flex gap-3 mb-4 mt-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedTrail(trail)}
-                      className="text-blue-600"
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
                     >
-                      <ChevronRight className="h-4 w-4 mr-1" />
-                      Подробная статистика
+                      <Users className="h-4 w-4 mr-2" />
+                      Статистика по студентам
                     </Button>
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-center">

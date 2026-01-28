@@ -45,6 +45,8 @@ import {
   User,
   FileText,
   MoreHorizontal,
+  Sparkles,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -294,6 +296,13 @@ export default function AdvancedAnalyticsPage() {
     weakModules: string[]
   } | null>(null)
   const [loadingStudentDetail, setLoadingStudentDetail] = useState(false)
+  // AI analysis state
+  const [aiAnalysis, setAiAnalysis] = useState<{
+    analysis: string
+    studentName: string
+    loading: boolean
+    error: string | null
+  }>({ analysis: "", studentName: "", loading: false, error: null })
 
   const toggleSection = (section: keyof typeof sectionsExpanded) => {
     setSectionsExpanded(prev => ({ ...prev, [section]: !prev[section] }))
@@ -407,6 +416,49 @@ export default function AdvancedAnalyticsPage() {
       weakModules: weakModules.slice(0, 5),
     })
     setLoadingStudentDetail(false)
+    // Reset AI analysis when student changes
+    setAiAnalysis({ analysis: "", studentName: "", loading: false, error: null })
+  }
+
+  // Request AI analysis for selected student
+  const requestAiAnalysis = async () => {
+    if (!selectedStudentId || !selectedStudentData) return
+
+    setAiAnalysis({ analysis: "", studentName: "", loading: true, error: null })
+
+    try {
+      const res = await fetch("/api/admin/analytics/ai-student", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: selectedStudentId }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setAiAnalysis({
+          analysis: "",
+          studentName: "",
+          loading: false,
+          error: data.error || "Ошибка AI-анализа",
+        })
+        return
+      }
+
+      setAiAnalysis({
+        analysis: data.analysis,
+        studentName: data.studentName,
+        loading: false,
+        error: null,
+      })
+    } catch {
+      setAiAnalysis({
+        analysis: "",
+        studentName: "",
+        loading: false,
+        error: "Ошибка соединения с сервером",
+      })
+    }
   }
 
   const { showToast } = useToast()
@@ -2092,6 +2144,63 @@ export default function AdvancedAnalyticsPage() {
                           )}
                         </div>
                       )}
+
+                      {/* AI Analysis Section */}
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-purple-500" />
+                            AI-анализ прогресса
+                          </h4>
+                          <Button
+                            onClick={requestAiAnalysis}
+                            disabled={aiAnalysis.loading}
+                            size="sm"
+                            className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
+                          >
+                            {aiAnalysis.loading ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Анализ...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Запросить анализ
+                              </>
+                            )}
+                          </Button>
+                        </div>
+
+                        {aiAnalysis.error && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm text-red-700">{aiAnalysis.error}</span>
+                          </div>
+                        )}
+
+                        {aiAnalysis.analysis && (
+                          <div className="relative p-4 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
+                            <button
+                              onClick={() => setAiAnalysis({ analysis: "", studentName: "", loading: false, error: null })}
+                              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 rounded"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                            <div className="prose prose-sm max-w-none text-gray-700">
+                              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                                {aiAnalysis.analysis}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {!aiAnalysis.analysis && !aiAnalysis.error && !aiAnalysis.loading && (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            Нажмите &quot;Запросить анализ&quot; для получения AI-рекомендаций по улучшению прогресса студента
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 
