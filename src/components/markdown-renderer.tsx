@@ -245,31 +245,53 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       }
 
       // Unordered list with checkboxes - collect all items into <ul>
+      // Handle blank lines between items (common in AI-generated markdown)
       if (line.startsWith("- ")) {
         const listItems: ReactNode[] = []
         const startIdx = i
 
-        while (i < lines.length && lines[i].startsWith("- ")) {
-          const itemLine = lines[i]
-          const itemContent = itemLine.slice(2)
+        while (i < lines.length) {
+          // Check if current line is an unordered list item
+          if (lines[i].startsWith("- ")) {
+            const itemLine = lines[i]
+            const itemContent = itemLine.slice(2)
 
-          // Check for checkbox syntax - [ ] or [x]
-          if (itemContent.startsWith("[ ] ")) {
-            listItems.push(renderCheckbox(false, itemContent.slice(4), `checkbox-${i}`))
-          } else if (itemContent.startsWith("[x] ") || itemContent.startsWith("[X] ")) {
-            listItems.push(renderCheckbox(true, itemContent.slice(4), `checkbox-${i}`))
-          } else if (itemContent === "[]" || itemContent.startsWith("[] ")) {
-            // Handle [] without space as unchecked checkbox
-            const text = itemContent === "[]" ? "" : itemContent.slice(3)
-            listItems.push(renderCheckbox(false, text, `checkbox-${i}`))
-          } else {
-            listItems.push(
-              <li key={`li-${i}`} className="mb-1">
-                {parseInlineMarkdown(itemContent)}
-              </li>
-            )
+            // Check for checkbox syntax - [ ] or [x]
+            if (itemContent.startsWith("[ ] ")) {
+              listItems.push(renderCheckbox(false, itemContent.slice(4), `checkbox-${i}`))
+            } else if (itemContent.startsWith("[x] ") || itemContent.startsWith("[X] ")) {
+              listItems.push(renderCheckbox(true, itemContent.slice(4), `checkbox-${i}`))
+            } else if (itemContent === "[]" || itemContent.startsWith("[] ")) {
+              // Handle [] without space as unchecked checkbox
+              const text = itemContent === "[]" ? "" : itemContent.slice(3)
+              listItems.push(renderCheckbox(false, text, `checkbox-${i}`))
+            } else {
+              listItems.push(
+                <li key={`li-${i}`} className="mb-1">
+                  {parseInlineMarkdown(itemContent)}
+                </li>
+              )
+            }
+            i++
           }
-          i++
+          // Skip blank lines if the next non-blank line is also an unordered list item
+          else if (lines[i].trim() === "") {
+            // Look ahead to find next non-blank line
+            let lookAhead = i + 1
+            while (lookAhead < lines.length && lines[lookAhead].trim() === "") {
+              lookAhead++
+            }
+            // If next non-blank line is an unordered list item, skip the blank lines
+            if (lookAhead < lines.length && lines[lookAhead].startsWith("- ")) {
+              i = lookAhead
+            } else {
+              // Not followed by an unordered list item, end the list
+              break
+            }
+          } else {
+            // Non-blank, non-list-item line - end the list
+            break
+          }
         }
 
         elements.push(
@@ -281,19 +303,41 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       }
 
       // Ordered list - collect all items into <ol>
+      // Handle blank lines between numbered items (common in AI-generated markdown)
       if (/^\d+\. /.test(line)) {
         const listItems: ReactNode[] = []
         const startIdx = i
 
-        while (i < lines.length && /^\d+\. /.test(lines[i])) {
-          const itemLine = lines[i]
-          const itemContent = itemLine.slice(itemLine.indexOf(" ") + 1)
-          listItems.push(
-            <li key={`oli-${i}`} className="mb-1">
-              {parseInlineMarkdown(itemContent)}
-            </li>
-          )
-          i++
+        while (i < lines.length) {
+          // Check if current line is a numbered item
+          if (/^\d+\. /.test(lines[i])) {
+            const itemLine = lines[i]
+            const itemContent = itemLine.slice(itemLine.indexOf(" ") + 1)
+            listItems.push(
+              <li key={`oli-${i}`} className="mb-1">
+                {parseInlineMarkdown(itemContent)}
+              </li>
+            )
+            i++
+          }
+          // Skip blank lines if the next non-blank line is also a numbered item
+          else if (lines[i].trim() === "") {
+            // Look ahead to find next non-blank line
+            let lookAhead = i + 1
+            while (lookAhead < lines.length && lines[lookAhead].trim() === "") {
+              lookAhead++
+            }
+            // If next non-blank line is a numbered item, skip the blank lines
+            if (lookAhead < lines.length && /^\d+\. /.test(lines[lookAhead])) {
+              i = lookAhead
+            } else {
+              // Not followed by a numbered item, end the list
+              break
+            }
+          } else {
+            // Non-blank, non-numbered line - end the list
+            break
+          }
         }
 
         elements.push(
