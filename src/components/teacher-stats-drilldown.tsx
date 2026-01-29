@@ -267,16 +267,16 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center justify-between"
+                  className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center justify-between group"
                   style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, transparent 100%)` }}
                 >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1">
                   <div
-                    className="w-3 h-3 rounded-full"
+                    className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: trail.color }}
                   />
                   <span className="font-semibold text-gray-900">{trail.title}</span>
-                  <div className="flex items-center gap-2 ml-auto mr-2">
+                  <div className="flex items-center gap-2 ml-auto">
                     <Badge variant="secondary">
                       {trail.modules.length} модулей
                     </Badge>
@@ -290,6 +290,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                     )}
                   </div>
                 </div>
+                <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-aria-expanded:rotate-180 ml-2 flex-shrink-0" />
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
