@@ -337,13 +337,9 @@ export function SubmissionsFilter({
                         </Link>
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="ghost-destructive"
                         size="sm"
-                        className={`${
-                          deletingId === submission.id
-                            ? "text-red-500"
-                            : "text-gray-400 hover:text-red-600 hover:bg-red-50"
-                        }`}
+                        className={deletingId === submission.id ? "text-red-500" : ""}
                         onClick={() => handleDeleteSubmission(
                           submission.id,
                           submission.user.name,

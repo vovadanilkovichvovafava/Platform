@@ -1100,8 +1100,7 @@ export default function UnifiedContentPage() {
                         </Button>
                         <Button
                           size="sm"
-                          variant="ghost"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          variant="ghost-destructive"
                           onClick={() => deleteTrail(trail.id, trail.title)}
                         >
                           <Trash2 className="h-4 w-4" />

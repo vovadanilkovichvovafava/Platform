@@ -384,9 +384,9 @@ export default function TeacherContentPage() {
                                 </Link>
                                 <div className="w-px h-5 bg-gray-200 mx-1" />
                                 <Button
-                                  variant="ghost"
+                                  variant="ghost-destructive"
                                   size="sm"
-                                  className="h-7 w-7 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                  className="h-7 w-7 p-0"
                                   onClick={() => deleteModule(module.id, module.title)}
                                   title="Удалить модуль"
                                 >

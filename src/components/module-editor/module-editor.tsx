@@ -580,8 +580,8 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
                           </div>
                           <Button
                             size="sm"
-                            variant="ghost"
-                            className="text-red-500 hover:text-red-700 shrink-0"
+                            variant="ghost-destructive"
+                            className="shrink-0"
                             onClick={() => deleteQuestion(qIndex)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -927,8 +927,8 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
                                   />
                                   <Button
                                     size="sm"
-                                    variant="ghost"
-                                    className="text-red-500 hover:text-red-700 shrink-0 p-1"
+                                    variant="ghost-destructive"
+                                    className="shrink-0 p-1"
                                     onClick={() => {
                                       const data = q.data as TrueFalseData
                                       if (data.statements.length > 1) {
@@ -1012,8 +1012,8 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
                                     />
                                     <Button
                                       size="sm"
-                                      variant="ghost"
-                                      className="text-red-500 hover:text-red-700 shrink-0 p-1"
+                                      variant="ghost-destructive"
+                                      className="shrink-0 p-1"
                                       onClick={() => {
                                         const data = q.data as FillBlankData
                                         if (data.blanks.length > 1) {
