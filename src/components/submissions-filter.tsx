@@ -353,7 +353,13 @@ export function SubmissionsFilter({
                       <Button
                         variant="ghost-destructive"
                         size="sm"
-                        className={deletingId === submission.id ? "text-red-500" : ""}
+                        className={
+                          deletingId === submission.id
+                            ? "text-red-500"
+                            : readyToDeleteId !== submission.id
+                              ? "opacity-50"
+                              : ""
+                        }
                         onClick={() => handleDeleteSubmission(
                           submission.id,
                           submission.user.name,
@@ -361,7 +367,7 @@ export function SubmissionsFilter({
                         )}
                         onMouseEnter={() => handleDeleteMouseEnter(submission.id)}
                         onMouseLeave={handleDeleteMouseLeave}
-                        disabled={deletingId === submission.id || readyToDeleteId !== submission.id}
+                        disabled={deletingId === submission.id}
                         title={
                           deletingId === submission.id
                             ? "Удаляем…"
