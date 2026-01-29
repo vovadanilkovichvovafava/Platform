@@ -329,6 +329,7 @@ export default async function ModulePage({ params }: Props) {
                   trailSlug={courseModule.trail.slug}
                   moduleType={courseModule.type}
                   isCompleted={isCompleted}
+                  userId={session.user.id}
                 />
 
                 {/* Practice submission form - PRACTICE с возможностью редактирования */}
@@ -395,6 +396,7 @@ export default async function ModulePage({ params }: Props) {
                 trailSlug={courseModule.trail.slug}
                 moduleType={courseModule.type}
                 isCompleted={isCompleted}
+                userId={session.user.id}
               />
             )}
           </div>

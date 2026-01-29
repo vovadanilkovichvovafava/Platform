@@ -213,11 +213,52 @@ ${QUESTION_TYPES_DEFINITION}
       "level": "Junior | Middle | Senior",
       "duration": "15 мин",
       "requiresSubmission": false,
+      "requirements": "Только для PROJECT: структурированные требования в Markdown",
       "questions": [/* массив вопросов разных типов */]
     }]
   }]
 }
 \`\`\`
+
+## ТРЕБОВАНИЯ К PROJECT МОДУЛЯМ
+
+**КРИТИЧНО**: Каждый PROJECT модуль ОБЯЗАН иметь поле "requirements" с чёткими структурированными требованиями!
+
+Формат requirements (Markdown буллеты):
+\`\`\`
+## Функциональные требования
+- Конкретный пункт 1
+- Конкретный пункт 2
+
+## Критерии готовности (Acceptance Criteria)
+- Критерий 1: описание
+- Критерий 2: описание
+
+## Ограничения
+- Ограничение 1
+\`\`\`
+
+**РАЗЛИЧИЯ ПО УРОВНЯМ ПРОЕКТОВ**:
+
+### Junior (Базовый):
+- MVP функционал (минимальный набор фич)
+- Простая структура, без сложных паттернов
+- 3-5 базовых требований
+- Фокус на "работает" без edge cases
+
+### Middle (Стандартный):
+- Расширенный функционал + обработка edge cases
+- Улучшенный UX, валидация данных
+- 5-8 требований включая тесты
+- Фокус на качество и надёжность
+
+### Senior (Продвинутый):
+- Полный функционал + архитектурные улучшения
+- Оптимизация производительности, безопасность
+- 8-12 требований включая нефункциональные
+- Фокус на масштабируемость и best practices
+
+**ПРОЕКТЫ ДОЛЖНЫ БЫТЬ РАЗНЫМИ**: Junior и Middle НЕ должны быть версиями одного проекта. Используй РАЗНЫЕ темы/задачи из материала курса!
 
 ## ПРАВИЛА
 
@@ -242,6 +283,7 @@ ${QUESTION_TYPES_DEFINITION}
       * ОПЦИОНАЛЬНО 1-2 дополнительных проекта (Senior или другие темы)
     - Порядок PROJECT модулей: Junior → Middle → Senior
     - НЕ создавай 3 версии одного проекта! Создай 2-4 РАЗНЫХ проекта
+15. **ОБЯЗАТЕЛЬНО для PROJECT**: каждый PROJECT модуль ДОЛЖЕН содержать поле "requirements" со структурированными требованиями (см. формат выше). Это НЕ то же самое что "description"!
 12. **Формулировки**: вопросы должны быть чёткими, однозначными и проверять понимание, а не запоминание
 13. **ОБЯЗАТЕЛЬНО для THEORY**: каждый модуль типа THEORY ДОЛЖЕН содержать минимум 3-5 вопросов для проверки понимания материала. Теория без вопросов недопустима!
 14. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
@@ -259,7 +301,9 @@ const AI_USER_PROMPT = `Преобразуй следующий образова
 ВАЖНО по PROJECT модулям:
 - Создай только 2-4 PROJECT модуля на весь курс (НЕ больше 4!)
 - ОБЯЗАТЕЛЬНО 1 модуль Junior уровня и 1 модуль Middle уровня
-- НЕ создавай 3 версии одного проекта - создавай РАЗНЫЕ проекты
+- НЕ создавай 3 версии одного проекта - создавай РАЗНЫЕ проекты по РАЗНЫМ темам курса
+- **КРИТИЧНО**: Каждый PROJECT ОБЯЗАН иметь поле "requirements" с чёткими структурированными требованиями!
+- Junior: базовый MVP (3-5 требований), Middle: расширенный + edge cases (5-8), Senior: полный + архитектура (8-12)
 
 ---
 {content}
@@ -286,6 +330,7 @@ ${QUESTION_TYPES_DEFINITION}
     "level": "Junior | Middle | Senior",
     "description": "Описание модуля",
     "content": "Контент в Markdown",
+    "requirements": "Только для PROJECT: структурированные требования в Markdown",
     "questions": [
       // ОБЯЗАТЕЛЬНО используй разные типы (SINGLE_CHOICE, MATCHING, ORDERING, TRUE_FALSE, FILL_BLANK, CASE_ANALYSIS)
       // У КАЖДОГО вопроса ОБЯЗАТЕЛЕН параметр "type" и соответствующий "data"!
@@ -303,6 +348,8 @@ ${QUESTION_TYPES_DEFINITION}
 5. **РАЗНООБРАЗИЕ**: НЕ делай все вопросы SINGLE_CHOICE! Используй минимум 2-3 разных типа.
 6. **MATCHING**: используй ОСМЫСЛЕННЫЕ термины (НЕ "Вариант 1/2/3", НЕ "Элемент 1")!
 7. Верни ТОЛЬКО валидный JSON без комментариев
+8. **КРИТИЧНО для PROJECT**: Поле "requirements" ОБЯЗАТЕЛЬНО со структурированными требованиями!
+   - Junior: MVP (3-5 требований), Middle: расширенный (5-8), Senior: полный (8-12)
 
 ## ЧЕКЛИСТ ПЕРЕД ВЫВОДОМ
 
@@ -311,6 +358,7 @@ ${QUESTION_TYPES_DEFINITION}
 ☐ Для MATCHING/ORDERING/TRUE_FALSE/FILL_BLANK/CASE_ANALYSIS есть корректный "data"?
 ☐ Используются минимум 2 разных типа вопросов?
 ☐ MATCHING не содержит плейсхолдеров "Вариант N", "Элемент N"?
+☐ У PROJECT модулей есть поле "requirements" с требованиями?
 
 Если нет — исправь до вывода!`
 
@@ -326,6 +374,7 @@ const AI_MODULE_USER_PROMPT = `Преобразуй следующий фраг�
 - Создай РАЗНООБРАЗНЫЕ типы вопросов (SINGLE_CHOICE, MATCHING, ORDERING, TRUE_FALSE, FILL_BLANK, CASE_ANALYSIS)
 - У КАЖДОГО вопроса ОБЯЗАТЕЛЕН параметр "type"
 - Для MATCHING используй ОСМЫСЛЕННЫЕ термины, НЕ "Вариант 1/2/3"
+- **Если это PROJECT модуль**: ОБЯЗАТЕЛЬНО добавь поле "requirements" со структурированными требованиями!
 
 Верни ТОЛЬКО JSON с модулями.`
 
@@ -1295,9 +1344,15 @@ export async function parseWithAIChunked(
   // Сортируем модули: сначала THEORY/PRACTICE, затем PROJECT в порядке Junior → Middle → Senior
   const sortedModules = sortProjectModulesByLevel(modulesWithAllLevels)
 
+  // Обеспечиваем requirements для PROJECT модулей
+  const modulesWithRequirements = sortedModules.map(m => ensureProjectRequirements(m))
+
+  // Проверяем схожесть проектов и усиливаем различия (Модуль 3)
+  const differentiatedModules = enhanceProjectDifferentiation(modulesWithRequirements, warnings)
+
   // Проверяем, был ли порядок PROJECT модулей изменён
   const projectModulesBefore = modulesWithAllLevels.filter(m => m.type === "PROJECT")
-  const projectModulesAfter = sortedModules.filter(m => m.type === "PROJECT")
+  const projectModulesAfter = differentiatedModules.filter(m => m.type === "PROJECT")
   if (projectModulesBefore.length > 1) {
     const orderChanged = projectModulesBefore.some((m, i) => m.slug !== projectModulesAfter[i]?.slug)
     if (orderChanged) {
@@ -1305,7 +1360,7 @@ export async function parseWithAIChunked(
     }
   }
 
-  trail.modules = sortedModules
+  trail.modules = differentiatedModules
 
   // Обеспечиваем минимум 2 типа вопросов в каждом модуле
   for (let i = 0; i < trail.modules.length; i++) {
@@ -1426,9 +1481,15 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
     // Сортируем модули: сначала THEORY/PRACTICE, затем PROJECT в порядке Junior → Middle → Senior
     const sortedModules = sortProjectModulesByLevel(modulesWithAllLevels)
 
+    // Обеспечиваем requirements для PROJECT модулей
+    const modulesWithRequirements = sortedModules.map(m => ensureProjectRequirements(m))
+
+    // Проверяем схожесть проектов и усиливаем различия (Модуль 3)
+    const differentiatedModules = enhanceProjectDifferentiation(modulesWithRequirements, warnings)
+
     // Проверяем, был ли порядок PROJECT модулей изменён
     const projectModulesBefore = validTrail.modules.filter(m => m.type === "PROJECT")
-    const projectModulesAfter = sortedModules.filter(m => m.type === "PROJECT")
+    const projectModulesAfter = differentiatedModules.filter(m => m.type === "PROJECT")
     if (projectModulesBefore.length > 1) {
       const orderChanged = projectModulesBefore.some((m, i) => m.slug !== projectModulesAfter[i]?.slug)
       if (orderChanged) {
@@ -1436,7 +1497,7 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
       }
     }
 
-    validTrail.modules = sortedModules
+    validTrail.modules = differentiatedModules
 
     // Обеспечиваем минимум 2 типа вопросов в каждом модуле
     for (let i = 0; i < validTrail.modules.length; i++) {
@@ -1583,6 +1644,7 @@ function sortProjectModulesByLevel(modules: ParsedModule[]): ParsedModule[] {
 
 // Обеспечение 2-4 PROJECT модулей с обязательными Junior и Middle уровнями
 // Ограничения: минимум 2, максимум 4 проекта; обязательно Junior и Middle
+// Senior опционален, но генерируется при достаточном контенте
 function ensureProjectLevels(modules: ParsedModule[], warnings: string[]): ParsedModule[] {
   const projectModules: ParsedModule[] = []
   const otherModules: ParsedModule[] = []
@@ -1604,6 +1666,7 @@ function ensureProjectLevels(modules: ParsedModule[], warnings: string[]): Parse
   // Проверяем наличие обязательных уровней (Junior и Middle)
   const hasJunior = projectModules.some(m => m.level === "Junior")
   const hasMiddle = projectModules.some(m => m.level === "Middle")
+  const hasSenior = projectModules.some(m => m.level === "Senior")
 
   let resultProjects: ParsedModule[] = [...projectModules]
 
@@ -1625,6 +1688,34 @@ function ensureProjectLevels(modules: ParsedModule[], warnings: string[]): Parse
     const newModule = createProjectModuleForLevel(templateModule, baseTitle, baseSlug, "Middle")
     resultProjects.push(newModule)
     warnings.push(`Автоматически создан обязательный PROJECT модуль уровня Middle: "${newModule.title}"`)
+  }
+
+  // МОДУЛЬ 2: Опциональное создание Senior уровня
+  // Условия для создания Senior:
+  // 1. Senior ещё не существует
+  // 2. Уже есть Junior и Middle (минимум 2 проекта)
+  // 3. Общее количество PROJECT модулей будет <= 4
+  // 4. Есть хотя бы один модуль с достаточно богатым контентом (для Senior-level сложности)
+  if (!hasSenior && resultProjects.length >= 2 && resultProjects.length < 4) {
+    // Проверяем достаточность контента для Senior
+    // Критерий: есть модуль с контентом > 500 символов ИЛИ общее количество модулей в курсе >= 5
+    const hasRichContent = resultProjects.some(m =>
+      (m.content && m.content.length > 500) ||
+      (m.requirements && m.requirements.length > 200)
+    )
+    const hasSufficientModules = otherModules.length >= 4 // Если есть 4+ THEORY/PRACTICE модуля
+
+    if (hasRichContent || hasSufficientModules) {
+      // Берём Middle как шаблон для Senior (продолжение усложнения)
+      const templateModule = resultProjects.find(m => m.level === "Middle") ||
+                            resultProjects.find(m => m.level === "Junior") ||
+                            resultProjects[0]
+      const baseTitle = extractBaseProjectTitle(templateModule.title)
+      const baseSlug = extractBaseProjectSlug(templateModule.slug)
+      const newModule = createProjectModuleForLevel(templateModule, baseTitle, baseSlug, "Senior")
+      resultProjects.push(newModule)
+      warnings.push(`Автоматически создан опциональный PROJECT модуль уровня Senior: "${newModule.title}"`)
+    }
   }
 
   // Ограничиваем количество проектов до 4 (но не меньше 2)
@@ -1654,6 +1745,126 @@ function ensureProjectLevels(modules: ParsedModule[], warnings: string[]): Parse
   })
 
   return [...otherModules, ...resultProjects]
+}
+
+// ============================================
+// МОДУЛЬ 3: ПРОВЕРКА СХОЖЕСТИ ПРОЕКТОВ
+// ============================================
+
+// Извлекает ключевые слова из текста (простой tokenizer без библиотек)
+function extractKeywords(text: string): Set<string> {
+  if (!text) return new Set()
+
+  // Очистка и токенизация
+  const cleaned = text
+    .toLowerCase()
+    .replace(/[^\wа-яёА-ЯЁ\s]/g, ' ') // Убираем пунктуацию
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // Стоп-слова (общие слова которые не несут смысла)
+  const stopWords = new Set([
+    // Русские
+    'и', 'в', 'на', 'с', 'по', 'для', 'к', 'от', 'из', 'за', 'при', 'до', 'о', 'об',
+    'это', 'как', 'так', 'что', 'все', 'его', 'её', 'их', 'не', 'но', 'или', 'же',
+    'быть', 'будет', 'был', 'были', 'есть', 'нет', 'да', 'ли', 'бы',
+    'нужно', 'можно', 'должен', 'может', 'будут', 'также', 'только',
+    'проект', 'модуль', 'уровень', 'версия', 'базовый', 'стандартный', 'продвинутый',
+    // Английские
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    'of', 'to', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'or', 'and',
+    'project', 'module', 'level', 'version', 'basic', 'standard', 'advanced'
+  ])
+
+  const words = cleaned.split(' ')
+    .filter(w => w.length > 2 && !stopWords.has(w))
+
+  return new Set(words)
+}
+
+// Вычисляет коэффициент схожести Жаккара между двумя множествами
+function jaccardSimilarity(set1: Set<string>, set2: Set<string>): number {
+  if (set1.size === 0 && set2.size === 0) return 1
+  if (set1.size === 0 || set2.size === 0) return 0
+
+  const intersection = new Set([...set1].filter(x => set2.has(x)))
+  const union = new Set([...set1, ...set2])
+
+  return intersection.size / union.size
+}
+
+// Проверяет схожесть двух PROJECT модулей
+function calculateProjectSimilarity(mod1: ParsedModule, mod2: ParsedModule): number {
+  // Извлекаем ключевые слова из title + description + requirements
+  const text1 = `${mod1.title} ${mod1.description} ${mod1.requirements || ''}`
+  const text2 = `${mod2.title} ${mod2.description} ${mod2.requirements || ''}`
+
+  const keywords1 = extractKeywords(text1)
+  const keywords2 = extractKeywords(text2)
+
+  return jaccardSimilarity(keywords1, keywords2)
+}
+
+// Проверяет проекты на схожесть и выдаёт предупреждения
+function checkProjectSimilarity(projects: ParsedModule[], warnings: string[]): void {
+  // Порог схожести: > 0.7 = очень похожи (предупреждение)
+  const SIMILARITY_THRESHOLD = 0.7
+
+  for (let i = 0; i < projects.length; i++) {
+    for (let j = i + 1; j < projects.length; j++) {
+      const similarity = calculateProjectSimilarity(projects[i], projects[j])
+
+      if (similarity > SIMILARITY_THRESHOLD) {
+        warnings.push(
+          `Проекты "${projects[i].title}" и "${projects[j].title}" очень похожи (${Math.round(similarity * 100)}%). ` +
+          `Рекомендуется использовать разные темы из материала курса.`
+        )
+      }
+    }
+  }
+}
+
+// Усиливает различия между проектами разных уровней
+function enhanceProjectDifferentiation(modules: ParsedModule[], warnings: string[]): ParsedModule[] {
+  const projectModules = modules.filter(m => m.type === "PROJECT")
+
+  // Проверяем схожесть
+  checkProjectSimilarity(projectModules, warnings)
+
+  // Усиливаем requirements если они слишком похожи
+  const juniorProject = projectModules.find(m => m.level === "Junior")
+  const middleProject = projectModules.find(m => m.level === "Middle")
+  const seniorProject = projectModules.find(m => m.level === "Senior")
+
+  // Добавляем уровневые различия в description если requirements уже похожи
+  const enhancedModules = modules.map(mod => {
+    if (mod.type !== "PROJECT") return mod
+
+    let enhancedDescription = mod.description
+
+    switch (mod.level) {
+      case "Junior":
+        if (!mod.description.includes("базов") && !mod.description.includes("MVP") && !mod.description.includes("упрощ")) {
+          enhancedDescription = `${mod.description} Фокус на базовой функциональности (MVP).`
+        }
+        break
+      case "Middle":
+        if (!mod.description.includes("edge case") && !mod.description.includes("валидаци") && !mod.description.includes("тест")) {
+          enhancedDescription = `${mod.description} Включает обработку ошибок и валидацию.`
+        }
+        break
+      case "Senior":
+        if (!mod.description.includes("архитектур") && !mod.description.includes("оптимизац") && !mod.description.includes("масштаб")) {
+          enhancedDescription = `${mod.description} Акцент на архитектуре и оптимизации.`
+        }
+        break
+    }
+
+    return { ...mod, description: enhancedDescription }
+  })
+
+  return enhancedModules
 }
 
 // Извлечение базового названия проекта (без указания уровня)
@@ -1695,6 +1906,7 @@ function createProjectModuleForLevel(
     level: level,
     duration: template.duration,
     requiresSubmission: true,
+    requirements: generateRequirementsForLevel(level, template.requirements),
   }
 }
 
@@ -1716,6 +1928,89 @@ function getLevelDescription(level: ValidLevel): string {
     case "Senior": return "Продвинутая версия проекта с дополнительными требованиями."
     default: return ""
   }
+}
+
+// Генерация структурированных требований для PROJECT модуля по уровню
+function generateRequirementsForLevel(level: ValidLevel, baseRequirements?: string): string {
+  // Если уже есть требования - возвращаем их с дополнением уровня
+  if (baseRequirements && baseRequirements.trim().length > 50) {
+    return baseRequirements
+  }
+
+  // Генерируем базовые требования по уровню
+  switch (level) {
+    case "Junior":
+      return `## Функциональные требования (Junior)
+- Реализовать базовый функционал согласно описанию
+- Обеспечить работоспособность основных сценариев использования
+- Создать простой и понятный интерфейс
+
+## Критерии готовности
+- Приложение запускается без ошибок
+- Основной функционал работает корректно
+- Код читаем и структурирован`
+
+    case "Middle":
+      return `## Функциональные требования (Middle)
+- Реализовать полный функционал согласно описанию
+- Добавить обработку ошибок и edge cases
+- Реализовать валидацию пользовательского ввода
+- Улучшить UX с обратной связью для пользователя
+
+## Нефункциональные требования
+- Написать базовые тесты для критичного функционала
+- Документировать основные компоненты
+
+## Критерии готовности
+- Все требования Junior выполнены
+- Приложение корректно обрабатывает некорректный ввод
+- Есть минимум 3-5 тестов`
+
+    case "Senior":
+      return `## Функциональные требования (Senior)
+- Реализовать полный функционал согласно описанию
+- Добавить расширенные возможности и оптимизации
+- Реализовать кэширование и оптимизацию производительности
+- Добавить логирование и мониторинг
+
+## Нефункциональные требования
+- Написать комплексные тесты (unit, integration)
+- Обеспечить безопасность (защита от основных уязвимостей)
+- Оптимизировать для production (минификация, lazy loading)
+- Документировать архитектуру и API
+
+## Архитектурные требования
+- Применить подходящие паттерны проектирования
+- Обеспечить масштабируемость решения
+- Реализовать чистую архитектуру с разделением ответственности
+
+## Критерии готовности
+- Все требования Middle выполнены
+- Покрытие тестами > 70%
+- Код проходит линтер без предупреждений
+- Есть README с инструкцией по запуску`
+
+    default:
+      return ""
+  }
+}
+
+// Валидация и заполнение requirements для PROJECT модуля
+function ensureProjectRequirements(module: ParsedModule): ParsedModule {
+  if (module.type !== "PROJECT") {
+    return module
+  }
+
+  // Если requirements пустые или слишком короткие - генерируем
+  if (!module.requirements || module.requirements.trim().length < 50) {
+    const level = (module.level as ValidLevel) || "Middle"
+    return {
+      ...module,
+      requirements: generateRequirementsForLevel(level, module.requirements)
+    }
+  }
+
+  return module
 }
 
 // Адаптация контента под уровень
