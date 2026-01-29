@@ -205,7 +205,10 @@ export function MatchingExercise({
         </div>
         <div className="flex flex-wrap gap-2">
           {rightItems.map((item, index) => {
-            const useCount = Object.values(matches).filter(id => id === item.id).length
+            // Find which left items (questions) are connected to this right item (answer)
+            const connectedLeftIndices = leftItems
+              .map((leftItem, idx) => matches[leftItem.id] === item.id ? idx + 1 : null)
+              .filter((idx): idx is number => idx !== null)
             const canClick = selectedLeft && !disabled && !showResult
 
             return (
@@ -228,9 +231,9 @@ export function MatchingExercise({
                   {index + 1}
                 </span>
                 <span className="break-words overflow-wrap-anywhere">{item.text}</span>
-                {useCount > 0 && (
-                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                    {useCount}
+                {connectedLeftIndices.length > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    {connectedLeftIndices.join(",")}
                   </span>
                 )}
               </button>
