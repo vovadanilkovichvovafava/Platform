@@ -204,7 +204,7 @@ export function MatchingExercise({
           Варианты ответов (можно использовать несколько раз)
         </div>
         <div className="flex flex-wrap gap-2">
-          {rightItems.map((item) => {
+          {rightItems.map((item, index) => {
             const useCount = Object.values(matches).filter(id => id === item.id).length
             const canClick = selectedLeft && !disabled && !showResult
 
@@ -215,12 +215,18 @@ export function MatchingExercise({
                 disabled={disabled || showResult || !selectedLeft}
                 className={cn(
                   "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border-2 relative",
-                  "max-w-full break-words text-left",
+                  "max-w-full break-words text-left flex items-start gap-2",
                   !canClick && "bg-white border-gray-200 text-gray-700",
                   canClick && "bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer shadow-sm hover:shadow",
                   (disabled || showResult) && "cursor-default"
                 )}
               >
+                <span className={cn(
+                  "flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold",
+                  canClick ? "bg-blue-100 text-blue-600" : "bg-gray-200 text-gray-600"
+                )}>
+                  {index + 1}
+                </span>
                 <span className="break-words overflow-wrap-anywhere">{item.text}</span>
                 {useCount > 0 && (
                   <span className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
