@@ -96,21 +96,31 @@ export function SubmissionsFilter({
   const [trailFilter, setTrailFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [isDeleteBlocked, setIsDeleteBlocked] = useState(false)
-  const deleteBlockTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Use ref for cooldown - survives re-renders/refreshes better than state
+  const lastDeleteTimeRef = useRef<number>(0)
+  const [, forceUpdate] = useState({}) // For re-render on cooldown end
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const COOLDOWN_MS = 1500
+
+  // Check if cooldown is active
+  const isCooldownActive = () => {
+    return Date.now() - lastDeleteTimeRef.current < COOLDOWN_MS
+  }
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (deleteBlockTimeoutRef.current) {
-        clearTimeout(deleteBlockTimeoutRef.current)
+      if (cooldownTimerRef.current) {
+        clearTimeout(cooldownTimerRef.current)
       }
     }
   }, [])
 
   const handleDeleteSubmission = async (id: string, userName: string, moduleTitle: string) => {
     // Check if delete is blocked (1.5s cooldown to prevent double clicks)
-    if (isDeleteBlocked || deletingId) {
+    if (isCooldownActive() || deletingId) {
       return
     }
 
@@ -123,18 +133,16 @@ export function SubmissionsFilter({
 
     if (!confirmed) return
 
-    // Set block for 1.5 seconds BEFORE making the request (prevents double-clicks)
-    setIsDeleteBlocked(true)
+    // Set cooldown timestamp BEFORE making the request (prevents double-clicks)
+    lastDeleteTimeRef.current = Date.now()
 
-    // Clear any existing timeout
-    if (deleteBlockTimeoutRef.current) {
-      clearTimeout(deleteBlockTimeoutRef.current)
+    // Schedule re-render when cooldown ends to update button states
+    if (cooldownTimerRef.current) {
+      clearTimeout(cooldownTimerRef.current)
     }
-
-    // Set timeout to unblock after 1.5 seconds
-    deleteBlockTimeoutRef.current = setTimeout(() => {
-      setIsDeleteBlocked(false)
-    }, 1500)
+    cooldownTimerRef.current = setTimeout(() => {
+      forceUpdate({})
+    }, COOLDOWN_MS)
 
     try {
       setDeletingId(id)
@@ -345,11 +353,11 @@ export function SubmissionsFilter({
                           submission.user.name,
                           submission.module.title
                         )}
-                        disabled={deletingId === submission.id || isDeleteBlocked}
+                        disabled={deletingId === submission.id || isCooldownActive()}
                         title={
                           deletingId === submission.id
                             ? "Удаляем…"
-                            : isDeleteBlocked
+                            : isCooldownActive()
                               ? "Подождите…"
                               : "Удалить работу"
                         }
