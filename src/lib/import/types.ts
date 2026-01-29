@@ -62,6 +62,7 @@ export interface ParsedModule {
   level?: string
   duration?: string
   requiresSubmission?: boolean // Требуется ли сдача работы (загрузка файлов)
+  requirements?: string // Структурированные требования к проекту (для PROJECT модулей)
 }
 
 export interface ParsedTrail {

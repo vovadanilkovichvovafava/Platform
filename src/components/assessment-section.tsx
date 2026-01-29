@@ -1,12 +1,23 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, XCircle, HelpCircle, RotateCcw, BookOpen } from "lucide-react"
 import Link from "next/link"
 import { MatchingExercise, OrderingExercise, CaseAnalysisExercise, TrueFalseExercise, FillBlankExercise } from "@/components/exercises"
+import {
+  generateQuestionSeed,
+  generateModuleSeed,
+  deterministicShuffle,
+  shuffleSingleChoiceOptions,
+  shuffleMatchingItems,
+  shuffleOrderingItems,
+  shuffleTrueFalseStatements,
+  shuffleFillBlankOptions,
+  shuffleCaseAnalysisOptions,
+} from "@/lib/shuffle"
 
 // Remove emojis from text (clean data that may have emojis)
 const stripEmojis = (text: string): string => {
@@ -132,6 +143,7 @@ interface AssessmentSectionProps {
   trailSlug: string
   moduleType: string
   isCompleted: boolean
+  userId?: string // Для детерминированной рандомизации порядка вопросов/ответов
 }
 
 export function AssessmentSection({
@@ -141,8 +153,22 @@ export function AssessmentSection({
   trailSlug,
   moduleType,
   isCompleted: initialCompleted,
+  userId,
 }: AssessmentSectionProps) {
   const router = useRouter()
+
+  // МОДУЛЬ 4: Детерминированная рандомизация порядка вопросов
+  // Shuffle вопросов на уровне модуля (если есть userId)
+  const shuffledQuestions = useMemo(() => {
+    if (!userId || questions.length === 0) return questions
+
+    const seed = generateModuleSeed(userId, moduleId)
+    // Создаём массив с индексами для сохранения mapping
+    const indexed = questions.map((q, idx) => ({ question: q, originalIndex: idx }))
+    const shuffled = deterministicShuffle(indexed, seed)
+    return shuffled.map(item => item.question)
+  }, [questions, userId, moduleId])
+
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -163,7 +189,8 @@ export function AssessmentSection({
   const [isResetting, setIsResetting] = useState(false)
 
   // Get current question safely (needed for hooks that depend on it)
-  const question = questions[currentQuestion] || null
+  // Используем shuffledQuestions для детерминированного порядка
+  const question = shuffledQuestions[currentQuestion] || null
   const existingAttempt = question ? attemptData[question.id] : undefined
   const currentAttempts = existingAttempt?.attempts || 0
   const isQuestionFinished = existingAttempt?.isCorrect || currentAttempts >= 3
@@ -238,7 +265,7 @@ export function AssessmentSection({
     }
   }
 
-  if (questions.length === 0) {
+  if (shuffledQuestions.length === 0) {
     // Module without questions - allow direct completion
     if (isCompleted) {
       return (
@@ -279,7 +306,7 @@ export function AssessmentSection({
   }
 
   // Calculate progress
-  const totalQuestions = questions.length
+  const totalQuestions = shuffledQuestions.length
   const answeredQuestions = Object.values(attemptData).filter(
     (a) => a.isCorrect || a.attempts >= 3
   ).length
@@ -347,7 +374,7 @@ export function AssessmentSection({
   }
 
   const handleNext = () => {
-    if (currentQuestion < questions.length - 1) {
+    if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
       setSelectedAnswer(null)
       setShowResult(false)
@@ -393,6 +420,12 @@ export function AssessmentSection({
     return "text-orange-600"
   }
 
+  // МОДУЛЬ 4: Генерируем seed для текущего вопроса
+  const questionSeed = useMemo(() => {
+    if (!userId || !question) return 0
+    return generateQuestionSeed(userId, question.id)
+  }, [userId, question])
+
   // Render question content based on type
   const renderQuestionContent = () => {
     if (!question) return null
@@ -405,12 +438,18 @@ export function AssessmentSection({
       // Clean emojis from items text
       const cleanLeftItems = data.leftItems.map(item => ({ ...item, text: stripEmojis(item.text) }))
       const cleanRightItems = data.rightItems.map(item => ({ ...item, text: stripEmojis(item.text) }))
+
+      // МОДУЛЬ 4: Детерминированный shuffle для MATCHING
+      const { shuffledLeft, shuffledRight } = userId
+        ? shuffleMatchingItems(cleanLeftItems, cleanRightItems, questionSeed)
+        : { shuffledLeft: cleanLeftItems, shuffledRight: cleanRightItems }
+
       return (
         <MatchingExercise
           key={question.id}
           question={question.question}
-          leftItems={cleanLeftItems}
-          rightItems={cleanRightItems}
+          leftItems={shuffledLeft}
+          rightItems={shuffledRight}
           correctPairs={data.correctPairs}
           leftLabel={data.leftLabel}
           rightLabel={data.rightLabel}
@@ -422,8 +461,11 @@ export function AssessmentSection({
 
     if (questionType === "ORDERING" && question.data) {
       const data = question.data as OrderingData
-      // Shuffle items for initial display
-      const shuffledItems = [...data.items].sort(() => Math.random() - 0.5)
+      // МОДУЛЬ 4: Детерминированный shuffle для ORDERING (вместо Math.random)
+      const shuffledItems = userId
+        ? shuffleOrderingItems(data.items, questionSeed)
+        : [...data.items].sort(() => Math.random() - 0.5)
+
       return (
         <OrderingExercise
           key={question.id}
@@ -439,10 +481,17 @@ export function AssessmentSection({
     if (questionType === "CASE_ANALYSIS" && question.data) {
       // Use actual data from database, fall back to improved data only if missing
       const dbData = question.data as CaseAnalysisData
+      const baseOptions = dbData.options && dbData.options.length > 0 ? dbData.options : IMPROVED_CASE_ANALYSIS.options
+
+      // МОДУЛЬ 4: Детерминированный shuffle для CASE_ANALYSIS options
+      const shuffledOptions = userId
+        ? shuffleCaseAnalysisOptions(baseOptions, questionSeed)
+        : baseOptions
+
       const data: CaseAnalysisData = {
         caseContent: dbData.caseContent || IMPROVED_CASE_ANALYSIS.caseContent,
         caseLabel: dbData.caseLabel || IMPROVED_CASE_ANALYSIS.caseLabel,
-        options: dbData.options && dbData.options.length > 0 ? dbData.options : IMPROVED_CASE_ANALYSIS.options,
+        options: shuffledOptions,
         minCorrectRequired: dbData.minCorrectRequired || IMPROVED_CASE_ANALYSIS.minCorrectRequired,
       }
       return (
@@ -461,11 +510,17 @@ export function AssessmentSection({
 
     if (questionType === "TRUE_FALSE" && question.data) {
       const data = question.data as TrueFalseData
+
+      // МОДУЛЬ 4: Детерминированный shuffle для TRUE_FALSE statements
+      const shuffledStatements = userId
+        ? shuffleTrueFalseStatements(data.statements, questionSeed)
+        : data.statements
+
       return (
         <TrueFalseExercise
           key={question.id}
           question={question.question}
-          statements={data.statements}
+          statements={shuffledStatements}
           onComplete={handleExerciseComplete}
           disabled={isQuestionFinished}
         />
@@ -474,50 +529,70 @@ export function AssessmentSection({
 
     if (questionType === "FILL_BLANK" && question.data) {
       const data = question.data as FillBlankData
+
+      // МОДУЛЬ 4: Детерминированный shuffle для FILL_BLANK options в каждом blank
+      const shuffledBlanks = userId
+        ? shuffleFillBlankOptions(data.blanks, questionSeed)
+        : data.blanks
+
       return (
         <FillBlankExercise
           key={question.id}
           question={question.question}
           textWithBlanks={data.textWithBlanks}
-          blanks={data.blanks}
+          blanks={shuffledBlanks}
           onComplete={handleExerciseComplete}
           disabled={isQuestionFinished}
         />
       )
     }
 
-    // Default: SINGLE_CHOICE - original rendering
+    // Default: SINGLE_CHOICE - with deterministic shuffle
+    // МОДУЛЬ 4: Детерминированный shuffle для SINGLE_CHOICE options
+    // Важно: сохраняем mapping для правильной отправки ответа на сервер
+    const { shuffledOptions, indexMapping } = userId
+      ? (() => {
+          const result = shuffleSingleChoiceOptions(question.options, 0, questionSeed)
+          return { shuffledOptions: result.shuffledOptions, indexMapping: result.indexMapping }
+        })()
+      : { shuffledOptions: question.options, indexMapping: question.options.map((_, i) => i) }
+
     return (
       <div className="space-y-3">
-        {question.options.map((option, idx) => {
+        {shuffledOptions.map((option, displayIdx) => {
+          // displayIdx - индекс в shuffled массиве (то что видит пользователь)
+          // originalIdx - оригинальный индекс (для сервера)
+          const originalIdx = indexMapping[displayIdx]
+
           // Determine button styling
           let buttonClass = "w-full justify-start text-left h-auto py-3 px-4 whitespace-normal transition-all"
           let isDisabled = isQuestionFinished || isSubmitting
 
           // Show correct/incorrect after submit
+          // Сервер возвращает correctAnswer в оригинальных индексах
           if (showResult && lastResult) {
             isDisabled = true
-            if (lastResult.correctAnswer !== undefined && idx === lastResult.correctAnswer) {
+            if (lastResult.correctAnswer !== undefined && originalIdx === lastResult.correctAnswer) {
               buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
-            } else if (idx === selectedAnswer && !lastResult.isCorrect) {
+            } else if (originalIdx === selectedAnswer && !lastResult.isCorrect) {
               buttonClass += " bg-red-100 border-red-500 border-2 text-red-700"
-            } else if (idx === selectedAnswer && lastResult.isCorrect) {
+            } else if (originalIdx === selectedAnswer && lastResult.isCorrect) {
               buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
             }
-          } else if (selectedAnswer === idx) {
+          } else if (selectedAnswer === originalIdx) {
             // Selected but not yet submitted - prominent highlight
             buttonClass += " border-blue-600 border-2 bg-blue-100 ring-2 ring-blue-300 ring-offset-1"
           }
 
           return (
             <Button
-              key={idx}
+              key={displayIdx}
               variant="outline"
               className={buttonClass}
-              onClick={() => !isDisabled && setSelectedAnswer(idx)}
+              onClick={() => !isDisabled && setSelectedAnswer(originalIdx)}
               disabled={isDisabled}
             >
-              <span className="font-medium mr-2 shrink-0">{String.fromCharCode(65 + idx)}.</span>
+              <span className="font-medium mr-2 shrink-0">{String.fromCharCode(65 + displayIdx)}.</span>
               <span className="text-left">{option}</span>
             </Button>
           )
@@ -616,7 +691,7 @@ export function AssessmentSection({
         <CardContent>
           {/* Progress indicators */}
           <div className="flex gap-1 mb-6">
-            {questions.map((q, idx) => {
+            {shuffledQuestions.map((q, idx) => {
               const attempt = attemptData[q.id]
               let bgColor = "bg-gray-200"
               if (attempt?.isCorrect) bgColor = "bg-green-500"
@@ -642,7 +717,7 @@ export function AssessmentSection({
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-500">
-                Вопрос {currentQuestion + 1} из {questions.length}
+                Вопрос {currentQuestion + 1} из {shuffledQuestions.length}
               </span>
               {!isQuestionFinished && (
                 <span className="text-sm text-gray-500">
@@ -736,7 +811,7 @@ export function AssessmentSection({
 
               {/* Next button - when question is finished OR correct answer */}
               {(isQuestionFinished || (showResult && lastResult?.isCorrect)) &&
-               currentQuestion < questions.length - 1 && (
+               currentQuestion < shuffledQuestions.length - 1 && (
                 <Button onClick={handleNext}>Следующий вопрос</Button>
               )}
             </div>
