@@ -187,6 +187,11 @@ export default function UnifiedContentPage() {
     available: false,
     checking: false,
   })
+  const [aiTestResult, setAiTestResult] = useState<{
+    testing: boolean
+    message?: string
+    success?: boolean
+  }>({ testing: false })
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [useNeuralParser, setUseNeuralParser] = useState(true)
 
@@ -599,6 +604,25 @@ export default function UnifiedContentPage() {
         available: false,
         error: "Ошибка проверки AI",
         checking: false,
+      })
+    }
+  }, [])
+
+  const runAITest = useCallback(async () => {
+    setAiTestResult({ testing: true })
+    try {
+      const res = await fetch("/api/admin/import?action=test-ai")
+      const data = await res.json()
+      setAiTestResult({
+        testing: false,
+        message: data.message,
+        success: data.success,
+      })
+    } catch (e) {
+      setAiTestResult({
+        testing: false,
+        message: `Ошибка: ${e instanceof Error ? e.message : "неизвестная ошибка"}`,
+        success: false,
       })
     }
   }, [])
@@ -1440,22 +1464,63 @@ export default function UnifiedContentPage() {
                       />
                     </div>
                     {useNeuralParser && (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        {aiStatus.checking ? (
-                          <span className="flex items-center gap-1">
-                            <RefreshCw className="h-3 w-3 animate-spin" />
-                            Проверка AI...
-                          </span>
-                        ) : aiStatus.available ? (
-                          <span className="flex items-center gap-1 text-green-600">
-                            <CheckCircle className="h-3 w-3" />
-                            AI доступен
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-red-500">
-                            <AlertTriangle className="h-3 w-3" />
-                            {aiStatus.error || "AI недоступен"}
-                          </span>
+                      <div className="pt-2 border-t border-gray-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-500">Статус AI:</span>
+                          <div className="flex items-center gap-2">
+                            {aiStatus.checking ? (
+                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                Проверка...
+                              </span>
+                            ) : aiStatus.available ? (
+                              <span className="text-xs text-green-600 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" />
+                                Доступен
+                              </span>
+                            ) : (
+                              <span className="text-xs text-red-500 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                {aiStatus.error || "Недоступен"}
+                              </span>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={runAITest}
+                              disabled={aiTestResult.testing}
+                              className="h-6 px-2 text-xs"
+                            >
+                              {aiTestResult.testing ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Zap className="h-3 w-3 mr-1" />
+                                  Тест API
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                        {aiTestResult.message && (
+                          <div className={`p-2 rounded border text-xs ${
+                            aiTestResult.success
+                              ? "bg-green-50 border-green-200 text-green-700"
+                              : "bg-red-50 border-red-200 text-red-700"
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">
+                                {aiTestResult.success ? "OK" : "Ошибка"}
+                              </span>
+                              <button
+                                onClick={() => setAiTestResult({ testing: false })}
+                                className="text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                            <p className="mt-1">{aiTestResult.message}</p>
+                          </div>
                         )}
                       </div>
                     )}
