@@ -484,6 +484,106 @@ export default function UnifiedContentPage() {
     setImportProgress(null)
   }
 
+  const handleRegenerate = async () => {
+    if (!uploadedFile) return
+
+    try {
+      setRegenerating(true)
+      setParsedData(null)
+      setParseError(null)
+      setImportProgress({ current: 0, total: 100, status: "Подготовка к перегенерации...", phase: "analyzing" })
+
+      const formData = new FormData()
+      formData.append("file", uploadedFile)
+      formData.append("useAI", useNeuralParser ? "true" : "false")
+      formData.append("forceAI", useNeuralParser ? "true" : "false")
+
+      const res = await fetch("/api/admin/import/stream", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        setParseError(errorData.error || "Ошибка при перегенерации")
+        setParsedData(null)
+        setImportProgress(null)
+        return
+      }
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        setParseError("Не удалось создать поток для чтения")
+        setParsedData(null)
+        setImportProgress(null)
+        return
+      }
+
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6))
+
+              if (event.type === "progress") {
+                setImportProgress({
+                  current: event.current || 0,
+                  total: event.total || 100,
+                  status: event.status || "Обработка...",
+                  phase: event.phase || "parsing"
+                })
+              } else if (event.type === "complete") {
+                const data = event.result
+                if (!data.success || !data.trails || data.trails.length === 0) {
+                  const errorDetails = data.details?.length > 0
+                    ? `\n${data.details.join("; ")}`
+                    : ""
+                  setParseError((data.error || "AI не смог распознать структуру") + errorDetails)
+                  setParsedData(null)
+                } else {
+                  setParsedData({
+                    trails: data.trails,
+                    warnings: data.warnings,
+                    parseMethod: data.parseMethod,
+                    detectedFormat: data.detectedFormat,
+                    structureConfidence: data.structureConfidence,
+                    confidenceDetails: data.confidenceDetails,
+                  })
+                  setParseError(null)
+                }
+                setImportProgress(null)
+              } else if (event.type === "error") {
+                setParseError(event.error || "Неизвестная ошибка")
+                setParsedData(null)
+                setImportProgress(null)
+              }
+            } catch {
+              console.error("Failed to parse SSE event:", line)
+            }
+          }
+        }
+      }
+    } catch {
+      setParseError("Ошибка при перегенерации")
+      setParsedData(null)
+      setImportProgress(null)
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
   const checkAIStatus = useCallback(async () => {
     setAiStatus({ available: false, checking: true })
     try {
@@ -1262,14 +1362,53 @@ export default function UnifiedContentPage() {
               {!parsedData && !parseError && !regenerating && (
                 <div className="space-y-6">
                   {importing && importProgress ? (
+                    // Показываем прогресс-бар во время парсинга
                     <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
                       <div className="flex items-center gap-3 mb-4">
-                        <RefreshCw className="h-8 w-8 text-purple-600 animate-spin" />
+                        <div className="relative">
+                          <RefreshCw className="h-8 w-8 text-purple-600 animate-spin" />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-bold text-purple-700">
+                              {importProgress.current}%
+                            </span>
+                          </div>
+                        </div>
                         <div>
-                          <p className="text-lg font-medium text-purple-700">{importProgress.status}</p>
+                          <p className="text-lg font-medium text-purple-700">
+                            {importProgress.phase === "analyzing" && "Анализ структуры"}
+                            {importProgress.phase === "metadata" && "Извлечение метаданных"}
+                            {importProgress.phase === "parsing" && "Обработка контента"}
+                            {importProgress.phase === "merging" && "Объединение результатов"}
+                          </p>
+                          <p className="text-sm text-purple-600">{importProgress.status}</p>
                         </div>
                       </div>
-                      <Progress value={importProgress.current} className="h-3" />
+
+                      <Progress value={importProgress.current} className="h-3 mb-3" />
+
+                      {/* Этапы парсинга */}
+                      <div className="flex justify-between text-xs text-gray-500 mt-4">
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 5 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 5 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          Анализ
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 10 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 10 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          Метаданные
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 50 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 50 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          Парсинг
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 95 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 95 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          Финализация
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-400 mt-4 text-center">
+                        Большие файлы могут обрабатываться несколько минут
+                      </p>
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
@@ -1324,11 +1463,69 @@ export default function UnifiedContentPage() {
                 </div>
               )}
 
-              {parseError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              {/* Ошибка парсинга или состояние регенерации */}
+              {(parseError || regenerating) && (
+                <div className={`p-4 rounded-lg mb-4 ${regenerating ? "bg-purple-50 border border-purple-200" : "bg-red-50 border border-red-200"}`}>
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
-                    <span className="text-red-700 whitespace-pre-line">{parseError}</span>
+                    {regenerating ? (
+                      <RefreshCw className="h-5 w-5 text-purple-600 mt-0.5 animate-spin" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      {regenerating ? (
+                        <div className="space-y-3">
+                          <span className="text-purple-700 font-medium">Повторная обработка с AI...</span>
+                          {importProgress ? (
+                            <>
+                              <Progress value={importProgress.current} className="h-2" />
+                              <p className="text-purple-600 text-sm">{importProgress.status}</p>
+                            </>
+                          ) : (
+                            <p className="text-purple-600 text-sm">Подготовка...</p>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-red-700 whitespace-pre-line">{parseError}</span>
+                          {uploadedFile && (
+                            <div className="mt-3">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRegenerate}
+                                disabled={regenerating}
+                                className={useNeuralParser
+                                  ? "text-purple-700 border-purple-300 hover:bg-purple-50"
+                                  : "text-gray-600 border-gray-300 hover:bg-gray-50"}
+                              >
+                                {useNeuralParser ? (
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                )}
+                                {useNeuralParser ? "Попробовать с AI ещё раз" : "Попробовать ещё раз"}
+                              </Button>
+                            </div>
+                          )}
+                          {uploadedFile && (
+                            <div className="mt-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setParseError(null)
+                                  setUploadedFile(null)
+                                }}
+                                className="text-gray-500 hover:text-gray-700"
+                              >
+                                Загрузить другой файл
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1354,15 +1551,53 @@ export default function UnifiedContentPage() {
             <div className="p-6 border-t bg-gray-50">
               {parsedData ? (
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={resetImportModal} className="flex-1">
+                  <Button
+                    variant="outline"
+                    onClick={resetImportModal}
+                    className="flex-1"
+                  >
                     Отмена
                   </Button>
+                  {useNeuralParser && aiStatus.available && (
+                    <Button
+                      variant="outline"
+                      onClick={handleRegenerate}
+                      disabled={regenerating || saving}
+                      className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                    >
+                      {regenerating ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      Перегенерировать
+                    </Button>
+                  )}
+                  {!useNeuralParser && (
+                    <Button
+                      variant="outline"
+                      onClick={handleRegenerate}
+                      disabled={regenerating || saving}
+                      className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                    >
+                      {regenerating ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Перепарсить
+                    </Button>
+                  )}
                   <Button
                     onClick={handleSaveImport}
-                    disabled={saving}
+                    disabled={saving || regenerating}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
-                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                    {saving ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
                     Добавить
                   </Button>
                 </div>
