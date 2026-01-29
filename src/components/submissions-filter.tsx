@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -96,12 +96,21 @@ export function SubmissionsFilter({
   const [trailFilter, setTrailFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deleteBlockedUntil, setDeleteBlockedUntil] = useState<number>(0) // Timestamp when block expires
+  const [isDeleteBlocked, setIsDeleteBlocked] = useState(false)
+  const deleteBlockTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (deleteBlockTimeoutRef.current) {
+        clearTimeout(deleteBlockTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleDeleteSubmission = async (id: string, userName: string, moduleTitle: string) => {
     // Check if delete is blocked (1.5s cooldown to prevent double clicks)
-    const now = Date.now()
-    if (now < deleteBlockedUntil) {
+    if (isDeleteBlocked || deletingId) {
       return
     }
 
@@ -115,7 +124,17 @@ export function SubmissionsFilter({
     if (!confirmed) return
 
     // Set block for 1.5 seconds BEFORE making the request (prevents double-clicks)
-    setDeleteBlockedUntil(Date.now() + 1500)
+    setIsDeleteBlocked(true)
+
+    // Clear any existing timeout
+    if (deleteBlockTimeoutRef.current) {
+      clearTimeout(deleteBlockTimeoutRef.current)
+    }
+
+    // Set timeout to unblock after 1.5 seconds
+    deleteBlockTimeoutRef.current = setTimeout(() => {
+      setIsDeleteBlocked(false)
+    }, 1500)
 
     try {
       setDeletingId(id)
@@ -320,17 +339,30 @@ export function SubmissionsFilter({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        className={`${
+                          deletingId === submission.id
+                            ? "text-red-500"
+                            : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        }`}
                         onClick={() => handleDeleteSubmission(
                           submission.id,
                           submission.user.name,
                           submission.module.title
                         )}
-                        disabled={deletingId === submission.id || Date.now() < deleteBlockedUntil}
-                        title={Date.now() < deleteBlockedUntil ? "Подождите..." : "Удалить работу (антиспам)"}
+                        disabled={deletingId === submission.id || isDeleteBlocked}
+                        title={
+                          deletingId === submission.id
+                            ? "Удаляем…"
+                            : isDeleteBlocked
+                              ? "Подождите…"
+                              : "Удалить работу"
+                        }
                       >
                         {deletingId === submission.id ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin mr-1" />
+                            <span className="text-xs">Удаляем…</span>
+                          </>
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
