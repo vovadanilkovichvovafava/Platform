@@ -1371,7 +1371,15 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
 
     validTrail.modules = sortedModules
 
-    result.push(validTrail)
+    // Обеспечиваем минимум 2 типа вопросов в каждом модуле
+    for (let i = 0; i < validTrail.modules.length; i++) {
+      validTrail.modules[i] = ensureModuleQuestionDiversity(validTrail.modules[i], warnings)
+    }
+
+    // Обеспечиваем все 6 типов вопросов на уровне trail (если достаточно вопросов)
+    const diversifiedTrail = ensureTrailQuestionTypeDiversity(validTrail, warnings)
+
+    result.push(diversifiedTrail)
   }
 
   return result
@@ -1665,11 +1673,136 @@ function getDefaultPoints(type: string): number {
   }
 }
 
+// Все 6 типов вопросов (для валидации разнообразия)
+const ALL_QUESTION_TYPES: QuestionType[] = [
+  "SINGLE_CHOICE",
+  "MATCHING",
+  "ORDERING",
+  "CASE_ANALYSIS",
+  "TRUE_FALSE",
+  "FILL_BLANK"
+]
+
 // Валидация типа вопроса
 function validateQuestionType(type: any): QuestionType {
-  const validTypes: QuestionType[] = ["SINGLE_CHOICE", "MATCHING", "ORDERING", "CASE_ANALYSIS", "TRUE_FALSE", "FILL_BLANK"]
+  const validTypes: QuestionType[] = ALL_QUESTION_TYPES
   const upperType = String(type || "").toUpperCase() as QuestionType
   return validTypes.includes(upperType) ? upperType : "SINGLE_CHOICE"
+}
+
+// ============================================
+// ВАЛИДАЦИЯ РАЗНООБРАЗИЯ ТИПОВ ВОПРОСОВ
+// ============================================
+
+// Проверка и нормализация разнообразия типов вопросов на уровне trail
+function ensureTrailQuestionTypeDiversity(trail: ParsedTrail, warnings: string[]): ParsedTrail {
+  // Собираем все вопросы из всех модулей
+  const allQuestions: ParsedQuestion[] = []
+  for (const mod of trail.modules) {
+    allQuestions.push(...mod.questions)
+  }
+
+  if (allQuestions.length < 6) {
+    // Недостаточно вопросов для полного разнообразия - пропускаем
+    return trail
+  }
+
+  // Подсчитываем типы
+  const typeCount = new Map<QuestionType, number>()
+  for (const type of ALL_QUESTION_TYPES) {
+    typeCount.set(type, 0)
+  }
+  for (const q of allQuestions) {
+    const count = typeCount.get(q.type as QuestionType) || 0
+    typeCount.set(q.type as QuestionType, count + 1)
+  }
+
+  // Находим отсутствующие типы
+  const missingTypes: QuestionType[] = []
+  for (const type of ALL_QUESTION_TYPES) {
+    if ((typeCount.get(type) || 0) === 0) {
+      missingTypes.push(type)
+    }
+  }
+
+  if (missingTypes.length === 0) {
+    // Все типы присутствуют - отлично
+    return trail
+  }
+
+  warnings.push(`Trail: отсутствуют типы вопросов: ${missingTypes.join(", ")}. Выполняется автоматическая диверсификация.`)
+
+  // Находим модули с достаточным количеством вопросов для конвертации
+  const modulesWithQuestions = trail.modules
+    .filter(m => m.questions.length >= 2)
+    .sort((a, b) => b.questions.length - a.questions.length)
+
+  if (modulesWithQuestions.length === 0) {
+    warnings.push("Trail: недостаточно вопросов для диверсификации типов")
+    return trail
+  }
+
+  // Для каждого отсутствующего типа пытаемся конвертировать один вопрос
+  let missingTypeIndex = 0
+  for (const mod of modulesWithQuestions) {
+    if (missingTypeIndex >= missingTypes.length) break
+
+    // Ищем SINGLE_CHOICE вопрос для конвертации
+    for (let i = 0; i < mod.questions.length && missingTypeIndex < missingTypes.length; i++) {
+      const q = mod.questions[i]
+      if (q.type === "SINGLE_CHOICE" && q.options && q.options.length >= 3) {
+        const targetType = missingTypes[missingTypeIndex]
+        const converted = convertToQuestionType(q, targetType)
+        if (converted) {
+          mod.questions[i] = converted
+          warnings.push(`Trail: вопрос "${q.question.substring(0, 30)}..." конвертирован в ${targetType}`)
+          missingTypeIndex++
+        }
+      }
+    }
+  }
+
+  return trail
+}
+
+// Обеспечение минимум 2 разных типов в каждом модуле
+function ensureModuleQuestionDiversity(module: ParsedModule, warnings: string[]): ParsedModule {
+  if (module.questions.length < 2) {
+    return module  // Недостаточно вопросов
+  }
+
+  // Подсчитываем уникальные типы
+  const uniqueTypes = new Set(module.questions.map(q => q.type))
+
+  if (uniqueTypes.size >= 2) {
+    return module  // Уже есть разнообразие
+  }
+
+  // Все вопросы одного типа - пытаемся диверсифицировать
+  const firstType = module.questions[0].type
+
+  if (firstType !== "SINGLE_CHOICE") {
+    // Если все вопросы не SINGLE_CHOICE - сложно конвертировать, оставляем как есть
+    return module
+  }
+
+  // Находим вопрос для конвертации (второй в списке)
+  for (let i = 1; i < module.questions.length; i++) {
+    const q = module.questions[i]
+    if (q.type === "SINGLE_CHOICE" && q.options && q.options.length >= 3) {
+      // Выбираем тип для конвертации (чередуем)
+      const targetTypes: QuestionType[] = ["TRUE_FALSE", "MATCHING", "ORDERING", "FILL_BLANK"]
+      const targetType = targetTypes[i % targetTypes.length]
+      const converted = convertToQuestionType(q, targetType)
+      if (converted) {
+        module.questions[i] = converted
+        warnings.push(`Модуль "${module.title}": вопрос конвертирован в ${targetType} для разнообразия`)
+        break  // Достаточно одной конвертации для минимум 2 типов
+      }
+    }
+  }
+
+  return module
 }
 
 // Валидация вопросов с поддержкой всех типов
@@ -1695,7 +1828,7 @@ function validateQuestions(questions: any[], warnings: string[]): ParsedQuestion
     // Валидация в зависимости от типа вопроса
     switch (questionType) {
       case "MATCHING":
-        validQuestion.data = validateMatchingData(q.data, warnings)
+        validQuestion.data = validateMatchingData(q.data, warnings, questionText)
         break
 
       case "ORDERING":
@@ -1814,11 +1947,16 @@ function convertToQuestionType(q: ParsedQuestion, targetType: QuestionType): Par
 
     case "MATCHING": {
       // Создаём MATCHING из вариантов ответа
+      // ВАЖНО: Левые элементы должны быть осмысленными терминами, НЕ плейсхолдерами "Вариант 1/2/3"
       if (options.length < 3) return null
+
+      // Извлекаем ключевые термины из вопроса для левой колонки
+      const extractedTerms = extractTermsFromQuestion(questionText, options.length)
 
       const leftItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
         id: `l${idx + 1}`,
-        text: `Вариант ${idx + 1}`
+        // Используем извлечённые термины или сами варианты ответа (они осмысленные)
+        text: extractedTerms[idx] || extractShortTerm(opt, idx)
       }))
 
       const rightItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
@@ -1893,8 +2031,150 @@ function convertToQuestionType(q: ParsedQuestion, targetType: QuestionType): Par
   }
 }
 
-// Валидация данных MATCHING
-function validateMatchingData(data: any, warnings: string[]): MatchingData {
+// ============================================
+// MATCHING ВАЛИДАЦИЯ И СТОП-СЛОВА
+// ============================================
+
+// Стоп-слова и паттерны для плейсхолдеров в MATCHING
+const MATCHING_PLACEHOLDER_PATTERNS = [
+  /^вариант\s*\d+$/i,
+  /^вариант\s*[а-гa-d]$/i,
+  /^option\s*\d+$/i,
+  /^item\s*\d+$/i,
+  /^элемент\s*\d+$/i,
+  /^термин\s*\d+$/i,
+  /^пункт\s*\d+$/i,
+  /^[а-гa-d][\.\)]?$/i,  // просто "а", "б", "a)", "b." и т.п.
+  /^\d+[\.\)]?$/,        // просто "1", "2.", "3)" и т.п.
+]
+
+// Проверка, является ли текст плейсхолдером
+function isPlaceholderText(text: string): boolean {
+  const trimmed = text.trim()
+  if (trimmed.length < 2) return true  // слишком короткий
+  return MATCHING_PLACEHOLDER_PATTERNS.some(pattern => pattern.test(trimmed))
+}
+
+// Извлечение терминов из текста вопроса для MATCHING
+function extractTermsFromQuestion(questionText: string, count: number): string[] {
+  const terms: string[] = []
+
+  // Паттерны для поиска терминов в вопросе
+  // Пример: "Что такое HTML, CSS и JavaScript?" -> ["HTML", "CSS", "JavaScript"]
+  const termPatterns = [
+    // Перечисления через запятую/и
+    /(?:что такое|сопоставьте|соотнесите|определите)\s+([^?]+)/i,
+    // Термины в кавычках
+    /"([^"]+)"/g,
+    // Термины заглавными буквами (аббревиатуры)
+    /\b([A-Z]{2,})\b/g,
+    // Слова с заглавной буквы (термины)
+    /\b([A-ZА-ЯЁ][a-zа-яё]+(?:\s+[a-zа-яё]+)?)\b/g,
+  ]
+
+  // Пробуем первый паттерн для извлечения списка
+  const listMatch = questionText.match(termPatterns[0])
+  if (listMatch && listMatch[1]) {
+    const listText = listMatch[1]
+    // Разбиваем по "и", ","
+    const parts = listText.split(/[,]\s*|\s+и\s+/i).map(p => p.trim()).filter(p => p.length > 1)
+    for (const part of parts) {
+      if (terms.length >= count) break
+      if (!isPlaceholderText(part)) {
+        terms.push(part)
+      }
+    }
+  }
+
+  // Если не нашли достаточно - ищем аббревиатуры
+  if (terms.length < count) {
+    const abbrevMatch = questionText.match(/\b[A-Z]{2,}\b/g)
+    if (abbrevMatch) {
+      for (const abbr of abbrevMatch) {
+        if (terms.length >= count) break
+        if (!terms.includes(abbr)) {
+          terms.push(abbr)
+        }
+      }
+    }
+  }
+
+  return terms
+}
+
+// Извлечение короткого термина из длинного текста варианта ответа
+function extractShortTerm(fullText: string, index: number): string {
+  // Если текст короткий - используем как есть
+  if (fullText.length <= 25) {
+    return fullText
+  }
+
+  // Ищем ключевое слово/фразу в начале
+  // Паттерны: "Термин - определение", "Термин: определение", "Термин (пояснение)"
+  const separatorMatch = fullText.match(/^([^:\-–—(]+)[\:\-–—(]/)
+  if (separatorMatch && separatorMatch[1].trim().length >= 2) {
+    const term = separatorMatch[1].trim()
+    if (!isPlaceholderText(term)) {
+      return term.substring(0, 30)
+    }
+  }
+
+  // Берём первые 2-3 слова
+  const words = fullText.split(/\s+/)
+  const shortVersion = words.slice(0, 3).join(" ")
+  if (shortVersion.length > 30) {
+    return shortVersion.substring(0, 27) + "..."
+  }
+  return shortVersion
+}
+
+// Исправление плейсхолдеров в MATCHING данных
+function repairMatchingPlaceholders(data: MatchingData, questionText: string, warnings: string[]): MatchingData {
+  let hasPlaceholders = false
+
+  // Проверяем левые элементы на плейсхолдеры
+  for (const item of data.leftItems) {
+    if (isPlaceholderText(item.text)) {
+      hasPlaceholders = true
+      break
+    }
+  }
+
+  if (!hasPlaceholders) {
+    return data  // Всё в порядке
+  }
+
+  warnings.push("MATCHING: обнаружены плейсхолдеры в элементах, выполняется автоматическое исправление")
+
+  // Извлекаем термины из вопроса
+  const extractedTerms = extractTermsFromQuestion(questionText, data.leftItems.length)
+
+  // Создаём исправленные левые элементы
+  const repairedLeftItems = data.leftItems.map((item, idx) => {
+    if (isPlaceholderText(item.text)) {
+      // Ищем замену
+      if (extractedTerms[idx]) {
+        return { ...item, text: extractedTerms[idx] }
+      }
+      // Если есть соответствующий правый элемент - извлекаем термин из него
+      const rightItem = data.rightItems[idx]
+      if (rightItem) {
+        return { ...item, text: extractShortTerm(rightItem.text, idx) }
+      }
+      // Крайний случай - генерируем из индекса с осмысленным префиксом
+      return { ...item, text: `Понятие ${String.fromCharCode(65 + idx)}` }  // A, B, C...
+    }
+    return item
+  })
+
+  return {
+    ...data,
+    leftItems: repairedLeftItems,
+  }
+}
+
+// Валидация данных MATCHING с проверкой на плейсхолдеры
+function validateMatchingData(data: any, warnings: string[], questionText: string = ""): MatchingData {
   if (!data || typeof data !== "object") {
     return createDefaultMatchingData()
   }
@@ -1912,28 +2192,62 @@ function validateMatchingData(data: any, warnings: string[]): MatchingData {
     return createDefaultMatchingData()
   }
 
-  return {
+  // Проверяем минимальную длину текста элементов
+  const hasShortItems = leftItems.some((i: any) => i.text.trim().length < 2) ||
+                        rightItems.some((i: any) => i.text.trim().length < 2)
+  if (hasShortItems) {
+    warnings.push("MATCHING: некоторые элементы слишком короткие")
+  }
+
+  // Проверяем уникальность левых элементов
+  const leftTexts = leftItems.map((i: any) => i.text.toLowerCase().trim())
+  const uniqueLeft = new Set(leftTexts)
+  if (uniqueLeft.size !== leftTexts.length) {
+    warnings.push("MATCHING: обнаружены дублирующиеся левые элементы")
+  }
+
+  // Проверяем корректность связей
+  const correctPairs = data.correctPairs || {}
+  const leftIds = new Set(leftItems.map((i: any) => i.id))
+  const rightIds = new Set(rightItems.map((i: any) => i.id))
+
+  for (const [leftId, rightId] of Object.entries(correctPairs)) {
+    if (!leftIds.has(leftId)) {
+      warnings.push(`MATCHING: связь ссылается на несуществующий левый элемент ${leftId}`)
+    }
+    if (!rightIds.has(rightId as string)) {
+      warnings.push(`MATCHING: связь ссылается на несуществующий правый элемент ${rightId}`)
+    }
+  }
+
+  let result: MatchingData = {
     leftLabel: data.leftLabel || "Термин",
     rightLabel: data.rightLabel || "Определение",
     leftItems,
     rightItems,
-    correctPairs: data.correctPairs || {},
+    correctPairs,
   }
+
+  // Проверяем и исправляем плейсхолдеры
+  result = repairMatchingPlaceholders(result, questionText, warnings)
+
+  return result
 }
 
 function createDefaultMatchingData(): MatchingData {
+  // Используем осмысленные примеры вместо плейсхолдеров
   return {
     leftLabel: "Термин",
     rightLabel: "Определение",
     leftItems: [
-      { id: "l1", text: "Элемент 1" },
-      { id: "l2", text: "Элемент 2" },
-      { id: "l3", text: "Элемент 3" },
+      { id: "l1", text: "Понятие A" },
+      { id: "l2", text: "Понятие B" },
+      { id: "l3", text: "Понятие C" },
     ],
     rightItems: [
-      { id: "r1", text: "Описание 1" },
-      { id: "r2", text: "Описание 2" },
-      { id: "r3", text: "Описание 3" },
+      { id: "r1", text: "Первое описание" },
+      { id: "r2", text: "Второе описание" },
+      { id: "r3", text: "Третье описание" },
     ],
     correctPairs: { l1: "r1", l2: "r2", l3: "r3" },
   }
