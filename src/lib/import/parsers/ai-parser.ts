@@ -212,8 +212,8 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 
 1. **Структура**: заголовки верхнего уровня -> trail, подзаголовки -> module
 2. **Типы модулей**:
-   - THEORY (50 points) - теоретический материал без тестов
-   - PRACTICE (75 points) - материал с вопросами/тестами
+   - THEORY (50 points) - теоретический материал С ОБЯЗАТЕЛЬНЫМИ вопросами/тестами для проверки понимания
+   - PRACTICE (75 points) - практический материал с вопросами/тестами
    - PROJECT (100 points) - практическое задание на создание чего-то
 3. **Slug**: транслитерация кириллицы, lowercase, дефисы вместо пробелов
 4. **Иконка**: подбери релевантный emoji по теме
@@ -225,13 +225,15 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 10. **requiresSubmission**: true для PROJECT, true для PRACTICE с практическими заданиями
 11. **Уровни модулей**: используй уровни Junior, Middle, Senior.
     - Для модулей типа THEORY и PRACTICE: выбирай уровень по сложности материала
-    - **ВАЖНО для PROJECT**: для КАЖДОЙ темы проекта ОБЯЗАТЕЛЬНО создай ТРИ версии с разными уровнями сложности (Junior, Middle, Senior). Это означает 3 отдельных модуля PROJECT с одной темой, но разной глубиной/сложностью задания:
-      * Junior - базовая версия проекта с простыми требованиями
-      * Middle - стандартная версия с дополнительными требованиями
-      * Senior - продвинутая версия с комплексными требованиями
+    - **КРИТИЧНО для PROJECT**: создавай только 2-4 PROJECT модуля на весь курс (НЕ больше 4!):
+      * ОБЯЗАТЕЛЬНО 1 модуль уровня Junior - базовая версия проекта с простыми требованиями
+      * ОБЯЗАТЕЛЬНО 1 модуль уровня Middle - стандартная версия с дополнительными требованиями
+      * ОПЦИОНАЛЬНО 1-2 дополнительных проекта (Senior или другие темы)
     - Порядок PROJECT модулей: Junior → Middle → Senior
+    - НЕ создавай 3 версии одного проекта! Создай 2-4 РАЗНЫХ проекта
 12. **Формулировки**: вопросы должны быть чёткими, однозначными и проверять понимание, а не запоминание
-13. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
+13. **ОБЯЗАТЕЛЬНО для THEORY**: каждый модуль типа THEORY ДОЛЖЕН содержать минимум 3-5 вопросов для проверки понимания материала. Теория без вопросов недопустима!
+14. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
 
 const AI_USER_PROMPT = `Преобразуй следующий образовательный контент в структурированный курс.
 
@@ -241,6 +243,12 @@ const AI_USER_PROMPT = `Преобразуй следующий образова
 - Создай РАЗНООБРАЗНЫЕ типы вопросов (SINGLE_CHOICE, MATCHING, ORDERING, CASE_ANALYSIS, TRUE_FALSE, FILL_BLANK)
 - НЕ делай все вопросы типа SINGLE_CHOICE - обязательно используй минимум 2-3 разных типа
 - Вопросы должны охватывать разные аспекты темы, не повторяться
+- **КРИТИЧНО**: Модули типа THEORY ОБЯЗАТЕЛЬНО должны содержать 3-5 вопросов! Теория без вопросов недопустима!
+
+ВАЖНО по PROJECT модулям:
+- Создай только 2-4 PROJECT модуля на весь курс (НЕ больше 4!)
+- ОБЯЗАТЕЛЬНО 1 модуль Junior уровня и 1 модуль Middle уровня
+- НЕ создавай 3 версии одного проекта - создавай РАЗНЫЕ проекты
 
 ---
 {content}
@@ -276,7 +284,9 @@ const AI_MODULE_SYSTEM_PROMPT = `Ты - AI-ассистент для парси�
 4. Slug генерируй из названия (транслитерация, lowercase, дефисы)
 5. points: THEORY=50, PRACTICE=75, PROJECT=100
 6. Сохрани весь контент в формате Markdown
-7. Верни ТОЛЬКО валидный JSON без комментариев`
+7. **КРИТИЧНО для THEORY**: модули типа THEORY ОБЯЗАТЕЛЬНО должны содержать 3-5 вопросов для проверки понимания материала! Теория без вопросов недопустима!
+8. **КРИТИЧНО для PROJECT**: не создавай много PROJECT модулей. Максимум 2-4 на курс. Обязательно Junior и Middle уровни.
+9. Верни ТОЛЬКО валидный JSON без комментариев`
 
 const AI_MODULE_USER_PROMPT = `Преобразуй следующий фрагмент в модули:
 
@@ -1430,7 +1440,8 @@ function sortProjectModulesByLevel(modules: ParsedModule[]): ParsedModule[] {
   return [...otherModules, ...projectModules]
 }
 
-// Обеспечение наличия всех трёх уровней (Junior, Middle, Senior) для PROJECT модулей
+// Обеспечение 2-4 PROJECT модулей с обязательными Junior и Middle уровнями
+// Ограничения: минимум 2, максимум 4 проекта; обязательно Junior и Middle
 function ensureProjectLevels(modules: ParsedModule[], warnings: string[]): ParsedModule[] {
   const projectModules: ParsedModule[] = []
   const otherModules: ParsedModule[] = []
@@ -1449,53 +1460,52 @@ function ensureProjectLevels(modules: ParsedModule[], warnings: string[]): Parse
     return modules
   }
 
-  // Группируем PROJECT модули по базовому названию (без уровня)
-  const projectGroups = new Map<string, ParsedModule[]>()
+  // Проверяем наличие обязательных уровней (Junior и Middle)
+  const hasJunior = projectModules.some(m => m.level === "Junior")
+  const hasMiddle = projectModules.some(m => m.level === "Middle")
 
-  for (const mod of projectModules) {
-    // Извлекаем базовое название, убирая уровень из названия если есть
-    const baseTitle = extractBaseProjectTitle(mod.title)
-    const baseSlug = extractBaseProjectSlug(mod.slug)
-    const key = baseSlug || baseTitle.toLowerCase().replace(/\s+/g, "-")
+  let resultProjects: ParsedModule[] = [...projectModules]
 
-    if (!projectGroups.has(key)) {
-      projectGroups.set(key, [])
-    }
-    projectGroups.get(key)!.push(mod)
+  // Если нет Junior - создаём на основе первого доступного модуля
+  if (!hasJunior) {
+    const templateModule = projectModules.find(m => m.level === "Middle") || projectModules[0]
+    const baseTitle = extractBaseProjectTitle(templateModule.title)
+    const baseSlug = extractBaseProjectSlug(templateModule.slug)
+    const newModule = createProjectModuleForLevel(templateModule, baseTitle, baseSlug, "Junior")
+    resultProjects.push(newModule)
+    warnings.push(`Автоматически создан обязательный PROJECT модуль уровня Junior: "${newModule.title}"`)
   }
 
-  // Для каждой группы проверяем наличие всех уровней и добавляем недостающие
-  const resultProjects: ParsedModule[] = []
-
-  for (const [groupKey, groupModules] of projectGroups) {
-    const existingLevels = new Set(groupModules.map(m => m.level))
-    const missingLevels: ValidLevel[] = []
-
-    for (const level of PROJECT_LEVEL_ORDER) {
-      if (!existingLevels.has(level)) {
-        missingLevels.push(level)
-      }
-    }
-
-    // Добавляем существующие модули
-    resultProjects.push(...groupModules)
-
-    // Создаём недостающие уровни на основе существующего модуля
-    if (missingLevels.length > 0 && missingLevels.length < 3) {
-      // Берём за основу Middle или первый доступный модуль
-      const templateModule = groupModules.find(m => m.level === "Middle") || groupModules[0]
-      const baseTitle = extractBaseProjectTitle(templateModule.title)
-      const baseSlug = extractBaseProjectSlug(templateModule.slug)
-
-      for (const level of missingLevels) {
-        const newModule = createProjectModuleForLevel(templateModule, baseTitle, baseSlug, level)
-        resultProjects.push(newModule)
-        warnings.push(`Автоматически создан PROJECT модуль уровня ${level}: "${newModule.title}"`)
-      }
-    }
+  // Если нет Middle - создаём на основе первого доступного модуля
+  if (!hasMiddle) {
+    const templateModule = projectModules.find(m => m.level === "Junior") || projectModules[0]
+    const baseTitle = extractBaseProjectTitle(templateModule.title)
+    const baseSlug = extractBaseProjectSlug(templateModule.slug)
+    const newModule = createProjectModuleForLevel(templateModule, baseTitle, baseSlug, "Middle")
+    resultProjects.push(newModule)
+    warnings.push(`Автоматически создан обязательный PROJECT модуль уровня Middle: "${newModule.title}"`)
   }
 
-  // Сортируем PROJECT модули по уровню
+  // Ограничиваем количество проектов до 4 (но не меньше 2)
+  // Приоритет: Junior, Middle, затем остальные
+  if (resultProjects.length > 4) {
+    warnings.push(`Слишком много PROJECT модулей (${resultProjects.length}). Ограничиваем до 4.`)
+
+    // Сортируем по приоритету: Junior -> Middle -> Senior -> остальные
+    const priorityOrder = ["Junior", "Middle", "Senior"]
+    resultProjects.sort((a, b) => {
+      const aIndex = priorityOrder.indexOf(a.level as string)
+      const bIndex = priorityOrder.indexOf(b.level as string)
+      const aPriority = aIndex === -1 ? 999 : aIndex
+      const bPriority = bIndex === -1 ? 999 : bIndex
+      return aPriority - bPriority
+    })
+
+    // Оставляем только первые 4
+    resultProjects = resultProjects.slice(0, 4)
+  }
+
+  // Сортируем PROJECT модули по уровню: Junior → Middle → Senior
   resultProjects.sort((a, b) => {
     const aIndex = PROJECT_LEVEL_ORDER.indexOf(a.level as typeof PROJECT_LEVEL_ORDER[number])
     const bIndex = PROJECT_LEVEL_ORDER.indexOf(b.level as typeof PROJECT_LEVEL_ORDER[number])
