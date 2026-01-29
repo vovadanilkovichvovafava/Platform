@@ -1476,16 +1476,16 @@ export default function AdminContentPage() {
                           <>
                             <Upload className="h-12 w-12 text-gray-400 mb-3" />
                             <p className="text-lg text-gray-600 font-medium">Выберите файл для импорта</p>
-                            <p className="text-sm text-gray-400 mt-1">.txt, .md, .json, .xml</p>
+                            <p className="text-sm text-gray-400 mt-1">.txt, .md, .json, .xml, .pdf, .doc, .docx</p>
                             <p className="text-xs text-gray-400 mt-3">
-                              Система автоматически определит структуру
+                              PDF/DOC/DOCX лучше распознаются с AI-парсером
                             </p>
                           </>
                         )}
                       </div>
                       <input
                         type="file"
-                        accept=".txt,.md,.markdown,.json,.xml"
+                        accept=".txt,.md,.markdown,.json,.xml,.pdf,.doc,.docx"
                         onChange={handleImport}
                         disabled={importing}
                         className="hidden"

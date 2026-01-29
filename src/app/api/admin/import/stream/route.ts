@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth"
 import {
   getAIConfig,
   SUPPORTED_FORMATS,
-  requiresAIParser,
 } from "@/lib/import"
 
 // Увеличиваем лимит времени выполнения для AI парсинга
@@ -63,7 +62,30 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const needsAI = requiresAIParser(filename)
+  // Лимит размера файла: 10MB
+  const MAX_FILE_SIZE = 10 * 1024 * 1024
+  if (file.size > MAX_FILE_SIZE) {
+    return new Response(JSON.stringify({
+      error: `Файл слишком большой. Максимальный размер: 10MB, ваш файл: ${Math.round(file.size / 1024 / 1024)}MB`,
+    }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+
+  // Проверка PDF без AI
+  const aiConfig = getAIConfig()
+  const isPdf = filename.endsWith(".pdf")
+  if (isPdf && (!aiConfig.enabled || !aiConfig.apiKey)) {
+    return new Response(JSON.stringify({
+      error: "PDF формат требует AI-парсер для извлечения текста. AI-парсер не настроен. Сконвертируйте файл в .txt или .md.",
+      details: ["PDF — бинарный формат, для извлечения текста требуется AI"],
+    }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+
   const text = await file.text()
 
   if (!text.trim()) {

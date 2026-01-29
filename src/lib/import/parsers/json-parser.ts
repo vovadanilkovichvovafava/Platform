@@ -86,7 +86,21 @@ export function parseJson(text: string): ParseResult {
       parseMethod: "code",
     }
   } catch (e) {
-    errors.push(`Ошибка парсинга JSON: ${e}`)
+    // Формируем понятное сообщение об ошибке JSON
+    let errorMsg = "Невалидный JSON"
+    if (e instanceof SyntaxError) {
+      const match = e.message.match(/position (\d+)/)
+      if (match) {
+        const pos = parseInt(match[1])
+        const lines = text.substring(0, pos).split("\n")
+        const line = lines.length
+        const col = lines[lines.length - 1].length + 1
+        errorMsg = `Синтаксическая ошибка JSON на строке ${line}, колонка ${col}`
+      } else {
+        errorMsg = `Синтаксическая ошибка JSON: ${e.message}`
+      }
+    }
+    errors.push(errorMsg)
     return {
       success: false,
       trails: [],
