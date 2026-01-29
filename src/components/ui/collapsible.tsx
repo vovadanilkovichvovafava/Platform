@@ -64,8 +64,9 @@ function CollapsibleTrigger({ children, className, asChild }: CollapsibleTrigger
   const { open, toggle } = useCollapsible()
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<{ onClick?: () => void }>, {
+    return React.cloneElement(children as React.ReactElement<{ onClick?: () => void; "aria-expanded"?: boolean }>, {
       onClick: toggle,
+      "aria-expanded": open,
     })
   }
 

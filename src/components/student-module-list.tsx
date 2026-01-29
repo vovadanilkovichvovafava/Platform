@@ -9,6 +9,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   CheckCircle2,
+  ChevronDown,
   Clock,
   XCircle,
   SkipForward,
@@ -156,7 +157,7 @@ export function StudentModuleList({
               <CardContent className="p-0">
                 {/* Trail header with collapsible trigger */}
                 <CollapsibleTrigger asChild>
-                  <button className="w-full p-4 pb-2 hover:bg-gray-50 transition-colors rounded-t-lg text-left">
+                  <button className="w-full p-4 pb-2 hover:bg-gray-50 transition-colors rounded-t-lg text-left group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-gray-900">{enrollment.trail.title}</span>
@@ -166,6 +167,7 @@ export function StudentModuleList({
                           {completedModules.length}/{trailModules.length}
                         </Badge>
                         <span className="text-sm text-gray-500">{trailProgress}%</span>
+                        <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-aria-expanded:rotate-180" />
                       </div>
                     </div>
                     {/* Progress bar */}

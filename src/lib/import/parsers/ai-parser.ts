@@ -199,7 +199,7 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
       "points": 50,
       "description": "Краткое описание модуля",
       "content": "Полный контент в Markdown с заголовками, списками, примерами кода",
-      "level": "Beginner | Middle | Advanced",
+      "level": "Junior | Middle | Senior",
       "duration": "15 мин",
       "requiresSubmission": false,
       "questions": [/* массив вопросов разных типов */]
@@ -223,8 +223,9 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 8. **Покрытие темы**: вопросы должны охватывать разные аспекты изученного материала, а не повторять одну и ту же тему
 9. **Улучшение**: если контент бедный - дополни примерами, пояснениями, деталями
 10. **requiresSubmission**: true для PROJECT, true для PRACTICE с практическими заданиями
-11. **Формулировки**: вопросы должны быть чёткими, однозначными и проверять понимание, а не запоминание
-12. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
+11. **Уровни модулей**: используй уровни Junior, Middle, Senior. При создании нескольких PROJECT модулей — порядок Junior → Middle → Senior. Первый проект - Junior, второй - Middle, третий - Senior.
+12. **Формулировки**: вопросы должны быть чёткими, однозначными и проверять понимание, а не запоминание
+13. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
 
 const AI_USER_PROMPT = `Преобразуй следующий образовательный контент в структурированный курс.
 
@@ -1205,18 +1206,36 @@ export async function parseWithAIChunked(
   for (const mod of allModules) {
     if (!mod || typeof mod !== "object") continue
 
+    const moduleType = validateModuleType(mod.type)
+    const normalizedLevel = normalizeLevel(mod.level, moduleType)
+
     trail.modules.push({
       title: mod.title || "Без названия",
       slug: mod.slug || generateSlugFromTitle(mod.title || "module"),
-      type: validateModuleType(mod.type),
-      points: typeof mod.points === "number" ? mod.points : 50,
+      type: moduleType,
+      points: typeof mod.points === "number" ? mod.points : getDefaultPoints(moduleType),
       description: mod.description || "",
       content: mod.content || "",
       questions: validateQuestions(mod.questions || [], warnings),
-      level: mod.level,
+      level: normalizedLevel,
       duration: mod.duration,
     })
   }
+
+  // Сортируем модули: сначала THEORY/PRACTICE, затем PROJECT в порядке Junior → Middle → Senior
+  const sortedModules = sortProjectModulesByLevel(trail.modules)
+
+  // Проверяем, был ли порядок PROJECT модулей изменён
+  const projectModulesBefore = trail.modules.filter(m => m.type === "PROJECT")
+  const projectModulesAfter = sortedModules.filter(m => m.type === "PROJECT")
+  if (projectModulesBefore.length > 1) {
+    const orderChanged = projectModulesBefore.some((m, i) => m.slug !== projectModulesAfter[i]?.slug)
+    if (orderChanged) {
+      warnings.push(`Порядок PROJECT модулей нормализован: Junior → Middle → Senior`)
+    }
+  }
+
+  trail.modules = sortedModules
 
   warnings.push(`Успешно обработано ${successfulChunks} из ${totalChunks} частей`)
 
@@ -1288,17 +1307,20 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
     for (const mod of modules) {
       if (!mod || typeof mod !== "object") continue
 
+      const moduleType = validateModuleType(mod.type)
+      const normalizedLevel = normalizeLevel(mod.level, moduleType)
+
       const validModule: ParsedModule = {
         title: mod.title || mod.name || "Без названия",
         slug: mod.slug || generateSlugFromTitle(mod.title || "module"),
-        type: validateModuleType(mod.type),
-        points: typeof mod.points === "number" ? mod.points : getDefaultPoints(mod.type),
+        type: moduleType,
+        points: typeof mod.points === "number" ? mod.points : getDefaultPoints(moduleType),
         description: mod.description || "",
         content: mod.content || "",
         questions: validateQuestions(mod.questions || [], warnings),
-        level: mod.level,
+        level: normalizedLevel,
         duration: mod.duration,
-        requiresSubmission: mod.requiresSubmission ?? (mod.type === "PROJECT"),
+        requiresSubmission: mod.requiresSubmission ?? (moduleType === "PROJECT"),
       }
 
       validTrail.modules.push(validModule)
@@ -1307,6 +1329,21 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
     if (validTrail.modules.length === 0) {
       warnings.push(`Trail "${validTrail.title}" не имеет модулей`)
     }
+
+    // Сортируем модули: сначала THEORY/PRACTICE, затем PROJECT в порядке Junior → Middle → Senior
+    const sortedModules = sortProjectModulesByLevel(validTrail.modules)
+
+    // Проверяем, был ли порядок PROJECT модулей изменён
+    const projectModulesBefore = validTrail.modules.filter(m => m.type === "PROJECT")
+    const projectModulesAfter = sortedModules.filter(m => m.type === "PROJECT")
+    if (projectModulesBefore.length > 1) {
+      const orderChanged = projectModulesBefore.some((m, i) => m.slug !== projectModulesAfter[i]?.slug)
+      if (orderChanged) {
+        warnings.push(`Порядок PROJECT модулей нормализован: Junior → Middle → Senior`)
+      }
+    }
+
+    validTrail.modules = sortedModules
 
     result.push(validTrail)
   }
@@ -1321,6 +1358,64 @@ function validateModuleType(type: any): "THEORY" | "PRACTICE" | "PROJECT" {
     return upperType
   }
   return "THEORY"
+}
+
+// Допустимые уровни и порядок (Junior → Middle → Senior)
+const PROJECT_LEVEL_ORDER = ["Junior", "Middle", "Senior"] as const
+const VALID_LEVELS = ["Junior", "Middle", "Senior"] as const
+type ValidLevel = typeof VALID_LEVELS[number]
+
+// Нормализация уровня модуля
+function normalizeLevel(level: any, moduleType: string): ValidLevel {
+  const levelStr = String(level || "").trim()
+
+  // Маппинг для совместимости со старыми значениями
+  const levelMap: Record<string, ValidLevel> = {
+    "beginner": "Junior",      // Beginner -> Junior
+    "intermediate": "Junior",  // Intermediate -> Junior
+    "junior": "Junior",
+    "middle": "Middle",
+    "senior": "Senior",
+    "advanced": "Senior",      // Advanced -> Senior
+    "expert": "Senior",        // Expert -> Senior
+  }
+
+  const normalized = levelMap[levelStr.toLowerCase()]
+  if (normalized) {
+    return normalized
+  }
+
+  // Дефолт: Middle (средний уровень)
+  return "Middle"
+}
+
+// Сортировка PROJECT модулей по порядку Junior → Middle → Senior
+function sortProjectModulesByLevel(modules: ParsedModule[]): ParsedModule[] {
+  const projectModules: ParsedModule[] = []
+  const otherModules: ParsedModule[] = []
+
+  for (const mod of modules) {
+    if (mod.type === "PROJECT") {
+      projectModules.push(mod)
+    } else {
+      otherModules.push(mod)
+    }
+  }
+
+  // Сортируем PROJECT модули по уровню
+  projectModules.sort((a, b) => {
+    const aLevel = a.level as ValidLevel
+    const bLevel = b.level as ValidLevel
+    const aIndex = PROJECT_LEVEL_ORDER.indexOf(aLevel as typeof PROJECT_LEVEL_ORDER[number])
+    const bIndex = PROJECT_LEVEL_ORDER.indexOf(bLevel as typeof PROJECT_LEVEL_ORDER[number])
+    // Если уровень не в PROJECT_LEVEL_ORDER, ставим в конец
+    const aOrder = aIndex === -1 ? 999 : aIndex
+    const bOrder = bIndex === -1 ? 999 : bIndex
+    return aOrder - bOrder
+  })
+
+  // Возвращаем сначала не-PROJECT, потом отсортированные PROJECT
+  return [...otherModules, ...projectModules]
 }
 
 // Получение баллов по умолчанию
