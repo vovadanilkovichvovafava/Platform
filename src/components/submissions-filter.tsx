@@ -96,21 +96,45 @@ export function SubmissionsFilter({
   const [trailFilter, setTrailFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [isDeleteBlocked, setIsDeleteBlocked] = useState(false)
-  const deleteBlockTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Cleanup timeout on unmount
+  // Hover-based activation: button becomes active after 1.5s of hovering
+  const [readyToDeleteId, setReadyToDeleteId] = useState<string | null>(null)
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const HOVER_DELAY_MS = 1500
+
+  // Handle mouse enter - start 1.5s timer
+  const handleDeleteMouseEnter = (id: string) => {
+    // Clear any existing timer
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+    }
+    // Start new timer - after 1.5s button becomes active
+    hoverTimerRef.current = setTimeout(() => {
+      setReadyToDeleteId(id)
+    }, HOVER_DELAY_MS)
+  }
+
+  // Handle mouse leave - cancel timer and reset ready state
+  const handleDeleteMouseLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = null
+    }
+    setReadyToDeleteId(null)
+  }
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (deleteBlockTimeoutRef.current) {
-        clearTimeout(deleteBlockTimeoutRef.current)
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current)
       }
     }
   }, [])
 
   const handleDeleteSubmission = async (id: string, userName: string, moduleTitle: string) => {
-    // Check if delete is blocked (1.5s cooldown to prevent double clicks)
-    if (isDeleteBlocked || deletingId) {
+    // Only allow if button is ready (hovered for 1.5s) and not already deleting
+    if (readyToDeleteId !== id || deletingId) {
       return
     }
 
@@ -123,18 +147,8 @@ export function SubmissionsFilter({
 
     if (!confirmed) return
 
-    // Set block for 1.5 seconds BEFORE making the request (prevents double-clicks)
-    setIsDeleteBlocked(true)
-
-    // Clear any existing timeout
-    if (deleteBlockTimeoutRef.current) {
-      clearTimeout(deleteBlockTimeoutRef.current)
-    }
-
-    // Set timeout to unblock after 1.5 seconds
-    deleteBlockTimeoutRef.current = setTimeout(() => {
-      setIsDeleteBlocked(false)
-    }, 1500)
+    // Reset ready state after action
+    setReadyToDeleteId(null)
 
     try {
       setDeletingId(id)
@@ -337,24 +351,22 @@ export function SubmissionsFilter({
                         </Link>
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="ghost-destructive"
                         size="sm"
-                        className={`${
-                          deletingId === submission.id
-                            ? "text-red-500"
-                            : "text-gray-400 hover:text-red-600 hover:bg-red-50"
-                        }`}
+                        className={deletingId === submission.id ? "text-red-500" : ""}
                         onClick={() => handleDeleteSubmission(
                           submission.id,
                           submission.user.name,
                           submission.module.title
                         )}
-                        disabled={deletingId === submission.id || isDeleteBlocked}
+                        onMouseEnter={() => handleDeleteMouseEnter(submission.id)}
+                        onMouseLeave={handleDeleteMouseLeave}
+                        disabled={deletingId === submission.id || readyToDeleteId !== submission.id}
                         title={
                           deletingId === submission.id
                             ? "Удаляем…"
-                            : isDeleteBlocked
-                              ? "Подождите…"
+                            : readyToDeleteId !== submission.id
+                              ? "Наведите и подождите 1.5с"
                               : "Удалить работу"
                         }
                       >
