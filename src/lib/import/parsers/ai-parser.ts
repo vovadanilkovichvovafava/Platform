@@ -39,19 +39,14 @@ function debugLog(...args: any[]) {
   }
 }
 
-// Детальный промпт для AI парсинга с поддержкой всех типов вопросов
-const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга и улучшения образовательного контента.
-Твоя задача - преобразовать текст в структурированный формат курса.
-
-ВАЖНО: Если исходный текст слишком краткий или бедный по содержанию:
-- Дополни его релевантной информацией по теме
-- Добавь примеры и пояснения
-- Сохрани исходную структуру, но обогати контент
-- Убедись, что каждый модуль содержит достаточно материала для изучения
-
-## ТИПЫ ВОПРОСОВ
+// ============================================
+// ОБЩИЙ БЛОК: ОПИСАНИЕ 6 ТИПОВ ВОПРОСОВ
+// Используется в AI_SYSTEM_PROMPT и AI_MODULE_SYSTEM_PROMPT
+// ============================================
+const QUESTION_TYPES_DEFINITION = `## ТИПЫ ВОПРОСОВ
 
 Поддерживаются 6 типов вопросов. ОБЯЗАТЕЛЬНО используй разные типы для разнообразия!
+У каждого вопроса ОБЯЗАТЕЛЕН параметр "type" и соответствующий "data".
 
 ### 1. SINGLE_CHOICE - Один правильный ответ
 Стандартный тест с одним правильным вариантом.
@@ -67,6 +62,8 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 
 ### 2. MATCHING - Сопоставление
 Соединение элементов из двух колонок.
+**КРИТИЧНО**: leftItems и rightItems должны содержать РАЗНЫЕ тексты!
+**ЗАПРЕЩЕНО**: плейсхолдеры "Вариант 1/2/3", "Элемент 1", "Option 1", "Item 1", "1", "А)", "A)" - используй ОСМЫСЛЕННЫЕ термины!
 \`\`\`json
 {
   "question": "Сопоставьте термины с их определениями",
@@ -181,6 +178,20 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 - 20% TRUE_FALSE (проверка понимания концепций)
 - 20% FILL_BLANK или CASE_ANALYSIS (применение знаний)
 
+ГЛОБАЛЬНО по курсу: если вопросов >= 6 — ВСЕ 6 типов должны встретиться хотя бы 1 раз!`
+
+// Детальный промпт для AI парсинга с поддержкой всех типов вопросов
+const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга и улучшения образовательного контента.
+Твоя задача - преобразовать текст в структурированный формат курса.
+
+ВАЖНО: Если исходный текст слишком краткий или бедный по содержанию:
+- Дополни его релевантной информацией по теме
+- Добавь примеры и пояснения
+- Сохрани исходную структуру, но обогати контент
+- Убедись, что каждый модуль содержит достаточно материала для изучения
+
+${QUESTION_TYPES_DEFINITION}
+
 ## ФОРМАТ ВЫВОДА
 
 \`\`\`json
@@ -257,36 +268,51 @@ const AI_USER_PROMPT = `Преобразуй следующий образова
 Верни ТОЛЬКО JSON согласно формату (без \`\`\`json обёртки).`
 
 // Промпт для парсинга отдельного модуля (для chunked parsing)
+// КРИТИЧНО: Используем тот же контракт типов вопросов, что и основной парсер!
 const AI_MODULE_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга части образовательного контента.
 Твоя задача - преобразовать текст в один или несколько модулей курса.
 
-Формат вывода (JSON):
+${QUESTION_TYPES_DEFINITION}
+
+## ФОРМАТ ВЫВОДА
+
+\`\`\`json
 {
   "modules": [{
     "title": "Название модуля",
     "slug": "nazvanie-modulya",
     "type": "THEORY" | "PRACTICE" | "PROJECT",
     "points": 50,
+    "level": "Junior | Middle | Senior",
     "description": "Описание модуля",
     "content": "Контент в Markdown",
-    "questions": [{
-      "question": "Текст вопроса?",
-      "options": ["Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4"],
-      "correctAnswer": 0
-    }]
+    "questions": [
+      // ОБЯЗАТЕЛЬНО используй разные типы (SINGLE_CHOICE, MATCHING, ORDERING, TRUE_FALSE, FILL_BLANK, CASE_ANALYSIS)
+      // У КАЖДОГО вопроса ОБЯЗАТЕЛЕН параметр "type" и соответствующий "data"!
+    ]
   }]
 }
+\`\`\`
 
-Правила:
-1. Если есть вопросы с вариантами ответов - тип PRACTICE
-2. Если есть задание на создание чего-то - тип PROJECT
-3. Остальное - THEORY
-4. Slug генерируй из названия (транслитерация, lowercase, дефисы)
-5. points: THEORY=50, PRACTICE=75, PROJECT=100
-6. Сохрани весь контент в формате Markdown
-7. **КРИТИЧНО для THEORY**: модули типа THEORY ОБЯЗАТЕЛЬНО должны содержать 3-5 вопросов для проверки понимания материала! Теория без вопросов недопустима!
-8. **КРИТИЧНО для PROJECT**: не создавай много PROJECT модулей. Максимум 2-4 на курс. Обязательно Junior и Middle уровни.
-9. Верни ТОЛЬКО валидный JSON без комментариев`
+## ПРАВИЛА
+
+1. Типы модулей: THEORY (50 очков), PRACTICE (75 очков), PROJECT (100 очков)
+2. Slug: транслитерация кириллицы, lowercase, дефисы
+3. Сохраняй контент в Markdown
+4. **КРИТИЧНО для THEORY**: минимум 3-5 вопросов РАЗНЫХ типов!
+5. **РАЗНООБРАЗИЕ**: НЕ делай все вопросы SINGLE_CHOICE! Используй минимум 2-3 разных типа.
+6. **MATCHING**: используй ОСМЫСЛЕННЫЕ термины (НЕ "Вариант 1/2/3", НЕ "Элемент 1")!
+7. Верни ТОЛЬКО валидный JSON без комментариев
+
+## ЧЕКЛИСТ ПЕРЕД ВЫВОДОМ
+
+Перед возвратом JSON проверь:
+☐ У каждого вопроса есть поле "type"?
+☐ Для MATCHING/ORDERING/TRUE_FALSE/FILL_BLANK/CASE_ANALYSIS есть корректный "data"?
+☐ Используются минимум 2 разных типа вопросов?
+☐ MATCHING не содержит плейсхолдеров "Вариант N", "Элемент N"?
+
+Если нет — исправь до вывода!`
 
 const AI_MODULE_USER_PROMPT = `Преобразуй следующий фрагмент в модули:
 
@@ -294,7 +320,14 @@ const AI_MODULE_USER_PROMPT = `Преобразуй следующий фраг�
 {content}
 ---
 
-Это часть {chunkIndex} из {totalChunks}. Верни JSON с модулями.`
+Это часть {chunkIndex} из {totalChunks}.
+
+ВАЖНО:
+- Создай РАЗНООБРАЗНЫЕ типы вопросов (SINGLE_CHOICE, MATCHING, ORDERING, TRUE_FALSE, FILL_BLANK, CASE_ANALYSIS)
+- У КАЖДОГО вопроса ОБЯЗАТЕЛЕН параметр "type"
+- Для MATCHING используй ОСМЫСЛЕННЫЕ термины, НЕ "Вариант 1/2/3"
+
+Верни ТОЛЬКО JSON с модулями.`
 
 // Промпт для определения метаданных курса
 const AI_METADATA_PROMPT = `Проанализируй начало документа и определи метаданные курса:
@@ -320,10 +353,10 @@ export interface AIParserResult {
 }
 
 // Проверка доступности Claude AI API
+// SECURITY: Не возвращаем конфигурацию (endpoint, apiKey, model) в ответе
 export async function checkAIAvailability(config: AIParserConfig): Promise<{
   available: boolean
   error?: string
-  model?: string
 }> {
   if (!config.enabled || !config.apiEndpoint || !config.apiKey) {
     return { available: false, error: "AI API не настроен" }
@@ -353,17 +386,17 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
     clearTimeout(timeoutId)
 
     if (response.ok) {
-      const data = await response.json()
-      return {
-        available: true,
-        model: data.model || config.model,
-      }
+      // Не возвращаем model в ответе для безопасности
+      return { available: true }
     }
 
-    const error = await response.text()
+    // Логируем полную ошибку на сервере, но возвращаем только код статуса
+    const errorText = await response.text()
+    console.error("[AI-Parser] Check failed:", response.status, errorText.substring(0, 200))
+
     return {
       available: false,
-      error: `API вернул ошибку: ${response.status} - ${error.substring(0, 200)}`,
+      error: `API вернул ошибку: ${response.status}`,
     }
   } catch (e) {
     // Обработка таймаута
@@ -374,20 +407,24 @@ export async function checkAIAvailability(config: AIParserConfig): Promise<{
       }
     }
 
-    // Улучшаем сообщения об ошибках для более понятного отображения
-    let errorMessage = e instanceof Error ? e.message : "unknown"
+    // Логируем детали только на сервере
+    console.error("[AI-Parser] Check error:", e instanceof Error ? e.message : String(e))
 
-    if (errorMessage === "fetch failed" || errorMessage.includes("ECONNREFUSED")) {
-      errorMessage = "Не удалось подключиться к AI API. Проверьте настройки сети и доступность сервера."
-    } else if (errorMessage.includes("ETIMEDOUT") || errorMessage.includes("timeout")) {
-      errorMessage = "Превышено время ожидания ответа."
-    } else if (errorMessage.includes("ENOTFOUND")) {
-      errorMessage = "AI API endpoint не найден. Проверьте URL."
+    // Возвращаем обобщённые сообщения без деталей для клиента
+    let errorMessage = "Ошибка соединения"
+    const originalError = e instanceof Error ? e.message : ""
+
+    if (originalError === "fetch failed" || originalError.includes("ECONNREFUSED")) {
+      errorMessage = "Не удалось подключиться к AI API"
+    } else if (originalError.includes("ETIMEDOUT") || originalError.includes("timeout")) {
+      errorMessage = "Превышено время ожидания ответа"
+    } else if (originalError.includes("ENOTFOUND")) {
+      errorMessage = "AI API недоступен"
     }
 
     return {
       available: false,
-      error: `Ошибка соединения: ${errorMessage}`,
+      error: errorMessage,
     }
   }
 }
@@ -575,6 +612,18 @@ export async function parseWithAI(
 
     // Валидация результата
     const validatedTrails = validateAndFixTrails(trails, warnings)
+
+    // Проверка разнообразия типов вопросов для каждого trail
+    for (const trail of validatedTrails) {
+      const diversityCheck = checkQuestionTypeDiversity(trail)
+      warnings.push(...diversityCheck.warnings)
+      errors.push(...diversityCheck.errors)
+
+      // Логируем результат проверки
+      if (diversityCheck.totalQuestions > 0) {
+        debugLog(`[Diversity Check] Trail "${trail.title}": ${diversityCheck.uniqueTypes.length} типов из 6, ${diversityCheck.totalQuestions} вопросов`)
+      }
+    }
 
     return {
       success: validatedTrails.length > 0,
@@ -1258,11 +1307,29 @@ export async function parseWithAIChunked(
 
   trail.modules = sortedModules
 
+  // Обеспечиваем минимум 2 типа вопросов в каждом модуле
+  for (let i = 0; i < trail.modules.length; i++) {
+    trail.modules[i] = ensureModuleQuestionDiversity(trail.modules[i], warnings)
+  }
+
+  // Обеспечиваем все 6 типов вопросов на уровне trail (если достаточно вопросов)
+  const diversifiedTrail = ensureTrailQuestionTypeDiversity(trail, warnings)
+
+  // Проверка разнообразия типов вопросов
+  const diversityCheck = checkQuestionTypeDiversity(diversifiedTrail)
+  warnings.push(...diversityCheck.warnings)
+  errors.push(...diversityCheck.errors)
+
+  // Логируем результат проверки
+  if (diversityCheck.totalQuestions > 0) {
+    debugLog(`[Diversity Check] Chunked Trail "${diversifiedTrail.title}": ${diversityCheck.uniqueTypes.length} типов из 6, ${diversityCheck.totalQuestions} вопросов`)
+  }
+
   warnings.push(`Успешно обработано ${successfulChunks} из ${totalChunks} частей`)
 
   return {
-    success: trail.modules.length > 0,
-    trails: [trail],
+    success: diversifiedTrail.modules.length > 0,
+    trails: [diversifiedTrail],
     warnings,
     errors,
     parseMethod: "ai",
@@ -1673,6 +1740,84 @@ function getDefaultPoints(type: string): number {
   }
 }
 
+// ============================================
+// ПРОВЕРКА РАЗНООБРАЗИЯ ТИПОВ ВОПРОСОВ
+// ============================================
+
+interface DiversityCheckResult {
+  isAcceptable: boolean
+  totalQuestions: number
+  uniqueTypes: QuestionType[]
+  missingTypes: QuestionType[]
+  warnings: string[]
+  errors: string[]
+}
+
+// Проверка разнообразия типов вопросов на уровне trail
+function checkQuestionTypeDiversity(trail: ParsedTrail): DiversityCheckResult {
+  const warnings: string[] = []
+  const errors: string[] = []
+
+  // Собираем все вопросы
+  const allQuestions: ParsedQuestion[] = []
+  for (const mod of trail.modules) {
+    allQuestions.push(...mod.questions)
+  }
+
+  const totalQuestions = allQuestions.length
+
+  // Подсчитываем типы
+  const typeCounts = new Map<QuestionType, number>()
+  for (const q of allQuestions) {
+    const type = q.type || "SINGLE_CHOICE"
+    typeCounts.set(type as QuestionType, (typeCounts.get(type as QuestionType) || 0) + 1)
+  }
+
+  const uniqueTypes = Array.from(typeCounts.keys())
+  const ALL_TYPES: QuestionType[] = ["SINGLE_CHOICE", "MATCHING", "ORDERING", "CASE_ANALYSIS", "TRUE_FALSE", "FILL_BLANK"]
+  const missingTypes = ALL_TYPES.filter(t => !typeCounts.has(t))
+
+  // Критерии разнообразия
+  // 1. Если >= 6 вопросов: должны быть ВСЕ 6 типов (или хотя бы 5)
+  // 2. На уровне модуля: 3-4 вопроса -> 2 типа, 5-6 -> 3 типа, 7+ -> 4 типа
+
+  let isAcceptable = true
+
+  if (totalQuestions >= 6) {
+    if (uniqueTypes.length < 4) {
+      errors.push(`Недостаточное разнообразие типов вопросов: ${uniqueTypes.length} из 6. Отсутствуют: ${missingTypes.join(", ")}`)
+      isAcceptable = false
+    } else if (uniqueTypes.length < 6) {
+      warnings.push(`Используется ${uniqueTypes.length} из 6 типов вопросов. Отсутствуют: ${missingTypes.join(", ")}`)
+    }
+  } else if (totalQuestions >= 3) {
+    if (uniqueTypes.length < 2) {
+      warnings.push(`Все ${totalQuestions} вопросов имеют один тип (${uniqueTypes[0]}). Рекомендуется использовать разные типы.`)
+    }
+  }
+
+  // Проверка каждого модуля
+  for (const mod of trail.modules) {
+    const modQuestions = mod.questions.length
+    const modTypes = new Set(mod.questions.map(q => q.type || "SINGLE_CHOICE"))
+
+    const expectedTypes = modQuestions >= 7 ? 4 : modQuestions >= 5 ? 3 : modQuestions >= 3 ? 2 : 1
+
+    if (modTypes.size < expectedTypes && modQuestions >= 3) {
+      warnings.push(`Модуль "${mod.title}": ${modTypes.size} тип(ов) вопросов при ${modQuestions} вопросах (рекомендуется минимум ${expectedTypes})`)
+    }
+  }
+
+  return {
+    isAcceptable,
+    totalQuestions,
+    uniqueTypes,
+    missingTypes,
+    warnings,
+    errors
+  }
+}
+
 // Все 6 типов вопросов (для валидации разнообразия)
 const ALL_QUESTION_TYPES: QuestionType[] = [
   "SINGLE_CHOICE",
@@ -1948,57 +2093,62 @@ function convertToQuestionType(q: ParsedQuestion, targetType: QuestionType): Par
     case "MATCHING": {
       // Создаём MATCHING из вариантов ответа
       // ВАЖНО: Левые и правые элементы ДОЛЖНЫ быть РАЗНЫМИ
+      // НИКАКИХ плейсхолдеров "Позиция N", "Вариант N" и т.п.!
       if (options.length < 3) return null
 
       // Извлекаем ключевые термины из вопроса для левой колонки
       const extractedTerms = extractTermsFromQuestion(questionText, options.length)
 
-      // Если не смогли извлечь термины из вопроса - не можем создать качественный MATCHING
-      // Потому что левые и правые элементы будут одинаковыми
-      if (extractedTerms.length < 3) {
-        // Пробуем создать MATCHING с нумерованными категориями
-        // Left: "Позиция 1", "Позиция 2", "Позиция 3"
-        // Right: сами варианты ответов (описания)
-        const leftItems = options.slice(0, Math.min(3, options.length)).map((_, idx) => ({
-          id: `l${idx + 1}`,
-          text: `Позиция ${idx + 1}`
-        }))
+      // Стратегия создания MATCHING без плейсхолдеров:
+      // 1. Если есть извлечённые термины из вопроса - используем их
+      // 2. Если options длинные - извлекаем короткие термины через extractShortTerm
+      // 3. Создаём пары "короткий термин" -> "длинное описание"
 
-        const rightItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
+      const numItems = Math.min(3, options.length)
+      let leftItems: { id: string; text: string }[] = []
+      let rightItems: { id: string; text: string }[] = []
+
+      if (extractedTerms.length >= numItems) {
+        // Вариант 1: Есть извлечённые термины из вопроса
+        leftItems = extractedTerms.slice(0, numItems).map((term, idx) => ({
+          id: `l${idx + 1}`,
+          text: term
+        }))
+        rightItems = options.slice(0, numItems).map((opt, idx) => ({
           id: `r${idx + 1}`,
           text: opt
         }))
+      } else {
+        // Вариант 2: Извлекаем короткие термины из длинных options
+        // Left = короткие версии (extractShortTerm), Right = полные описания
+        const usedShortTerms = new Set<string>()
 
-        const correctPairs: Record<string, string> = {}
-        leftItems.forEach((item, idx) => {
-          correctPairs[item.id] = rightItems[idx].id
-        })
+        for (let idx = 0; idx < numItems; idx++) {
+          const opt = options[idx]
+          let shortTerm = extractShortTerm(opt, idx)
 
-        return {
-          question: `Сопоставьте позиции с правильными ответами: ${questionText}`,
-          type: "MATCHING",
-          options: [],
-          correctAnswer: 0,
-          data: {
-            leftLabel: "Позиция",
-            rightLabel: "Ответ",
-            leftItems,
-            rightItems,
-            correctPairs
+          // Убеждаемся что короткий термин уникален и не совпадает с полным текстом
+          if (usedShortTerms.has(shortTerm.toLowerCase()) || shortTerm.toLowerCase() === opt.toLowerCase()) {
+            // Пробуем взять первые 2 слова + индекс
+            const words = opt.split(/\s+/).slice(0, 2).join(" ")
+            shortTerm = words.length > 2 ? words : `Концепт ${String.fromCharCode(65 + idx)}`
           }
+          usedShortTerms.add(shortTerm.toLowerCase())
+
+          leftItems.push({ id: `l${idx + 1}`, text: shortTerm })
+          rightItems.push({ id: `r${idx + 1}`, text: opt })
         }
+
+        // Если левые и правые совпадают - создаём альтернативные названия
+        const rightTextsLower = new Set(rightItems.map(r => r.text.toLowerCase()))
+        leftItems = leftItems.map((item, idx) => {
+          if (rightTextsLower.has(item.text.toLowerCase())) {
+            // Используем буквенную категорию как fallback
+            return { ...item, text: `Категория ${String.fromCharCode(65 + idx)}` }
+          }
+          return item
+        })
       }
-
-      // Есть извлечённые термины - используем их для левой колонки
-      const leftItems = extractedTerms.slice(0, 3).map((term, idx) => ({
-        id: `l${idx + 1}`,
-        text: term
-      }))
-
-      const rightItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
-        id: `r${idx + 1}`,
-        text: opt
-      }))
 
       const correctPairs: Record<string, string> = {}
       leftItems.forEach((item, idx) => {
@@ -2106,8 +2256,17 @@ const MATCHING_PLACEHOLDER_PATTERNS = [
   /^элемент\s*\d+$/i,
   /^термин\s*\d+$/i,
   /^пункт\s*\d+$/i,
+  /^позиция\s*\d+$/i,   // Добавлено: "Позиция 1/2/3"
+  /^ответ\s*\d+$/i,     // Добавлено: "Ответ 1/2/3"
+  /^пара\s*\d+$/i,      // Добавлено: "Пара 1/2/3"
+  /^левый\s*\d+$/i,     // Добавлено: "Левый 1/2/3"
+  /^правый\s*\d+$/i,    // Добавлено: "Правый 1/2/3"
+  /^left\s*\d+$/i,      // Добавлено: "Left 1/2/3"
+  /^right\s*\d+$/i,     // Добавлено: "Right 1/2/3"
   /^[а-гa-d][\.\)]?$/i,  // просто "а", "б", "a)", "b." и т.п.
   /^\d+[\.\)]?$/,        // просто "1", "2.", "3)" и т.п.
+  /^l\d+$/i,             // "l1", "l2", etc
+  /^r\d+$/i,             // "r1", "r2", etc
 ]
 
 // Проверка, является ли текст плейсхолдером
@@ -2191,14 +2350,24 @@ function extractShortTerm(fullText: string, index: number): string {
 }
 
 // Исправление плейсхолдеров в MATCHING данных
+// Использует extractShortTerm для создания осмысленных терминов
 function repairMatchingPlaceholders(data: MatchingData, questionText: string, warnings: string[]): MatchingData {
   let hasPlaceholders = false
   let hasDuplicates = false
+  let hasRightPlaceholders = false
 
   // Проверяем левые элементы на плейсхолдеры
   for (const item of data.leftItems) {
     if (isPlaceholderText(item.text)) {
       hasPlaceholders = true
+      break
+    }
+  }
+
+  // Проверяем правые элементы на плейсхолдеры
+  for (const item of data.rightItems) {
+    if (isPlaceholderText(item.text)) {
+      hasRightPlaceholders = true
       break
     }
   }
@@ -2212,14 +2381,14 @@ function repairMatchingPlaceholders(data: MatchingData, questionText: string, wa
     }
   }
 
-  if (!hasPlaceholders && !hasDuplicates) {
+  if (!hasPlaceholders && !hasDuplicates && !hasRightPlaceholders) {
     return data  // Всё в порядке
   }
 
   if (hasDuplicates) {
     warnings.push("MATCHING: обнаружено совпадение левых и правых элементов, выполняется автоматическое исправление")
   }
-  if (hasPlaceholders) {
+  if (hasPlaceholders || hasRightPlaceholders) {
     warnings.push("MATCHING: обнаружены плейсхолдеры в элементах, выполняется автоматическое исправление")
   }
 
@@ -2227,28 +2396,91 @@ function repairMatchingPlaceholders(data: MatchingData, questionText: string, wa
   const extractedTerms = extractTermsFromQuestion(questionText, data.leftItems.length)
 
   // Создаём исправленные левые элементы
+  // СТРАТЕГИЯ: Если правые элементы длинные - извлекаем из них короткие термины для левой колонки
   const repairedLeftItems = data.leftItems.map((item, idx) => {
     const rightItem = data.rightItems[idx]
     const isDuplicate = rightItem && item.text.toLowerCase().trim() === rightItem.text.toLowerCase().trim()
 
     if (isPlaceholderText(item.text) || isDuplicate) {
-      // Ищем замену
+      // Приоритет 1: Используем извлечённые термины из вопроса
       if (extractedTerms[idx] && extractedTerms[idx].toLowerCase().trim() !== rightItem?.text.toLowerCase().trim()) {
         return { ...item, text: extractedTerms[idx] }
       }
-      // Если дубликат или плейсхолдер - используем нумерованную позицию
-      // Это гарантирует что левые и правые элементы ТОЧНО будут разными
-      return { ...item, text: `Позиция ${idx + 1}` }
+
+      // Приоритет 2: Извлекаем короткий термин из правого элемента (если он длинный)
+      if (rightItem && rightItem.text.length > 25) {
+        const shortTerm = extractShortTerm(rightItem.text, idx)
+        if (!isPlaceholderText(shortTerm) && shortTerm.toLowerCase().trim() !== rightItem.text.toLowerCase().trim()) {
+          return { ...item, text: shortTerm }
+        }
+      }
+
+      // Приоритет 3: Генерируем осмысленный термин на основе индекса и контекста вопроса
+      // Ищем ключевые слова в вопросе для генерации контекстного названия
+      const contextTerms = extractContextualTerms(questionText)
+      if (contextTerms.length > 0) {
+        const contextTerm = `${contextTerms[0]} ${idx + 1}`
+        if (contextTerm.toLowerCase().trim() !== rightItem?.text.toLowerCase().trim()) {
+          return { ...item, text: contextTerm }
+        }
+      }
+
+      // Последний fallback: используем "Элемент A/B/C" (буквы вместо цифр для лучшей читаемости)
+      const letters = ["A", "B", "C", "D", "E", "F", "G", "H"]
+      return { ...item, text: `Элемент ${letters[idx] || (idx + 1)}` }
+    }
+    return item
+  })
+
+  // Убеждаемся что левые и правые элементы уникальны
+  const newRightTexts = new Set(data.rightItems.map(item => item.text.toLowerCase().trim()))
+  const finalLeftItems = repairedLeftItems.map((item, idx) => {
+    if (newRightTexts.has(item.text.toLowerCase().trim())) {
+      const letters = ["A", "B", "C", "D", "E", "F", "G", "H"]
+      return { ...item, text: `Категория ${letters[idx] || (idx + 1)}` }
     }
     return item
   })
 
   return {
     ...data,
-    leftItems: repairedLeftItems,
-    leftLabel: hasDuplicates ? "Позиция" : data.leftLabel,
-    rightLabel: hasDuplicates ? "Ответ" : data.rightLabel,
+    leftItems: finalLeftItems,
+    leftLabel: data.leftLabel || "Термин",
+    rightLabel: data.rightLabel || "Определение",
   }
+}
+
+// Извлечение контекстных терминов из вопроса для генерации осмысленных названий
+function extractContextualTerms(questionText: string): string[] {
+  const contextWords: string[] = []
+
+  // Ищем ключевые существительные в вопросе
+  const patterns = [
+    /сопоставьте\s+(\w+)/i,
+    /соотнесите\s+(\w+)/i,
+    /термин[ыа]?\s+(\w+)/i,
+    /понят[ияе]+\s+(\w+)/i,
+    /элемент[ыа]?\s+(\w+)/i,
+    /категори[яие]+\s+(\w+)/i,
+  ]
+
+  for (const pattern of patterns) {
+    const match = questionText.match(pattern)
+    if (match && match[1] && !isPlaceholderText(match[1])) {
+      contextWords.push(match[1])
+    }
+  }
+
+  // Если ничего не нашли - пробуем извлечь тему
+  if (contextWords.length === 0) {
+    // Ищем слова-темы
+    const topicMatch = questionText.match(/(?:о|по теме|про)\s+([а-яёa-z]+)/i)
+    if (topicMatch && topicMatch[1]) {
+      contextWords.push(topicMatch[1])
+    }
+  }
+
+  return contextWords
 }
 
 // Валидация данных MATCHING с проверкой на плейсхолдеры
