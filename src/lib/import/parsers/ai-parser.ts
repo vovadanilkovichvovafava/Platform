@@ -223,7 +223,13 @@ const AI_SYSTEM_PROMPT = `Ты - AI-ассистент для парсинга �
 8. **Покрытие темы**: вопросы должны охватывать разные аспекты изученного материала, а не повторять одну и ту же тему
 9. **Улучшение**: если контент бедный - дополни примерами, пояснениями, деталями
 10. **requiresSubmission**: true для PROJECT, true для PRACTICE с практическими заданиями
-11. **Уровни модулей**: используй уровни Junior, Middle, Senior. При создании нескольких PROJECT модулей — порядок Junior → Middle → Senior. Первый проект - Junior, второй - Middle, третий - Senior.
+11. **Уровни модулей**: используй уровни Junior, Middle, Senior.
+    - Для модулей типа THEORY и PRACTICE: выбирай уровень по сложности материала
+    - **ВАЖНО для PROJECT**: для КАЖДОЙ темы проекта ОБЯЗАТЕЛЬНО создай ТРИ версии с разными уровнями сложности (Junior, Middle, Senior). Это означает 3 отдельных модуля PROJECT с одной темой, но разной глубиной/сложностью задания:
+      * Junior - базовая версия проекта с простыми требованиями
+      * Middle - стандартная версия с дополнительными требованиями
+      * Senior - продвинутая версия с комплексными требованиями
+    - Порядок PROJECT модулей: Junior → Middle → Senior
 12. **Формулировки**: вопросы должны быть чёткими, однозначными и проверять понимание, а не запоминание
 13. **Возврат**: ТОЛЬКО валидный JSON без комментариев и markdown-разметки вокруг`
 
@@ -1222,11 +1228,14 @@ export async function parseWithAIChunked(
     })
   }
 
+  // Обеспечиваем наличие всех трёх уровней для PROJECT модулей
+  const modulesWithAllLevels = ensureProjectLevels(trail.modules, warnings)
+
   // Сортируем модули: сначала THEORY/PRACTICE, затем PROJECT в порядке Junior → Middle → Senior
-  const sortedModules = sortProjectModulesByLevel(trail.modules)
+  const sortedModules = sortProjectModulesByLevel(modulesWithAllLevels)
 
   // Проверяем, был ли порядок PROJECT модулей изменён
-  const projectModulesBefore = trail.modules.filter(m => m.type === "PROJECT")
+  const projectModulesBefore = modulesWithAllLevels.filter(m => m.type === "PROJECT")
   const projectModulesAfter = sortedModules.filter(m => m.type === "PROJECT")
   if (projectModulesBefore.length > 1) {
     const orderChanged = projectModulesBefore.some((m, i) => m.slug !== projectModulesAfter[i]?.slug)
@@ -1330,8 +1339,11 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
       warnings.push(`Trail "${validTrail.title}" не имеет модулей`)
     }
 
+    // Обеспечиваем наличие всех трёх уровней для PROJECT модулей
+    const modulesWithAllLevels = ensureProjectLevels(validTrail.modules, warnings)
+
     // Сортируем модули: сначала THEORY/PRACTICE, затем PROJECT в порядке Junior → Middle → Senior
-    const sortedModules = sortProjectModulesByLevel(validTrail.modules)
+    const sortedModules = sortProjectModulesByLevel(modulesWithAllLevels)
 
     // Проверяем, был ли порядок PROJECT модулей изменён
     const projectModulesBefore = validTrail.modules.filter(m => m.type === "PROJECT")
@@ -1416,6 +1428,156 @@ function sortProjectModulesByLevel(modules: ParsedModule[]): ParsedModule[] {
 
   // Возвращаем сначала не-PROJECT, потом отсортированные PROJECT
   return [...otherModules, ...projectModules]
+}
+
+// Обеспечение наличия всех трёх уровней (Junior, Middle, Senior) для PROJECT модулей
+function ensureProjectLevels(modules: ParsedModule[], warnings: string[]): ParsedModule[] {
+  const projectModules: ParsedModule[] = []
+  const otherModules: ParsedModule[] = []
+
+  // Разделяем модули
+  for (const mod of modules) {
+    if (mod.type === "PROJECT") {
+      projectModules.push(mod)
+    } else {
+      otherModules.push(mod)
+    }
+  }
+
+  // Если нет PROJECT модулей - возвращаем как есть
+  if (projectModules.length === 0) {
+    return modules
+  }
+
+  // Группируем PROJECT модули по базовому названию (без уровня)
+  const projectGroups = new Map<string, ParsedModule[]>()
+
+  for (const mod of projectModules) {
+    // Извлекаем базовое название, убирая уровень из названия если есть
+    const baseTitle = extractBaseProjectTitle(mod.title)
+    const baseSlug = extractBaseProjectSlug(mod.slug)
+    const key = baseSlug || baseTitle.toLowerCase().replace(/\s+/g, "-")
+
+    if (!projectGroups.has(key)) {
+      projectGroups.set(key, [])
+    }
+    projectGroups.get(key)!.push(mod)
+  }
+
+  // Для каждой группы проверяем наличие всех уровней и добавляем недостающие
+  const resultProjects: ParsedModule[] = []
+
+  for (const [groupKey, groupModules] of projectGroups) {
+    const existingLevels = new Set(groupModules.map(m => m.level))
+    const missingLevels: ValidLevel[] = []
+
+    for (const level of PROJECT_LEVEL_ORDER) {
+      if (!existingLevels.has(level)) {
+        missingLevels.push(level)
+      }
+    }
+
+    // Добавляем существующие модули
+    resultProjects.push(...groupModules)
+
+    // Создаём недостающие уровни на основе существующего модуля
+    if (missingLevels.length > 0 && missingLevels.length < 3) {
+      // Берём за основу Middle или первый доступный модуль
+      const templateModule = groupModules.find(m => m.level === "Middle") || groupModules[0]
+      const baseTitle = extractBaseProjectTitle(templateModule.title)
+      const baseSlug = extractBaseProjectSlug(templateModule.slug)
+
+      for (const level of missingLevels) {
+        const newModule = createProjectModuleForLevel(templateModule, baseTitle, baseSlug, level)
+        resultProjects.push(newModule)
+        warnings.push(`Автоматически создан PROJECT модуль уровня ${level}: "${newModule.title}"`)
+      }
+    }
+  }
+
+  // Сортируем PROJECT модули по уровню
+  resultProjects.sort((a, b) => {
+    const aIndex = PROJECT_LEVEL_ORDER.indexOf(a.level as typeof PROJECT_LEVEL_ORDER[number])
+    const bIndex = PROJECT_LEVEL_ORDER.indexOf(b.level as typeof PROJECT_LEVEL_ORDER[number])
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex)
+  })
+
+  return [...otherModules, ...resultProjects]
+}
+
+// Извлечение базового названия проекта (без указания уровня)
+function extractBaseProjectTitle(title: string): string {
+  // Удаляем суффиксы уровней из названия
+  return title
+    .replace(/\s*\(?(Junior|Middle|Senior|Базовый|Стандартный|Продвинутый)\)?$/i, "")
+    .replace(/\s*[-–—]\s*(Junior|Middle|Senior|Базовый|Стандартный|Продвинутый)$/i, "")
+    .replace(/\s*(Junior|Middle|Senior)$/i, "")
+    .trim()
+}
+
+// Извлечение базового slug проекта (без указания уровня)
+function extractBaseProjectSlug(slug: string): string {
+  return slug
+    .replace(/-(junior|middle|senior|bazovyj|standartnyj|prodvinutyj)$/i, "")
+    .replace(/(junior|middle|senior)$/i, "")
+    .trim()
+}
+
+// Создание PROJECT модуля для определённого уровня
+function createProjectModuleForLevel(
+  template: ParsedModule,
+  baseTitle: string,
+  baseSlug: string,
+  level: ValidLevel
+): ParsedModule {
+  const levelSuffix = getLevelSuffix(level)
+  const levelDescription = getLevelDescription(level)
+
+  return {
+    title: `${baseTitle} (${levelSuffix})`,
+    slug: `${baseSlug}-${level.toLowerCase()}`,
+    type: "PROJECT",
+    points: template.points,
+    description: `${template.description} ${levelDescription}`.trim(),
+    content: adjustContentForLevel(template.content, level),
+    questions: [], // PROJECT модули обычно без вопросов
+    level: level,
+    duration: template.duration,
+    requiresSubmission: true,
+  }
+}
+
+// Получение суффикса уровня для названия
+function getLevelSuffix(level: ValidLevel): string {
+  switch (level) {
+    case "Junior": return "Базовый"
+    case "Middle": return "Стандартный"
+    case "Senior": return "Продвинутый"
+    default: return level
+  }
+}
+
+// Получение описания уровня
+function getLevelDescription(level: ValidLevel): string {
+  switch (level) {
+    case "Junior": return "Базовая версия проекта с упрощёнными требованиями."
+    case "Middle": return "Стандартная версия проекта."
+    case "Senior": return "Продвинутая версия проекта с дополнительными требованиями."
+    default: return ""
+  }
+}
+
+// Адаптация контента под уровень
+function adjustContentForLevel(content: string, level: ValidLevel): string {
+  if (!content) return ""
+
+  const levelNote = {
+    Junior: "\n\n---\n**Уровень: Junior (Базовый)**\nЭто упрощённая версия проекта. Сфокусируйтесь на базовой функциональности.\n",
+    Middle: "\n\n---\n**Уровень: Middle (Стандартный)**\nСтандартная версия проекта со всеми основными требованиями.\n",
+    Senior: "\n\n---\n**Уровень: Senior (Продвинутый)**\nПродвинутая версия проекта. Реализуйте дополнительную функциональность и оптимизации.\n",
+  }
+
+  return content + (levelNote[level] || "")
 }
 
 // Получение баллов по умолчанию

@@ -273,7 +273,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         }
 
         elements.push(
-          <ul key={`ul-${startIdx}`} className="list-disc ml-6 my-2">
+          <ul key={`ul-${startIdx}`} className="ml-6 my-2" style={{ listStyleType: 'disc' }}>
             {listItems}
           </ul>
         )
@@ -297,7 +297,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         }
 
         elements.push(
-          <ol key={`ol-${startIdx}`} className="list-decimal ml-6 my-2">
+          <ol key={`ol-${startIdx}`} className="ml-6 my-2" style={{ listStyleType: 'decimal' }}>
             {listItems}
           </ol>
         )
