@@ -3,6 +3,21 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+// In-memory rate limiting for delete operations (1.5s cooldown)
+// Key: `userId:submissionId`, Value: timestamp of last delete attempt
+const deleteAttempts = new Map<string, number>()
+const DELETE_COOLDOWN_MS = 1500
+
+// Cleanup old entries periodically (every 5 minutes)
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, timestamp] of deleteAttempts.entries()) {
+    if (now - timestamp > 60000) { // Remove entries older than 1 minute
+      deleteAttempts.delete(key)
+    }
+  }
+}, 300000)
+
 // DELETE - Teacher can delete PENDING submissions (anti-spam, test cleanup)
 export async function DELETE(
   request: NextRequest,
@@ -16,6 +31,21 @@ export async function DELETE(
     }
 
     const { id } = await params
+
+    // Server-side rate limiting to prevent double-submit
+    const rateLimitKey = `${session.user.id}:${id}`
+    const lastAttempt = deleteAttempts.get(rateLimitKey)
+    const now = Date.now()
+
+    if (lastAttempt && now - lastAttempt < DELETE_COOLDOWN_MS) {
+      return NextResponse.json(
+        { error: "Слишком частые запросы. Подождите 1.5 секунды." },
+        { status: 429 }
+      )
+    }
+
+    // Record this attempt
+    deleteAttempts.set(rateLimitKey, now)
 
     // Get the submission with related data
     const submission = await prisma.submission.findUnique({
