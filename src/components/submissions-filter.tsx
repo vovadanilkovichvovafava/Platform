@@ -97,30 +97,44 @@ export function SubmissionsFilter({
   const [statusFilter, setStatusFilter] = useState("all")
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // Use ref for cooldown - survives re-renders/refreshes better than state
-  const lastDeleteTimeRef = useRef<number>(0)
-  const [, forceUpdate] = useState({}) // For re-render on cooldown end
-  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null)
+  // Hover-based activation: button becomes active after 1.5s of hovering
+  const [readyToDeleteId, setReadyToDeleteId] = useState<string | null>(null)
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const HOVER_DELAY_MS = 1500
 
-  const COOLDOWN_MS = 1500
-
-  // Check if cooldown is active
-  const isCooldownActive = () => {
-    return Date.now() - lastDeleteTimeRef.current < COOLDOWN_MS
+  // Handle mouse enter - start 1.5s timer
+  const handleDeleteMouseEnter = (id: string) => {
+    // Clear any existing timer
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+    }
+    // Start new timer - after 1.5s button becomes active
+    hoverTimerRef.current = setTimeout(() => {
+      setReadyToDeleteId(id)
+    }, HOVER_DELAY_MS)
   }
 
-  // Cleanup timeout on unmount
+  // Handle mouse leave - cancel timer and reset ready state
+  const handleDeleteMouseLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = null
+    }
+    setReadyToDeleteId(null)
+  }
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (cooldownTimerRef.current) {
-        clearTimeout(cooldownTimerRef.current)
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current)
       }
     }
   }, [])
 
   const handleDeleteSubmission = async (id: string, userName: string, moduleTitle: string) => {
-    // Check if delete is blocked (1.5s cooldown to prevent double clicks)
-    if (isCooldownActive() || deletingId) {
+    // Only allow if button is ready (hovered for 1.5s) and not already deleting
+    if (readyToDeleteId !== id || deletingId) {
       return
     }
 
@@ -133,16 +147,8 @@ export function SubmissionsFilter({
 
     if (!confirmed) return
 
-    // Set cooldown timestamp BEFORE making the request (prevents double-clicks)
-    lastDeleteTimeRef.current = Date.now()
-
-    // Schedule re-render when cooldown ends to update button states
-    if (cooldownTimerRef.current) {
-      clearTimeout(cooldownTimerRef.current)
-    }
-    cooldownTimerRef.current = setTimeout(() => {
-      forceUpdate({})
-    }, COOLDOWN_MS)
+    // Reset ready state after action
+    setReadyToDeleteId(null)
 
     try {
       setDeletingId(id)
@@ -353,12 +359,14 @@ export function SubmissionsFilter({
                           submission.user.name,
                           submission.module.title
                         )}
-                        disabled={deletingId === submission.id || isCooldownActive()}
+                        onMouseEnter={() => handleDeleteMouseEnter(submission.id)}
+                        onMouseLeave={handleDeleteMouseLeave}
+                        disabled={deletingId === submission.id || readyToDeleteId !== submission.id}
                         title={
                           deletingId === submission.id
                             ? "Удаляем…"
-                            : isCooldownActive()
-                              ? "Подождите…"
+                            : readyToDeleteId !== submission.id
+                              ? "Наведите и подождите 1.5с"
                               : "Удалить работу"
                         }
                       >
