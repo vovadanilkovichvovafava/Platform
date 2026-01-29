@@ -1530,20 +1530,163 @@ export default function UnifiedContentPage() {
                 </div>
               )}
 
+              {/* Превью распарсенных данных */}
               {parsedData && parsedData.trails.length > 0 && (
-                <div className="space-y-4">
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="text-green-700 font-medium">
-                      Распознано {parsedData.trails.length} trails
-                    </span>
-                  </div>
-                  {parsedData.trails.map((trail, idx) => (
-                    <div key={idx} className="p-3 border rounded-lg">
-                      <h4 className="font-medium">{trail.title}</h4>
-                      <p className="text-sm text-gray-500">{trail.modules.length} модулей</p>
+                <div className="space-y-6">
+                  {/* Информация о парсинге с выпадающим списком критериев */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg overflow-hidden">
+                    <div
+                      className="flex items-center gap-3 p-3 cursor-pointer hover:bg-green-100/50 transition-colors"
+                      onClick={() => parsedData.confidenceDetails && setShowConfidenceDetails(!showConfidenceDetails)}
+                    >
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div className="flex-1">
+                        <span className="text-green-700 font-medium">Контент успешно распознан</span>
+                        <span className="text-green-600 text-sm ml-2">
+                          ({parsedData.parseMethod === "ai" ? "AI" : parsedData.parseMethod === "hybrid" ? "Гибридный" : "Авто"})
+                        </span>
+                      </div>
+                      {parsedData.structureConfidence !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-green-600 font-medium">
+                            Уверенность: {parsedData.structureConfidence}%
+                          </span>
+                          {parsedData.confidenceDetails && (
+                            <button
+                              type="button"
+                              className="text-green-600 hover:text-green-700 p-1 rounded-full hover:bg-green-100"
+                              title="Показать критерии оценки"
+                            >
+                              {showConfidenceDetails ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ))}
+
+                    {/* Выпадающий список критериев уверенности */}
+                    {showConfidenceDetails && parsedData.confidenceDetails && (
+                      <div className="border-t border-green-200 p-3 bg-green-50/50">
+                        <div className="flex items-center gap-2 mb-3 text-sm text-green-700">
+                          <Info className="h-4 w-4" />
+                          <span className="font-medium">Критерии оценки структуры</span>
+                        </div>
+                        <div className="space-y-2">
+                          {parsedData.confidenceDetails.criteria.map((criterion, idx) => (
+                            <div
+                              key={idx}
+                              className={`p-2 rounded-lg border ${
+                                criterion.met
+                                  ? 'bg-green-100/50 border-green-300'
+                                  : 'bg-gray-50 border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm font-medium ${
+                                  criterion.met ? 'text-green-700' : 'text-gray-600'
+                                }`}>
+                                  {criterion.name}
+                                </span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                  criterion.met
+                                    ? 'bg-green-200 text-green-700'
+                                    : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                  +{criterion.score}/{criterion.maxScore}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600">
+                                {criterion.description}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-green-200 flex items-center justify-between text-sm">
+                          <span className="text-green-700">Итоговая оценка</span>
+                          <span className="font-bold text-green-700">
+                            {parsedData.confidenceDetails.totalScore} из {parsedData.confidenceDetails.maxPossibleScore} баллов
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Предупреждения */}
+                  {parsedData.warnings && parsedData.warnings.length > 0 && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-yellow-700 font-medium mb-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Предупреждения
+                      </div>
+                      <ul className="text-sm text-yellow-600 space-y-1">
+                        {parsedData.warnings.slice(0, 5).map((w, i) => (
+                          <li key={i}>• {w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Превью trails */}
+                  <div className="space-y-4">
+                    {parsedData.trails.map((trail, trailIndex) => (
+                      <div key={trailIndex} className="border rounded-lg overflow-hidden">
+                        <div
+                          className="p-4 flex items-center gap-3"
+                          style={{ backgroundColor: `${trail.color || "#6366f1"}15` }}
+                        >
+                          <span className="text-2xl">{trail.icon || "📚"}</span>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">{trail.title}</h3>
+                            {trail.subtitle && (
+                              <p className="text-sm text-gray-600">{trail.subtitle}</p>
+                            )}
+                          </div>
+                          <Badge variant="outline">
+                            {trail.modules.length} модулей
+                          </Badge>
+                        </div>
+
+                        <div className="divide-y">
+                          {trail.modules.map((module, moduleIndex) => {
+                            const TypeIcon = typeIcons[module.type] || BookOpen
+                            return (
+                              <div key={moduleIndex} className="p-3 flex items-center gap-3 bg-white">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
+                                  <TypeIcon className="h-4 w-4 text-gray-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900 truncate">
+                                      {module.title}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs shrink-0">
+                                      {typeLabels[module.type]}
+                                    </Badge>
+                                  </div>
+                                  {module.description && (
+                                    <p className="text-xs text-gray-500 truncate">{module.description}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0">
+                                  {module.questions.length > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <HelpCircle className="h-3 w-3" />
+                                      {module.questions.length}
+                                    </span>
+                                  )}
+                                  <span>{module.points} XP</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
