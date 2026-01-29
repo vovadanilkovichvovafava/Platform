@@ -1791,7 +1791,7 @@ function ensureModuleQuestionDiversity(module: ParsedModule, warnings: string[])
     const q = module.questions[i]
     if (q.type === "SINGLE_CHOICE" && q.options && q.options.length >= 3) {
       // Выбираем тип для конвертации (чередуем)
-      const targetTypes: QuestionType[] = ["TRUE_FALSE", "MATCHING", "ORDERING", "FILL_BLANK"]
+      const targetTypes: QuestionType[] = ["TRUE_FALSE", "MATCHING", "ORDERING", "FILL_BLANK", "CASE_ANALYSIS"]
       const targetType = targetTypes[i % targetTypes.length]
       const converted = convertToQuestionType(q, targetType)
       if (converted) {
@@ -1891,7 +1891,7 @@ function diversifyQuestionTypes(questions: ParsedQuestion[], warnings: string[])
   if (questions.length < 2) return questions
 
   const diversified = [...questions]
-  const typesToUse: QuestionType[] = ["TRUE_FALSE", "MATCHING", "ORDERING", "FILL_BLANK"]
+  const typesToUse: QuestionType[] = ["TRUE_FALSE", "MATCHING", "ORDERING", "FILL_BLANK", "CASE_ANALYSIS"]
   let typeIndex = 0
 
   // Определяем сколько вопросов нужно конвертировать (минимум 1, максимум половина)
@@ -1947,16 +1947,52 @@ function convertToQuestionType(q: ParsedQuestion, targetType: QuestionType): Par
 
     case "MATCHING": {
       // Создаём MATCHING из вариантов ответа
-      // ВАЖНО: Левые элементы должны быть осмысленными терминами, НЕ плейсхолдерами "Вариант 1/2/3"
+      // ВАЖНО: Левые и правые элементы ДОЛЖНЫ быть РАЗНЫМИ
       if (options.length < 3) return null
 
       // Извлекаем ключевые термины из вопроса для левой колонки
       const extractedTerms = extractTermsFromQuestion(questionText, options.length)
 
-      const leftItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
+      // Если не смогли извлечь термины из вопроса - не можем создать качественный MATCHING
+      // Потому что левые и правые элементы будут одинаковыми
+      if (extractedTerms.length < 3) {
+        // Пробуем создать MATCHING с нумерованными категориями
+        // Left: "Позиция 1", "Позиция 2", "Позиция 3"
+        // Right: сами варианты ответов (описания)
+        const leftItems = options.slice(0, Math.min(3, options.length)).map((_, idx) => ({
+          id: `l${idx + 1}`,
+          text: `Позиция ${idx + 1}`
+        }))
+
+        const rightItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
+          id: `r${idx + 1}`,
+          text: opt
+        }))
+
+        const correctPairs: Record<string, string> = {}
+        leftItems.forEach((item, idx) => {
+          correctPairs[item.id] = rightItems[idx].id
+        })
+
+        return {
+          question: `Сопоставьте позиции с правильными ответами: ${questionText}`,
+          type: "MATCHING",
+          options: [],
+          correctAnswer: 0,
+          data: {
+            leftLabel: "Позиция",
+            rightLabel: "Ответ",
+            leftItems,
+            rightItems,
+            correctPairs
+          }
+        }
+      }
+
+      // Есть извлечённые термины - используем их для левой колонки
+      const leftItems = extractedTerms.slice(0, 3).map((term, idx) => ({
         id: `l${idx + 1}`,
-        // Используем извлечённые термины или сами варианты ответа (они осмысленные)
-        text: extractedTerms[idx] || extractShortTerm(opt, idx)
+        text: term
       }))
 
       const rightItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
@@ -1975,8 +2011,8 @@ function convertToQuestionType(q: ParsedQuestion, targetType: QuestionType): Par
         options: [],
         correctAnswer: 0,
         data: {
-          leftLabel: "Элемент",
-          rightLabel: "Значение",
+          leftLabel: "Термин",
+          rightLabel: "Определение",
           leftItems,
           rightItems,
           correctPairs
@@ -2022,6 +2058,32 @@ function convertToQuestionType(q: ParsedQuestion, targetType: QuestionType): Par
             correctAnswer: correctOption,
             options: [correctOption, ...wrongOptions]
           }]
+        }
+      }
+    }
+
+    case "CASE_ANALYSIS": {
+      // Создаём CASE_ANALYSIS из вопроса и вариантов ответа
+      // Правильный ответ становится isCorrect: true, остальные - false
+      if (options.length < 3) return null
+
+      const caseOptions = options.slice(0, Math.min(4, options.length)).map((opt, idx) => ({
+        id: `o${idx + 1}`,
+        text: opt,
+        isCorrect: idx === q.correctAnswer,
+        explanation: idx === q.correctAnswer ? "Это правильный вариант" : "Это неправильный вариант"
+      }))
+
+      return {
+        question: `Проанализируйте ситуацию и выберите правильные варианты: ${questionText}`,
+        type: "CASE_ANALYSIS",
+        options: [],
+        correctAnswer: 0,
+        data: {
+          caseContent: questionText,
+          caseLabel: "Ситуация для анализа",
+          options: caseOptions,
+          minCorrectRequired: 1
         }
       }
     }
@@ -2131,6 +2193,7 @@ function extractShortTerm(fullText: string, index: number): string {
 // Исправление плейсхолдеров в MATCHING данных
 function repairMatchingPlaceholders(data: MatchingData, questionText: string, warnings: string[]): MatchingData {
   let hasPlaceholders = false
+  let hasDuplicates = false
 
   // Проверяем левые элементы на плейсхолдеры
   for (const item of data.leftItems) {
@@ -2140,29 +2203,42 @@ function repairMatchingPlaceholders(data: MatchingData, questionText: string, wa
     }
   }
 
-  if (!hasPlaceholders) {
+  // Проверяем совпадение левых и правых элементов (главная проблема!)
+  const rightTexts = new Set(data.rightItems.map(item => item.text.toLowerCase().trim()))
+  for (const item of data.leftItems) {
+    if (rightTexts.has(item.text.toLowerCase().trim())) {
+      hasDuplicates = true
+      break
+    }
+  }
+
+  if (!hasPlaceholders && !hasDuplicates) {
     return data  // Всё в порядке
   }
 
-  warnings.push("MATCHING: обнаружены плейсхолдеры в элементах, выполняется автоматическое исправление")
+  if (hasDuplicates) {
+    warnings.push("MATCHING: обнаружено совпадение левых и правых элементов, выполняется автоматическое исправление")
+  }
+  if (hasPlaceholders) {
+    warnings.push("MATCHING: обнаружены плейсхолдеры в элементах, выполняется автоматическое исправление")
+  }
 
   // Извлекаем термины из вопроса
   const extractedTerms = extractTermsFromQuestion(questionText, data.leftItems.length)
 
   // Создаём исправленные левые элементы
   const repairedLeftItems = data.leftItems.map((item, idx) => {
-    if (isPlaceholderText(item.text)) {
+    const rightItem = data.rightItems[idx]
+    const isDuplicate = rightItem && item.text.toLowerCase().trim() === rightItem.text.toLowerCase().trim()
+
+    if (isPlaceholderText(item.text) || isDuplicate) {
       // Ищем замену
-      if (extractedTerms[idx]) {
+      if (extractedTerms[idx] && extractedTerms[idx].toLowerCase().trim() !== rightItem?.text.toLowerCase().trim()) {
         return { ...item, text: extractedTerms[idx] }
       }
-      // Если есть соответствующий правый элемент - извлекаем термин из него
-      const rightItem = data.rightItems[idx]
-      if (rightItem) {
-        return { ...item, text: extractShortTerm(rightItem.text, idx) }
-      }
-      // Крайний случай - генерируем из индекса с осмысленным префиксом
-      return { ...item, text: `Понятие ${String.fromCharCode(65 + idx)}` }  // A, B, C...
+      // Если дубликат или плейсхолдер - используем нумерованную позицию
+      // Это гарантирует что левые и правые элементы ТОЧНО будут разными
+      return { ...item, text: `Позиция ${idx + 1}` }
     }
     return item
   })
@@ -2170,6 +2246,8 @@ function repairMatchingPlaceholders(data: MatchingData, questionText: string, wa
   return {
     ...data,
     leftItems: repairedLeftItems,
+    leftLabel: hasDuplicates ? "Позиция" : data.leftLabel,
+    rightLabel: hasDuplicates ? "Ответ" : data.rightLabel,
   }
 }
 
