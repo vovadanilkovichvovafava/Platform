@@ -703,31 +703,36 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
                                 </Button>
                               </div>
                             </div>
-                            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                              <p className="font-medium mb-1">Связи (левый - правый):</p>
-                              {(q.data as MatchingData).leftItems.map((leftItem, idx) => (
-                                <div key={leftItem.id} className="flex items-center gap-2 mb-1">
-                                  <span className="truncate max-w-[80px]">{leftItem.text || `Л${idx + 1}`}</span>
-                                  <span>-</span>
-                                  <select
-                                    value={(q.data as MatchingData).correctPairs[leftItem.id] || ""}
-                                    onChange={(e) => {
-                                      const data = q.data as MatchingData
-                                      updateQuestionData(qIndex, {
-                                        correctPairs: { ...data.correctPairs, [leftItem.id]: e.target.value }
-                                      })
-                                    }}
-                                    className="text-xs border rounded px-1 py-0.5"
-                                  >
-                                    <option value="">Выберите</option>
-                                    {(q.data as MatchingData).rightItems.map((rightItem, rIdx) => (
-                                      <option key={rightItem.id} value={rightItem.id}>
-                                        {rightItem.text || `П${rIdx + 1}`}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              ))}
+                            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded overflow-hidden">
+                              <p className="font-medium mb-2">Связи (левый → правый):</p>
+                              <div className="space-y-2">
+                                {(q.data as MatchingData).leftItems.map((leftItem, idx) => (
+                                  <div key={leftItem.id} className="grid grid-cols-[auto_1fr_auto_1fr] gap-1 items-start">
+                                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                                      {idx + 1}
+                                    </span>
+                                    <span className="break-words min-w-0 text-gray-700">{leftItem.text || `Л${idx + 1}`}</span>
+                                    <span className="text-gray-400 px-1">→</span>
+                                    <select
+                                      value={(q.data as MatchingData).correctPairs[leftItem.id] || ""}
+                                      onChange={(e) => {
+                                        const data = q.data as MatchingData
+                                        updateQuestionData(qIndex, {
+                                          correctPairs: { ...data.correctPairs, [leftItem.id]: e.target.value }
+                                        })
+                                      }}
+                                      className="text-xs border rounded px-1 py-0.5 min-w-0 w-full bg-white"
+                                    >
+                                      <option value="">Выберите</option>
+                                      {(q.data as MatchingData).rightItems.map((rightItem, rIdx) => (
+                                        <option key={rightItem.id} value={rightItem.id}>
+                                          {rightItem.text || `П${rIdx + 1}`}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         )}

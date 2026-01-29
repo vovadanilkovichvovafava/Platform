@@ -380,7 +380,7 @@ async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
         icon: trailData.icon,
         color: trailData.color,
         duration: "4 недели",
-        isPublished: true,
+        isPublished: false, // New trails are HIDDEN by default - admin must explicitly publish
         isRestricted: true, // New trails are restricted by default - students need explicit access
       },
     })

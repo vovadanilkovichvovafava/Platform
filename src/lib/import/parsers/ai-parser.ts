@@ -1223,15 +1223,17 @@ export async function parseWithAIChunked(
     if (!mod || typeof mod !== "object") continue
 
     const moduleType = validateModuleType(mod.type)
-    const normalizedLevel = normalizeLevel(mod.level, moduleType)
+    const moduleTitle = mod.title || "Без названия"
+    const moduleContent = mod.content || ""
+    const normalizedLevel = normalizeLevel(mod.level, moduleType, moduleTitle, moduleContent)
 
     trail.modules.push({
-      title: mod.title || "Без названия",
+      title: moduleTitle,
       slug: mod.slug || generateSlugFromTitle(mod.title || "module"),
       type: moduleType,
       points: typeof mod.points === "number" ? mod.points : getDefaultPoints(moduleType),
       description: mod.description || "",
-      content: mod.content || "",
+      content: moduleContent,
       questions: validateQuestions(mod.questions || [], warnings),
       level: normalizedLevel,
       duration: mod.duration,
@@ -1327,15 +1329,17 @@ function validateAndFixTrails(trails: any[], warnings: string[]): ParsedTrail[] 
       if (!mod || typeof mod !== "object") continue
 
       const moduleType = validateModuleType(mod.type)
-      const normalizedLevel = normalizeLevel(mod.level, moduleType)
+      const moduleTitle = mod.title || mod.name || "Без названия"
+      const moduleContent = mod.content || ""
+      const normalizedLevel = normalizeLevel(mod.level, moduleType, moduleTitle, moduleContent)
 
       const validModule: ParsedModule = {
-        title: mod.title || mod.name || "Без названия",
+        title: moduleTitle,
         slug: mod.slug || generateSlugFromTitle(mod.title || "module"),
         type: moduleType,
         points: typeof mod.points === "number" ? mod.points : getDefaultPoints(moduleType),
         description: mod.description || "",
-        content: mod.content || "",
+        content: moduleContent,
         questions: validateQuestions(mod.questions || [], warnings),
         level: normalizedLevel,
         duration: mod.duration,
@@ -1387,8 +1391,8 @@ const PROJECT_LEVEL_ORDER = ["Junior", "Middle", "Senior"] as const
 const VALID_LEVELS = ["Junior", "Middle", "Senior"] as const
 type ValidLevel = typeof VALID_LEVELS[number]
 
-// Нормализация уровня модуля
-function normalizeLevel(level: any, moduleType: string): ValidLevel {
+// Нормализация уровня модуля с детекцией из title/content
+function normalizeLevel(level: any, moduleType: string, title?: string, content?: string): ValidLevel {
   const levelStr = String(level || "").trim()
 
   // Маппинг для совместимости со старыми значениями
@@ -1402,13 +1406,75 @@ function normalizeLevel(level: any, moduleType: string): ValidLevel {
     "expert": "Senior",        // Expert -> Senior
   }
 
+  // Сначала проверяем явно указанный уровень
   const normalized = levelMap[levelStr.toLowerCase()]
   if (normalized) {
     return normalized
   }
 
-  // Дефолт: Middle (средний уровень)
-  return "Middle"
+  // Если уровень не указан явно - детектим из title или content
+  const textToCheck = `${title || ""} ${content || ""}`.toLowerCase()
+
+  // Паттерны для определения уровня из текста
+  const levelPatterns: { level: ValidLevel; patterns: RegExp[] }[] = [
+    {
+      level: "Junior",
+      patterns: [
+        /junior/i,
+        /начинающ/i,
+        /базов[ыйаяое]/i,
+        /для\s+начинающих/i,
+        /beginner/i,
+        /основ[ыа]/i,
+        /введение/i,
+        /новичк/i
+      ]
+    },
+    {
+      level: "Senior",
+      patterns: [
+        /senior/i,
+        /продвинут/i,
+        /экспертн/i,
+        /advanced/i,
+        /expert/i,
+        /профессионал/i,
+        /глубок/i,
+        /сложн[ыйаяое]/i
+      ]
+    },
+    {
+      level: "Middle",
+      patterns: [
+        /middle/i,
+        /средн[ийяяое]/i,
+        /intermediate/i,
+        /стандартн/i
+      ]
+    }
+  ]
+
+  // Сначала проверяем только title (приоритет)
+  const titleLower = (title || "").toLowerCase()
+  for (const { level: detectedLevel, patterns } of levelPatterns) {
+    for (const pattern of patterns) {
+      if (pattern.test(titleLower)) {
+        return detectedLevel
+      }
+    }
+  }
+
+  // Затем проверяем content
+  for (const { level: detectedLevel, patterns } of levelPatterns) {
+    for (const pattern of patterns) {
+      if (pattern.test(textToCheck)) {
+        return detectedLevel
+      }
+    }
+  }
+
+  // Дефолт: Junior (базовый уровень) вместо Middle
+  return "Junior"
 }
 
 // Сортировка PROJECT модулей по порядку Junior → Middle → Senior
@@ -1608,7 +1674,7 @@ function validateQuestionType(type: any): QuestionType {
 
 // Валидация вопросов с поддержкой всех типов
 function validateQuestions(questions: any[], warnings: string[]): ParsedQuestion[] {
-  const result: ParsedQuestion[] = []
+  let result: ParsedQuestion[] = []
 
   for (const q of questions) {
     if (!q || typeof q !== "object") continue
@@ -1669,15 +1735,162 @@ function validateQuestions(questions: any[], warnings: string[]): ParsedQuestion
     result.push(validQuestion)
   }
 
-  // Проверка разнообразия типов вопросов
-  if (result.length >= 3) {
+  // Ограничение количества вопросов: минимум 2, максимум 5
+  if (result.length > 5) {
+    warnings.push(`Количество вопросов ограничено с ${result.length} до 5`)
+    result = result.slice(0, 5)
+  }
+
+  // Проверка разнообразия типов вопросов и диверсификация
+  if (result.length >= 2) {
     const typeCount = new Set(result.map(q => q.type)).size
-    if (typeCount === 1) {
-      warnings.push(`Все ${result.length} вопросов имеют один тип (${result[0].type}). Рекомендуется разнообразить типы вопросов.`)
+    if (typeCount === 1 && result[0].type === "SINGLE_CHOICE") {
+      // Все вопросы SINGLE_CHOICE - диверсифицируем
+      result = diversifyQuestionTypes(result, warnings)
     }
   }
 
   return result
+}
+
+// Диверсификация типов вопросов: конвертирует часть SINGLE_CHOICE в другие типы
+function diversifyQuestionTypes(questions: ParsedQuestion[], warnings: string[]): ParsedQuestion[] {
+  if (questions.length < 2) return questions
+
+  const diversified = [...questions]
+  const typesToUse: QuestionType[] = ["TRUE_FALSE", "MATCHING", "ORDERING", "FILL_BLANK"]
+  let typeIndex = 0
+
+  // Определяем сколько вопросов нужно конвертировать (минимум 1, максимум половина)
+  const toConvert = Math.max(1, Math.floor(questions.length / 2))
+
+  for (let i = 0; i < toConvert && i < diversified.length; i++) {
+    const q = diversified[i]
+    if (q.type !== "SINGLE_CHOICE" || !q.options || q.options.length < 2) continue
+
+    const newType = typesToUse[typeIndex % typesToUse.length]
+    typeIndex++
+
+    const converted = convertToQuestionType(q, newType)
+    if (converted) {
+      diversified[i] = converted
+    }
+  }
+
+  // Проверяем, что диверсификация успешна
+  const newTypeCount = new Set(diversified.map(q => q.type)).size
+  if (newTypeCount > 1) {
+    warnings.push(`Типы вопросов автоматически диверсифицированы (${newTypeCount} разных типов)`)
+  }
+
+  return diversified
+}
+
+// Конвертация SINGLE_CHOICE вопроса в другой тип
+function convertToQuestionType(q: ParsedQuestion, targetType: QuestionType): ParsedQuestion | null {
+  const questionText = q.question
+  const options = q.options || []
+
+  if (options.length < 2) return null
+
+  switch (targetType) {
+    case "TRUE_FALSE": {
+      // Создаём TRUE_FALSE на основе вопроса и вариантов ответа
+      const statements = options.slice(0, 3).map((opt, idx) => ({
+        id: `t${idx + 1}`,
+        text: opt,
+        isTrue: idx === q.correctAnswer,
+        explanation: idx === q.correctAnswer ? "Это правильный ответ" : "Это неправильный ответ"
+      }))
+
+      return {
+        question: `Определите верность утверждений: ${questionText}`,
+        type: "TRUE_FALSE",
+        options: [],
+        correctAnswer: 0,
+        data: { statements }
+      }
+    }
+
+    case "MATCHING": {
+      // Создаём MATCHING из вариантов ответа
+      if (options.length < 3) return null
+
+      const leftItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
+        id: `l${idx + 1}`,
+        text: `Вариант ${idx + 1}`
+      }))
+
+      const rightItems = options.slice(0, Math.min(3, options.length)).map((opt, idx) => ({
+        id: `r${idx + 1}`,
+        text: opt
+      }))
+
+      const correctPairs: Record<string, string> = {}
+      leftItems.forEach((item, idx) => {
+        correctPairs[item.id] = rightItems[idx].id
+      })
+
+      return {
+        question: `Сопоставьте элементы: ${questionText}`,
+        type: "MATCHING",
+        options: [],
+        correctAnswer: 0,
+        data: {
+          leftLabel: "Элемент",
+          rightLabel: "Значение",
+          leftItems,
+          rightItems,
+          correctPairs
+        }
+      }
+    }
+
+    case "ORDERING": {
+      // Создаём ORDERING из вариантов ответа
+      if (options.length < 3) return null
+
+      const items = options.slice(0, Math.min(4, options.length)).map((opt, idx) => ({
+        id: `s${idx + 1}`,
+        text: opt
+      }))
+
+      // Правильный порядок - как были заданы варианты
+      const correctOrder = items.map(item => item.id)
+
+      return {
+        question: `Расположите в правильном порядке: ${questionText}`,
+        type: "ORDERING",
+        options: [],
+        correctAnswer: 0,
+        data: { items, correctOrder }
+      }
+    }
+
+    case "FILL_BLANK": {
+      // Создаём FILL_BLANK с одним пропуском
+      const correctOption = options[q.correctAnswer] || options[0]
+      const wrongOptions = options.filter((_, idx) => idx !== q.correctAnswer).slice(0, 3)
+
+      return {
+        question: questionText,
+        type: "FILL_BLANK",
+        options: [],
+        correctAnswer: 0,
+        data: {
+          textWithBlanks: `Ответ на вопрос: {{1}}`,
+          blanks: [{
+            id: "1",
+            correctAnswer: correctOption,
+            options: [correctOption, ...wrongOptions]
+          }]
+        }
+      }
+    }
+
+    default:
+      return null
+  }
 }
 
 // Валидация данных MATCHING
