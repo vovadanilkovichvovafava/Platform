@@ -63,6 +63,24 @@ export async function POST(request: NextRequest) {
     // Для форматов требующих AI, автоматически включаем AI
     const needsAI = requiresAIParser(filename)
 
+    // Лимит размера файла: 10MB
+    const MAX_FILE_SIZE = 10 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({
+        error: `Файл слишком большой. Максимальный размер: 10MB, ваш файл: ${Math.round(file.size / 1024 / 1024)}MB`,
+      }, { status: 400 })
+    }
+
+    // Проверка PDF без AI
+    const aiConfig = getAIConfig()
+    const isPdf = filename.endsWith(".pdf")
+    if (isPdf && (!aiConfig.enabled || !aiConfig.apiKey)) {
+      return NextResponse.json({
+        error: "PDF формат требует AI-парсер для извлечения текста. AI-парсер не настроен. Сконвертируйте файл в .txt или .md, либо включите AI-парсер.",
+        details: ["PDF — бинарный формат, для извлечения текста требуется AI"],
+      }, { status: 400 })
+    }
+
     const text = await file.text()
 
     if (!text.trim()) {
@@ -70,7 +88,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Парсинг файла (БЕЗ сохранения в БД)
-    const aiConfig = getAIConfig()
     let parseResult
 
     // Порог для использования chunked parsing (2KB)
