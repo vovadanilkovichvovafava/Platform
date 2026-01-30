@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { isAnyAdmin, isSuperAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
 
 const moduleUpdateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -20,13 +21,13 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
-// GET - Get single module with questions
+// GET - Get single module with questions (with access check)
 export async function GET(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session?.user?.id || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -49,6 +50,14 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     if (!courseModule) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
+    }
+
+    // Check admin access to the trail (deny-by-default)
+    if (isAnyAdmin(session.user.role) && !isSuperAdmin(session.user.role)) {
+      const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, courseModule.trail.id)
+      if (!hasAccess) {
+        return NextResponse.json({ error: "Доступ к этому модулю запрещён" }, { status: 403 })
+      }
     }
 
     // Find adjacent modules for navigation
@@ -78,13 +87,13 @@ async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Pro
   return !!assignment
 }
 
-// PATCH - Update module (Admin: any, Teacher: only in assigned trails)
+// PATCH - Update module (with access check)
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session?.user?.id || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -98,13 +107,21 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    // Teachers can only update modules in trails they are assigned to
+    // Check access based on role
     if (session.user.role === "TEACHER") {
+      // Teachers can only update modules in trails they are assigned to
       const isAssigned = await isTeacherAssignedToTrail(session.user.id, existingModule.trailId)
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
       }
+    } else if (session.user.role === "ADMIN") {
+      // Regular ADMIN - check AdminTrailAccess
+      const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, existingModule.trailId)
+      if (!hasAccess) {
+        return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
+      }
     }
+    // SUPER_ADMIN has access to all
 
     const body = await request.json()
     const data = moduleUpdateSchema.parse(body)
@@ -124,13 +141,13 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   }
 }
 
-// DELETE - Delete module (Admin: any, Teacher: only in assigned trails)
+// DELETE - Delete module (with access check)
 export async function DELETE(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session?.user?.id || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -144,13 +161,21 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    // Teachers can only delete modules in trails they are assigned to
+    // Check access based on role
     if (session.user.role === "TEACHER") {
+      // Teachers can only delete modules in trails they are assigned to
       const isAssigned = await isTeacherAssignedToTrail(session.user.id, existingModule.trailId)
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
       }
+    } else if (session.user.role === "ADMIN") {
+      // Regular ADMIN - check AdminTrailAccess
+      const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, existingModule.trailId)
+      if (!hasAccess) {
+        return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
+      }
     }
+    // SUPER_ADMIN has access to all
 
     await prisma.module.delete({
       where: { id },

@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { isAnyAdmin, isSuperAdmin } from "@/lib/admin-access"
 
 const updateUserSchema = z.object({
-  role: z.enum(["STUDENT", "TEACHER", "ADMIN"]).optional(),
+  role: z.enum(["STUDENT", "TEACHER", "ADMIN", "SUPER_ADMIN"]).optional(),
 })
 
 // GET - List all users (admin only)
@@ -13,7 +14,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -48,7 +49,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -98,7 +99,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -116,6 +117,21 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json()
     const data = updateUserSchema.parse(body)
+
+    // Only SUPER_ADMIN can assign SUPER_ADMIN role
+    if (data.role === "SUPER_ADMIN" && !isSuperAdmin(session.user.role)) {
+      return NextResponse.json({ error: "Только суперадмин может назначать роль суперадмина" }, { status: 403 })
+    }
+
+    // Get target user to check if trying to demote SUPER_ADMIN
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    })
+
+    if (targetUser?.role === "SUPER_ADMIN" && !isSuperAdmin(session.user.role)) {
+      return NextResponse.json({ error: "Только суперадмин может изменять роль суперадмина" }, { status: 403 })
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },
