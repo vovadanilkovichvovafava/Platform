@@ -18,7 +18,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 
-interface Admin {
+interface CoAdmin {
   id: string
   name: string
   email: string
@@ -35,7 +35,7 @@ interface Trail {
 export default function AdminAccessPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [admins, setAdmins] = useState<Admin[]>([])
+  const [coAdmins, setCoAdmins] = useState<CoAdmin[]>([])
   const [trails, setTrails] = useState<Trail[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -43,7 +43,7 @@ export default function AdminAccessPage() {
   const [changes, setChanges] = useState<Record<string, string[]>>({})
   const { showToast } = useToast()
 
-  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
+  const isAdmin = session?.user?.role === "ADMIN"
 
   const fetchData = async () => {
     try {
@@ -52,19 +52,19 @@ export default function AdminAccessPage() {
       const res = await fetch("/api/admin/admin-access")
 
       if (res.status === 403) {
-        setError("Доступ запрещён. Требуется роль SUPER_ADMIN")
+        setError("Доступ запрещён. Требуется роль ADMIN")
         return
       }
 
       if (!res.ok) throw new Error("Failed to fetch")
 
       const data = await res.json()
-      setAdmins(data.admins)
+      setCoAdmins(data.coAdmins)
       setTrails(data.trails)
       // Initialize changes from server data
       const initialChanges: Record<string, string[]> = {}
-      data.admins.forEach((admin: Admin) => {
-        initialChanges[admin.id] = [...admin.trailIds]
+      data.coAdmins.forEach((coAdmin: CoAdmin) => {
+        initialChanges[coAdmin.id] = [...coAdmin.trailIds]
       })
       setChanges(initialChanges)
     } catch {
@@ -76,12 +76,12 @@ export default function AdminAccessPage() {
 
   useEffect(() => {
     if (status === "loading") return
-    if (!isSuperAdmin) {
+    if (!isAdmin) {
       router.push("/admin/users")
       return
     }
     fetchData()
-  }, [status, isSuperAdmin, router])
+  }, [status, isAdmin, router])
 
   const toggleTrail = (adminId: string, trailId: string) => {
     setChanges((prev) => {
@@ -108,23 +108,23 @@ export default function AdminAccessPage() {
     }))
   }
 
-  const hasChanges = (adminId: string) => {
-    const admin = admins.find((a) => a.id === adminId)
-    if (!admin) return false
-    const current = changes[adminId] || []
-    if (admin.trailIds.length !== current.length) return true
-    return !admin.trailIds.every((id) => current.includes(id))
+  const hasChanges = (coAdminId: string) => {
+    const coAdmin = coAdmins.find((a) => a.id === coAdminId)
+    if (!coAdmin) return false
+    const current = changes[coAdminId] || []
+    if (coAdmin.trailIds.length !== current.length) return true
+    return !coAdmin.trailIds.every((id) => current.includes(id))
   }
 
-  const saveAccess = async (adminId: string) => {
+  const saveAccess = async (coAdminId: string) => {
     try {
-      setSavingId(adminId)
+      setSavingId(coAdminId)
       const res = await fetch("/api/admin/admin-access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          adminId,
-          trailIds: changes[adminId] || [],
+          coAdminId,
+          trailIds: changes[coAdminId] || [],
         }),
       })
 
@@ -135,9 +135,9 @@ export default function AdminAccessPage() {
       }
 
       // Update local state
-      setAdmins((prev) =>
+      setCoAdmins((prev) =>
         prev.map((a) =>
-          a.id === adminId ? { ...a, trailIds: changes[adminId] || [] } : a
+          a.id === coAdminId ? { ...a, trailIds: changes[coAdminId] || [] } : a
         )
       )
       showToast("Доступ обновлён", "success")
@@ -148,12 +148,12 @@ export default function AdminAccessPage() {
     }
   }
 
-  const resetChanges = (adminId: string) => {
-    const admin = admins.find((a) => a.id === adminId)
-    if (admin) {
+  const resetChanges = (coAdminId: string) => {
+    const coAdmin = coAdmins.find((a) => a.id === coAdminId)
+    if (coAdmin) {
       setChanges((prev) => ({
         ...prev,
-        [adminId]: [...admin.trailIds],
+        [coAdminId]: [...coAdmin.trailIds],
       }))
     }
   }
@@ -166,7 +166,7 @@ export default function AdminAccessPage() {
     )
   }
 
-  if (!isSuperAdmin) {
+  if (!isAdmin) {
     return null
   }
 
@@ -188,17 +188,17 @@ export default function AdminAccessPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  Управление доступом админов
+                  Управление доступом со-админов
                 </h1>
                 <p className="text-gray-600 text-sm">
-                  Назначьте каким trails имеет доступ каждый админ
+                  Назначьте каким trails имеет доступ каждый со-админ
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Badge className="bg-red-100 text-red-700 border-0">
                 <ShieldCheck className="h-3 w-3 mr-1" />
-                Только для SUPER_ADMIN
+                Только для ADMIN
               </Badge>
               <Button onClick={fetchData} variant="outline" size="sm">
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -221,19 +221,19 @@ export default function AdminAccessPage() {
         <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <h3 className="font-medium text-blue-900 mb-2">Как это работает:</h3>
           <ul className="text-sm text-blue-700 space-y-1">
-            <li>• <strong>SUPER_ADMIN</strong> видит все trails без ограничений</li>
-            <li>• <strong>ADMIN</strong> видит только назначенные trails (deny-by-default)</li>
-            <li>• Если у админа нет назначенных trails — он не видит ничего</li>
-            <li>• При создании trail админом — он автоматически получает к нему доступ</li>
+            <li>• <strong>ADMIN</strong> видит все trails без ограничений</li>
+            <li>• <strong>CO_ADMIN</strong> видит только назначенные trails (deny-by-default)</li>
+            <li>• Если у со-админа нет назначенных trails — он не видит ничего</li>
+            <li>• При создании trail со-админом — он автоматически получает к нему доступ</li>
           </ul>
         </div>
 
-        {admins.length === 0 ? (
+        {coAdmins.length === 0 ? (
           <div className="bg-white rounded-xl border p-12 text-center">
             <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 mb-2">Нет администраторов с ролью ADMIN</p>
+            <p className="text-gray-500 mb-2">Нет пользователей с ролью CO_ADMIN</p>
             <p className="text-sm text-gray-400">
-              Назначьте пользователям роль ADMIN в разделе{" "}
+              Назначьте пользователям роль CO_ADMIN в разделе{" "}
               <a href="/admin/users" className="text-blue-600 hover:underline">
                 Управление пользователями
               </a>
@@ -241,19 +241,19 @@ export default function AdminAccessPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {admins.map((admin) => {
-              const adminTrailIds = changes[admin.id] || []
-              const changed = hasChanges(admin.id)
-              const isSaving = savingId === admin.id
+            {coAdmins.map((coAdmin) => {
+              const coAdminTrailIds = changes[coAdmin.id] || []
+              const changed = hasChanges(coAdmin.id)
+              const isSaving = savingId === coAdmin.id
 
               return (
                 <div
-                  key={admin.id}
+                  key={coAdmin.id}
                   className={`bg-white rounded-xl border overflow-hidden ${
                     changed ? "ring-2 ring-blue-500" : ""
                   }`}
                 >
-                  {/* Admin header */}
+                  {/* Co-admin header */}
                   <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-purple-100 rounded-lg">
@@ -261,9 +261,9 @@ export default function AdminAccessPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{admin.name}</span>
+                          <span className="font-medium">{coAdmin.name}</span>
                           <Badge className="bg-purple-100 text-purple-700 border-0 text-xs">
-                            ADMIN
+                            CO_ADMIN
                           </Badge>
                           {changed && (
                             <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">
@@ -271,18 +271,18 @@ export default function AdminAccessPage() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500">{admin.email}</p>
+                        <p className="text-sm text-gray-500">{coAdmin.email}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-500">
-                        {adminTrailIds.length} из {trails.length} trails
+                        {coAdminTrailIds.length} из {trails.length} trails
                       </span>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => selectAll(admin.id)}
+                        onClick={() => selectAll(coAdmin.id)}
                         disabled={isSaving}
                       >
                         Выбрать все
@@ -290,7 +290,7 @@ export default function AdminAccessPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => deselectAll(admin.id)}
+                        onClick={() => deselectAll(coAdmin.id)}
                         disabled={isSaving}
                       >
                         Снять все
@@ -300,7 +300,7 @@ export default function AdminAccessPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => resetChanges(admin.id)}
+                            onClick={() => resetChanges(coAdmin.id)}
                             disabled={isSaving}
                           >
                             <X className="h-4 w-4 mr-1" />
@@ -308,7 +308,7 @@ export default function AdminAccessPage() {
                           </Button>
                           <Button
                             size="sm"
-                            onClick={() => saveAccess(admin.id)}
+                            onClick={() => saveAccess(coAdmin.id)}
                             disabled={isSaving}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
@@ -333,7 +333,7 @@ export default function AdminAccessPage() {
                     ) : (
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {trails.map((trail) => {
-                          const isSelected = adminTrailIds.includes(trail.id)
+                          const isSelected = coAdminTrailIds.includes(trail.id)
                           return (
                             <label
                               key={trail.id}
@@ -346,7 +346,7 @@ export default function AdminAccessPage() {
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={() =>
-                                  toggleTrail(admin.id, trail.id)
+                                  toggleTrail(coAdmin.id, trail.id)
                                 }
                                 disabled={isSaving}
                               />

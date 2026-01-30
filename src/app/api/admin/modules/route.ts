@@ -66,14 +66,14 @@ export async function POST(request: NextRequest) {
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
       }
-    } else if (session.user.role === "ADMIN") {
-      // Regular ADMIN - check AdminTrailAccess
+    } else if (session.user.role === "CO_ADMIN") {
+      // CO_ADMIN - check AdminTrailAccess
       const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, data.trailId)
       if (!hasAccess) {
         return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
       }
     }
-    // SUPER_ADMIN has access to all
+    // ADMIN has access to all
 
     // Generate slug from title (transliterate Cyrillic to Latin)
     const slug = generateSlug(data.title)

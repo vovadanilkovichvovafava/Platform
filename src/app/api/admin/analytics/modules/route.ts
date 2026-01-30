@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isAnyAdmin, isSuperAdmin, getAdminTrailFilter } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, getAdminTrailFilter } from "@/lib/admin-access"
 
 export async function GET() {
   try {
@@ -14,7 +14,7 @@ export async function GET() {
 
     // Build where clause based on admin access
     let whereClause = {}
-    if (!isSuperAdmin(session.user.role)) {
+    if (!isAdmin(session.user.role)) {
       const trailFilter = await getAdminTrailFilter(session.user.id, session.user.role)
       if (trailFilter) {
         whereClause = { trail: trailFilter }

@@ -12,7 +12,7 @@ model User {
   email         String    @unique
   password      String
   name          String
-  role          String    @default("STUDENT") // STUDENT, TEACHER, ADMIN, SUPER_ADMIN
+  role          String    @default("STUDENT") // STUDENT, TEACHER, CO_ADMIN, ADMIN
   totalXP       Int       @default(0)
   currentStreak Int       @default(0)
   avatarUrl     String?
@@ -155,7 +155,7 @@ model StudentTrailAccess {
   @@index([trailId])
 }
 
-// Grant specific ADMINs access to specific trails (SUPER_ADMIN has access to all)
+// Grant specific CO_ADMINs access to specific trails (ADMIN has access to all)
 model AdminTrailAccess {
   id        String   @id @default(cuid())
   adminId   String
