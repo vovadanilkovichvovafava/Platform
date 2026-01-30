@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, isAdmin as checkIsAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,20 +17,26 @@ import { SubmissionsFilter } from "@/components/submissions-filter"
 export default async function TeacherDashboard() {
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, and ADMIN roles
+  if (!session || !isPrivileged(session.user.role)) {
     redirect("/dashboard")
   }
 
-  const isAdmin = session.user.role === "ADMIN"
+  const isAdmin = checkIsAdmin(session.user.role)
+  const isCoAdmin = session.user.role === "CO_ADMIN"
 
-  // Get teacher's assigned trails (ADMIN sees all)
-  // For TEACHER role:
-  // 1. Get trails with teacherVisibility = "ALL_TEACHERS"
-  // 2. Get trails where teacher is specifically assigned (in TrailTeacher)
+  // Get teacher's assigned trails
+  // - ADMIN sees all
+  // - CO_ADMIN sees trails from AdminTrailAccess
+  // - TEACHER sees trails with teacherVisibility = "ALL_TEACHERS" + specifically assigned
   let assignedTrailIds: string[] = []
 
-  if (!isAdmin) {
+  if (isCoAdmin) {
+    // CO_ADMIN - get trails from AdminTrailAccess
+    const allowedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+    assignedTrailIds = allowedTrailIds || []
+  } else if (!isAdmin) {
+    // TEACHER role
     // Get all trails visible to all teachers
     const allTeacherTrails = await prisma.trail.findMany({
       where: { teacherVisibility: "ALL_TEACHERS" },
@@ -51,11 +58,13 @@ export default async function TeacherDashboard() {
     assignedTrailIds = Array.from(allTrailIds)
   }
 
-  // ADMIN sees all submissions, TEACHER only sees assigned trails
+  // ADMIN sees all submissions, CO_ADMIN and TEACHER only see assigned trails
+  const shouldFilter = !isAdmin && assignedTrailIds.length > 0
   const pendingSubmissions = await prisma.submission.findMany({
     where: {
       status: "PENDING",
-      ...(!isAdmin ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(shouldFilter ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(!isAdmin && assignedTrailIds.length === 0 ? { id: "__NEVER_MATCH__" } : {}), // No access = no results
     },
     orderBy: { createdAt: "asc" },
     include: {
@@ -74,7 +83,8 @@ export default async function TeacherDashboard() {
   const reviewedSubmissions = await prisma.submission.findMany({
     where: {
       status: { in: ["APPROVED", "REVISION", "FAILED"] },
-      ...(!isAdmin ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(shouldFilter ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(!isAdmin && assignedTrailIds.length === 0 ? { id: "__NEVER_MATCH__" } : {}),
     },
     orderBy: { updatedAt: "desc" },
     take: 50, // Limit history to last 50
@@ -101,7 +111,9 @@ export default async function TeacherDashboard() {
   // Stats - only for assigned trails
   const stats = await prisma.submission.groupBy({
     by: ["status"],
-    where: !isAdmin ? { module: { trailId: { in: assignedTrailIds } } } : {},
+    where: shouldFilter
+      ? { module: { trailId: { in: assignedTrailIds } } }
+      : (!isAdmin && assignedTrailIds.length === 0 ? { id: "__NEVER_MATCH__" } : {}),
     _count: true,
   })
 

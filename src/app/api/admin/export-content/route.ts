@@ -2,21 +2,30 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isAnyAdmin, getAdminTrailFilter } from "@/lib/admin-access"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
+
+    // CO_ADMIN can only export their assigned trails
+    const trailFilter = await getAdminTrailFilter(session.user.id, session.user.role)
 
     const { searchParams } = new URL(request.url)
     const trailId = searchParams.get("trailId")
 
+    // Build where clause with access filter
+    const whereClause = trailId
+      ? { id: trailId, ...trailFilter }
+      : trailFilter
+
     // Get trails with modules and questions
     const trails = await prisma.trail.findMany({
-      where: trailId ? { id: trailId } : undefined,
+      where: whereClause,
       orderBy: { order: "asc" },
       include: {
         modules: {

@@ -42,7 +42,8 @@ export default function AdminInvitesPage() {
   useEffect(() => {
     if (status === "loading") return
 
-    if (!session || session.user.role !== "ADMIN") {
+    // Allow both ADMIN and CO_ADMIN
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "CO_ADMIN")) {
       router.push("/")
       return
     }
@@ -140,7 +141,8 @@ export default function AdminInvitesPage() {
     )
   }
 
-  if (!session || session.user.role !== "ADMIN") {
+  // Allow both ADMIN and CO_ADMIN
+  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "CO_ADMIN")) {
     return null
   }
 

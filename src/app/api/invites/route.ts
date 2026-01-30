@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { isAnyAdmin } from "@/lib/admin-access"
 
 const createInviteSchema = z.object({
   code: z.string().min(3, "Код должен быть минимум 3 символа").toUpperCase(),
@@ -11,12 +12,12 @@ const createInviteSchema = z.object({
   expiresAt: z.string().optional(),
 })
 
-// GET - List all invites (admin only)
+// GET - List all invites (ADMIN and CO_ADMIN)
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -36,12 +37,12 @@ export async function GET() {
   }
 }
 
-// POST - Create new invite (admin only)
+// POST - Create new invite (ADMIN and CO_ADMIN)
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -77,12 +78,12 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE - Delete invite (admin only)
+// DELETE - Delete invite (ADMIN and CO_ADMIN)
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 

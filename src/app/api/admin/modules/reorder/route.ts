@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { isAnyAdmin, adminHasTrailAccess } from "@/lib/admin-access"
 
 const reorderSchema = z.object({
   moduleIds: z.array(z.string()).min(1),
@@ -13,12 +14,20 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     const body = await request.json()
     const { moduleIds, trailId } = reorderSchema.parse(body)
+
+    // CO_ADMIN: check trail access
+    if (session.user.role === "CO_ADMIN") {
+      const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, trailId)
+      if (!hasAccess) {
+        return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
+      }
+    }
 
     // Get trail name for audit log
     const trail = await prisma.trail.findUnique({
