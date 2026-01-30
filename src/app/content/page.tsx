@@ -119,8 +119,8 @@ export default function UnifiedContentPage() {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
-  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
-  const isAdmin = session?.user?.role === "ADMIN" || isSuperAdmin
+  const isFullAdmin = session?.user?.role === "ADMIN"
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "CO_ADMIN"
   const isTeacher = session?.user?.role === "TEACHER"
   const isPrivileged = isAdmin || isTeacher
 
@@ -907,7 +907,7 @@ export default function UnifiedContentPage() {
                       Доступ
                     </Link>
                   </Button>
-                  {isSuperAdmin && (
+                  {isFullAdmin && (
                     <Button asChild variant="outline" size="sm">
                       <Link href="/admin/admin-access">
                         <Lock className="h-4 w-4 mr-2" />

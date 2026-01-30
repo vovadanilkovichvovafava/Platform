@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { isAnyAdmin, isSuperAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
 
 const trailUpdateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
 
     // Check admin access to this specific trail (deny-by-default)
-    if (isAnyAdmin(session.user.role) && !isSuperAdmin(session.user.role)) {
+    if (isAnyAdmin(session.user.role) && !isAdmin(session.user.role)) {
       const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, id)
       if (!hasAccess) {
         return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
@@ -102,14 +102,14 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
       }
-    } else if (session.user.role === "ADMIN") {
-      // Regular ADMIN - check AdminTrailAccess
+    } else if (session.user.role === "CO_ADMIN") {
+      // CO_ADMIN - check AdminTrailAccess
       const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, id)
       if (!hasAccess) {
         return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
       }
     }
-    // SUPER_ADMIN has access to all
+    // ADMIN has access to all
 
     const body = await request.json()
     const data = trailUpdateSchema.parse(body)
@@ -117,16 +117,16 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     // Extract teacher assignment data
     const { assignedTeacherId, teacherVisibility, ...trailData } = data
 
-    // RBAC: Only SUPER_ADMIN can change teacherVisibility
-    if (!isSuperAdmin(session.user.role) && teacherVisibility !== undefined) {
+    // RBAC: Only ADMIN can change teacherVisibility
+    if (!isAdmin(session.user.role) && teacherVisibility !== undefined) {
       return NextResponse.json(
-        { error: "Только суперадмин может изменять видимость для учителей" },
+        { error: "Только админ может изменять видимость для учителей" },
         { status: 403 }
       )
     }
 
-    // Update trail (include teacherVisibility only for SUPER_ADMIN)
-    const updateData = isSuperAdmin(session.user.role)
+    // Update trail (include teacherVisibility only for ADMIN)
+    const updateData = isAdmin(session.user.role)
       ? { ...trailData, ...(teacherVisibility !== undefined && { teacherVisibility }) }
       : trailData
 
@@ -135,8 +135,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       data: updateData,
     })
 
-    // Handle teacher assignment for SPECIFIC visibility (SUPER_ADMIN only)
-    if (isSuperAdmin(session.user.role) && teacherVisibility === "SPECIFIC") {
+    // Handle teacher assignment for SPECIFIC visibility (ADMIN only)
+    if (isAdmin(session.user.role) && teacherVisibility === "SPECIFIC") {
       // Clear existing assignments for this trail
       await prisma.trailTeacher.deleteMany({
         where: { trailId: id },
@@ -158,7 +158,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
           })
         }
       }
-    } else if (isSuperAdmin(session.user.role) && teacherVisibility && teacherVisibility !== "SPECIFIC") {
+    } else if (isAdmin(session.user.role) && teacherVisibility && teacherVisibility !== "SPECIFIC") {
       // Clear assignments when switching away from SPECIFIC
       await prisma.trailTeacher.deleteMany({
         where: { trailId: id },
@@ -192,14 +192,14 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
       }
-    } else if (session.user.role === "ADMIN") {
-      // Regular ADMIN - check AdminTrailAccess
+    } else if (session.user.role === "CO_ADMIN") {
+      // CO_ADMIN - check AdminTrailAccess
       const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, id)
       if (!hasAccess) {
         return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
       }
     }
-    // SUPER_ADMIN has access to all
+    // ADMIN has access to all
 
     await prisma.trail.delete({
       where: { id },

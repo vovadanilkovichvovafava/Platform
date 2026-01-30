@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 
-type UserRole = "STUDENT" | "TEACHER" | "ADMIN" | "SUPER_ADMIN"
+type UserRole = "STUDENT" | "TEACHER" | "CO_ADMIN" | "ADMIN"
 
 interface User {
   id: string
@@ -47,13 +47,13 @@ const roleConfig: Record<UserRole, { label: string; color: string; icon: typeof 
     color: "bg-green-100 text-green-700",
     icon: BookOpen,
   },
-  ADMIN: {
-    label: "Админ",
+  CO_ADMIN: {
+    label: "Со-админ",
     color: "bg-purple-100 text-purple-700",
     icon: Shield,
   },
-  SUPER_ADMIN: {
-    label: "Суперадмин",
+  ADMIN: {
+    label: "Админ",
     color: "bg-red-100 text-red-700",
     icon: ShieldCheck,
   },
@@ -71,7 +71,7 @@ export default function AdminUsersPage() {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
-  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
+  const isAdmin = session?.user?.role === "ADMIN"
 
   const fetchUsers = async () => {
     try {
@@ -92,9 +92,9 @@ export default function AdminUsersPage() {
   }, [])
 
   const updateRole = async (userId: string, newRole: UserRole) => {
-    // Only SUPER_ADMIN can assign SUPER_ADMIN role
-    if (newRole === "SUPER_ADMIN" && !isSuperAdmin) {
-      showToast("Только суперадмин может назначать роль суперадмина", "error")
+    // Only ADMIN can assign ADMIN role
+    if (newRole === "ADMIN" && !isAdmin) {
+      showToast("Только админ может назначать роль админа", "error")
       return
     }
 
@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
 
   const students = users.filter(u => u.role === "STUDENT")
   const teachers = users.filter(u => u.role === "TEACHER")
-  const admins = users.filter(u => u.role === "ADMIN" || u.role === "SUPER_ADMIN")
+  const admins = users.filter(u => u.role === "CO_ADMIN" || u.role === "ADMIN")
 
   // Filter users by search and role
   const filteredUsers = users.filter(user => {
@@ -288,8 +288,8 @@ export default function AdminUsersPage() {
                   <option value="ALL">Все роли</option>
                   <option value="STUDENT">Студенты</option>
                   <option value="TEACHER">Учителя</option>
+                  <option value="CO_ADMIN">Со-админы</option>
                   <option value="ADMIN">Админы</option>
-                  <option value="SUPER_ADMIN">Суперадмины</option>
                 </select>
               </div>
             </div>
@@ -352,8 +352,8 @@ export default function AdminUsersPage() {
                         >
                           <option value="STUDENT">Студент</option>
                           <option value="TEACHER">Учитель</option>
-                          <option value="ADMIN">Админ</option>
-                          {isSuperAdmin && <option value="SUPER_ADMIN">Суперадмин</option>}
+                          <option value="CO_ADMIN">Со-админ</option>
+                          {isAdmin && <option value="ADMIN">Админ</option>}
                         </select>
 
                         {/* Delete button */}
@@ -380,8 +380,8 @@ export default function AdminUsersPage() {
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• <strong>Студент</strong> — может проходить тесты и сдавать проекты</li>
             <li>• <strong>Учитель</strong> — может проверять работы на /teacher</li>
-            <li>• <strong>Админ</strong> — доступ к админке только для назначенных trails</li>
-            <li>• <strong>Суперадмин</strong> — полный доступ ко всем trails и управление доступом админов</li>
+            <li>• <strong>Со-админ</strong> — доступ к админке только для назначенных trails</li>
+            <li>• <strong>Админ</strong> — полный доступ ко всем trails и управление доступом со-админов</li>
           </ul>
         </div>
       </div>

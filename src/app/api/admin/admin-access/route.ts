@@ -2,25 +2,25 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isSuperAdmin, setAdminTrailAccess, getAdminsWithTrailAccess, ROLE_ADMIN } from "@/lib/admin-access"
+import { isAdmin, setCoAdminTrailAccess, getCoAdminsWithTrailAccess, ROLE_CO_ADMIN } from "@/lib/admin-access"
 import { z } from "zod"
 
 const updateAccessSchema = z.object({
-  adminId: z.string().min(1),
+  coAdminId: z.string().min(1),
   trailIds: z.array(z.string()),
 })
 
-// GET - List all admins with their trail access (SUPER_ADMIN only)
+// GET - List all co-admins with their trail access (ADMIN only)
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isSuperAdmin(session.user.role)) {
-      return NextResponse.json({ error: "Доступ запрещён. Требуется роль SUPER_ADMIN" }, { status: 403 })
+    if (!session?.user?.id || !isAdmin(session.user.role)) {
+      return NextResponse.json({ error: "Доступ запрещён. Требуется роль ADMIN" }, { status: 403 })
     }
 
-    // Get all admins with their trail access
-    const admins = await getAdminsWithTrailAccess()
+    // Get all co-admins with their trail access
+    const coAdmins = await getCoAdminsWithTrailAccess()
 
     // Get all trails for selection
     const trails = await prisma.trail.findMany({
@@ -33,37 +33,37 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ admins, trails })
+    return NextResponse.json({ coAdmins, trails })
   } catch (error) {
-    console.error("Error fetching admin access:", error)
+    console.error("Error fetching co-admin access:", error)
     return NextResponse.json({ error: "Ошибка загрузки данных" }, { status: 500 })
   }
 }
 
-// POST - Update admin's trail access (SUPER_ADMIN only)
+// POST - Update co-admin's trail access (ADMIN only)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isSuperAdmin(session.user.role)) {
-      return NextResponse.json({ error: "Доступ запрещён. Требуется роль SUPER_ADMIN" }, { status: 403 })
+    if (!session?.user?.id || !isAdmin(session.user.role)) {
+      return NextResponse.json({ error: "Доступ запрещён. Требуется роль ADMIN" }, { status: 403 })
     }
 
     const body = await request.json()
     const data = updateAccessSchema.parse(body)
 
-    // Verify admin exists and has ADMIN role
-    const admin = await prisma.user.findUnique({
-      where: { id: data.adminId },
+    // Verify co-admin exists and has CO_ADMIN role
+    const coAdmin = await prisma.user.findUnique({
+      where: { id: data.coAdminId },
       select: { id: true, role: true },
     })
 
-    if (!admin) {
-      return NextResponse.json({ error: "Администратор не найден" }, { status: 404 })
+    if (!coAdmin) {
+      return NextResponse.json({ error: "Со-администратор не найден" }, { status: 404 })
     }
 
-    if (admin.role !== ROLE_ADMIN) {
-      return NextResponse.json({ error: "Пользователь не является администратором" }, { status: 400 })
+    if (coAdmin.role !== ROLE_CO_ADMIN) {
+      return NextResponse.json({ error: "Пользователь не является со-администратором" }, { status: 400 })
     }
 
     // Verify all trail IDs exist
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update access (atomic transaction in setAdminTrailAccess)
-    await setAdminTrailAccess(data.adminId, data.trailIds)
+    // Update access (atomic transaction in setCoAdminTrailAccess)
+    await setCoAdminTrailAccess(data.coAdminId, data.trailIds)
 
     // Create audit log
     await prisma.auditLog.create({
@@ -87,9 +87,9 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         userName: session.user.name || session.user.email || "Unknown",
         action: "UPDATE",
-        entityType: "ADMIN_ACCESS",
-        entityId: data.adminId,
-        entityName: `Admin access updated (${data.trailIds.length} trails)`,
+        entityType: "CO_ADMIN_ACCESS",
+        entityId: data.coAdminId,
+        entityName: `Co-admin access updated (${data.trailIds.length} trails)`,
         details: JSON.stringify({ trailIds: data.trailIds }),
       },
     })
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors[0].message }, { status: 400 })
     }
-    console.error("Error updating admin access:", error)
+    console.error("Error updating co-admin access:", error)
     return NextResponse.json({ error: "Ошибка при обновлении доступа" }, { status: 500 })
   }
 }
