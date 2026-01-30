@@ -12,7 +12,7 @@ model User {
   email         String    @unique
   password      String
   name          String
-  role          String    @default("STUDENT") // STUDENT, TEACHER, ADMIN
+  role          String    @default("STUDENT") // STUDENT, TEACHER, ADMIN, SUPER_ADMIN
   totalXP       Int       @default(0)
   currentStreak Int       @default(0)
   avatarUrl     String?
@@ -37,6 +37,7 @@ model User {
   notifications    Notification[]
   certificates     Certificate[]
   achievements     UserAchievement[]
+  adminTrailAccess AdminTrailAccess[] @relation("AdminTrails")
 }
 
 // Track daily user activity (one record per day per user)
@@ -95,6 +96,7 @@ model Trail {
   studentAccess StudentTrailAccess[]
   teachers      TrailTeacher[]
   certificates  Certificate[]
+  adminAccess   AdminTrailAccess[]
 }
 
 model Module {
@@ -150,6 +152,21 @@ model StudentTrailAccess {
 
   @@unique([studentId, trailId])
   @@index([studentId])
+  @@index([trailId])
+}
+
+// Grant specific ADMINs access to specific trails (SUPER_ADMIN has access to all)
+model AdminTrailAccess {
+  id        String   @id @default(cuid())
+  adminId   String
+  trailId   String
+  createdAt DateTime @default(now())
+
+  admin User  @relation("AdminTrails", fields: [adminId], references: [id], onDelete: Cascade)
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, trailId])
+  @@index([adminId])
   @@index([trailId])
 }
 

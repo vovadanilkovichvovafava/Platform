@@ -11,18 +11,22 @@ import {
   Users,
   GraduationCap,
   Shield,
+  ShieldCheck,
   BookOpen,
   Trash2,
   CalendarDays,
   Search,
   X,
 } from "lucide-react"
+import { useSession } from "next-auth/react"
+
+type UserRole = "STUDENT" | "TEACHER" | "ADMIN" | "SUPER_ADMIN"
 
 interface User {
   id: string
   email: string
   name: string
-  role: "STUDENT" | "TEACHER" | "ADMIN"
+  role: UserRole
   totalXP: number
   createdAt: string
   _count: {
@@ -32,7 +36,7 @@ interface User {
   }
 }
 
-const roleConfig = {
+const roleConfig: Record<UserRole, { label: string; color: string; icon: typeof Shield }> = {
   STUDENT: {
     label: "Студент",
     color: "bg-blue-100 text-blue-700",
@@ -48,18 +52,26 @@ const roleConfig = {
     color: "bg-purple-100 text-purple-700",
     icon: Shield,
   },
+  SUPER_ADMIN: {
+    label: "Суперадмин",
+    color: "bg-red-100 text-red-700",
+    icon: ShieldCheck,
+  },
 }
 
 export default function AdminUsersPage() {
+  const { data: session } = useSession()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [roleFilter, setRoleFilter] = useState<"ALL" | "STUDENT" | "TEACHER" | "ADMIN">("ALL")
+  const [roleFilter, setRoleFilter] = useState<"ALL" | UserRole>("ALL")
   const { showToast } = useToast()
   const { confirm } = useConfirm()
+
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
 
   const fetchUsers = async () => {
     try {
@@ -79,7 +91,13 @@ export default function AdminUsersPage() {
     fetchUsers()
   }, [])
 
-  const updateRole = async (userId: string, newRole: "STUDENT" | "TEACHER" | "ADMIN") => {
+  const updateRole = async (userId: string, newRole: UserRole) => {
+    // Only SUPER_ADMIN can assign SUPER_ADMIN role
+    if (newRole === "SUPER_ADMIN" && !isSuperAdmin) {
+      showToast("Только суперадмин может назначать роль суперадмина", "error")
+      return
+    }
+
     try {
       setUpdatingId(userId)
       const res = await fetch(`/api/admin/users?id=${userId}`, {
@@ -148,7 +166,7 @@ export default function AdminUsersPage() {
 
   const students = users.filter(u => u.role === "STUDENT")
   const teachers = users.filter(u => u.role === "TEACHER")
-  const admins = users.filter(u => u.role === "ADMIN")
+  const admins = users.filter(u => u.role === "ADMIN" || u.role === "SUPER_ADMIN")
 
   // Filter users by search and role
   const filteredUsers = users.filter(user => {
@@ -271,6 +289,7 @@ export default function AdminUsersPage() {
                   <option value="STUDENT">Студенты</option>
                   <option value="TEACHER">Учителя</option>
                   <option value="ADMIN">Админы</option>
+                  <option value="SUPER_ADMIN">Суперадмины</option>
                 </select>
               </div>
             </div>
@@ -327,13 +346,14 @@ export default function AdminUsersPage() {
                         {/* Role selector */}
                         <select
                           value={user.role}
-                          onChange={(e) => updateRole(user.id, e.target.value as "STUDENT" | "TEACHER" | "ADMIN")}
+                          onChange={(e) => updateRole(user.id, e.target.value as UserRole)}
                           disabled={isUpdating || isDeleting}
                           className="px-3 py-1.5 border rounded-lg text-sm bg-white disabled:opacity-50"
                         >
                           <option value="STUDENT">Студент</option>
                           <option value="TEACHER">Учитель</option>
                           <option value="ADMIN">Админ</option>
+                          {isSuperAdmin && <option value="SUPER_ADMIN">Суперадмин</option>}
                         </select>
 
                         {/* Delete button */}
@@ -360,7 +380,8 @@ export default function AdminUsersPage() {
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• <strong>Студент</strong> — может проходить тесты и сдавать проекты</li>
             <li>• <strong>Учитель</strong> — может проверять работы на /teacher</li>
-            <li>• <strong>Админ</strong> — полный доступ к админке</li>
+            <li>• <strong>Админ</strong> — доступ к админке только для назначенных trails</li>
+            <li>• <strong>Суперадмин</strong> — полный доступ ко всем trails и управление доступом админов</li>
           </ul>
         </div>
       </div>

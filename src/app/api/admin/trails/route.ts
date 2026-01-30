@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { isAnyAdmin, isSuperAdmin, getAdminTrailFilter, isPrivileged } from "@/lib/admin-access"
 
 // Transliterate Cyrillic to Latin for URL-safe slugs
 const translitMap: Record<string, string> = {
@@ -34,16 +35,31 @@ const trailSchema = z.object({
   isPublished: z.boolean().default(true),
 })
 
-// GET - List all trails with modules
+// GET - List all trails with modules (filtered by admin access)
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session?.user?.id || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
+    // Build where clause based on role
+    // SUPER_ADMIN: no filter (sees all)
+    // ADMIN: filter by AdminTrailAccess
+    // TEACHER: handled separately via TrailTeacher
+    let whereClause = {}
+
+    if (isAnyAdmin(session.user.role) && !isSuperAdmin(session.user.role)) {
+      // Regular ADMIN - filter by allowed trails
+      const trailFilter = await getAdminTrailFilter(session.user.id, session.user.role)
+      if (trailFilter) {
+        whereClause = trailFilter
+      }
+    }
+
     const trails = await prisma.trail.findMany({
+      where: whereClause,
       orderBy: { order: "asc" },
       include: {
         modules: {
@@ -75,12 +91,12 @@ export async function GET() {
   }
 }
 
-// POST - Create new trail (Admin or Teacher - teacher gets auto-assigned)
+// POST - Create new trail (Admin or Teacher - creator gets auto-assigned)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session?.user?.id || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -105,15 +121,25 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // If teacher creates trail, automatically assign them to it
+    // Auto-assign creator to the trail
     if (session.user.role === "TEACHER") {
+      // Teacher -> TrailTeacher
       await prisma.trailTeacher.create({
         data: {
           trailId: trail.id,
           teacherId: session.user.id,
         },
       })
+    } else if (session.user.role === "ADMIN") {
+      // Regular ADMIN -> AdminTrailAccess (auto-grant access to created trail)
+      await prisma.adminTrailAccess.create({
+        data: {
+          trailId: trail.id,
+          adminId: session.user.id,
+        },
+      })
     }
+    // SUPER_ADMIN doesn't need assignment - has access to all
 
     return NextResponse.json(trail)
   } catch (error) {

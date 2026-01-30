@@ -46,33 +46,33 @@ const authMiddleware = withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Protect teacher routes (allow both TEACHER and ADMIN)
-    if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "ADMIN") {
+    // Protect teacher routes (allow TEACHER, ADMIN, and SUPER_ADMIN)
+    if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "ADMIN" && token?.role !== "SUPER_ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Protect admin routes
-    if (path.startsWith("/admin") && token?.role !== "ADMIN") {
+    // Protect admin routes (allow ADMIN and SUPER_ADMIN)
+    if (path.startsWith("/admin") && token?.role !== "ADMIN" && token?.role !== "SUPER_ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Protect shared content editing routes (allow both TEACHER and ADMIN)
-    if (path.startsWith("/content/modules/") && token?.role !== "TEACHER" && token?.role !== "ADMIN") {
+    // Protect shared content editing routes (allow TEACHER, ADMIN, and SUPER_ADMIN)
+    if (path.startsWith("/content/modules/") && token?.role !== "TEACHER" && token?.role !== "ADMIN" && token?.role !== "SUPER_ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Protect /content main page (allow both TEACHER and ADMIN)
-    if (path === "/content" && token?.role !== "TEACHER" && token?.role !== "ADMIN") {
+    // Protect /content main page (allow TEACHER, ADMIN, and SUPER_ADMIN)
+    if (path === "/content" && token?.role !== "TEACHER" && token?.role !== "ADMIN" && token?.role !== "SUPER_ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
     // Redirects for backward compatibility: /admin/content → /content
-    if (path === "/admin/content" && token?.role === "ADMIN") {
+    if (path === "/admin/content" && (token?.role === "ADMIN" || token?.role === "SUPER_ADMIN")) {
       return NextResponse.redirect(new URL("/content", req.url))
     }
 
     // Redirects for backward compatibility: /teacher/content → /content
-    if (path === "/teacher/content" && (token?.role === "TEACHER" || token?.role === "ADMIN")) {
+    if (path === "/teacher/content" && (token?.role === "TEACHER" || token?.role === "ADMIN" || token?.role === "SUPER_ADMIN")) {
       return NextResponse.redirect(new URL("/content", req.url))
     }
 

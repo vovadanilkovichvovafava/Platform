@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
 
 // Transliterate Cyrillic to Latin for URL-safe slugs
 const translitMap: Record<string, string> = {
@@ -46,25 +47,33 @@ async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Pro
   return !!assignment
 }
 
-// POST - Create new module (Admin: any trail, Teacher: only assigned trails)
+// POST - Create new module (with access check to trail)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session?.user?.id || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     const body = await request.json()
     const data = moduleSchema.parse(body)
 
-    // Teachers can only create modules in trails they are assigned to
+    // Check access based on role
     if (session.user.role === "TEACHER") {
+      // Teachers can only create modules in trails they are assigned to
       const isAssigned = await isTeacherAssignedToTrail(session.user.id, data.trailId)
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
       }
+    } else if (session.user.role === "ADMIN") {
+      // Regular ADMIN - check AdminTrailAccess
+      const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, data.trailId)
+      if (!hasAccess) {
+        return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
+      }
     }
+    // SUPER_ADMIN has access to all
 
     // Generate slug from title (transliterate Cyrillic to Latin)
     const slug = generateSlug(data.title)

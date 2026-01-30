@@ -2,17 +2,28 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isAnyAdmin, isSuperAdmin, getAdminTrailFilter } from "@/lib/admin-access"
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
-    // Get all modules with their progress and reviews
+    // Build where clause based on admin access
+    let whereClause = {}
+    if (!isSuperAdmin(session.user.role)) {
+      const trailFilter = await getAdminTrailFilter(session.user.id, session.user.role)
+      if (trailFilter) {
+        whereClause = { trail: trailFilter }
+      }
+    }
+
+    // Get modules with their progress and reviews (filtered by admin access)
     const modules = await prisma.module.findMany({
+      where: whereClause,
       orderBy: [
         { trail: { order: "asc" } },
         { order: "asc" },
