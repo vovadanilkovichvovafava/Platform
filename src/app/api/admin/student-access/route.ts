@@ -2,12 +2,13 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isAnyAdmin } from "@/lib/admin-access"
 
 // GET - List student access entries (optionally filtered by trailId or studentId)
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAnyAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAnyAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAnyAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -113,7 +114,7 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAnyAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

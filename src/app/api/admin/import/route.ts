@@ -11,6 +11,7 @@ import {
   SUPPORTED_FORMATS,
   requiresAIParser,
 } from "@/lib/import"
+import { isAnyAdmin } from "@/lib/admin-access"
 
 // Увеличиваем лимит времени выполнения функции для AI парсинга
 // Vercel: Hobby = 10s, Pro = 60s (можно до 300s), Enterprise = 900s
@@ -21,7 +22,7 @@ export const maxDuration = 300 // 5 минут (требует Pro план на
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -247,7 +248,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

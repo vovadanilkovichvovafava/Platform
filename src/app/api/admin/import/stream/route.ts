@@ -5,6 +5,7 @@ import {
   getAIConfig,
   SUPPORTED_FORMATS,
 } from "@/lib/import"
+import { isAnyAdmin } from "@/lib/admin-access"
 
 // Увеличиваем лимит времени выполнения для AI парсинга
 export const maxDuration = 300 // 5 минут
@@ -29,7 +30,7 @@ function sendSSE(controller: ReadableStreamDefaultController, event: ProgressEve
 // POST - парсинг файла со стримингом прогресса
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },

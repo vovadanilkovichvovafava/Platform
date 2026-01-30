@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { isAnyAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 const bulkDeleteSchema = z.object({
   moduleIds: z.array(z.string()).min(1),
@@ -12,18 +13,29 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     const body = await request.json()
     const { moduleIds } = bulkDeleteSchema.parse(body)
 
-    // Get module names for audit log
+    // Get module names and trail IDs for audit log and access check
     const modules = await prisma.module.findMany({
       where: { id: { in: moduleIds } },
-      select: { id: true, title: true },
+      select: { id: true, title: true, trailId: true },
     })
+
+    // CO_ADMIN: check trail access for all modules
+    if (session.user.role === "CO_ADMIN") {
+      const allowedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+      if (allowedTrailIds) {
+        const unauthorizedModules = modules.filter(m => !allowedTrailIds.includes(m.trailId))
+        if (unauthorizedModules.length > 0) {
+          return NextResponse.json({ error: "Нет доступа к некоторым модулям" }, { status: 403 })
+        }
+      }
+    }
 
     // Delete all selected modules
     const result = await prisma.module.deleteMany({
