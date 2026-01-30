@@ -17,6 +17,9 @@ model User {
   currentStreak Int       @default(0)
   avatarUrl     String?
   invitedBy     String?   // ID of user who invited
+  telegramChatId      String?   // Telegram chat ID for notifications
+  telegramEnabled     Boolean   @default(true) // Allow user to disable TG notifications
+  telegramConnectedAt DateTime? // When Telegram was linked
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -230,6 +233,7 @@ model Submission {
   status    String   @default("PENDING") // PENDING, APPROVED, REVISION, FAILED
   userId    String
   moduleId  String
+  telegramNotifiedAt DateTime? // When TG notification was sent (idempotency)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -383,4 +387,16 @@ model UserAchievement {
 
   @@unique([userId, achievementId])
   @@index([userId])
+}
+
+// Telegram connection tokens (for secure linking)
+model TelegramLinkToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique // One pending token per user
+  token     String   @unique // HMAC-signed token
+  expiresAt DateTime // TTL for security
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
 }

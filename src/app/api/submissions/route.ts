@@ -5,6 +5,12 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
 import { recordActivity } from "@/lib/activity"
+import {
+  sendTelegramMessage,
+  buildSubmissionNotificationMessage,
+  getReviewUrl,
+  isTelegramConfigured,
+} from "@/lib/telegram"
 
 const submissionSchema = z.object({
   moduleId: z.string().min(1),
@@ -116,10 +122,10 @@ export async function POST(request: Request) {
     })
 
     // Notify teachers about new submission
-    // Get trail to check teacherVisibility
+    // Get trail to check teacherVisibility and get title for notifications
     const trail = await prisma.trail.findUnique({
       where: { id: courseModule.trailId },
-      select: { teacherVisibility: true },
+      select: { teacherVisibility: true, title: true },
     })
 
     // Collect user IDs to notify (teachers and admins)
@@ -130,7 +136,7 @@ export async function POST(request: Request) {
       where: { trailId: courseModule.trailId },
       select: { teacherId: true },
     })
-    trailTeachers.forEach((tt) => userIdsToNotify.add(tt.teacherId))
+    trailTeachers.forEach((tt: { teacherId: string }) => userIdsToNotify.add(tt.teacherId))
 
     // 2. If trail is visible to all teachers, notify all teachers
     if (trail?.teacherVisibility === "ALL_TEACHERS") {
@@ -138,7 +144,7 @@ export async function POST(request: Request) {
         where: { role: "TEACHER" },
         select: { id: true },
       })
-      allTeachers.forEach((t) => userIdsToNotify.add(t.id))
+      allTeachers.forEach((t: { id: string }) => userIdsToNotify.add(t.id))
     }
 
     // 3. Always notify all admins
@@ -146,7 +152,7 @@ export async function POST(request: Request) {
       where: { role: "ADMIN" },
       select: { id: true },
     })
-    allAdmins.forEach((a) => userIdsToNotify.add(a.id))
+    allAdmins.forEach((a: { id: string }) => userIdsToNotify.add(a.id))
 
     // Create notifications for all teachers and admins
     if (userIdsToNotify.size > 0) {
@@ -159,6 +165,19 @@ export async function POST(request: Request) {
           link: `/teacher/reviews/${submission.id}`,
         })),
       })
+
+      // Send Telegram notifications (non-blocking, errors don't affect main flow)
+      if (isTelegramConfigured()) {
+        sendTelegramNotifications({
+          submissionId: submission.id,
+          userIds: Array.from(userIdsToNotify),
+          studentName: session.user.name || "Студент",
+          moduleTitle: courseModule.title,
+          trailTitle: trail?.title,
+        }).catch(() => {
+          // Silently ignore - logged inside function
+        })
+      }
     }
 
     // Update module progress to in_progress if not already
@@ -190,6 +209,83 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Ошибка при отправке работы" },
       { status: 500 }
+    )
+  }
+}
+
+/**
+ * Send Telegram notifications to teachers (idempotent, non-blocking)
+ * Errors are logged safely without exposing secrets
+ */
+async function sendTelegramNotifications(params: {
+  submissionId: string
+  userIds: string[]
+  studentName: string
+  moduleTitle: string
+  trailTitle?: string
+}): Promise<void> {
+  const { submissionId, userIds, studentName, moduleTitle, trailTitle } = params
+
+  try {
+    // Idempotency check: skip if already notified
+    const submission = await prisma.submission.findUnique({
+      where: { id: submissionId },
+      select: { telegramNotifiedAt: true },
+    })
+
+    if (submission?.telegramNotifiedAt) {
+      return // Already notified
+    }
+
+    // Get users with Telegram enabled
+    const usersWithTelegram = await prisma.user.findMany({
+      where: {
+        id: { in: userIds },
+        telegramChatId: { not: null },
+        telegramEnabled: true,
+      },
+      select: {
+        id: true,
+        telegramChatId: true,
+      },
+    })
+
+    if (usersWithTelegram.length === 0) {
+      return // No users with Telegram
+    }
+
+    // Build message
+    const reviewUrl = getReviewUrl(submissionId)
+    const message = buildSubmissionNotificationMessage({
+      studentName,
+      moduleTitle,
+      trailTitle,
+      reviewUrl,
+    })
+
+    // Send to all users (parallel, but don't fail fast)
+    const results = await Promise.allSettled(
+      usersWithTelegram.map((user: { id: string; telegramChatId: string | null }) =>
+        sendTelegramMessage(user.telegramChatId!, message)
+      )
+    )
+
+    // Log failures (without sensitive data)
+    const failures = results.filter((r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.success))
+    if (failures.length > 0) {
+      console.warn(`[Telegram] ${failures.length}/${usersWithTelegram.length} notifications failed for submission ${submissionId}`)
+    }
+
+    // Mark as notified (even if some failed - to prevent spam on retry)
+    await prisma.submission.update({
+      where: { id: submissionId },
+      data: { telegramNotifiedAt: new Date() },
+    })
+  } catch (error) {
+    // Log safely without exposing secrets
+    console.error(
+      "[Telegram] Error sending notifications:",
+      error instanceof Error ? error.message : "Unknown"
     )
   }
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Switch } from "@/components/ui/switch"
 import {
   User,
   Mail,
@@ -19,6 +20,11 @@ import {
   Save,
   Key,
   Loader2,
+  MessageCircle,
+  Link2,
+  Unlink,
+  ExternalLink,
+  CheckCircle2,
 } from "lucide-react"
 
 interface UserProfile {
@@ -50,6 +56,29 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
 
+  // Telegram states
+  const [telegramStatus, setTelegramStatus] = useState<{
+    isConnected: boolean
+    isEnabled: boolean
+    connectedAt: string | null
+    isConfigured: boolean
+  } | null>(null)
+  const [telegramLoading, setTelegramLoading] = useState(false)
+  const [telegramDeepLink, setTelegramDeepLink] = useState<string | null>(null)
+
+  // Telegram functions (defined before useEffect to avoid hoisting issues)
+  const fetchTelegramStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/telegram/connect")
+      if (res.ok) {
+        const data = await res.json()
+        setTelegramStatus(data)
+      }
+    } catch {
+      // Ignore errors silently - Telegram is optional
+    }
+  }, [])
+
   useEffect(() => {
     // Ждём пока сессия загрузится
     if (status === "loading") {
@@ -63,8 +92,12 @@ export default function ProfilePage() {
     // Сессия есть - загружаем профиль
     if (session) {
       fetchProfile()
+      // Load Telegram status for teachers/admins
+      if (session.user?.role === "TEACHER" || session.user?.role === "ADMIN") {
+        fetchTelegramStatus()
+      }
     }
-  }, [session, status, router])
+  }, [session, status, router, fetchTelegramStatus])
 
   const fetchProfile = async () => {
     try {
@@ -74,9 +107,57 @@ export default function ProfilePage() {
       setProfile(data)
       setName(data.name)
     } catch {
-      setError("Не удалось загрузить профиль")
+      setError("Не удалось загрузить профиля")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleTelegramConnect = async () => {
+    setTelegramLoading(true)
+    setError("")
+    try {
+      const res = await fetch("/api/telegram/connect", { method: "POST" })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Ошибка подключения")
+      }
+      const { deepLink } = await res.json()
+      setTelegramDeepLink(deepLink)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка подключения Telegram")
+    } finally {
+      setTelegramLoading(false)
+    }
+  }
+
+  const handleTelegramDisconnect = async () => {
+    setTelegramLoading(true)
+    setError("")
+    try {
+      const res = await fetch("/api/telegram/connect", { method: "DELETE" })
+      if (!res.ok) throw new Error("Ошибка отключения")
+      setTelegramStatus((prev) => prev ? { ...prev, isConnected: false, connectedAt: null } : null)
+      setTelegramDeepLink(null)
+      setSuccess("Telegram отключён")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка отключения")
+    } finally {
+      setTelegramLoading(false)
+    }
+  }
+
+  const handleTelegramToggle = async (enabled: boolean) => {
+    try {
+      const res = await fetch("/api/telegram/connect", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      })
+      if (!res.ok) throw new Error("Ошибка изменения настроек")
+      setTelegramStatus((prev) => prev ? { ...prev, isEnabled: enabled } : null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка")
     }
   }
 
@@ -364,6 +445,112 @@ export default function ProfilePage() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Telegram Notifications - only for teachers/admins */}
+          {(profile.role === "TEACHER" || profile.role === "ADMIN") && telegramStatus?.isConfigured && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5" />
+                  Telegram-уведомления
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {telegramStatus.isConnected ? (
+                  <>
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle2 className="h-5 w-5" />
+                      <span className="font-medium">Telegram подключён</span>
+                    </div>
+                    {telegramStatus.connectedAt && (
+                      <p className="text-sm text-gray-500">
+                        Подключено:{" "}
+                        {new Date(telegramStatus.connectedAt).toLocaleDateString("ru-RU", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between pt-2">
+                      <div>
+                        <Label htmlFor="telegram-enabled" className="font-medium">
+                          Получать уведомления
+                        </Label>
+                        <p className="text-sm text-gray-500">
+                          О новых работах на проверку
+                        </p>
+                      </div>
+                      <Switch
+                        id="telegram-enabled"
+                        checked={telegramStatus.isEnabled}
+                        onCheckedChange={handleTelegramToggle}
+                      />
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      onClick={handleTelegramDisconnect}
+                      disabled={telegramLoading}
+                      className="w-full mt-4"
+                    >
+                      {telegramLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Unlink className="h-4 w-4 mr-2" />
+                      )}
+                      Отключить Telegram
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      Подключите Telegram, чтобы получать уведомления о новых работах студентов.
+                    </p>
+
+                    {telegramDeepLink ? (
+                      <div className="space-y-3">
+                        <a
+                          href={telegramDeepLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Открыть Telegram
+                        </a>
+                        <p className="text-xs text-gray-500 text-center">
+                          Ссылка действительна 15 минут
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setTelegramDeepLink(null)}
+                          className="w-full"
+                        >
+                          Отмена
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={handleTelegramConnect}
+                        disabled={telegramLoading}
+                        className="w-full"
+                      >
+                        {telegramLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Link2 className="h-4 w-4 mr-2" />
+                        )}
+                        Подключить Telegram
+                      </Button>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
