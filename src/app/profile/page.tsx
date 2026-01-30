@@ -25,6 +25,14 @@ import {
   Unlink,
   ExternalLink,
   CheckCircle2,
+  Settings,
+  RefreshCw,
+  AlertTriangle,
+  XCircle,
+  Webhook,
+  Trash2,
+  Play,
+  Info,
 } from "lucide-react"
 
 interface UserProfile {
@@ -39,6 +47,18 @@ interface UserProfile {
     moduleProgress: number
     activityDays: number
   }
+}
+
+interface WebhookStatus {
+  isConfigured: boolean
+  hasSecretToken: boolean
+  pendingUpdates: number
+  lastErrorDate: string | null
+  lastErrorMessage: string | null
+  maxConnections: number
+  allowedUpdates: string[]
+  expectedUrl: string | null
+  urlMatches: boolean
 }
 
 export default function ProfilePage() {
@@ -66,6 +86,11 @@ export default function ProfilePage() {
   const [telegramLoading, setTelegramLoading] = useState(false)
   const [telegramDeepLink, setTelegramDeepLink] = useState<string | null>(null)
 
+  // Webhook admin states (ADMIN only)
+  const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null)
+  const [webhookLoading, setWebhookLoading] = useState(false)
+  const [webhookError, setWebhookError] = useState<string | null>(null)
+
   // Telegram functions (defined before useEffect to avoid hoisting issues)
   const fetchTelegramStatus = useCallback(async () => {
     try {
@@ -78,6 +103,68 @@ export default function ProfilePage() {
       // Ignore errors silently - Telegram is optional
     }
   }, [])
+
+  // Webhook admin functions (ADMIN only)
+  const fetchWebhookStatus = useCallback(async () => {
+    setWebhookLoading(true)
+    setWebhookError(null)
+    try {
+      const res = await fetch("/api/telegram/admin")
+      if (res.ok) {
+        const data = await res.json()
+        setWebhookStatus(data)
+      } else {
+        const errorData = await res.json()
+        setWebhookError(errorData.error || "Ошибка получения статуса")
+      }
+    } catch {
+      setWebhookError("Ошибка подключения к серверу")
+    } finally {
+      setWebhookLoading(false)
+    }
+  }, [])
+
+  const handleSetupWebhook = async () => {
+    setWebhookLoading(true)
+    setWebhookError(null)
+    try {
+      const res = await fetch("/api/telegram/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dropPendingUpdates: true }),
+      })
+      if (res.ok) {
+        setSuccess("Webhook успешно настроен")
+        await fetchWebhookStatus()
+      } else {
+        const errorData = await res.json()
+        setWebhookError(errorData.error || "Ошибка настройки webhook")
+      }
+    } catch {
+      setWebhookError("Ошибка подключения к серверу")
+    } finally {
+      setWebhookLoading(false)
+    }
+  }
+
+  const handleDeleteWebhook = async () => {
+    setWebhookLoading(true)
+    setWebhookError(null)
+    try {
+      const res = await fetch("/api/telegram/admin", { method: "DELETE" })
+      if (res.ok) {
+        setSuccess("Webhook удалён")
+        await fetchWebhookStatus()
+      } else {
+        const errorData = await res.json()
+        setWebhookError(errorData.error || "Ошибка удаления webhook")
+      }
+    } catch {
+      setWebhookError("Ошибка подключения к серверу")
+    } finally {
+      setWebhookLoading(false)
+    }
+  }
 
   useEffect(() => {
     // Ждём пока сессия загрузится
@@ -96,8 +183,12 @@ export default function ProfilePage() {
       if (session.user?.role === "TEACHER" || session.user?.role === "ADMIN") {
         fetchTelegramStatus()
       }
+      // Load webhook status for admins
+      if (session.user?.role === "ADMIN") {
+        fetchWebhookStatus()
+      }
     }
-  }, [session, status, router, fetchTelegramStatus])
+  }, [session, status, router, fetchTelegramStatus, fetchWebhookStatus])
 
   const fetchProfile = async () => {
     try {
@@ -547,6 +638,177 @@ export default function ProfilePage() {
                       </Button>
                     )}
                   </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Telegram Bot Administration - ADMIN only */}
+          {profile.role === "ADMIN" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Управление Telegram-ботом
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {webhookError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    {webhookError}
+                  </div>
+                )}
+
+                {webhookLoading && !webhookStatus ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+                  </div>
+                ) : webhookStatus ? (
+                  <div className="space-y-4">
+                    {/* Status overview */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Webhook className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-medium">Webhook</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {webhookStatus.isConfigured && webhookStatus.urlMatches ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              <span className="text-sm text-green-600">Активен</span>
+                            </>
+                          ) : webhookStatus.isConfigured ? (
+                            <>
+                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              <span className="text-sm text-yellow-600">Неверный URL</span>
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-4 w-4 text-red-500" />
+                              <span className="text-sm text-red-600">Не настроен</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Key className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-medium">Secret Token</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {webhookStatus.hasSecretToken ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              <span className="text-sm text-green-600">Настроен</span>
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-4 w-4 text-red-500" />
+                              <span className="text-sm text-red-600">Отсутствует</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pending updates */}
+                    {webhookStatus.pendingUpdates > 0 && (
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-yellow-700">
+                          <Info className="h-4 w-4" />
+                          <span className="text-sm">
+                            Ожидающих обновлений: {webhookStatus.pendingUpdates}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Last error */}
+                    {webhookStatus.lastErrorMessage && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start gap-2 text-red-700">
+                          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Последняя ошибка</p>
+                            <p className="text-sm">{webhookStatus.lastErrorMessage}</p>
+                            {webhookStatus.lastErrorDate && (
+                              <p className="text-xs text-red-500 mt-1">
+                                {new Date(webhookStatus.lastErrorDate).toLocaleString("ru-RU")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Expected URL info */}
+                    {webhookStatus.expectedUrl && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Ожидаемый URL webhook:</p>
+                        <p className="text-xs font-mono text-gray-700 break-all">
+                          {webhookStatus.expectedUrl}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                      <Button
+                        onClick={handleSetupWebhook}
+                        disabled={webhookLoading}
+                        className="flex-1"
+                      >
+                        {webhookLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4 mr-2" />
+                        )}
+                        {webhookStatus.isConfigured ? "Переустановить webhook" : "Установить webhook"}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={fetchWebhookStatus}
+                        disabled={webhookLoading}
+                      >
+                        {webhookLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                      </Button>
+
+                      {webhookStatus.isConfigured && (
+                        <Button
+                          variant="destructive"
+                          onClick={handleDeleteWebhook}
+                          disabled={webhookLoading}
+                        >
+                          {webhookLoading ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 mr-2" />
+                          )}
+                          Удалить
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <p>Не удалось загрузить статус webhook</p>
+                    <Button
+                      variant="outline"
+                      onClick={fetchWebhookStatus}
+                      className="mt-2"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Повторить
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
