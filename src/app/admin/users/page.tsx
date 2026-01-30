@@ -344,27 +344,37 @@ export default function AdminUsersPage() {
                         </div>
 
                         {/* Role selector */}
-                        <select
-                          value={user.role}
-                          onChange={(e) => updateRole(user.id, e.target.value as UserRole)}
-                          disabled={isUpdating || isDeleting}
-                          className="px-3 py-1.5 border rounded-lg text-sm bg-white disabled:opacity-50"
-                        >
-                          <option value="STUDENT">Студент</option>
-                          <option value="TEACHER">Учитель</option>
-                          <option value="CO_ADMIN">Со-админ</option>
-                          {isAdmin && <option value="ADMIN">Админ</option>}
-                        </select>
+                        {/* CO_ADMIN cannot change roles of ADMIN/CO_ADMIN users */}
+                        {!isAdmin && (user.role === "ADMIN" || user.role === "CO_ADMIN") ? (
+                          <span className="px-3 py-1.5 text-sm text-gray-500">
+                            {roleConfig[user.role].label}
+                          </span>
+                        ) : (
+                          <select
+                            value={user.role}
+                            onChange={(e) => updateRole(user.id, e.target.value as UserRole)}
+                            disabled={isUpdating || isDeleting}
+                            className="px-3 py-1.5 border rounded-lg text-sm bg-white disabled:opacity-50"
+                          >
+                            <option value="STUDENT">Студент</option>
+                            <option value="TEACHER">Учитель</option>
+                            {/* Only ADMIN can assign CO_ADMIN/ADMIN roles */}
+                            {isAdmin && <option value="CO_ADMIN">Со-админ</option>}
+                            {isAdmin && <option value="ADMIN">Админ</option>}
+                          </select>
+                        )}
 
-                        {/* Delete button */}
-                        <button
-                          onClick={() => deleteUser(user.id, user.name)}
-                          disabled={isDeleting}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Удалить пользователя"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {/* Delete button - CO_ADMIN cannot delete ADMIN/CO_ADMIN users */}
+                        {(isAdmin || (user.role !== "ADMIN" && user.role !== "CO_ADMIN")) && (
+                          <button
+                            onClick={() => deleteUser(user.id, user.name)}
+                            disabled={isDeleting}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            title="Удалить пользователя"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

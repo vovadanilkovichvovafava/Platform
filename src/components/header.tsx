@@ -15,6 +15,16 @@ import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award,
 import { useState } from "react"
 import { NotificationBell } from "@/components/notification-bell"
 
+// Helper to check if user has any admin role (ADMIN or CO_ADMIN)
+function isAnyAdminRole(role: string | undefined): boolean {
+  return role === "ADMIN" || role === "CO_ADMIN"
+}
+
+// Helper to check if user is privileged (TEACHER, CO_ADMIN, or ADMIN)
+function isPrivilegedRole(role: string | undefined): boolean {
+  return role === "TEACHER" || role === "CO_ADMIN" || role === "ADMIN"
+}
+
 export function Header() {
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -87,7 +97,7 @@ export function Header() {
               >
                 Лидерборд
               </Link>
-              {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
+              {isPrivilegedRole(session.user.role) && (
                 <Link
                   href="/teacher"
                   className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
@@ -95,9 +105,9 @@ export function Header() {
                   Панель эксперта
                 </Link>
               )}
-              {session.user.role === "ADMIN" && (
+              {isAnyAdminRole(session.user.role) && (
                 <Link
-                  href="/admin/invites"
+                  href="/admin/users"
                   className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
                 >
                   Админ панель
@@ -168,7 +178,7 @@ export function Header() {
                     Лидерборд
                   </Link>
                 </DropdownMenuItem>
-                {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
+                {isPrivilegedRole(session.user.role) && (
                   <>
                     <DropdownMenuSeparator className="bg-slate-100" />
                     <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
@@ -179,10 +189,10 @@ export function Header() {
                     </DropdownMenuItem>
                   </>
                 )}
-                {session.user.role === "ADMIN" && (
+                {isAnyAdminRole(session.user.role) && (
                   <>
                     <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                      <Link href="/admin/invites" className="cursor-pointer">
+                      <Link href="/admin/users" className="cursor-pointer">
                         <Shield className="mr-2 h-4 w-4" />
                         Админ панель
                       </Link>
@@ -250,7 +260,7 @@ export function Header() {
               <Trophy className="h-4 w-4" />
               Лидерборд
             </Link>
-            {(session.user.role === "TEACHER" || session.user.role === "ADMIN") && (
+            {isPrivilegedRole(session.user.role) && (
               <Link
                 href="/teacher"
                 onClick={() => setMobileMenuOpen(false)}
@@ -260,10 +270,10 @@ export function Header() {
                 Панель эксперта
               </Link>
             )}
-            {session.user.role === "ADMIN" && (
+            {isAnyAdminRole(session.user.role) && (
               <>
                 <Link
-                  href="/admin/invites"
+                  href="/admin/users"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
                 >
