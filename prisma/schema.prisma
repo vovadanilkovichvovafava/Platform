@@ -411,11 +411,9 @@ model TelegramLinkToken {
   id        String   @id @default(cuid())
   userId    String   @unique // One pending token per user
   token     String   @unique // HMAC-signed token
-  shortCode String   @unique // Short code for manual entry (6 chars)
   expiresAt DateTime // TTL for security
   createdAt DateTime @default(now())
 
   @@index([token])
-  @@index([shortCode])
   @@index([expiresAt])
 }
