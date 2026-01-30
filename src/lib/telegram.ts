@@ -102,26 +102,35 @@ export async function sendTelegramMessage(
     disableWebPagePreview?: boolean
   }
 ): Promise<{ success: boolean; error?: string }> {
+  console.log("[Telegram] sendTelegramMessage called for chat:", chatId, "text length:", text.length)
+
   if (!TELEGRAM_BOT_TOKEN) {
     // Log without exposing token
     console.error("[Telegram] Bot token not configured")
     return { success: false, error: "Bot not configured" }
   }
 
+  console.log("[Telegram] Bot token is configured, sending message...")
+
   try {
+    const requestBody = {
+      chat_id: chatId,
+      text,
+      parse_mode: options?.parseMode || "HTML",
+      disable_web_page_preview: options?.disableWebPagePreview ?? false,
+    }
+    console.log("[Telegram] Request body:", JSON.stringify({ ...requestBody, text: text.substring(0, 50) + "..." }))
+
     const response = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-          parse_mode: options?.parseMode || "HTML",
-          disable_web_page_preview: options?.disableWebPagePreview ?? false,
-        }),
+        body: JSON.stringify(requestBody),
       }
     )
+
+    console.log("[Telegram] Response status:", response.status)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
@@ -129,6 +138,7 @@ export async function sendTelegramMessage(
       console.error("[Telegram] Send failed:", {
         status: response.status,
         description: errorData.description || "Unknown error",
+        errorCode: errorData.error_code,
       })
       return {
         success: false,
@@ -136,10 +146,13 @@ export async function sendTelegramMessage(
       }
     }
 
+    const responseData = await response.json()
+    console.log("[Telegram] Message sent successfully, message_id:", responseData.result?.message_id)
+
     return { success: true }
   } catch (error) {
     // Log safely without token
-    console.error("[Telegram] Network error:", error instanceof Error ? error.message : "Unknown")
+    console.error("[Telegram] Network error:", error instanceof Error ? error.message : "Unknown", error)
     return { success: false, error: "Network error" }
   }
 }
