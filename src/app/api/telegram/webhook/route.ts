@@ -172,7 +172,9 @@ async function handleStartCommand(chatId: string, token: string): Promise<void> 
   })
   console.log("[Telegram Webhook] User found:", user?.name, "role:", user?.role)
 
-  if (!user || (user.role !== "TEACHER" && user.role !== "ADMIN")) {
+  // Only teachers, co-admins, and admins can connect Telegram
+  const allowedRoles = ["TEACHER", "CO_ADMIN", "ADMIN"]
+  if (!user || !allowedRoles.includes(user.role)) {
     const result = await sendTelegramMessage(
       chatId,
       "Telegram-уведомления доступны только для преподавателей."

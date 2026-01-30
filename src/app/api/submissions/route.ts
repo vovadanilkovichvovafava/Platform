@@ -147,9 +147,9 @@ export async function POST(request: Request) {
       allTeachers.forEach((t: { id: string }) => userIdsToNotify.add(t.id))
     }
 
-    // 3. Always notify all admins
+    // 3. Always notify all admins and co-admins
     const allAdmins = await prisma.user.findMany({
-      where: { role: "ADMIN" },
+      where: { role: { in: ["ADMIN", "CO_ADMIN"] } },
       select: { id: true },
     })
     allAdmins.forEach((a: { id: string }) => userIdsToNotify.add(a.id))

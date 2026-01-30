@@ -13,7 +13,9 @@ const APP_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL
 export async function GET() {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user || session.user.role !== "ADMIN") {
+  // Only CO_ADMIN and ADMIN can manage webhook
+  const allowedRoles = ["CO_ADMIN", "ADMIN"]
+  if (!session?.user || !allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -70,7 +72,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user || session.user.role !== "ADMIN") {
+  // Only CO_ADMIN and ADMIN can manage webhook
+  const allowedRoles = ["CO_ADMIN", "ADMIN"]
+  if (!session?.user || !allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -155,7 +159,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE() {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user || session.user.role !== "ADMIN") {
+  // Only CO_ADMIN and ADMIN can manage webhook
+  const allowedRoles = ["CO_ADMIN", "ADMIN"]
+  if (!session?.user || !allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
