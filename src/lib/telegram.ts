@@ -10,6 +10,19 @@ const APP_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL
 const TOKEN_TTL_MS = 15 * 60 * 1000
 
 /**
+ * Generate a short 6-character alphanumeric code for manual Telegram connection
+ * Uses uppercase letters and digits, avoiding confusing characters (0, O, I, 1, L)
+ */
+export function generateShortCode(): string {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789" // No 0, O, I, 1, L
+  let code = ""
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
+/**
  * Generate HMAC-signed token for Telegram linking
  * Format: userId:timestamp:signature
  */
