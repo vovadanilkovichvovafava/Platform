@@ -21,8 +21,9 @@ export async function POST() {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    // Only teachers and admins can connect Telegram
-    if (session.user.role !== "TEACHER" && session.user.role !== "ADMIN") {
+    // Only teachers, co-admins, and admins can connect Telegram
+    const allowedRoles = ["TEACHER", "CO_ADMIN", "ADMIN"]
+    if (!allowedRoles.includes(session.user.role)) {
       return NextResponse.json(
         { error: "Telegram-уведомления доступны только для преподавателей" },
         { status: 403 }

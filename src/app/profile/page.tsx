@@ -86,10 +86,13 @@ export default function ProfilePage() {
   const [telegramLoading, setTelegramLoading] = useState(false)
   const [telegramDeepLink, setTelegramDeepLink] = useState<string | null>(null)
 
-  // Webhook admin states (ADMIN only)
+  // Webhook admin states (CO_ADMIN/ADMIN)
   const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null)
   const [webhookLoading, setWebhookLoading] = useState(false)
   const [webhookError, setWebhookError] = useState<string | null>(null)
+
+  // Test notification state
+  const [testLoading, setTestLoading] = useState(false)
 
   // Telegram functions (defined before useEffect to avoid hoisting issues)
   const fetchTelegramStatus = useCallback(async () => {
@@ -179,12 +182,14 @@ export default function ProfilePage() {
     // Сессия есть - загружаем профиль
     if (session) {
       fetchProfile()
-      // Load Telegram status for teachers/admins
-      if (session.user?.role === "TEACHER" || session.user?.role === "ADMIN") {
+      // Load Telegram status for teachers/co-admins/admins
+      const telegramRoles = ["TEACHER", "CO_ADMIN", "ADMIN"]
+      if (session.user?.role && telegramRoles.includes(session.user.role)) {
         fetchTelegramStatus()
       }
-      // Load webhook status for admins
-      if (session.user?.role === "ADMIN") {
+      // Load webhook status for co-admins/admins
+      const webhookRoles = ["CO_ADMIN", "ADMIN"]
+      if (session.user?.role && webhookRoles.includes(session.user.role)) {
         fetchWebhookStatus()
       }
     }
@@ -249,6 +254,23 @@ export default function ProfilePage() {
       setTelegramStatus((prev) => prev ? { ...prev, isEnabled: enabled } : null)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка")
+    }
+  }
+
+  const handleTestNotification = async () => {
+    setTestLoading(true)
+    setError("")
+    try {
+      const res = await fetch("/api/telegram/test", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Ошибка отправки")
+      }
+      setSuccess("Тестовое сообщение отправлено в Telegram")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка отправки тестового сообщения")
+    } finally {
+      setTestLoading(false)
     }
   }
 
@@ -332,6 +354,7 @@ export default function ProfilePage() {
   const getRoleName = (role: string) => {
     switch (role) {
       case "ADMIN": return "Администратор"
+      case "CO_ADMIN": return "Со-администратор"
       case "TEACHER": return "Эксперт"
       case "STUDENT": return "Ученик"
       default: return role
@@ -341,6 +364,7 @@ export default function ProfilePage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case "ADMIN": return "bg-purple-100 text-purple-700"
+      case "CO_ADMIN": return "bg-indigo-100 text-indigo-700"
       case "TEACHER": return "bg-blue-100 text-blue-700"
       case "STUDENT": return "bg-green-100 text-green-700"
       default: return "bg-gray-100 text-gray-700"
@@ -537,8 +561,8 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Telegram Notifications - only for teachers/admins */}
-          {(profile.role === "TEACHER" || profile.role === "ADMIN") && telegramStatus?.isConfigured && (
+          {/* Telegram Notifications - only for teachers/co-admins/admins */}
+          {["TEACHER", "CO_ADMIN", "ADMIN"].includes(profile.role) && telegramStatus?.isConfigured && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -580,19 +604,34 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    <Button
-                      variant="outline"
-                      onClick={handleTelegramDisconnect}
-                      disabled={telegramLoading}
-                      className="w-full mt-4"
-                    >
-                      {telegramLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Unlink className="h-4 w-4 mr-2" />
-                      )}
-                      Отключить Telegram
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        onClick={handleTestNotification}
+                        disabled={testLoading || !telegramStatus.isEnabled}
+                        className="flex-1"
+                      >
+                        {testLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4 mr-2" />
+                        )}
+                        Тест уведомления
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleTelegramDisconnect}
+                        disabled={telegramLoading}
+                        className="flex-1"
+                      >
+                        {telegramLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Unlink className="h-4 w-4 mr-2" />
+                        )}
+                        Отключить
+                      </Button>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -643,8 +682,8 @@ export default function ProfilePage() {
             </Card>
           )}
 
-          {/* Telegram Bot Administration - ADMIN only */}
-          {profile.role === "ADMIN" && (
+          {/* Telegram Bot Administration - CO_ADMIN and ADMIN */}
+          {["CO_ADMIN", "ADMIN"].includes(profile.role) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
