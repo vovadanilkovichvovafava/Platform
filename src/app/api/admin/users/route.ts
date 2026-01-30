@@ -65,6 +65,24 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Нельзя удалить свой аккаунт" }, { status: 400 })
     }
 
+    // Get target user to check role
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    })
+
+    if (!targetUser) {
+      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
+    }
+
+    // RBAC: CO_ADMIN cannot delete ADMIN or CO_ADMIN users
+    if (!isAdmin(session.user.role) && (targetUser.role === "ADMIN" || targetUser.role === "CO_ADMIN")) {
+      return NextResponse.json(
+        { error: "Только главный админ может удалять админов" },
+        { status: 403 }
+      )
+    }
+
     // Delete in transaction to ensure consistency
     await prisma.$transaction(async (tx) => {
       // First delete invites created by this user (no cascade)
@@ -118,19 +136,35 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const data = updateUserSchema.parse(body)
 
-    // Only ADMIN can assign ADMIN role
-    if (data.role === "ADMIN" && !isAdmin(session.user.role)) {
-      return NextResponse.json({ error: "Только админ может назначать роль админа" }, { status: 403 })
-    }
-
-    // Get target user to check if trying to demote ADMIN
+    // Get target user to check current role
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true },
     })
 
-    if (targetUser?.role === "ADMIN" && !isAdmin(session.user.role)) {
-      return NextResponse.json({ error: "Только админ может изменять роль админа" }, { status: 403 })
+    if (!targetUser) {
+      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
+    }
+
+    // RBAC: Only ADMIN can assign or modify ADMIN/CO_ADMIN roles
+    // CO_ADMIN cannot:
+    // 1. Assign ADMIN or CO_ADMIN role to anyone
+    // 2. Change the role of existing ADMIN or CO_ADMIN users
+    if (!isAdmin(session.user.role)) {
+      // Check if trying to assign privileged role
+      if (data.role === "ADMIN" || data.role === "CO_ADMIN") {
+        return NextResponse.json(
+          { error: "Только главный админ может назначать роли админов" },
+          { status: 403 }
+        )
+      }
+      // Check if trying to modify privileged user
+      if (targetUser.role === "ADMIN" || targetUser.role === "CO_ADMIN") {
+        return NextResponse.json(
+          { error: "Только главный админ может изменять роли админов" },
+          { status: 403 }
+        )
+      }
     }
 
     const user = await prisma.user.update({
