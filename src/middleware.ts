@@ -90,7 +90,10 @@ const authMiddleware = withAuth(
           path === "/register" ||
           path.startsWith("/trails") ||
           path.startsWith("/api/auth") ||
-          path.startsWith("/api/register")
+          path.startsWith("/api/register") ||
+          // Telegram webhook must bypass auth - Telegram sends requests without session
+          // Security is handled via X-Telegram-Bot-Api-Secret-Token header in the handler
+          path.startsWith("/api/telegram")
         ) {
           return true
         }
