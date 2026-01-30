@@ -85,6 +85,7 @@ export default function ProfilePage() {
   } | null>(null)
   const [telegramLoading, setTelegramLoading] = useState(false)
   const [telegramDeepLink, setTelegramDeepLink] = useState<string | null>(null)
+  const [telegramShortCode, setTelegramShortCode] = useState<string | null>(null)
 
   // Webhook admin states (CO_ADMIN/ADMIN)
   const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null)
@@ -218,8 +219,9 @@ export default function ProfilePage() {
         const data = await res.json()
         throw new Error(data.error || "Ошибка подключения")
       }
-      const { deepLink } = await res.json()
+      const { deepLink, shortCode } = await res.json()
       setTelegramDeepLink(deepLink)
+      setTelegramShortCode(shortCode)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка подключения Telegram")
     } finally {
@@ -640,7 +642,7 @@ export default function ProfilePage() {
                     </p>
 
                     {telegramDeepLink ? (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <a
                           href={telegramDeepLink}
                           target="_blank"
@@ -650,13 +652,28 @@ export default function ProfilePage() {
                           <ExternalLink className="h-4 w-4" />
                           Открыть Telegram
                         </a>
+
+                        {telegramShortCode && (
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-xs text-gray-500 mb-2 text-center">
+                              Или отправьте этот код боту в Telegram:
+                            </p>
+                            <p className="text-2xl font-mono font-bold text-center tracking-widest text-gray-900">
+                              {telegramShortCode}
+                            </p>
+                          </div>
+                        )}
+
                         <p className="text-xs text-gray-500 text-center">
                           Ссылка действительна 15 минут
                         </p>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setTelegramDeepLink(null)}
+                          onClick={() => {
+                            setTelegramDeepLink(null)
+                            setTelegramShortCode(null)
+                          }}
                           className="w-full"
                         >
                           Отмена

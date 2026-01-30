@@ -73,9 +73,19 @@ export async function POST(request: NextRequest) {
       console.log("[Telegram Webhook] Handling plain /start")
       const result = await sendTelegramMessage(
         chatId,
-        "Добро пожаловать! Для подключения уведомлений перейдите в профиль на платформе и нажмите «Подключить Telegram»."
+        "Добро пожаловать!\n\nДля подключения уведомлений:\n1. Перейдите в профиль на платформе\n2. Нажмите «Подключить Telegram»\n3. Отправьте сюда код, который появится на экране\n\nПример: <code>ABC123</code>",
+        { parseMode: "HTML" }
       )
       console.log("[Telegram Webhook] /start response sent:", result)
+      return NextResponse.json({ ok: true })
+    }
+
+    // Handle short code connection (user sends just the code, e.g., "ABC123")
+    const shortCodeMatch = text.match(/^[A-Z0-9]{6}$/i)
+    if (shortCodeMatch) {
+      const code = text.toUpperCase()
+      console.log("[Telegram Webhook] Handling short code:", code)
+      await handleShortCodeConnect(chatId, code)
       return NextResponse.json({ ok: true })
     }
 
@@ -255,4 +265,77 @@ async function handleStopCommand(chatId: string): Promise<void> {
     chatId,
     "Уведомления отключены. Вы можете включить их снова в профиле на платформе."
   )
+}
+
+/**
+ * Handle short code connection
+ * User sends a 6-character code from the platform
+ */
+async function handleShortCodeConnect(chatId: string, code: string): Promise<void> {
+  console.log("[Telegram Webhook] handleShortCodeConnect started for chat:", chatId, "code:", code)
+
+  // Find token by short code
+  const storedToken = await prisma.telegramLinkToken.findUnique({
+    where: { shortCode: code },
+  })
+
+  if (!storedToken) {
+    console.log("[Telegram Webhook] Short code not found:", code)
+    await sendTelegramMessage(
+      chatId,
+      "Код не найден. Убедитесь, что вы ввели код правильно, или сгенерируйте новый в профиле на платформе."
+    )
+    return
+  }
+
+  // Check if token expired
+  if (storedToken.expiresAt < new Date()) {
+    console.log("[Telegram Webhook] Short code expired:", code)
+    await sendTelegramMessage(
+      chatId,
+      "Код устарел. Сгенерируйте новый в профиле на платформе."
+    )
+    await prisma.telegramLinkToken.delete({ where: { shortCode: code } })
+    return
+  }
+
+  const userId = storedToken.userId
+
+  // Check if user exists and is teacher/admin
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, role: true },
+  })
+  console.log("[Telegram Webhook] User found:", user?.name, "role:", user?.role)
+
+  // Only teachers, co-admins, and admins can connect Telegram
+  const allowedRoles = ["TEACHER", "CO_ADMIN", "ADMIN"]
+  if (!user || !allowedRoles.includes(user.role)) {
+    await sendTelegramMessage(
+      chatId,
+      "Telegram-уведомления доступны только для преподавателей."
+    )
+    return
+  }
+
+  // Link Telegram to user
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      telegramChatId: chatId,
+      telegramEnabled: true,
+      telegramConnectedAt: new Date(),
+    },
+  })
+  console.log("[Telegram Webhook] User updated with telegramChatId:", chatId)
+
+  // Clean up used token
+  await prisma.telegramLinkToken.delete({ where: { shortCode: code } })
+  console.log("[Telegram Webhook] Token deleted")
+
+  await sendTelegramMessage(
+    chatId,
+    `Telegram подключён, ${user.name}! Вы будете получать уведомления о новых работах на проверку.\n\nИспользуйте /stop для отключения.`
+  )
+  console.log("[Telegram Webhook] Sent success message")
 }

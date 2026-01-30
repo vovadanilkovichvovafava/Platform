@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import {
   generateTelegramLinkToken,
+  generateShortCode,
   getTelegramDeepLink,
   isTelegramConfigured,
 } from "@/lib/telegram"
@@ -39,15 +40,16 @@ export async function POST() {
 
     const userId = session.user.id
 
-    // Generate token
+    // Generate token and short code
     const token = generateTelegramLinkToken(userId)
+    const shortCode = generateShortCode()
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
     // Store token in database (upsert to handle re-generation)
     await prisma.telegramLinkToken.upsert({
       where: { userId },
-      update: { token, expiresAt },
-      create: { userId, token, expiresAt },
+      update: { token, shortCode, expiresAt },
+      create: { userId, token, shortCode, expiresAt },
     })
 
     // Generate deep link
@@ -55,6 +57,7 @@ export async function POST() {
 
     return NextResponse.json({
       deepLink,
+      shortCode,
       expiresAt: expiresAt.toISOString(),
     })
   } catch (error) {
