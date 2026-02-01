@@ -10,10 +10,9 @@ import { Loader2, Upload, FileText, Link as LinkIcon } from "lucide-react"
 
 interface SubmitPracticeFormProps {
   moduleId: string
-  moduleSlug: string
 }
 
-export function SubmitPracticeForm({ moduleId, moduleSlug }: SubmitPracticeFormProps) {
+export function SubmitPracticeForm({ moduleId }: SubmitPracticeFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

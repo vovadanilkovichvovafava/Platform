@@ -65,7 +65,7 @@ export default async function TeacherLayout({
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 md:ml-64">
+        <main className="flex-1 md:ml-64 min-w-0 overflow-hidden">
           {children}
         </main>
       </div>

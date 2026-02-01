@@ -146,10 +146,29 @@ export async function POST(request: Request) {
       data: { status: data.status },
     })
 
-    // Get module info for task progress update
+    // Get module info for task progress update and notification
     const currentModule = await prisma.module.findUnique({
       where: { id: data.moduleId },
       include: { trail: true },
+    })
+
+    // Create notification for the student
+    const statusMessages: Record<string, string> = {
+      APPROVED: "Работа принята!",
+      REVISION: "Работа отправлена на доработку",
+      FAILED: "Работа не принята",
+    }
+
+    await prisma.notification.create({
+      data: {
+        userId: data.userId,
+        type: "REVIEW_RECEIVED",
+        title: statusMessages[data.status],
+        message: currentModule
+          ? `Ваша работа по модулю "${currentModule.title}" получила оценку ${data.score}/10`
+          : `Ваша работа получила оценку ${data.score}/10`,
+        link: `/my-work`,
+      },
     })
 
     // Update TaskProgress for project modules (level progression)

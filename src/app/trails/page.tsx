@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { TrailCard } from "@/components/trail-card"
+import { TrailSearch } from "@/components/trail-search"
 
 export const dynamic = "force-dynamic"
 
@@ -39,7 +39,7 @@ export default async function TrailsPage() {
   })
 
   let enrolledTrailIds: string[] = []
-  let progressMap: Record<string, number> = {}
+  const progressMap: Record<string, number> = {}
 
   if (session) {
     const enrollments = await prisma.enrollment.findMany({
@@ -84,16 +84,11 @@ export default async function TrailsPage() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trails.map((trail) => (
-            <TrailCard
-              key={trail.id}
-              trail={trail}
-              enrolled={enrolledTrailIds.includes(trail.id)}
-              progress={progressMap[trail.id] || 0}
-            />
-          ))}
-        </div>
+        <TrailSearch
+          trails={trails}
+          enrolledTrailIds={enrolledTrailIds}
+          progressMap={progressMap}
+        />
       </div>
     </div>
   )

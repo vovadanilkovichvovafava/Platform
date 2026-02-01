@@ -25,15 +25,15 @@ const questionSchema = z.object({
 
 // Helper to check if teacher is assigned to trail via module
 async function isTeacherAssignedToModule(teacherId: string, moduleId: string): Promise<boolean> {
-  const module = await prisma.module.findUnique({
+  const courseModule = await prisma.module.findUnique({
     where: { id: moduleId },
     select: { trailId: true },
   })
-  if (!module) return false
+  if (!courseModule) return false
 
   const assignment = await prisma.trailTeacher.findUnique({
     where: {
-      trailId_teacherId: { trailId: module.trailId, teacherId },
+      trailId_teacherId: { trailId: courseModule.trailId, teacherId },
     },
   })
   return !!assignment

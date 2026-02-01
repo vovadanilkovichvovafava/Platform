@@ -2,20 +2,29 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { z } from "zod"
+
+const updateProgressSchema = z.object({
+  taskProgressId: z.string().min(1, "ID прогресса обязателен"),
+  level: z.enum(["JUNIOR", "MIDDLE", "SENIOR"], {
+    errorMap: () => ({ message: "Уровень должен быть JUNIOR, MIDDLE или SENIOR" })
+  }),
+  passed: z.boolean({ required_error: "Поле passed обязательно" }),
+})
 
 // GET - Get task progress for a trail
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const trailId = searchParams.get("trailId")
 
     if (!trailId) {
-      return NextResponse.json({ error: "Missing trailId" }, { status: 400 })
+      return NextResponse.json({ error: "Не указан trailId" }, { status: 400 })
     }
 
     let taskProgress = await prisma.taskProgress.findUnique({
@@ -53,7 +62,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
     // Check if user is teacher
@@ -62,14 +71,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (user?.role !== "TEACHER") {
-      return NextResponse.json({ error: "Only teachers can update task progress" }, { status: 403 })
+      return NextResponse.json({ error: "Только преподаватели могут обновлять прогресс" }, { status: 403 })
     }
 
-    const { taskProgressId, level, passed } = await request.json()
-
-    if (!taskProgressId || !level || passed === undefined) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
+    const body = await request.json()
+    const { taskProgressId, level, passed } = updateProgressSchema.parse(body)
 
     const taskProgress = await prisma.taskProgress.findUnique({
       where: { id: taskProgressId },
@@ -114,7 +120,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(updated)
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
     console.error("Error updating task progress:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Внутренняя ошибка сервера" }, { status: 500 })
   }
 }

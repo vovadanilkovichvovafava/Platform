@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { recordActivity } from "@/lib/activity"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Record daily activity
+    await recordActivity(session.user.id)
+
     const { moduleId } = await request.json()
 
     if (!moduleId) {
@@ -17,12 +21,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get module with trail info
-    const module = await prisma.module.findUnique({
+    const courseModule = await prisma.module.findUnique({
       where: { id: moduleId },
       include: { trail: true },
     })
 
-    if (!module) {
+    if (!courseModule) {
       return NextResponse.json({ error: "Module not found" }, { status: 404 })
     }
 
@@ -100,8 +104,8 @@ export async function POST(request: NextRequest) {
     // Find next module and start it
     const nextModule = await prisma.module.findFirst({
       where: {
-        trailId: module.trailId,
-        order: { gt: module.order },
+        trailId: courseModule.trailId,
+        order: { gt: courseModule.order },
         type: { not: "PROJECT" }, // Only auto-start non-project modules
       },
       orderBy: { order: "asc" },

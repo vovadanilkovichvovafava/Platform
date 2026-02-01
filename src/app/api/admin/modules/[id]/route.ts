@@ -13,6 +13,7 @@ const moduleUpdateSchema = z.object({
   level: z.enum(["Beginner", "Intermediate", "Junior", "Middle", "Senior"]).optional(),
   points: z.number().optional(),
   duration: z.string().optional(),
+  requiresSubmission: z.boolean().optional(),
 })
 
 interface Props {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
-    const module = await prisma.module.findUnique({
+    const courseModule = await prisma.module.findUnique({
       where: { id },
       include: {
         trail: true,
@@ -39,11 +40,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       },
     })
 
-    if (!module) {
+    if (!courseModule) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    return NextResponse.json(module)
+    return NextResponse.json(courseModule)
   } catch (error) {
     console.error("Error fetching module:", error)
     return NextResponse.json({ error: "Ошибка при получении модуля" }, { status: 500 })
@@ -91,12 +92,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const body = await request.json()
     const data = moduleUpdateSchema.parse(body)
 
-    const module = await prisma.module.update({
+    const updatedModule = await prisma.module.update({
       where: { id },
       data,
     })
 
-    return NextResponse.json(module)
+    return NextResponse.json(updatedModule)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors[0].message }, { status: 400 })
@@ -119,7 +120,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     // Get module to check trail
     const existingModule = await prisma.module.findUnique({
       where: { id },
-      select: { trailId: true },
+      select: { trailId: true, title: true },
     })
 
     if (!existingModule) {
@@ -136,6 +137,18 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
     await prisma.module.delete({
       where: { id },
+    })
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        userName: session.user.name || session.user.email || "Unknown",
+        action: "DELETE",
+        entityType: "MODULE",
+        entityId: id,
+        entityName: existingModule.title,
+      },
     })
 
     return NextResponse.json({ success: true })
