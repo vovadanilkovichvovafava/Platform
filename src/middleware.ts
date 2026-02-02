@@ -2,6 +2,11 @@ import { withAuth } from "next-auth/middleware"
 import { NextResponse, NextRequest } from "next/server"
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
 
+// Generate simple request ID for tracing (no crypto needed)
+function generateRequestId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 // Get client IP from request
 function getClientIp(request: NextRequest): string {
   const forwardedFor = request.headers.get("x-forwarded-for")
@@ -107,15 +112,32 @@ const authMiddleware = withAuth(
 
 // Combined middleware: rate limit first, then auth
 export default function middleware(request: NextRequest) {
-  // Check rate limit for auth endpoints
-  const rateLimitResponse = checkAuthRateLimit(request)
-  if (rateLimitResponse) {
-    return rateLimitResponse
-  }
+  const requestId = generateRequestId()
+  const path = request.nextUrl.pathname
 
-  // Proceed with auth middleware
-  // @ts-expect-error - withAuth returns a middleware that accepts NextRequest
-  return authMiddleware(request)
+  try {
+    // Check rate limit for auth endpoints
+    const rateLimitResponse = checkAuthRateLimit(request)
+    if (rateLimitResponse) {
+      return rateLimitResponse
+    }
+
+    // Proceed with auth middleware
+    // @ts-expect-error - withAuth returns a middleware that accepts NextRequest
+    return authMiddleware(request)
+  } catch (error) {
+    // Log error with request ID for tracing (no sensitive data)
+    console.error(`[middleware] requestId=${requestId} path=${path} error=${error instanceof Error ? error.message : "unknown"}`)
+
+    // Return a safe response instead of 503
+    // For auth pages, allow the request to proceed
+    if (path === "/login" || path === "/register") {
+      return NextResponse.next()
+    }
+
+    // For other routes, redirect to login as a safe fallback
+    return NextResponse.redirect(new URL("/login", request.url))
+  }
 }
 
 export const config = {

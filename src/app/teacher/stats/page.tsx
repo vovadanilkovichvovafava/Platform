@@ -4,6 +4,7 @@ import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { TeacherStatsDrilldown } from "@/components/teacher-stats-drilldown"
+import { isPrivileged } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,8 +21,8 @@ import {
 export default async function TeacherStatsPage() {
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, and ADMIN roles
+  if (!session || !isPrivileged(session.user.role)) {
     redirect("/dashboard")
   }
 

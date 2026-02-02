@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Users } from "lucide-react"
@@ -10,8 +11,8 @@ import { StudentsSearch } from "@/components/students-search"
 export default async function TeacherStudentsPage() {
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, and ADMIN roles
+  if (!session || !isPrivileged(session.user.role)) {
     redirect("/dashboard")
   }
 

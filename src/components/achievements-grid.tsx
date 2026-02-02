@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Award, Lock, ChevronDown, X } from "lucide-react"
+import { pluralizeRu } from "@/lib/utils"
 
 export interface Achievement {
   id: string
@@ -331,7 +332,7 @@ export function AchievementsGrid({
                     />
                   </div>
                   <span className="text-xs text-gray-500">
-                    {stats.count} / {stats.total}
+                    {stats.count} из {stats.total} {pluralizeRu(stats.total, ["достижения", "достижений", "достижений"])}
                   </span>
                 </div>
               )}
