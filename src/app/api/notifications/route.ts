@@ -48,6 +48,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Валидация notificationId - cuid формат (20-30 алфавитно-цифровых символов)
+function isValidNotificationId(id: unknown): id is string {
+  return typeof id === "string" && /^[a-z0-9]{20,30}$/i.test(id)
+}
+
 // PATCH - Mark notifications as read
 export async function PATCH(request: NextRequest) {
   try {
@@ -61,6 +66,7 @@ export async function PATCH(request: NextRequest) {
     const { notificationIds, markAllRead } = body
 
     if (markAllRead) {
+      // Отметить все уведомления как прочитанные
       await prisma.notification.updateMany({
         where: {
           userId: session.user.id,
@@ -68,10 +74,25 @@ export async function PATCH(request: NextRequest) {
         },
         data: { isRead: true },
       })
-    } else if (notificationIds && notificationIds.length > 0) {
+    } else if (notificationIds) {
+      // Валидация: notificationIds должен быть массивом
+      if (!Array.isArray(notificationIds)) {
+        return NextResponse.json({ error: "Неверный формат данных" }, { status: 400 })
+      }
+
+      // Фильтруем только валидные ID (защита от инъекций и мусорных данных)
+      const validIds = notificationIds.filter(isValidNotificationId)
+
+      if (validIds.length === 0) {
+        // Нет валидных ID - возвращаем успех (идемпотентность)
+        return NextResponse.json({ success: true })
+      }
+
+      // SECURITY: userId в WHERE гарантирует что пользователь может
+      // отметить только СВОИ уведомления - чужие просто не обновятся
       await prisma.notification.updateMany({
         where: {
-          id: { in: notificationIds },
+          id: { in: validIds },
           userId: session.user.id,
         },
         data: { isRead: true },
@@ -80,7 +101,8 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error marking notifications as read:", error)
+    // Не логируем детали ошибки которые могут содержать пользовательские данные
+    console.error("Error marking notifications as read")
     return NextResponse.json({ error: "Ошибка обновления уведомлений" }, { status: 500 })
   }
 }

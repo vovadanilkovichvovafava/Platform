@@ -12,8 +12,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award, Trophy, BarChart3, Menu, X } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { NotificationBell } from "@/components/notification-bell"
+
+// Страховка: обрабатываем notificationId из URL и отмечаем уведомление как прочитанное
+function useMarkNotificationFromUrl() {
+  const { data: session } = useSession()
+
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const url = new URL(window.location.href)
+    const notificationId = url.searchParams.get("notificationId")
+
+    // Проверяем валидность notificationId (cuid формат - 25 символов, буквы и цифры)
+    if (!notificationId || !/^[a-z0-9]{20,30}$/i.test(notificationId)) {
+      return
+    }
+
+    // Fire-and-forget запрос - не блокируем рендер страницы
+    fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificationIds: [notificationId] }),
+      keepalive: true,
+    }).catch(() => {
+      // Тихий fail - уведомление уже могло быть прочитано
+    })
+
+    // Убираем notificationId из URL без перезагрузки страницы (чистый URL)
+    url.searchParams.delete("notificationId")
+    window.history.replaceState({}, "", url.toString())
+  }, [session?.user?.id])
+}
 
 // Helper to check if user has any admin role (ADMIN or CO_ADMIN)
 function isAnyAdminRole(role: string | undefined): boolean {
@@ -28,6 +59,9 @@ function isPrivilegedRole(role: string | undefined): boolean {
 export function Header() {
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Страховка: обрабатываем notificationId из URL при переходе по ссылке из уведомления
+  useMarkNotificationFromUrl()
 
   const getInitials = (name: string) => {
     return name

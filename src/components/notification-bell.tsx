@@ -45,18 +45,25 @@ export function NotificationBell() {
     return () => clearInterval(interval)
   }, [])
 
-  const markAsRead = async (notificationId: string) => {
+  const markAsRead = async (notificationId: string, optimistic = true) => {
+    // Optimistic update - сразу обновляем UI
+    if (optimistic) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
+      )
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    }
+
     try {
       await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notificationIds: [notificationId] }),
+        // keepalive позволяет запросу завершиться даже при переходе на другую страницу
+        keepalive: true,
       })
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
-      )
-      setUnreadCount((prev) => Math.max(0, prev - 1))
     } catch (err) {
+      // Тихий fail - не блокируем пользователя, страховка на целевой странице
       console.error("Error marking notification as read:", err)
     }
   }
@@ -79,11 +86,17 @@ export function NotificationBell() {
   }
 
   const handleNotificationClick = (notification: Notification) => {
+    // Отмечаем как прочитанное (оптимистично + fire-and-forget запрос с keepalive)
     if (!notification.isRead) {
       markAsRead(notification.id)
     }
+
     if (notification.link) {
-      window.location.href = notification.link
+      // Добавляем notificationId в URL как страховку - если fetch не успеет,
+      // header.tsx обработает этот параметр и повторит mark-as-read
+      const url = new URL(notification.link, window.location.origin)
+      url.searchParams.set("notificationId", notification.id)
+      window.location.href = url.toString()
     }
     setIsOpen(false)
   }
