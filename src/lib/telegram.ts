@@ -10,62 +10,30 @@ const APP_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL
 const TOKEN_TTL_MS = 15 * 60 * 1000
 
 /**
- * Generate HMAC-signed token for Telegram linking
- * Format: userId:timestamp:signature
+ * Generate a short random token for Telegram linking
+ * Token is 32 hex characters (fits within Telegram's 64 char limit for deep links)
+ * The userId is stored in DB, not in the token itself
  */
-export function generateTelegramLinkToken(userId: string): string {
-  const timestamp = Date.now()
-  const payload = `${userId}:${timestamp}`
-  const signature = crypto
-    .createHmac("sha256", TELEGRAM_WEBHOOK_SECRET || "fallback-secret")
-    .update(payload)
-    .digest("hex")
-    .slice(0, 16) // Shorten for URL-friendly token
-
-  return Buffer.from(`${payload}:${signature}`).toString("base64url")
+export function generateTelegramLinkToken(_userId: string): string {
+  // 16 random bytes = 32 hex characters (well under 64 char limit)
+  return crypto.randomBytes(16).toString("hex")
 }
 
 /**
- * Verify and decode Telegram link token
- * Returns userId if valid, null if invalid/expired
+ * Verify Telegram link token format
+ * Returns basic validation result; actual userId lookup happens in webhook handler
+ * Token is just a random string, validation is via DB lookup
  */
 export function verifyTelegramLinkToken(
   token: string
 ): { userId: string; isValid: boolean; error?: string } {
-  try {
-    const decoded = Buffer.from(token, "base64url").toString("utf-8")
-    const [userId, timestampStr, signature] = decoded.split(":")
-
-    if (!userId || !timestampStr || !signature) {
-      return { userId: "", isValid: false, error: "Invalid token format" }
-    }
-
-    const timestamp = parseInt(timestampStr, 10)
-    if (isNaN(timestamp)) {
-      return { userId: "", isValid: false, error: "Invalid timestamp" }
-    }
-
-    // Check TTL
-    if (Date.now() - timestamp > TOKEN_TTL_MS) {
-      return { userId, isValid: false, error: "Token expired" }
-    }
-
-    // Verify signature
-    const payload = `${userId}:${timestamp}`
-    const expectedSignature = crypto
-      .createHmac("sha256", TELEGRAM_WEBHOOK_SECRET || "fallback-secret")
-      .update(payload)
-      .digest("hex")
-      .slice(0, 16)
-
-    if (signature !== expectedSignature) {
-      return { userId, isValid: false, error: "Invalid signature" }
-    }
-
-    return { userId, isValid: true }
-  } catch {
-    return { userId: "", isValid: false, error: "Token decode failed" }
+  // Token should be 32 hex characters
+  if (!token || !/^[a-f0-9]{32}$/i.test(token)) {
+    return { userId: "", isValid: false, error: "Invalid token format" }
   }
+  // Token format is valid; actual validation happens via DB lookup in webhook
+  // Return placeholder - real userId comes from DB
+  return { userId: "", isValid: true }
 }
 
 /**

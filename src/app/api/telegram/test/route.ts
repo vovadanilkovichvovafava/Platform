@@ -5,6 +5,44 @@ import { prisma } from "@/lib/prisma"
 import { sendTelegramMessage, isTelegramConfigured } from "@/lib/telegram"
 
 /**
+ * GET /api/telegram/test
+ * Diagnostic endpoint: check if Telegram is ready for current user
+ * Returns configuration status without sending any message
+ */
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
+    }
+
+    const allowedRoles = ["TEACHER", "CO_ADMIN", "ADMIN"]
+    if (!allowedRoles.includes(session.user.role)) {
+      return NextResponse.json({ error: "Недоступно" }, { status: 403 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        telegramChatId: true,
+        telegramEnabled: true,
+      },
+    })
+
+    return NextResponse.json({
+      configured: isTelegramConfigured(),
+      connected: !!user?.telegramChatId,
+      enabled: user?.telegramEnabled ?? false,
+      ready: isTelegramConfigured() && !!user?.telegramChatId && (user?.telegramEnabled ?? false),
+    })
+  } catch (error) {
+    console.error("[Telegram Test GET] Error:", error instanceof Error ? error.message : "Unknown")
+    return NextResponse.json({ error: "Ошибка" }, { status: 500 })
+  }
+}
+
+/**
  * POST /api/telegram/test
  * Send a test notification to the current user's connected Telegram
  * Only for users who have Telegram connected and enabled

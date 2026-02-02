@@ -216,5 +216,7 @@ export async function DELETE() {
 function getExpectedWebhookUrl(): string | null {
   if (!APP_URL) return null
   const baseUrl = APP_URL.startsWith("http") ? APP_URL : `https://${APP_URL}`
-  return `${baseUrl}/api/telegram/webhook`
+  // Ensure no trailing slash on base URL, and webhook path has no trailing slash
+  const normalizedBase = baseUrl.replace(/\/+$/, "")
+  return `${normalizedBase}/api/telegram/webhook`
 }
