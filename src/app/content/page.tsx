@@ -47,6 +47,7 @@ import {
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
+import { pluralizeRu } from "@/lib/utils"
 
 interface Module {
   id: string
@@ -760,7 +761,7 @@ export default function UnifiedContentPage() {
 
     const confirmed = await confirm({
       title: "Удалить модули?",
-      message: `Вы уверены, что хотите удалить ${selectedModules.size} модулей?`,
+      message: `Вы уверены, что хотите удалить ${selectedModules.size} ${pluralizeRu(selectedModules.size, ["модуль", "модуля", "модулей"])}?`,
       confirmText: "Удалить",
       variant: "danger",
     })
@@ -779,7 +780,7 @@ export default function UnifiedContentPage() {
 
       setSelectedModules(new Set())
       fetchData()
-      showToast(`Удалено ${selectedModules.size} модулей`, "success")
+      showToast(`Удалено ${selectedModules.size} ${pluralizeRu(selectedModules.size, ["модуль", "модуля", "модулей"])}`, "success")
     } catch {
       showToast("Ошибка при массовом удалении", "error")
     } finally {
@@ -991,7 +992,7 @@ export default function UnifiedContentPage() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-blue-700 font-medium">
-                Выбрано: {selectedModules.size} модулей
+                Выбрано: {selectedModules.size} {pluralizeRu(selectedModules.size, ["модуль", "модуля", "модулей"])}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -1071,7 +1072,7 @@ export default function UnifiedContentPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-500">
-                          {trail.modules.length} модулей
+                          {trail.modules.length} {pluralizeRu(trail.modules.length, ["модуль", "модуля", "модулей"])}
                         </span>
                         <Button
                           size="sm"
@@ -1655,7 +1656,7 @@ export default function UnifiedContentPage() {
                             )}
                           </div>
                           <Badge variant="outline">
-                            {trail.modules.length} модулей
+                            {trail.modules.length} {pluralizeRu(trail.modules.length, ["модуль", "модуля", "модулей"])}
                           </Badge>
                         </div>
 

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { pluralizeRu } from "@/lib/utils"
 import { TeacherStatsDrilldown } from "@/components/teacher-stats-drilldown"
 import { isPrivileged } from "@/lib/admin-access"
 
@@ -360,7 +361,7 @@ export default async function TeacherStatsPage() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{trail}</span>
                       <span className="text-sm text-gray-500">
-                        {stats.total} работ
+                        {stats.total} {pluralizeRu(stats.total, ["работа", "работы", "работ"])}
                       </span>
                     </div>
                     <div className="flex gap-2 text-xs">
@@ -421,7 +422,7 @@ export default async function TeacherStatsPage() {
                         {student.totalXP} XP
                       </p>
                       <p className="text-xs text-gray-500">
-                        {student._count.submissions} работ
+                        {student._count.submissions} {pluralizeRu(student._count.submissions, ["работа", "работы", "работ"])}
                       </p>
                     </div>
                   </Link>

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ACHIEVEMENTS } from "@/lib/achievements"
 import { getLevelInfo, getRankInfo, formatXP } from "@/lib/levels"
+import { pluralizeRu } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -400,7 +401,7 @@ export default async function DashboardPage() {
                     Мои trails
                   </h2>
                   <p className="text-sm text-gray-500">
-                    {enrolledTrails.length} активных курсов
+                    {enrolledTrails.length} {pluralizeRu(enrolledTrails.length, ["активный курс", "активных курса", "активных курсов"])}
                   </p>
                 </div>
               </div>
@@ -436,7 +437,7 @@ export default async function DashboardPage() {
                   Доступные trails
                 </h2>
                 <p className="text-sm text-gray-500">
-                  {availableTrails.length} курсов для изучения
+                  {availableTrails.length} {pluralizeRu(availableTrails.length, ["курс", "курса", "курсов"])} для изучения
                 </p>
               </div>
             </div>

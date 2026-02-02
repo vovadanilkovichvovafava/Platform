@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
+import { pluralizeRu } from "@/lib/utils"
 import {
   Trophy,
   Medal,
@@ -183,7 +184,7 @@ export default function LeaderboardPage() {
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-blue-500" />
                     <p className="text-sm text-blue-600 font-medium">
-                      {currentUserEntry.modulesCompleted} модулей
+                      {currentUserEntry.modulesCompleted} {pluralizeRu(currentUserEntry.modulesCompleted, ["модуль", "модуля", "модулей"])}
                     </p>
                   </div>
                 </div>
@@ -265,7 +266,7 @@ export default function LeaderboardPage() {
                   <div className="flex items-center justify-center gap-3 mt-3">
                     <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100">
                       <Target className="h-3 w-3 mr-1" />
-                      {leaderboard[0].modulesCompleted} модулей
+                      {leaderboard[0].modulesCompleted} {pluralizeRu(leaderboard[0].modulesCompleted, ["модуль", "модуля", "модулей"])}
                     </Badge>
                     {leaderboard[0].streak > 0 && (
                       <Badge className="bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100">
@@ -277,7 +278,7 @@ export default function LeaderboardPage() {
                   {leaderboard[0].certificates > 0 && (
                     <div className="mt-3 flex items-center justify-center gap-1 text-xs text-yellow-600">
                       <Award className="h-4 w-4" />
-                      <span>{leaderboard[0].certificates} сертификатов</span>
+                      <span>{leaderboard[0].certificates} {pluralizeRu(leaderboard[0].certificates, ["сертификат", "сертификата", "сертификатов"])}</span>
                     </div>
                   )}
                 </CardContent>
@@ -380,7 +381,7 @@ export default function LeaderboardPage() {
                       <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                         <span className="flex items-center gap-1">
                           <Target className="h-3 w-3" />
-                          {entry.modulesCompleted} модулей
+                          {entry.modulesCompleted} {pluralizeRu(entry.modulesCompleted, ["модуль", "модуля", "модулей"])}
                         </span>
                         {entry.certificates > 0 && (
                           <span className="flex items-center gap-1 text-purple-500">

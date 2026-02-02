@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { pluralizeRu } from "@/lib/utils"
+import { isPrivileged } from "@/lib/admin-access"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -43,7 +45,8 @@ export default async function StudentDetailPage({ params }: Props) {
   const { id } = await params
   const session = await getServerSession(authOptions)
 
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, and ADMIN roles
+  if (!session || !isPrivileged(session.user.role)) {
     redirect("/dashboard")
   }
 
@@ -299,7 +302,7 @@ export default async function StudentDetailPage({ params }: Props) {
               <FileText className="h-6 w-6 text-orange-600" />
               История работ
               <Badge variant="secondary" className="ml-2 text-sm">
-                {student.submissions.length} работ
+                {student.submissions.length} {pluralizeRu(student.submissions.length, ["работа", "работы", "работ"])}
               </Badge>
             </h2>
 

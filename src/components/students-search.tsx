@@ -25,6 +25,7 @@ import {
   Filter,
   SortAsc,
 } from "lucide-react"
+import { pluralizeRu } from "@/lib/utils"
 
 interface StudentEnrollment {
   trailId: string
@@ -239,7 +240,7 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
                               {student.moduleProgress.length}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500">Модулей</p>
+                          <p className="text-xs text-gray-500">{pluralizeRu(student.moduleProgress.length, ["модуль", "модуля", "модулей"])}</p>
                         </div>
 
                         <div className="text-center">
