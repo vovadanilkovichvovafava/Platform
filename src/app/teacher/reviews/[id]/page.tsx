@@ -28,8 +28,8 @@ export default async function ReviewPage({ params }: Props) {
   const { id } = await params
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, and ADMIN roles
+  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "CO_ADMIN" && session.user.role !== "ADMIN")) {
     redirect("/dashboard")
   }
 
