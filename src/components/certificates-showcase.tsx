@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Award, Calendar, Trophy, ExternalLink } from "lucide-react"
 import Link from "next/link"
+import { pluralizeRu } from "@/lib/utils"
 
 interface Certificate {
   id: string
@@ -73,8 +74,7 @@ export function CertificatesShowcase({
               <div>
                 <h3 className="font-semibold text-gray-900">Сертификаты</h3>
                 <p className="text-sm text-gray-500">
-                  {certificates.length} {certificates.length === 1 ? "сертификат" :
-                    certificates.length < 5 ? "сертификата" : "сертификатов"}
+                  {certificates.length} {pluralizeRu(certificates.length, ["сертификат", "сертификата", "сертификатов"])}
                 </p>
               </div>
             </div>
