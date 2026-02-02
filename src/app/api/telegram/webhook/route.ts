@@ -6,6 +6,9 @@ import {
   sendTelegramMessage,
 } from "@/lib/telegram"
 
+// Force dynamic rendering - no caching for webhook
+export const dynamic = "force-dynamic"
+
 // Telegram Update type (minimal subset we need)
 interface TelegramUpdate {
   message?: {
@@ -118,52 +121,48 @@ export async function POST(request: NextRequest) {
  * Links Telegram chat to user account
  */
 async function handleStartCommand(chatId: string, token: string): Promise<void> {
-  console.log("[Telegram Webhook] handleStartCommand started for chat:", chatId)
+  console.log("[Telegram Webhook] handleStartCommand started for chat:", chatId, "token length:", token.length)
 
-  // Verify token
+  // Verify token format (32 hex characters)
   const verification = verifyTelegramLinkToken(token)
-  console.log("[Telegram Webhook] Token verification result:", {
-    isValid: verification.isValid,
-    error: verification.error,
-    userId: verification.userId
-  })
-
   if (!verification.isValid) {
-    const errorMsg = verification.error === "Token expired"
-      ? "Ссылка устарела. Пожалуйста, сгенерируйте новую в профиле на платформе."
-      : "Неверная ссылка. Пожалуйста, используйте кнопку «Подключить Telegram» в профиле."
-    const result = await sendTelegramMessage(chatId, errorMsg)
+    console.log("[Telegram Webhook] Token format invalid:", verification.error)
+    const result = await sendTelegramMessage(
+      chatId,
+      "Неверная ссылка. Пожалуйста, используйте кнопку «Подключить Telegram» в профиле."
+    )
     console.log("[Telegram Webhook] Sent error message:", result)
     return
   }
 
-  const userId = verification.userId
-
-  // Check if token exists in database and not expired
+  // Look up token in database (token is the primary lookup key now)
   const storedToken = await prisma.telegramLinkToken.findUnique({
-    where: { userId },
+    where: { token },
   })
-  console.log("[Telegram Webhook] Stored token found:", !!storedToken, "matches:", storedToken?.token === token)
+  console.log("[Telegram Webhook] Stored token found:", !!storedToken)
 
-  if (!storedToken || storedToken.token !== token) {
+  if (!storedToken) {
     const result = await sendTelegramMessage(
       chatId,
-      "Ссылка недействительна. Сгенерируйте новую в профиле."
+      "Ссылка недействительна или уже использована. Сгенерируйте новую в профиле."
     )
-    console.log("[Telegram Webhook] Sent invalid token message:", result)
+    console.log("[Telegram Webhook] Token not found in DB")
     return
   }
 
+  // Check if token expired
   if (storedToken.expiresAt < new Date()) {
     const result = await sendTelegramMessage(
       chatId,
       "Ссылка устарела. Сгенерируйте новую в профиле."
     )
-    console.log("[Telegram Webhook] Sent expired token message:", result)
+    console.log("[Telegram Webhook] Token expired")
     // Clean up expired token
-    await prisma.telegramLinkToken.delete({ where: { userId } })
+    await prisma.telegramLinkToken.delete({ where: { token } })
     return
   }
+
+  const userId = storedToken.userId
 
   // Check if user exists and is teacher/admin
   const user = await prisma.user.findUnique({
@@ -194,8 +193,8 @@ async function handleStartCommand(chatId: string, token: string): Promise<void> 
   })
   console.log("[Telegram Webhook] User updated with telegramChatId:", chatId)
 
-  // Clean up used token
-  await prisma.telegramLinkToken.delete({ where: { userId } })
+  // Clean up used token (delete by token, not userId, for correctness)
+  await prisma.telegramLinkToken.delete({ where: { token } })
   console.log("[Telegram Webhook] Token deleted")
 
   const result = await sendTelegramMessage(
@@ -255,4 +254,13 @@ async function handleStopCommand(chatId: string): Promise<void> {
     chatId,
     "Уведомления отключены. Вы можете включить их снова в профиле на платформе."
   )
+}
+
+/**
+ * GET /api/telegram/webhook
+ * Health check endpoint (returns 200 for monitoring)
+ * Does NOT expose any sensitive information
+ */
+export async function GET() {
+  return NextResponse.json({ status: "ok" })
 }
