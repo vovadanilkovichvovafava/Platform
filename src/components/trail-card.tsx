@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Clock, BookOpen, ArrowRight } from "lucide-react"
+import { pluralizeRu } from "@/lib/utils"
 
 // Custom SVG icons for trails - more polished design
 const TrailIcons: Record<string, React.FC<{ className?: string }>> = {
@@ -86,7 +87,7 @@ export function TrailCard({ trail, progress = 0, enrolled = false }: TrailCardPr
             </span>
             <span className="flex items-center gap-1.5">
               <BookOpen className="h-3.5 w-3.5" />
-              {moduleCount} модулей
+              {moduleCount} {pluralizeRu(moduleCount, ["модуль", "модуля", "модулей"])}
             </span>
           </div>
 

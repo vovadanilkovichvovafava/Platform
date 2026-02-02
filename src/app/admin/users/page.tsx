@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
+import { pluralizeRu } from "@/lib/utils"
 import {
   RefreshCw,
   Users,
@@ -340,7 +341,7 @@ export default function AdminUsersPage() {
                           <span>•</span>
                           <span>{user.totalXP} XP</span>
                           <span>•</span>
-                          <span>{user._count.submissions} работ</span>
+                          <span>{user._count.submissions} {pluralizeRu(user._count.submissions, ["работа", "работы", "работ"])}</span>
                         </div>
 
                         {/* Role selector */}
