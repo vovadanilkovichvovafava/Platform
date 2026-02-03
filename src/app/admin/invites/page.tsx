@@ -39,6 +39,63 @@ export default function AdminInvitesPage() {
     expiresAt: "",
   })
 
+  // Validation errors state
+  const [errors, setErrors] = useState<{
+    code?: string
+    email?: string
+    maxUses?: string
+  }>({})
+
+  // Simple email validation regex (basic check)
+  const isValidEmail = (email: string): boolean => {
+    if (!email) return true // Email is optional
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  // Validate maxUses field
+  const validateMaxUses = (value: number | string): string | undefined => {
+    const num = typeof value === "string" ? parseInt(value, 10) : value
+    if (isNaN(num)) return "Введите число"
+    if (!Number.isInteger(num)) return "Должно быть целым числом"
+    if (num < 1) return "Минимум 1 использование"
+    return undefined
+  }
+
+  // Validate email field
+  const validateEmail = (value: string): string | undefined => {
+    if (!value) return undefined // Email is optional
+    if (!isValidEmail(value)) return "Некорректный формат email"
+    return undefined
+  }
+
+  // Validate code field
+  const validateCode = (value: string): string | undefined => {
+    if (!value.trim()) return "Введите код приглашения"
+    if (value.length < 3) return "Код должен быть минимум 3 символа"
+    return undefined
+  }
+
+  // Validate all fields
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {}
+
+    const codeError = validateCode(newInvite.code)
+    if (codeError) newErrors.code = codeError
+
+    const emailError = validateEmail(newInvite.email)
+    if (emailError) newErrors.email = emailError
+
+    const maxUsesError = validateMaxUses(newInvite.maxUses)
+    if (maxUsesError) newErrors.maxUses = maxUsesError
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  // Check if form has validation errors (for disabling submit button)
+  const hasErrors = Boolean(errors.code || errors.email || errors.maxUses)
+
   useEffect(() => {
     if (status === "loading") return
 
@@ -67,6 +124,12 @@ export default function AdminInvitesPage() {
 
   const createInvite = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Client-side validation
+    if (!validateForm()) {
+      return
+    }
+
     setIsCreating(true)
 
     try {
@@ -81,6 +144,7 @@ export default function AdminInvitesPage() {
 
       if (res.ok) {
         setNewInvite({ code: "", email: "", maxUses: 1, expiresAt: "" })
+        setErrors({}) // Clear validation errors
         fetchInvites()
         showToast("Приглашение создано", "success")
       } else {
@@ -131,6 +195,10 @@ export default function AdminInvitesPage() {
       code += chars.charAt(Math.floor(Math.random() * chars.length))
     }
     setNewInvite({ ...newInvite, code })
+    // Clear code error when generating
+    if (errors.code) {
+      setErrors({ ...errors, code: undefined })
+    }
   }
 
   if (status === "loading" || isLoading) {
@@ -226,15 +294,33 @@ export default function AdminInvitesPage() {
                   <Input
                     id="code"
                     value={newInvite.code}
-                    onChange={(e) => setNewInvite({ ...newInvite, code: e.target.value.toUpperCase() })}
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase()
+                      setNewInvite({ ...newInvite, code: value })
+                      // Clear error when user types
+                      if (errors.code) {
+                        setErrors({ ...errors, code: undefined })
+                      }
+                    }}
+                    onBlur={() => {
+                      const codeError = validateCode(newInvite.code)
+                      if (codeError) setErrors({ ...errors, code: codeError })
+                    }}
                     placeholder="MYCODE2024"
                     className="uppercase"
                     required
+                    aria-invalid={!!errors.code}
+                    aria-describedby={errors.code ? "code-error" : undefined}
                   />
                   <Button type="button" variant="outline" onClick={generateRandomCode}>
                     Сгенерировать
                   </Button>
                 </div>
+                {errors.code && (
+                  <p id="code-error" className="text-sm text-red-500" role="alert">
+                    {errors.code}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -243,9 +329,26 @@ export default function AdminInvitesPage() {
                   id="email"
                   type="email"
                   value={newInvite.email}
-                  onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
+                  onChange={(e) => {
+                    setNewInvite({ ...newInvite, email: e.target.value })
+                    // Clear error when user types
+                    if (errors.email) {
+                      setErrors({ ...errors, email: undefined })
+                    }
+                  }}
+                  onBlur={() => {
+                    const emailError = validateEmail(newInvite.email)
+                    if (emailError) setErrors({ ...errors, email: emailError })
+                  }}
                   placeholder="user@example.com"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? "email-error" : undefined}
                 />
+                {errors.email && (
+                  <p id="email-error" className="text-sm text-red-500" role="alert">
+                    {errors.email}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -254,9 +357,29 @@ export default function AdminInvitesPage() {
                   id="maxUses"
                   type="number"
                   min="1"
+                  step="1"
                   value={newInvite.maxUses}
-                  onChange={(e) => setNewInvite({ ...newInvite, maxUses: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => {
+                    const rawValue = e.target.value
+                    const num = parseInt(rawValue, 10)
+                    // Allow empty input (will show error), otherwise validate
+                    if (rawValue === "") {
+                      setNewInvite({ ...newInvite, maxUses: 0 })
+                      setErrors({ ...errors, maxUses: "Введите число" })
+                    } else if (!isNaN(num)) {
+                      setNewInvite({ ...newInvite, maxUses: num })
+                      const maxUsesError = validateMaxUses(num)
+                      setErrors({ ...errors, maxUses: maxUsesError })
+                    }
+                  }}
+                  aria-invalid={!!errors.maxUses}
+                  aria-describedby={errors.maxUses ? "maxUses-error" : undefined}
                 />
+                {errors.maxUses && (
+                  <p id="maxUses-error" className="text-sm text-red-500" role="alert">
+                    {errors.maxUses}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -270,7 +393,7 @@ export default function AdminInvitesPage() {
               </div>
             </div>
 
-            <Button type="submit" disabled={isCreating} className="bg-orange-500 hover:bg-orange-600">
+            <Button type="submit" disabled={isCreating || hasErrors} className="bg-orange-500 hover:bg-orange-600">
               {isCreating ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
