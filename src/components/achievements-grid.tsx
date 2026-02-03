@@ -354,11 +354,14 @@ export function AchievementsGrid({
           collapsible && !isExpanded ? "max-h-0 opacity-0" : "max-h-[2000px] opacity-100"
         }`}
       >
-        <div className={`grid gap-4 ${
-          compact
-            ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6"
-            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+        <div className={`overflow-y-auto achievements-scroll ${
+          compact ? "max-h-[280px]" : "max-h-[460px]"
         }`}>
+          <div className={`grid gap-4 ${
+            compact
+              ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6"
+              : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+          }`}>
           {earnedAchievements.map((achievement) => (
             <Card
               key={achievement.id}
@@ -416,6 +419,7 @@ export function AchievementsGrid({
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
 
         {compact && earnedAchievements.length === 0 && (
