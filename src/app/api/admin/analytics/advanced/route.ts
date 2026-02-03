@@ -87,9 +87,24 @@ export async function GET(request: NextRequest) {
     type StudentType = typeof students[number]
     const totalStudents = students.length
     const enrolledStudents = students.filter((s: StudentType) => s._count.enrollments > 0).length
-    const startedModules = students.filter((s: StudentType) => s._count.moduleProgress > 0).length
-    const submittedWork = students.filter((s: StudentType) => s._count.submissions > 0).length
+    // Note: students._count.moduleProgress counts COMPLETED only (see query above)
     const completedModule = students.filter((s: StudentType) => s._count.moduleProgress > 0).length
+    const submittedWork = students.filter((s: StudentType) => s._count.submissions > 0).length
+
+    // Get students who STARTED at least one module (IN_PROGRESS or COMPLETED)
+    // This requires a separate query since _count can only have one filter per relation
+    const studentsWithStartedModules = await prisma.user.findMany({
+      where: {
+        role: "STUDENT",
+        moduleProgress: {
+          some: {
+            status: { in: ["IN_PROGRESS", "COMPLETED"] },
+          },
+        },
+      },
+      select: { id: true },
+    })
+    const startedModules = studentsWithStartedModules.length
 
     // Get certificates count
     const certificateHolders = await prisma.certificate.groupBy({
@@ -97,14 +112,30 @@ export async function GET(request: NextRequest) {
       _count: true,
     })
 
-    const funnel = [
-      { stage: "Зарегистрировались", count: totalStudents, percent: 100 },
-      { stage: "Записались на trail", count: enrolledStudents, percent: Math.round((enrolledStudents / totalStudents) * 100) || 0 },
-      { stage: "Начали модуль", count: startedModules, percent: Math.round((startedModules / totalStudents) * 100) || 0 },
-      { stage: "Отправили работу", count: submittedWork, percent: Math.round((submittedWork / totalStudents) * 100) || 0 },
-      { stage: "Завершили модуль", count: completedModule, percent: Math.round((completedModule / totalStudents) * 100) || 0 },
-      { stage: "Получили сертификат", count: certificateHolders.length, percent: Math.round((certificateHolders.length / totalStudents) * 100) || 0 },
+    // Build funnel with monotonically decreasing counts
+    // Each step should be <= previous step (funnel property)
+    const rawFunnel = [
+      { stage: "Зарегистрировались", count: totalStudents },
+      { stage: "Записались на trail", count: enrolledStudents },
+      { stage: "Начали модуль", count: startedModules },
+      { stage: "Отправили работу", count: submittedWork },
+      { stage: "Завершили модуль", count: completedModule },
+      { stage: "Получили сертификат", count: certificateHolders.length },
     ]
+
+    // Ensure funnel consistency: each step count <= previous step count
+    // This handles edge cases where data might be inconsistent
+    const funnel = rawFunnel.map((step, index) => {
+      // First step is always the base (100%)
+      if (index === 0) {
+        return { ...step, percent: 100 }
+      }
+      // For subsequent steps, cap the count at previous step's count
+      const prevCount = rawFunnel[index - 1].count
+      const cappedCount = Math.min(step.count, prevCount)
+      const percent = totalStudents > 0 ? Math.round((cappedCount / totalStudents) * 100) : 0
+      return { stage: step.stage, count: cappedCount, percent }
+    })
 
     // 3. Engagement trends (last 30 days)
     const activityTrend = await prisma.userActivity.groupBy({
