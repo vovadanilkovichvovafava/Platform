@@ -385,3 +385,26 @@ body {
 .achievement-sparkle:nth-child(2) { top: 20%; right: 20%; animation-delay: 0.3s; }
 .achievement-sparkle:nth-child(3) { bottom: 25%; left: 10%; animation-delay: 0.6s; }
 .achievement-sparkle:nth-child(4) { bottom: 15%; right: 15%; animation-delay: 0.9s; }
+
+/* Achievements scroll container */
+.achievements-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.achievements-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.achievements-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.achievements-scroll::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.achievements-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: #9ca3af;
+}
