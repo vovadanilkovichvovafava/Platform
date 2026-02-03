@@ -61,6 +61,11 @@ const authMiddleware = withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
+    // Redirect /admin to /admin/invites (default admin landing page)
+    if (path === "/admin" && (token?.role === "CO_ADMIN" || token?.role === "ADMIN")) {
+      return NextResponse.redirect(new URL("/admin/invites", req.url))
+    }
+
     // Protect shared content editing routes (allow TEACHER, CO_ADMIN, and ADMIN)
     if (path.startsWith("/content/modules/") && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
