@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Progress } from "@/components/ui/progress"
@@ -43,6 +44,8 @@ import {
   Info,
   Pencil,
   FileCheck,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
@@ -105,6 +108,26 @@ const typeLabels: Record<string, string> = {
   PROJECT: "Проект",
 }
 
+const createTrailIconOptions = [
+  { value: "Code", icon: Code, label: "Код" },
+  { value: "Target", icon: Target, label: "Цель" },
+  { value: "Palette", icon: Palette, label: "Дизайн" },
+  { value: "Lightbulb", icon: Lightbulb, label: "Идея" },
+]
+
+const createTrailColorOptions = [
+  { value: "#6366f1", label: "Индиго" },
+  { value: "#8b5cf6", label: "Фиолетовый" },
+  { value: "#ec4899", label: "Розовый" },
+  { value: "#ef4444", label: "Красный" },
+  { value: "#f97316", label: "Оранжевый" },
+  { value: "#eab308", label: "Жёлтый" },
+  { value: "#22c55e", label: "Зелёный" },
+  { value: "#14b8a6", label: "Бирюзовый" },
+  { value: "#0ea5e9", label: "Голубой" },
+  { value: "#3b82f6", label: "Синий" },
+]
+
 interface Assignment {
   trailId: string
 }
@@ -128,6 +151,11 @@ export default function UnifiedContentPage() {
   const [showTrailModal, setShowTrailModal] = useState(false)
   const [newTrailTitle, setNewTrailTitle] = useState("")
   const [newTrailSubtitle, setNewTrailSubtitle] = useState("")
+  const [newTrailDescription, setNewTrailDescription] = useState("")
+  const [newTrailDuration, setNewTrailDuration] = useState("")
+  const [newTrailIcon, setNewTrailIcon] = useState("Code")
+  const [newTrailColor, setNewTrailColor] = useState("#6366f1")
+  const [newTrailIsPublished, setNewTrailIsPublished] = useState(true)
   const [creatingTrail, setCreatingTrail] = useState(false)
 
   // Edit trail modal
@@ -268,15 +296,26 @@ export default function UnifiedContentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: newTrailTitle,
-          subtitle: newTrailSubtitle,
+          title: newTrailTitle.trim(),
+          subtitle: newTrailSubtitle.trim(),
+          description: newTrailDescription.trim(),
+          duration: newTrailDuration.trim(),
+          icon: newTrailIcon,
+          color: newTrailColor,
+          isPublished: newTrailIsPublished,
         }),
       })
 
       if (!res.ok) throw new Error("Failed to create")
 
+      // Reset form
       setNewTrailTitle("")
       setNewTrailSubtitle("")
+      setNewTrailDescription("")
+      setNewTrailDuration("")
+      setNewTrailIcon("Code")
+      setNewTrailColor("#6366f1")
+      setNewTrailIsPublished(true)
       setShowTrailModal(false)
       fetchData()
     } catch {
@@ -1281,15 +1320,27 @@ export default function UnifiedContentPage() {
 
       {/* Create Trail Modal */}
       {showTrailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Создать Trail</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: `${newTrailColor}20` }}
+                >
+                  {(() => {
+                    const IconComp = createTrailIconOptions.find(i => i.value === newTrailIcon)?.icon || Code
+                    return <IconComp className="h-4 w-4" style={{ color: newTrailColor }} />
+                  })()}
+                </div>
+                <h2 className="text-lg font-semibold">Создать Trail</h2>
+              </div>
               <button onClick={() => setShowTrailModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="p-6 space-y-4">
+              {/* Title */}
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">
                   Название *
@@ -1300,6 +1351,8 @@ export default function UnifiedContentPage() {
                   placeholder="Например: Vibe Coder"
                 />
               </div>
+
+              {/* Subtitle */}
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">
                   Подзаголовок
@@ -1310,12 +1363,123 @@ export default function UnifiedContentPage() {
                   placeholder="Краткое описание направления"
                 />
               </div>
+
+              {/* Description */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Описание
+                </label>
+                <Textarea
+                  value={newTrailDescription}
+                  onChange={(e) => setNewTrailDescription(e.target.value)}
+                  placeholder="Полное описание trail (markdown поддерживается)"
+                  rows={3}
+                />
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Длительность
+                </label>
+                <Input
+                  value={newTrailDuration}
+                  onChange={(e) => setNewTrailDuration(e.target.value)}
+                  placeholder="4-6 недель"
+                />
+              </div>
+
+              {/* Icon selection */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">
+                  Иконка
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {createTrailIconOptions.map(({ value, icon: IconComponent, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setNewTrailIcon(value)}
+                      className={`p-3 rounded-lg border text-center transition-colors ${
+                        newTrailIcon === value
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      <IconComponent
+                        className={`h-5 w-5 mx-auto mb-1 ${
+                          newTrailIcon === value ? "text-blue-600" : "text-gray-500"
+                        }`}
+                      />
+                      <span
+                        className={`text-xs ${
+                          newTrailIcon === value ? "text-blue-700" : "text-gray-600"
+                        }`}
+                      >
+                        {label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color selection */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">
+                  Цвет
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {createTrailColorOptions.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setNewTrailColor(value)}
+                      title={label}
+                      className={`h-10 rounded-lg border-2 transition-all ${
+                        newTrailColor === value
+                          ? "border-gray-900 scale-110"
+                          : "border-transparent hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: value }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Published toggle */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  {newTrailIsPublished ? (
+                    <Eye className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  )}
+                  <div>
+                    <span className="text-sm font-medium">
+                      {newTrailIsPublished ? "Опубликован" : "Скрыт"}
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      {newTrailIsPublished
+                        ? "Trail виден всем пользователям"
+                        : "Trail скрыт от студентов"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={newTrailIsPublished}
+                  onCheckedChange={setNewTrailIsPublished}
+                />
+              </div>
+
+              {/* Warning for non-admins */}
               {!isAdmin && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
                   Новый trail будет закрыт для учеников до подтверждения администратором.
                 </div>
               )}
-              <div className="flex gap-3 pt-2">
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2 border-t">
                 <Button
                   variant="outline"
                   onClick={() => setShowTrailModal(false)}
