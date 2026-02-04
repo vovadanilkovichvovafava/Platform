@@ -122,6 +122,36 @@ export async function setCoAdminTrailAccess(
 }
 
 /**
+ * Get list of trail IDs that a teacher has access to
+ * Teachers get access via:
+ * 1. Trails with teacherVisibility = "ALL_TEACHERS"
+ * 2. Trails where they are specifically assigned (TrailTeacher)
+ *
+ * @returns string[] of trail IDs the teacher can access
+ */
+export async function getTeacherAllowedTrailIds(teacherId: string): Promise<string[]> {
+  // Get trails visible to all teachers
+  const allTeacherTrails = await prisma.trail.findMany({
+    where: { teacherVisibility: "ALL_TEACHERS" },
+    select: { id: true },
+  })
+
+  // Get specifically assigned trails
+  const specificAssignments = await prisma.trailTeacher.findMany({
+    where: { teacherId },
+    select: { trailId: true },
+  })
+
+  // Combine both lists (removing duplicates)
+  const allTrailIds = new Set([
+    ...allTeacherTrails.map((t) => t.id),
+    ...specificAssignments.map((a) => a.trailId),
+  ])
+
+  return Array.from(allTrailIds)
+}
+
+/**
  * Get all co-admins with their trail access
  * For ADMIN management UI
  */

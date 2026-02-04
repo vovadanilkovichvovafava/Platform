@@ -73,6 +73,7 @@ interface EditTrailModalProps {
   trail: TrailFormData | null
   onClose: () => void
   onSave: (data: TrailFormData) => void
+  mode?: "edit" | "create"
 }
 
 export function EditTrailModal({
@@ -80,6 +81,7 @@ export function EditTrailModal({
   trail,
   onClose,
   onSave,
+  mode = "edit",
 }: EditTrailModalProps) {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
@@ -124,9 +126,23 @@ export function EditTrailModal({
     }
   }, [open])
 
-  // Reset form when trail changes
+  // Reset form when trail changes or modal opens
   useEffect(() => {
-    if (trail) {
+    if (mode === "create") {
+      // Reset to defaults for create mode
+      setForm({
+        id: "",
+        title: "",
+        subtitle: "",
+        description: "",
+        icon: "Code",
+        color: "#6366f1",
+        duration: "",
+        isPublished: true,
+        teacherVisibility: "ADMIN_ONLY",
+        assignedTeacherId: null,
+      })
+    } else if (trail) {
       setForm({
         id: trail.id,
         title: trail.title,
@@ -140,7 +156,7 @@ export function EditTrailModal({
         assignedTeacherId: trail.assignedTeacherId || null,
       })
     }
-  }, [trail])
+  }, [trail, mode, open])
 
   const handleSubmit = async () => {
     if (!form.title.trim()) {
@@ -148,8 +164,8 @@ export function EditTrailModal({
       return
     }
 
-    // Validate: if SPECIFIC visibility, teacher must be selected
-    if (form.teacherVisibility === "SPECIFIC" && !form.assignedTeacherId) {
+    // Validate: if SPECIFIC visibility, teacher must be selected (edit mode only, admin only)
+    if (mode === "edit" && isAdmin && form.teacherVisibility === "SPECIFIC" && !form.assignedTeacherId) {
       showToast("Выберите учителя для конкретного назначения", "error")
       return
     }
@@ -157,8 +173,8 @@ export function EditTrailModal({
     try {
       setLoading(true)
 
-      // Build update payload - only admins can change teacherVisibility
-      const updatePayload: Record<string, unknown> = {
+      // Build payload
+      const payload: Record<string, unknown> = {
         title: form.title.trim(),
         subtitle: form.subtitle.trim(),
         description: form.description.trim(),
@@ -168,29 +184,41 @@ export function EditTrailModal({
         isPublished: form.isPublished,
       }
 
-      // Only include teacherVisibility for admins
-      if (isAdmin) {
-        updatePayload.teacherVisibility = form.teacherVisibility
-        updatePayload.assignedTeacherId = form.teacherVisibility === "SPECIFIC" ? form.assignedTeacherId : null
+      // Only include teacherVisibility for admins in edit mode
+      if (mode === "edit" && isAdmin) {
+        payload.teacherVisibility = form.teacherVisibility
+        payload.assignedTeacherId = form.teacherVisibility === "SPECIFIC" ? form.assignedTeacherId : null
       }
 
-      const res = await fetch(`/api/admin/trails/${form.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatePayload),
-      })
+      let res: Response
+      if (mode === "create") {
+        // POST for creating new trail
+        res = await fetch("/api/admin/trails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      } else {
+        // PATCH for updating existing trail
+        res = await fetch(`/api/admin/trails/${form.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      }
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || "Ошибка сохранения")
+        throw new Error(data.error || (mode === "create" ? "Ошибка создания" : "Ошибка сохранения"))
       }
 
-      showToast("Trail успешно обновлён", "success")
-      onSave(form)
+      const savedTrail = await res.json()
+      showToast(mode === "create" ? "Trail успешно создан" : "Trail успешно обновлён", "success")
+      onSave(mode === "create" ? { ...form, id: savedTrail.id } : form)
       onClose()
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : "Ошибка сохранения",
+        error instanceof Error ? error.message : (mode === "create" ? "Ошибка создания" : "Ошибка сохранения"),
         "error"
       )
     } finally {
@@ -198,7 +226,8 @@ export function EditTrailModal({
     }
   }
 
-  if (!open || !trail) return null
+  // In create mode, trail is not required
+  if (!open || (mode === "edit" && !trail)) return null
 
   const SelectedIcon = iconOptions.find(i => i.value === form.icon)?.icon || Code
 
@@ -214,7 +243,7 @@ export function EditTrailModal({
               >
                 <SelectedIcon className="h-4 w-4" style={{ color: form.color }} />
               </div>
-              Редактировать Trail
+              {mode === "create" ? "Создать Trail" : "Редактировать Trail"}
             </CardTitle>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="h-5 w-5" />
@@ -423,7 +452,7 @@ export function EditTrailModal({
               ) : (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  Сохранить
+                  {mode === "create" ? "Создать" : "Сохранить"}
                 </>
               )}
             </Button>
