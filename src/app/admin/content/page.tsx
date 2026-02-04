@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Progress } from "@/components/ui/progress"
@@ -121,9 +120,6 @@ export default function AdminContentPage() {
 
   // Create trail modal
   const [showTrailModal, setShowTrailModal] = useState(false)
-  const [newTrailTitle, setNewTrailTitle] = useState("")
-  const [newTrailSubtitle, setNewTrailSubtitle] = useState("")
-  const [creatingTrail, setCreatingTrail] = useState(false)
 
   // Edit trail modal
   const [showEditTrailModal, setShowEditTrailModal] = useState(false)
@@ -242,33 +238,6 @@ export default function AdminContentPage() {
   useEffect(() => {
     fetchTrails()
   }, [])
-
-  const createTrail = async () => {
-    if (!newTrailTitle.trim()) return
-
-    try {
-      setCreatingTrail(true)
-      const res = await fetch("/api/admin/trails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newTrailTitle,
-          subtitle: newTrailSubtitle,
-        }),
-      })
-
-      if (!res.ok) throw new Error("Failed to create")
-
-      setNewTrailTitle("")
-      setNewTrailSubtitle("")
-      setShowTrailModal(false)
-      fetchTrails()
-    } catch {
-      setError("Ошибка создания trail")
-    } finally {
-      setCreatingTrail(false)
-    }
-  }
 
   const createModule = async (data: {
     title: string
@@ -1260,61 +1229,17 @@ export default function AdminContentPage() {
         </div>
       </div>
 
-      {/* Create Trail Modal */}
-      {showTrailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Создать Trail</h2>
-              <button onClick={() => setShowTrailModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Название *
-                </label>
-                <Input
-                  value={newTrailTitle}
-                  onChange={(e) => setNewTrailTitle(e.target.value)}
-                  placeholder="Например: Vibe Coder"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Подзаголовок
-                </label>
-                <Input
-                  value={newTrailSubtitle}
-                  onChange={(e) => setNewTrailSubtitle(e.target.value)}
-                  placeholder="Краткое описание направления"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowTrailModal(false)}
-                  className="flex-1"
-                >
-                  Отмена
-                </Button>
-                <Button
-                  onClick={createTrail}
-                  disabled={!newTrailTitle.trim() || creatingTrail}
-                  className="flex-1"
-                >
-                  {creatingTrail ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Создать"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Create Trail Modal - uses same form as Edit */}
+      <EditTrailModal
+        open={showTrailModal}
+        trail={null}
+        onClose={() => setShowTrailModal(false)}
+        onSave={() => {
+          fetchTrails()
+          setShowTrailModal(false)
+        }}
+        mode="create"
+      />
 
       {/* Create Module Modal */}
       <CreateModuleModal

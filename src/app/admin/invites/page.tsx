@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban } from "lucide-react"
+import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban, ChevronDown } from "lucide-react"
 import Link from "next/link"
 
 interface Invite {
@@ -21,6 +21,15 @@ interface Invite {
   createdAt: string
   createdBy: { name: string; email: string }
 }
+
+// Cleanup period options for auto-deletion of exhausted invites
+const CLEANUP_PERIOD_OPTIONS = [
+  { value: "10m", label: "10 минут" },
+  { value: "1h", label: "1 час" },
+  { value: "1d", label: "1 сутки" },
+] as const
+
+const CLEANUP_PERIOD_STORAGE_KEY = "invites_cleanup_period"
 
 export default function AdminInvitesPage() {
   const { data: session, status } = useSession()
@@ -38,6 +47,9 @@ export default function AdminInvitesPage() {
     maxUses: 1,
     expiresAt: "",
   })
+
+  // Cleanup period for auto-deletion (default: 1 day)
+  const [cleanupPeriod, setCleanupPeriod] = useState<string>("1d")
 
   // Validation errors state
   const [errors, setErrors] = useState<{
@@ -96,6 +108,14 @@ export default function AdminInvitesPage() {
   // Check if form has validation errors (for disabling submit button)
   const hasErrors = Boolean(errors.code || errors.email || errors.maxUses)
 
+  // Initialize cleanup period from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(CLEANUP_PERIOD_STORAGE_KEY)
+    if (saved && CLEANUP_PERIOD_OPTIONS.some(opt => opt.value === saved)) {
+      setCleanupPeriod(saved)
+    }
+  }, [])
+
   useEffect(() => {
     if (status === "loading") return
 
@@ -106,11 +126,12 @@ export default function AdminInvitesPage() {
     }
 
     fetchInvites()
-  }, [session, status, router])
+  }, [session, status, router, cleanupPeriod])
 
   const fetchInvites = async () => {
     try {
-      const res = await fetch("/api/invites")
+      // Pass cleanup period to trigger opportunistic cleanup on server
+      const res = await fetch(`/api/invites?cleanupPeriod=${cleanupPeriod}`)
       if (res.ok) {
         const data = await res.json()
         setInvites(data)
@@ -120,6 +141,12 @@ export default function AdminInvitesPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Handle cleanup period change
+  const handleCleanupPeriodChange = (newPeriod: string) => {
+    setCleanupPeriod(newPeriod)
+    localStorage.setItem(CLEANUP_PERIOD_STORAGE_KEY, newPeriod)
   }
 
   const createInvite = async (e: React.FormEvent) => {
@@ -406,8 +433,28 @@ export default function AdminInvitesPage() {
 
         {/* Invites List */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-200">
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Все приглашения ({invites.length})</h2>
+
+            {/* Cleanup Period Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Авто-удаление:</span>
+              <div className="relative">
+                <select
+                  value={cleanupPeriod}
+                  onChange={(e) => handleCleanupPeriodChange(e.target.value)}
+                  className="appearance-none bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 pr-8 text-sm text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  title="Исчерпанные приглашения старше этого периода удаляются автоматически"
+                >
+                  {CLEANUP_PERIOD_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
           </div>
 
           {invites.length === 0 ? (

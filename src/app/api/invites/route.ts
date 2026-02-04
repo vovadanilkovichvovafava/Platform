@@ -12,8 +12,15 @@ const createInviteSchema = z.object({
   expiresAt: z.string().optional(),
 })
 
+// Cleanup periods in milliseconds
+const CLEANUP_PERIODS: Record<string, number> = {
+  "10m": 10 * 60 * 1000,        // 10 minutes
+  "1h": 60 * 60 * 1000,         // 1 hour
+  "1d": 24 * 60 * 60 * 1000,    // 1 day (default)
+}
+
 // GET - List all invites (ADMIN and CO_ADMIN)
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -21,6 +28,35 @@ export async function GET() {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
+    // Get cleanup period from query params (default: 1 day)
+    const { searchParams } = new URL(request.url)
+    const cleanupPeriod = searchParams.get("cleanupPeriod") || "1d"
+    const periodMs = CLEANUP_PERIODS[cleanupPeriod] || CLEANUP_PERIODS["1d"]
+
+    // Opportunistic cleanup: delete exhausted invites older than the period
+    // An invite is "exhausted" when usedCount >= maxUses
+    const cutoffDate = new Date(Date.now() - periodMs)
+
+    // Find exhausted invites to delete
+    const exhaustedInvites = await prisma.invite.findMany({
+      where: {
+        updatedAt: { lt: cutoffDate },
+      },
+      select: { id: true, usedCount: true, maxUses: true },
+    })
+
+    // Filter to only exhausted ones (usedCount >= maxUses) and delete
+    const idsToDelete = exhaustedInvites
+      .filter((inv) => inv.usedCount >= inv.maxUses)
+      .map((inv) => inv.id)
+
+    if (idsToDelete.length > 0) {
+      await prisma.invite.deleteMany({
+        where: { id: { in: idsToDelete } },
+      })
+    }
+
+    // Now fetch the remaining invites
     const invites = await prisma.invite.findMany({
       orderBy: { createdAt: "desc" },
       include: {
