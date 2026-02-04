@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Progress } from "@/components/ui/progress"
@@ -123,8 +124,11 @@ export default function UnifiedContentPage() {
   const isTeacher = session?.user?.role === "TEACHER"
   const isPrivileged = isAdmin || isTeacher
 
-  // Create trail modal (uses EditTrailModal with mode="create")
-  const [showCreateTrailModal, setShowCreateTrailModal] = useState(false)
+  // Create trail modal
+  const [showTrailModal, setShowTrailModal] = useState(false)
+  const [newTrailTitle, setNewTrailTitle] = useState("")
+  const [newTrailSubtitle, setNewTrailSubtitle] = useState("")
+  const [creatingTrail, setCreatingTrail] = useState(false)
 
   // Edit trail modal
   const [showEditTrailModal, setShowEditTrailModal] = useState(false)
@@ -255,6 +259,32 @@ export default function UnifiedContentPage() {
     ? trails
     : trails.filter((t) => assignedTrailIds.includes(t.id))
 
+  const createTrail = async () => {
+    if (!newTrailTitle.trim()) return
+
+    try {
+      setCreatingTrail(true)
+      const res = await fetch("/api/admin/trails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTrailTitle,
+          subtitle: newTrailSubtitle,
+        }),
+      })
+
+      if (!res.ok) throw new Error("Failed to create")
+
+      setNewTrailTitle("")
+      setNewTrailSubtitle("")
+      setShowTrailModal(false)
+      fetchData()
+    } catch {
+      setError("Ошибка создания trail")
+    } finally {
+      setCreatingTrail(false)
+    }
+  }
 
   const createModule = async (data: {
     title: string
@@ -919,7 +949,7 @@ export default function UnifiedContentPage() {
               )}
 
               {/* New Trail - both roles */}
-              <Button onClick={() => setShowCreateTrailModal(true)} className="bg-green-600 hover:bg-green-700" size="sm">
+              <Button onClick={() => setShowTrailModal(true)} className="bg-green-600 hover:bg-green-700" size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Новый Trail
               </Button>
@@ -996,7 +1026,7 @@ export default function UnifiedContentPage() {
                 <p className="text-gray-500 mb-4">
                   {isAdmin ? "Нет trails" : "Нет назначенных trails"}
                 </p>
-                <Button onClick={() => setShowCreateTrailModal(true)}>
+                <Button onClick={() => setShowTrailModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Создать первый Trail
                 </Button>
@@ -1249,14 +1279,66 @@ export default function UnifiedContentPage() {
         </div>
       </div>
 
-      {/* Create Trail Modal - uses EditTrailModal with mode="create" */}
-      <EditTrailModal
-        open={showCreateTrailModal}
-        trail={null}
-        onClose={() => setShowCreateTrailModal(false)}
-        onSave={handleTrailSave}
-        mode="create"
-      />
+      {/* Create Trail Modal */}
+      {showTrailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Создать Trail</h2>
+              <button onClick={() => setShowTrailModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Название *
+                </label>
+                <Input
+                  value={newTrailTitle}
+                  onChange={(e) => setNewTrailTitle(e.target.value)}
+                  placeholder="Например: Vibe Coder"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Подзаголовок
+                </label>
+                <Input
+                  value={newTrailSubtitle}
+                  onChange={(e) => setNewTrailSubtitle(e.target.value)}
+                  placeholder="Краткое описание направления"
+                />
+              </div>
+              {!isAdmin && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                  Новый trail будет закрыт для учеников до подтверждения администратором.
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTrailModal(false)}
+                  className="flex-1"
+                >
+                  Отмена
+                </Button>
+                <Button
+                  onClick={createTrail}
+                  disabled={!newTrailTitle.trim() || creatingTrail}
+                  className="flex-1"
+                >
+                  {creatingTrail ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Создать"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Module Modal */}
       <CreateModuleModal
