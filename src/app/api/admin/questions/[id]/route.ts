@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { checkTrailPasswordAccess } from "@/lib/trail-password"
 
 const questionUpdateSchema = z.object({
   question: z.string().min(1).optional(),
@@ -57,27 +56,6 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       const isAssigned = await isTeacherAssignedToQuestion(session.user.id, id)
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
-      }
-    }
-
-    // Check password access for protected trails (non-creators must enter password)
-    const question = await prisma.question.findUnique({
-      where: { id },
-      select: { module: { select: { trail: { select: { id: true, createdById: true, isPasswordProtected: true } } } } },
-    })
-
-    if (!question) {
-      return NextResponse.json({ error: "Вопрос не найден" }, { status: 404 })
-    }
-
-    const isCreator = question.module.trail.createdById === session.user.id
-    if (!isCreator && question.module.trail.isPasswordProtected) {
-      const passwordAccess = await checkTrailPasswordAccess(question.module.trail.id, session.user.id)
-      if (!passwordAccess.hasAccess) {
-        return NextResponse.json(
-          { error: "Для редактирования вопроса в защищённом трейле необходимо ввести пароль", requiresPassword: true },
-          { status: 403 }
-        )
       }
     }
 
@@ -138,27 +116,6 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       const isAssigned = await isTeacherAssignedToQuestion(session.user.id, id)
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
-      }
-    }
-
-    // Check password access for protected trails (non-creators must enter password)
-    const question = await prisma.question.findUnique({
-      where: { id },
-      select: { module: { select: { trail: { select: { id: true, createdById: true, isPasswordProtected: true } } } } },
-    })
-
-    if (!question) {
-      return NextResponse.json({ error: "Вопрос не найден" }, { status: 404 })
-    }
-
-    const isCreator = question.module.trail.createdById === session.user.id
-    if (!isCreator && question.module.trail.isPasswordProtected) {
-      const passwordAccess = await checkTrailPasswordAccess(question.module.trail.id, session.user.id)
-      if (!passwordAccess.hasAccess) {
-        return NextResponse.json(
-          { error: "Для удаления вопроса из защищённого трейла необходимо ввести пароль", requiresPassword: true },
-          { status: 403 }
-        )
       }
     }
 
