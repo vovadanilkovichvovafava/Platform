@@ -18,6 +18,7 @@ import {
   CalendarDays,
   Search,
   X,
+  Gift,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 
@@ -67,6 +68,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState("")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [grantingAchievementId, setGrantingAchievementId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState<"ALL" | UserRole>("ALL")
   const { showToast } = useToast()
@@ -154,6 +156,33 @@ export default function AdminUsersPage() {
       showToast("Ошибка при удалении пользователя", "error")
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const grantRandomAchievement = async (userId: string, userName: string) => {
+    try {
+      setGrantingAchievementId(userId)
+      const res = await fetch("/api/admin/achievements/grant-random", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        showToast(data.message || data.error || "Ошибка при выдаче достижения", "error")
+        return
+      }
+
+      showToast(
+        `Достижение "${data.achievement.name}" выдано пользователю ${userName}`,
+        "success"
+      )
+    } catch {
+      showToast("Ошибка при выдаче достижения", "error")
+    } finally {
+      setGrantingAchievementId(null)
     }
   }
 
@@ -364,6 +393,20 @@ export default function AdminUsersPage() {
                             {isAdmin && <option value="ADMIN">Админ</option>}
                           </select>
                         )}
+
+                        {/* Grant random achievement button */}
+                        <button
+                          onClick={() => grantRandomAchievement(user.id, user.name)}
+                          disabled={grantingAchievementId === user.id}
+                          className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Выдать случайное достижение"
+                        >
+                          {grantingAchievementId === user.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Gift className="h-4 w-4" />
+                          )}
+                        </button>
 
                         {/* Delete button - CO_ADMIN cannot delete ADMIN/CO_ADMIN users */}
                         {(isAdmin || (user.role !== "ADMIN" && user.role !== "CO_ADMIN")) && (

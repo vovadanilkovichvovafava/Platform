@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award, Trophy, BarChart3, Menu, X } from "lucide-react"
+import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award, Trophy, BarChart3, Menu, X, FolderKanban } from "lucide-react"
 import { useState, useEffect } from "react"
 import { NotificationBell } from "@/components/notification-bell"
 
@@ -132,12 +132,20 @@ export function Header() {
                 Лидерборд
               </Link>
               {isPrivilegedRole(session.user.role) && (
-                <Link
-                  href="/teacher"
-                  className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
-                >
-                  Панель эксперта
-                </Link>
+                <>
+                  <Link
+                    href="/teacher"
+                    className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
+                  >
+                    Панель эксперта
+                  </Link>
+                  <Link
+                    href="/content"
+                    className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
+                  >
+                    Контент
+                  </Link>
+                </>
               )}
               {isAnyAdminRole(session.user.role) && (
                 <Link
@@ -221,6 +229,12 @@ export function Header() {
                         Панель эксперта
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
+                      <Link href="/content" className="cursor-pointer">
+                        <FolderKanban className="mr-2 h-4 w-4" />
+                        Контент
+                      </Link>
+                    </DropdownMenuItem>
                   </>
                 )}
                 {isAnyAdminRole(session.user.role) && (
@@ -295,14 +309,24 @@ export function Header() {
               Лидерборд
             </Link>
             {isPrivilegedRole(session.user.role) && (
-              <Link
-                href="/teacher"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
-              >
-                <Settings className="h-4 w-4" />
-                Панель эксперта
-              </Link>
+              <>
+                <Link
+                  href="/teacher"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
+                >
+                  <Settings className="h-4 w-4" />
+                  Панель эксперта
+                </Link>
+                <Link
+                  href="/content"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
+                >
+                  <FolderKanban className="h-4 w-4" />
+                  Контент
+                </Link>
+              </>
             )}
             {isAnyAdminRole(session.user.role) && (
               <>
