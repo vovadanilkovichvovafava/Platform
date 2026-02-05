@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { pluralizeRu } from "@/lib/utils"
 import { TeacherStatsDrilldown } from "@/components/teacher-stats-drilldown"
-import { isPrivileged } from "@/lib/admin-access"
+import { isPrivileged, isAdmin as checkIsAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,15 +27,45 @@ export default async function TeacherStatsPage() {
     redirect("/dashboard")
   }
 
-  // Get overall stats
+  const isAdmin = checkIsAdmin(session.user.role)
+  const isCoAdmin = session.user.role === "CO_ADMIN"
+
+  // Get assigned trail IDs based on role
+  // ADMIN: null (all trails), CO_ADMIN: from AdminTrailAccess, TEACHER: from TrailTeacher
+  let assignedTrailIds: string[] | null = null // null = all trails (ADMIN)
+
+  if (isCoAdmin) {
+    // CO_ADMIN - get trails from AdminTrailAccess
+    assignedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+  } else if (!isAdmin) {
+    // TEACHER role - get assigned trails
+    assignedTrailIds = await getTeacherAllowedTrailIds(session.user.id)
+  }
+
+  // Build filters based on assigned trails
+  const studentFilter = assignedTrailIds === null
+    ? { role: "STUDENT" as const }
+    : {
+        role: "STUDENT" as const,
+        enrollments: { some: { trailId: { in: assignedTrailIds } } },
+      }
+
+  const submissionFilter = assignedTrailIds !== null
+    ? { module: { trailId: { in: assignedTrailIds } } }
+    : undefined
+
+  // Get overall stats (filtered by assigned trails for non-admin)
   const totalStudents = await prisma.user.count({
-    where: { role: "STUDENT" },
+    where: studentFilter,
   })
 
-  const totalSubmissions = await prisma.submission.count()
+  const totalSubmissions = await prisma.submission.count({
+    where: submissionFilter,
+  })
 
   const submissionsByStatus = await prisma.submission.groupBy({
     by: ["status"],
+    where: submissionFilter,
     _count: true,
   })
 
@@ -43,8 +73,9 @@ export default async function TeacherStatsPage() {
   const approvedCount = submissionsByStatus.find((s) => s.status === "APPROVED")?._count || 0
   const revisionCount = submissionsByStatus.find((s) => s.status === "REVISION")?._count || 0
 
-  // Get submissions by trail
+  // Get submissions by trail (filtered)
   const submissionsByTrail = await prisma.submission.findMany({
+    where: submissionFilter,
     include: {
       module: {
         include: {
@@ -68,9 +99,12 @@ export default async function TeacherStatsPage() {
     return acc
   }, {} as Record<string, { total: number; approved: number; pending: number; revision: number; color: string }>)
 
-  // Get top students by XP
+  // Get top students by XP (filtered by students in assigned trails)
   const topStudents = await prisma.user.findMany({
-    where: { role: "STUDENT", totalXP: { gt: 0 } },
+    where: {
+      ...studentFilter,
+      totalXP: { gt: 0 },
+    },
     orderBy: { totalXP: "desc" },
     take: 5,
     select: {
@@ -83,55 +117,41 @@ export default async function TeacherStatsPage() {
     },
   })
 
-  // Get recent activity (last 7 days)
+  // Get recent activity (last 7 days, filtered)
   const weekAgo = new Date()
   weekAgo.setDate(weekAgo.getDate() - 7)
 
   const recentSubmissions = await prisma.submission.count({
-    where: { createdAt: { gte: weekAgo } },
+    where: {
+      createdAt: { gte: weekAgo },
+      ...(submissionFilter || {}),
+    },
   })
 
   const recentReviews = await prisma.review.count({
-    where: { createdAt: { gte: weekAgo } },
+    where: {
+      createdAt: { gte: weekAgo },
+      ...(assignedTrailIds !== null
+        ? { submission: { module: { trailId: { in: assignedTrailIds } } } }
+        : {}),
+    },
   })
 
-  // Module completion stats
+  // Module completion stats (filtered)
   const completedModules = await prisma.moduleProgress.count({
-    where: { status: "COMPLETED" },
+    where: {
+      status: "COMPLETED",
+      ...(assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+    },
   })
 
   const approvalRate = totalSubmissions > 0
     ? Math.round((approvedCount / totalSubmissions) * 100)
     : 0
 
-  // Get trails with detailed stats for drill-down
-  const isAdmin = session.user.role === "ADMIN"
-  let assignedTrailIds: string[] = []
-
-  if (!isAdmin) {
-    // Get all trails visible to all teachers
-    const allTeacherTrails = await prisma.trail.findMany({
-      where: { teacherVisibility: "ALL_TEACHERS" },
-      select: { id: true },
-    })
-
-    // Get specifically assigned trails
-    const specificAssignments = await prisma.trailTeacher.findMany({
-      where: { teacherId: session.user.id },
-      select: { trailId: true },
-    })
-
-    // Combine both lists (removing duplicates)
-    const allTrailIds = new Set([
-      ...allTeacherTrails.map(t => t.id),
-      ...specificAssignments.map(a => a.trailId),
-    ])
-
-    assignedTrailIds = Array.from(allTrailIds)
-  }
-
+  // Get trails with detailed stats for drill-down (filtered)
   const trailsWithStats = await prisma.trail.findMany({
-    where: isAdmin ? {} : { id: { in: assignedTrailIds } },
+    where: assignedTrailIds !== null ? { id: { in: assignedTrailIds } } : {},
     include: {
       modules: {
         orderBy: { order: "asc" },

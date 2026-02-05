@@ -2,27 +2,63 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, isAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+    if (!session || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
+    }
+
+    const isAdminUser = isAdmin(session.user.role)
+    const isCoAdmin = session.user.role === "CO_ADMIN"
+
+    // Get assigned trail IDs based on role
+    let assignedTrailIds: string[] | null = null // null = all trails (ADMIN)
+
+    if (isCoAdmin) {
+      // CO_ADMIN - get trails from AdminTrailAccess
+      assignedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+    } else if (!isAdminUser) {
+      // TEACHER role - get assigned trails
+      assignedTrailIds = await getTeacherAllowedTrailIds(session.user.id)
     }
 
     // Check if exporting for a specific student
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get("studentId")
 
+    // Build student filter based on role and assigned trails
+    // ADMIN sees all students, others see only students enrolled in their assigned trails
+    const studentFilter = assignedTrailIds === null
+      ? studentId
+        ? { id: studentId, role: "STUDENT" as const }
+        : { role: "STUDENT" as const }
+      : studentId
+        ? {
+            id: studentId,
+            role: "STUDENT" as const,
+            enrollments: { some: { trailId: { in: assignedTrailIds } } },
+          }
+        : {
+            role: "STUDENT" as const,
+            enrollments: { some: { trailId: { in: assignedTrailIds } } },
+          }
+
+    // Build submission filter for assigned trails
+    const submissionFilter = assignedTrailIds !== null
+      ? { module: { trailId: { in: assignedTrailIds } } }
+      : undefined
+
     // Get students with their submissions and details
     const students = await prisma.user.findMany({
-      where: studentId
-        ? { id: studentId, role: "STUDENT" }
-        : { role: "STUDENT" },
+      where: studentFilter,
       orderBy: { name: "asc" },
       include: {
         enrollments: {
+          where: assignedTrailIds !== null ? { trailId: { in: assignedTrailIds } } : undefined,
           include: {
             trail: {
               select: { title: true },
@@ -30,6 +66,7 @@ export async function GET(request: NextRequest) {
           },
         },
         submissions: {
+          where: submissionFilter,
           orderBy: { createdAt: "desc" },
           include: {
             module: {
@@ -48,7 +85,10 @@ export async function GET(request: NextRequest) {
           },
         },
         moduleProgress: {
-          where: { status: "COMPLETED" },
+          where: {
+            status: "COMPLETED",
+            ...(assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+          },
         },
         _count: {
           select: {
