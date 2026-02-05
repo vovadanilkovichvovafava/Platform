@@ -10,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Award, Lock, ChevronDown, X } from "lucide-react"
+import { Award, Lock, ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { pluralizeRu } from "@/lib/utils"
 
 export interface Achievement {
@@ -261,6 +262,9 @@ function AchievementModal({
   )
 }
 
+// Items per page: 3 rows × 5 columns (lg) = 15 items
+const ITEMS_PER_PAGE = 15
+
 export function AchievementsGrid({
   achievements,
   stats,
@@ -272,6 +276,7 @@ export function AchievementsGrid({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [page, setPage] = useState(1)
 
   const handleAchievementClick = (achievement: Achievement) => {
     setSelectedAchievement(achievement)
@@ -289,13 +294,41 @@ export function AchievementsGrid({
     )
   }
 
-  const earnedAchievements = compact
+  const filteredAchievements = compact
     ? achievements.filter((a) => a.earned)
     : achievements
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredAchievements.length / ITEMS_PER_PAGE)
+  const startIndex = (page - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const paginatedAchievements = filteredAchievements.slice(startIndex, endIndex)
+
+  // Reset page if current page is out of bounds
+  if (page > totalPages && totalPages > 0) {
+    setPage(1)
+  }
 
   const earnedCount = achievements.filter((a) => a.earned).length
   const totalCount = stats?.total ?? achievements.length
   const progressPercent = Math.round((earnedCount / totalCount) * 100)
+
+  // Generate page numbers for pagination UI
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (page > 3) pages.push("ellipsis")
+      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+        pages.push(i)
+      }
+      if (page < totalPages - 2) pages.push("ellipsis")
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   return (
     <div>
@@ -351,18 +384,16 @@ export function AchievementsGrid({
 
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          collapsible && !isExpanded ? "max-h-0 opacity-0" : "max-h-[2000px] opacity-100"
+          collapsible && !isExpanded ? "max-h-0 opacity-0" : "opacity-100"
         }`}
       >
-        <div className={`overflow-y-auto achievements-scroll ${
-          compact ? "max-h-[280px]" : "max-h-[460px]"
-        }`}>
+        <div>
           <div className={`grid gap-4 ${
             compact
               ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6"
               : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
           }`}>
-          {earnedAchievements.map((achievement) => (
+          {paginatedAchievements.map((achievement) => (
             <Card
               key={achievement.id}
               onClick={() => handleAchievementClick(achievement)}
@@ -420,9 +451,54 @@ export function AchievementsGrid({
             </Card>
           ))}
           </div>
+
+          {/* Pagination UI */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((pageNum, idx) =>
+                  pageNum === "ellipsis" ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={pageNum}
+                      variant={page === pageNum ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setPage(pageNum)}
+                      className="h-8 w-8 p-0 text-sm"
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
 
-        {compact && earnedAchievements.length === 0 && (
+        {compact && filteredAchievements.length === 0 && (
           <p className="text-center text-gray-500 text-sm py-4">
             Пока нет достижений
           </p>
