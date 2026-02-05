@@ -20,6 +20,7 @@ import {
 import type { LucideIcon } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { NotificationBell } from "@/components/notification-bell"
+import { NavbarPresetsEditor } from "@/components/navbar-presets-editor"
 
 // Icon map for dynamic rendering
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -121,7 +122,7 @@ function useNavbarPreset(isAuthenticated: boolean) {
     fetchPreset()
   }, [isAuthenticated])
 
-  return { items, isLoaded }
+  return { items, setItems, isLoaded }
 }
 
 // Helper to check if item is visible for role
@@ -152,7 +153,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Fetch navbar preset items
-  const { items: navbarItems } = useNavbarPreset(!!session?.user?.id)
+  const { items: navbarItems, setItems: setNavbarItems } = useNavbarPreset(!!session?.user?.id)
 
   // Страховка: обрабатываем notificationId из URL при переходе по ссылке из уведомления
   useMarkNotificationFromUrl()
@@ -231,6 +232,12 @@ export function Header() {
         <div className="flex items-center gap-2">
           {session ? (
             <>
+              {/* Navbar presets editor - only for admins */}
+              <NavbarPresetsEditor
+                userRole={session.user.role || "STUDENT"}
+                currentItems={navbarItems}
+                onItemsChange={setNavbarItems}
+              />
               <NotificationBell />
               <DropdownMenu>
               <DropdownMenuTrigger asChild>
