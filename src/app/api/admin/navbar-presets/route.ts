@@ -13,6 +13,8 @@ const VALID_ICONS = [
   "Check", "X", "ArrowRight", "ExternalLink", "FileText",
   "Users", "Calendar", "Clock", "Target", "Zap", "Code",
   "Database", "Globe", "Lock", "Unlock", "Edit", "Trash",
+  "GraduationCap", "History", "UserCheck", "BookMarked",
+  "Layers", "PenTool", "Eye", "MessageSquare",
 ]
 
 // Valid roles for visibility
@@ -192,6 +194,28 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating navbar preset:", error)
     return NextResponse.json({ error: "Ошибка при создании пресета" }, { status: 500 })
+  }
+}
+
+// PATCH - Deactivate all presets (switch to default)
+export async function PATCH() {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    // Deactivate all presets
+    await prisma.navbarPreset.updateMany({
+      where: { isActive: true },
+      data: { isActive: false },
+    })
+
+    return NextResponse.json({ success: true, message: "Все пресеты деактивированы" })
+  } catch (error) {
+    console.error("Error deactivating navbar presets:", error)
+    return NextResponse.json({ error: "Ошибка при деактивации пресетов" }, { status: 500 })
   }
 }
 

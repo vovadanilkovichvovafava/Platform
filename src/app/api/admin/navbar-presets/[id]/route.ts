@@ -13,6 +13,8 @@ const VALID_ICONS = [
   "Check", "X", "ArrowRight", "ExternalLink", "FileText",
   "Users", "Calendar", "Clock", "Target", "Zap", "Code",
   "Database", "Globe", "Lock", "Unlock", "Edit", "Trash",
+  "GraduationCap", "History", "UserCheck", "BookMarked",
+  "Layers", "PenTool", "Eye", "MessageSquare",
 ]
 
 const VALID_ROLES = ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
