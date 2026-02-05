@@ -59,7 +59,7 @@ export function HeroSection({ isLoggedIn = false }: HeroSectionProps) {
               variant="outline"
               className="h-12 px-8 text-base font-semibold bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:border-white/50"
             >
-              <Link href="/trails">Смотреть trails</Link>
+              <Link href={isLoggedIn ? "/trails" : "/login"}>Смотреть trails</Link>
             </Button>
           </div>
         </div>

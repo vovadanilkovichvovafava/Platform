@@ -334,7 +334,52 @@ export default async function StudentDetailPage({ params }: Props) {
             </h2>
             <Card>
               <CardContent className="p-4">
-                <ActivityCalendar activityDays={activityDaysWithDetails} />
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Calendar */}
+                  <div className="shrink-0">
+                    <ActivityCalendar activityDays={activityDaysWithDetails} />
+                  </div>
+                  {/* Activity Stats */}
+                  <div className="flex-1 grid grid-cols-2 gap-3 content-start">
+                    <div className="p-3 bg-purple-50 rounded-lg">
+                      <p className="text-2xl font-bold text-purple-700">
+                        {student.activityDays.reduce((sum, d) => sum + d.actions, 0)}
+                      </p>
+                      <p className="text-xs text-purple-600">всего действий</p>
+                    </div>
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <p className="text-2xl font-bold text-blue-700">
+                        {student.moduleProgress.filter(p => p.status === "COMPLETED").length}
+                      </p>
+                      <p className="text-xs text-blue-600">модулей завершено</p>
+                    </div>
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-2xl font-bold text-green-700">
+                        {student.submissions.filter(s => s.status === "APPROVED").length}
+                      </p>
+                      <p className="text-xs text-green-600">работ принято</p>
+                    </div>
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <p className="text-2xl font-bold text-orange-700">
+                        {student.currentStreak}
+                      </p>
+                      <p className="text-xs text-orange-600">дней стрик</p>
+                    </div>
+                    {/* Recent Activity */}
+                    {student.activityDays.length > 0 && (
+                      <div className="col-span-2 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Последняя активность</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {new Date(student.activityDays[student.activityDays.length - 1].date).toLocaleDateString("ru-RU", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </section>

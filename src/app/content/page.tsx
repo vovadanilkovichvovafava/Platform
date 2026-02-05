@@ -237,6 +237,9 @@ export default function UnifiedContentPage() {
 
   // History (admin only)
   const [showHistory, setShowHistory] = useState(false)
+
+  // Track which trails are expanded (default: all collapsed)
+  const [expandedTrails, setExpandedTrails] = useState<Set<string>>(new Set())
   const [auditLogs, setAuditLogs] = useState<Array<{
     id: string
     userName: string
@@ -790,6 +793,21 @@ export default function UnifiedContentPage() {
     return trail.modules.every((m) => selectedModules.has(m.id))
   }
 
+  // Toggle trail expansion
+  const toggleTrailExpanded = (trailId: string) => {
+    setExpandedTrails((prev) => {
+      const next = new Set(prev)
+      if (next.has(trailId)) {
+        next.delete(trailId)
+      } else {
+        next.add(trailId)
+      }
+      return next
+    })
+  }
+
+  const isTrailExpanded = (trailId: string) => expandedTrails.has(trailId)
+
   const clearSelection = () => {
     setSelectedModules(new Set())
   }
@@ -1082,8 +1100,36 @@ export default function UnifiedContentPage() {
 
               return (
                 <Card key={trail.id}>
-                  <CardHeader>
+                  <CardHeader
+                    className="cursor-pointer select-none"
+                    onClick={() => toggleTrailExpanded(trail.id)}
+                    role="button"
+                    aria-expanded={isTrailExpanded(trail.id)}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        toggleTrailExpanded(trail.id)
+                      }
+                    }}
+                  >
                     <div className="flex items-center gap-4">
+                      {/* Expand/Collapse indicator */}
+                      <button
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleTrailExpanded(trail.id)
+                        }}
+                        aria-label={isTrailExpanded(trail.id) ? "Свернуть" : "Развернуть"}
+                      >
+                        {isTrailExpanded(trail.id) ? (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-gray-500" />
+                        )}
+                      </button>
                       <div
                         className="flex h-12 w-12 items-center justify-center rounded-xl"
                         style={{ backgroundColor: `${trail.color}20` }}
@@ -1111,7 +1157,7 @@ export default function UnifiedContentPage() {
                         </div>
                         <p className="text-sm text-gray-500">{trail.subtitle}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <span className="text-sm text-gray-500">
                           {trail.modules.length} {pluralizeRu(trail.modules.length, ["модуль", "модуля", "модулей"])}
                         </span>
@@ -1159,7 +1205,7 @@ export default function UnifiedContentPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  {isTrailExpanded(trail.id) && <CardContent>
                     {trail.modules.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         <p className="mb-3">Нет модулей</p>
@@ -1313,7 +1359,7 @@ export default function UnifiedContentPage() {
                         )}
                       </>
                     )}
-                  </CardContent>
+                  </CardContent>}
                 </Card>
               )
             })
