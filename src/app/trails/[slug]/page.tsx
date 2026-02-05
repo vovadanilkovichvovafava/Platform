@@ -62,15 +62,37 @@ export default async function TrailPage({ params }: Props) {
     notFound()
   }
 
-  // Check access for restricted trails
-  if (trail.isRestricted) {
-    const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER"
+  // Check access for restricted or unpublished trails
+  const isPrivilegedUser = session?.user.role === "ADMIN" || session?.user.role === "TEACHER" || session?.user.role === "CO_ADMIN"
 
+  // If trail is unpublished, only privileged users or users with explicit access can view
+  if (!trail.isPublished) {
     if (!session) {
       redirect("/login")
     }
 
-    if (!isPrivileged) {
+    if (!isPrivilegedUser) {
+      const hasAccess = await prisma.studentTrailAccess.findUnique({
+        where: {
+          studentId_trailId: {
+            studentId: session.user.id,
+            trailId: trail.id,
+          },
+        },
+      })
+
+      if (!hasAccess) {
+        redirect("/trails") // Redirect to trails list if no access
+      }
+    }
+  }
+  // If trail is restricted (but published), check access
+  else if (trail.isRestricted) {
+    if (!session) {
+      redirect("/login")
+    }
+
+    if (!isPrivilegedUser) {
       const hasAccess = await prisma.studentTrailAccess.findUnique({
         where: {
           studentId_trailId: {
@@ -169,7 +191,7 @@ export default async function TrailPage({ params }: Props) {
   const Icon = iconMap[trail.icon] || Code
 
   // Check if user is admin or teacher (to show level badges)
-  const isPrivileged = session?.user?.role === "ADMIN" || session?.user?.role === "TEACHER"
+  const isPrivileged = session?.user?.role === "ADMIN" || session?.user?.role === "TEACHER" || session?.user?.role === "CO_ADMIN"
 
   // Capture values for server action closure
   const trailId = trail.id

@@ -18,8 +18,22 @@ export default async function TrailsPage() {
     accessibleTrailIds = userAccess.map((a) => a.trailId)
   }
 
+  const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER" || session?.user.role === "CO_ADMIN"
+
+  // Build query to include:
+  // 1. All published trails (for everyone)
+  // 2. Unpublished trails that user has explicit access to (for students with StudentTrailAccess)
+  const whereClause = accessibleTrailIds.length > 0
+    ? {
+        OR: [
+          { isPublished: true },
+          { id: { in: accessibleTrailIds } }, // Include trails user has access to, even if unpublished
+        ],
+      }
+    : { isPublished: true }
+
   const allTrails = await prisma.trail.findMany({
-    where: { isPublished: true },
+    where: whereClause,
     orderBy: { order: "asc" },
     include: {
       modules: {
@@ -29,13 +43,19 @@ export default async function TrailsPage() {
   })
 
   // Filter out restricted trails user doesn't have access to
-  // Admins and teachers can see all trails
-  const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER"
+  // Admins and teachers can see all published trails
   const trails = allTrails.filter((trail) => {
-    if (!trail.isRestricted) return true // Public trail
-    if (isPrivileged) return true // Admin/Teacher can see all
-    if (!session) return false // Not logged in, can't see restricted
-    return accessibleTrailIds.includes(trail.id) // Check access
+    // If user has explicit access, always show (even if unpublished or restricted)
+    if (accessibleTrailIds.includes(trail.id)) return true
+    // For unpublished trails without explicit access - hide
+    if (!trail.isPublished) return false
+    // Public trail (not restricted)
+    if (!trail.isRestricted) return true
+    // Admin/Teacher/CO_ADMIN can see all published trails
+    if (isPrivileged) return true
+    // Not logged in, can't see restricted
+    if (!session) return false
+    return false
   })
 
   let enrolledTrailIds: string[] = []
