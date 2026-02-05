@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, isAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
-import { hashTrailPassword, revokeAllPasswordAccess, checkTrailPasswordAccess } from "@/lib/trail-password"
+import { hashTrailPassword, revokeAllPasswordAccess } from "@/lib/trail-password"
 
 const trailUpdateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -128,17 +128,6 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       }
     }
     // ADMIN has access to all
-
-    // Check password access for protected trails (non-creators must enter password)
-    if (!isCreator && existingTrail.isPasswordProtected) {
-      const passwordAccess = await checkTrailPasswordAccess(id, session.user.id)
-      if (!passwordAccess.hasAccess) {
-        return NextResponse.json(
-          { error: "Для редактирования защищённого трейла необходимо ввести пароль", requiresPassword: true },
-          { status: 403 }
-        )
-      }
-    }
 
     const body = await request.json()
     const data = trailUpdateSchema.parse(body)
@@ -299,27 +288,6 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       }
     }
     // ADMIN has access to all
-
-    // Check password access for protected trails (non-creators must enter password)
-    const trail = await prisma.trail.findUnique({
-      where: { id },
-      select: { createdById: true, isPasswordProtected: true },
-    })
-
-    if (!trail) {
-      return NextResponse.json({ error: "Trail не найден" }, { status: 404 })
-    }
-
-    const isCreator = trail.createdById === session.user.id
-    if (!isCreator && trail.isPasswordProtected) {
-      const passwordAccess = await checkTrailPasswordAccess(id, session.user.id)
-      if (!passwordAccess.hasAccess) {
-        return NextResponse.json(
-          { error: "Для удаления защищённого трейла необходимо ввести пароль", requiresPassword: true },
-          { status: 403 }
-        )
-      }
-    }
 
     await prisma.trail.delete({
       where: { id },

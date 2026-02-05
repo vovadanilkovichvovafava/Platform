@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, isAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
-import { checkTrailPasswordAccess } from "@/lib/trail-password"
 
 const moduleUpdateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -101,7 +100,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     // Get module to check trail
     const existingModule = await prisma.module.findUnique({
       where: { id },
-      select: { trailId: true, trail: { select: { createdById: true, isPasswordProtected: true } } },
+      select: { trailId: true },
     })
 
     if (!existingModule) {
@@ -123,18 +122,6 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       }
     }
     // ADMIN has access to all
-
-    // Check password access for protected trails (non-creators must enter password)
-    const isCreator = existingModule.trail.createdById === session.user.id
-    if (!isCreator && existingModule.trail.isPasswordProtected) {
-      const passwordAccess = await checkTrailPasswordAccess(existingModule.trailId, session.user.id)
-      if (!passwordAccess.hasAccess) {
-        return NextResponse.json(
-          { error: "Для редактирования модуля в защищённом трейле необходимо ввести пароль", requiresPassword: true },
-          { status: 403 }
-        )
-      }
-    }
 
     const body = await request.json()
     const data = moduleUpdateSchema.parse(body)
@@ -167,7 +154,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     // Get module to check trail
     const existingModule = await prisma.module.findUnique({
       where: { id },
-      select: { trailId: true, title: true, trail: { select: { createdById: true, isPasswordProtected: true } } },
+      select: { trailId: true, title: true },
     })
 
     if (!existingModule) {
@@ -189,18 +176,6 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       }
     }
     // ADMIN has access to all
-
-    // Check password access for protected trails (non-creators must enter password)
-    const isCreator = existingModule.trail.createdById === session.user.id
-    if (!isCreator && existingModule.trail.isPasswordProtected) {
-      const passwordAccess = await checkTrailPasswordAccess(existingModule.trailId, session.user.id)
-      if (!passwordAccess.hasAccess) {
-        return NextResponse.json(
-          { error: "Для удаления модуля из защищённого трейла необходимо ввести пароль", requiresPassword: true },
-          { status: 403 }
-        )
-      }
-    }
 
     await prisma.module.delete({
       where: { id },
