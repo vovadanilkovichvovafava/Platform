@@ -421,12 +421,29 @@ export default async function ModulePage({ params }: Props) {
           </div>
         </div>
 
-        {/* Next Module Button */}
+        {/* Next Module Button - show when completed OR when work is submitted (PENDING) */}
         {isCompleted && nextModule && (
           <div className="mt-8 flex justify-center">
             <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-600 text-white">
               <Link href={`/module/${nextModule.slug}`}>
                 Следующий модуль: {nextModule.title}
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        )}
+
+        {/* CTA to next module when submission is PENDING (not yet reviewed) */}
+        {!isCompleted && submission?.status === "PENDING" && nextModule && (
+          <div className="mt-8 flex flex-col items-center gap-4">
+            <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-200 max-w-md">
+              <p className="text-amber-700 text-sm">
+                Ваша работа отправлена на проверку. Вы можете продолжить обучение, не дожидаясь результата.
+              </p>
+            </div>
+            <Button asChild size="lg" className="bg-blue-500 hover:bg-blue-600 text-white">
+              <Link href={`/module/${nextModule.slug}`}>
+                Перейти к следующей практике
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>
