@@ -4,6 +4,7 @@ import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { safeJsonParse } from "@/lib/utils"
+import { checkTrailPasswordAccess } from "@/lib/trail-password"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
@@ -85,6 +86,24 @@ export default async function ModulePage({ params }: Props) {
     })
 
     if (!enrollment) {
+      redirect(`/trails/${courseModule.trail.slug}`)
+    }
+  }
+
+  // Check password protection for the trail
+  // Even privileged users don't get automatic access - only creator, users who entered password, or enrolled students
+  const trailPasswordInfo = await prisma.trail.findUnique({
+    where: { id: courseModule.trailId },
+    select: {
+      isPasswordProtected: true,
+      createdById: true,
+    },
+  })
+
+  if (trailPasswordInfo?.isPasswordProtected) {
+    const passwordAccessResult = await checkTrailPasswordAccess(courseModule.trailId, session.user.id)
+    if (!passwordAccessResult.hasAccess) {
+      // Redirect to trail page where password form will be shown
       redirect(`/trails/${courseModule.trail.slug}`)
     }
   }
