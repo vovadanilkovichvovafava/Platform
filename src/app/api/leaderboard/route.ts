@@ -1,11 +1,38 @@
 import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions)
+
+    // Build where clause - CO_ADMIN sees only students from their trails
+    let whereClause: { role: string; enrollments?: { some: { trailId: { in: string[] } } } } = {
+      role: "STUDENT"
+    }
+
+    // If CO_ADMIN, filter by their assigned trails
+    if (session?.user?.role === "CO_ADMIN") {
+      const allowedTrailIds = await getAdminAllowedTrailIds(
+        session.user.id,
+        session.user.role
+      )
+
+      if (allowedTrailIds !== null) {
+        whereClause = {
+          role: "STUDENT",
+          enrollments: {
+            some: { trailId: { in: allowedTrailIds } }
+          }
+        }
+      }
+    }
+
     // Get top 10 students by XP
     const students = await prisma.user.findMany({
-      where: { role: "STUDENT" },
+      where: whereClause,
       orderBy: { totalXP: "desc" },
       take: 10,
       select: {

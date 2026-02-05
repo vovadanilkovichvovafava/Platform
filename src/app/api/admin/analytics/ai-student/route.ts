@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isAnyAdmin } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 // AI API configuration from environment
 const AI_API_ENDPOINT = process.env.AI_API_ENDPOINT || "https://api.anthropic.com/v1/messages"
@@ -91,6 +91,31 @@ export async function POST(request: NextRequest) {
         { error: "studentId обязателен" },
         { status: 400 }
       )
+    }
+
+    // CO_ADMIN: verify access to this student based on trails
+    if (!isAdmin(session.user.role)) {
+      const allowedTrailIds = await getAdminAllowedTrailIds(
+        session.user.id,
+        session.user.role
+      )
+
+      if (allowedTrailIds !== null) {
+        // Check if student is enrolled in any of CO_ADMIN's trails
+        const studentEnrollment = await prisma.enrollment.findFirst({
+          where: {
+            userId: studentId,
+            trailId: { in: allowedTrailIds }
+          }
+        })
+
+        if (!studentEnrollment) {
+          return NextResponse.json(
+            { error: "Нет доступа к этому студенту" },
+            { status: 403 }
+          )
+        }
+      }
     }
 
     // Log request (without PII)

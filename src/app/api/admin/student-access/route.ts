@@ -2,9 +2,10 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isAnyAdmin } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 // GET - List student access entries (optionally filtered by trailId or studentId)
+// CO_ADMIN sees only entries for their assigned trails
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
@@ -16,9 +17,33 @@ export async function GET(request: NextRequest) {
   const trailId = searchParams.get("trailId")
   const studentId = searchParams.get("studentId")
 
-  const where: { trailId?: string; studentId?: string } = {}
-  if (trailId) where.trailId = trailId
+  // Build where clause
+  const where: { trailId?: string | { in: string[] }; studentId?: string } = {}
   if (studentId) where.studentId = studentId
+
+  // CO_ADMIN: filter by allowed trails
+  if (!isAdmin(session.user.role)) {
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    if (allowedTrailIds !== null) {
+      // If specific trailId requested, verify access
+      if (trailId) {
+        if (!allowedTrailIds.includes(trailId)) {
+          return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+        }
+        where.trailId = trailId
+      } else {
+        // No specific trail - filter by allowed trails
+        where.trailId = { in: allowedTrailIds }
+      }
+    }
+  } else if (trailId) {
+    // ADMIN with specific trailId filter
+    where.trailId = trailId
+  }
 
   const access = await prisma.studentTrailAccess.findMany({
     where,
@@ -37,6 +62,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Grant student access to a trail
+// CO_ADMIN can only grant access to their assigned trails
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
@@ -51,6 +77,18 @@ export async function POST(request: NextRequest) {
       { error: "studentId and trailId are required" },
       { status: 400 }
     )
+  }
+
+  // CO_ADMIN: verify access to this trail
+  if (!isAdmin(session.user.role)) {
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    if (allowedTrailIds !== null && !allowedTrailIds.includes(trailId)) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
   }
 
   // Check if already exists
@@ -83,6 +121,7 @@ export async function POST(request: NextRequest) {
 }
 
 // DELETE - Remove student access
+// CO_ADMIN can only remove access for their assigned trails
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
@@ -101,6 +140,18 @@ export async function DELETE(request: NextRequest) {
     )
   }
 
+  // CO_ADMIN: verify access to this trail
+  if (!isAdmin(session.user.role)) {
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    if (allowedTrailIds !== null && !allowedTrailIds.includes(trailId)) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+  }
+
   await prisma.studentTrailAccess.delete({
     where: {
       studentId_trailId: { studentId, trailId },
@@ -111,6 +162,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // PATCH - Toggle trail restriction status
+// CO_ADMIN can only modify restriction for their assigned trails
 export async function PATCH(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
@@ -125,6 +177,18 @@ export async function PATCH(request: NextRequest) {
       { error: "trailId and isRestricted are required" },
       { status: 400 }
     )
+  }
+
+  // CO_ADMIN: verify access to this trail
+  if (!isAdmin(session.user.role)) {
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    if (allowedTrailIds !== null && !allowedTrailIds.includes(trailId)) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
   }
 
   const trail = await prisma.trail.update({
