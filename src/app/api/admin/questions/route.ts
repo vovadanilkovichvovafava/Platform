@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { checkTrailPasswordAccess } from "@/lib/trail-password"
 
 const questionSchema = z.object({
   moduleId: z.string().min(1),
@@ -56,6 +57,27 @@ export async function POST(request: NextRequest) {
       const isAssigned = await isTeacherAssignedToModule(session.user.id, data.moduleId)
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
+    }
+
+    // Check password access for protected trails (non-creators must enter password)
+    const courseModule = await prisma.module.findUnique({
+      where: { id: data.moduleId },
+      select: { trail: { select: { id: true, createdById: true, isPasswordProtected: true } } },
+    })
+
+    if (!courseModule) {
+      return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
+    }
+
+    const isCreator = courseModule.trail.createdById === session.user.id
+    if (!isCreator && courseModule.trail.isPasswordProtected) {
+      const passwordAccess = await checkTrailPasswordAccess(courseModule.trail.id, session.user.id)
+      if (!passwordAccess.hasAccess) {
+        return NextResponse.json(
+          { error: "Для создания вопроса в защищённом трейле необходимо ввести пароль", requiresPassword: true },
+          { status: 403 }
+        )
       }
     }
 

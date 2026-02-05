@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, adminHasTrailAccess } from "@/lib/admin-access"
+import { checkTrailPasswordAccess } from "@/lib/trail-password"
 
 const reorderSchema = z.object({
   moduleIds: z.array(z.string()).min(1),
@@ -29,11 +30,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get trail name for audit log
+    // Get trail for audit log and password check
     const trail = await prisma.trail.findUnique({
       where: { id: trailId },
-      select: { title: true },
+      select: { title: true, createdById: true, isPasswordProtected: true },
     })
+
+    if (!trail) {
+      return NextResponse.json({ error: "Trail не найден" }, { status: 404 })
+    }
+
+    // Check password access for protected trails (non-creators must enter password)
+    const isCreator = trail.createdById === session.user.id
+    if (!isCreator && trail.isPasswordProtected) {
+      const passwordAccess = await checkTrailPasswordAccess(trailId, session.user.id)
+      if (!passwordAccess.hasAccess) {
+        return NextResponse.json(
+          { error: "Для изменения порядка модулей в защищённом трейле необходимо ввести пароль", requiresPassword: true },
+          { status: 403 }
+        )
+      }
+    }
 
     // Update order for each module
     await prisma.$transaction(
