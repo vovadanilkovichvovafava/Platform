@@ -953,20 +953,20 @@ export default function UnifiedContentPage() {
               {isAdmin && (
                 <>
                   <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/teachers">
+                    <Link href="/admin/access?tab=teachers">
                       <Users className="h-4 w-4 mr-2" />
                       Учителя
                     </Link>
                   </Button>
                   <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/access">
+                    <Link href="/admin/access?tab=student-access">
                       <Lock className="h-4 w-4 mr-2" />
                       Доступ
                     </Link>
                   </Button>
                   {isFullAdmin && (
                     <Button asChild variant="outline" size="sm">
-                      <Link href="/admin/admin-access">
+                      <Link href="/admin/access?tab=admin-access">
                         <Lock className="h-4 w-4 mr-2" />
                         Доступ админов
                       </Link>
