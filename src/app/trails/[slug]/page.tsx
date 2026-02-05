@@ -147,6 +147,9 @@ export default async function TrailPage({ params }: Props) {
   let taskProgress: { currentLevel: string; middleStatus: string; juniorStatus: string; seniorStatus: string } | null = null
   let hasCertificate = false
 
+  // Map to track which modules have pending submissions (for instant progress unlock)
+  const modulesWithPendingSubmission = new Set<string>()
+
   if (session) {
     const enrollment = await prisma.enrollment.findUnique({
       where: {
@@ -167,6 +170,19 @@ export default async function TrailPage({ params }: Props) {
       })
       progress.forEach((p) => {
         moduleProgressMap[p.moduleId] = p.status
+      })
+
+      // Fetch submissions to check for PENDING status (allows instant progress to next module)
+      const submissions = await prisma.submission.findMany({
+        where: {
+          userId: session.user.id,
+          moduleId: { in: trail.modules.map((m) => m.id) },
+          status: "PENDING",
+        },
+        select: { moduleId: true },
+      })
+      submissions.forEach((s) => {
+        modulesWithPendingSubmission.add(s.moduleId)
       })
 
       // Get task progress for project levels
@@ -447,15 +463,26 @@ export default async function TrailPage({ params }: Props) {
               const isCompleted = status === "COMPLETED"
               const isInProgress = status === "IN_PROGRESS"
 
-              // Lock if not enrolled or previous not completed
+              // Lock if not enrolled or previous not completed/submitted
               let isLocked = !isEnrolled
               if (isEnrolled && index > 0) {
                 const prevModule = assessmentModules[index - 1]
                 const prevStatus = moduleProgressMap[prevModule.id]
-                if (prevStatus !== "COMPLETED" && status === "NOT_STARTED") {
+                const prevHasPendingSubmission = modulesWithPendingSubmission.has(prevModule.id)
+
+                // Unlock next module if:
+                // 1. Previous is COMPLETED, OR
+                // 2. Previous is IN_PROGRESS AND has a PENDING submission (work submitted, awaiting review)
+                const prevAllowsProgress = prevStatus === "COMPLETED" ||
+                  (prevStatus === "IN_PROGRESS" && prevHasPendingSubmission)
+
+                if (!prevAllowsProgress && status === "NOT_STARTED") {
                   isLocked = true
                 }
               }
+
+              // Check if this module has a pending submission (for UI indicator)
+              const hasPendingSubmission = modulesWithPendingSubmission.has(module.id)
 
               return (
                 <Card
@@ -489,10 +516,12 @@ export default async function TrailPage({ params }: Props) {
                       <div className="flex items-center gap-4 p-4">
                         <Link href={`/module/${module.slug}`} className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                            isCompleted ? "bg-green-100" : isInProgress ? "bg-blue-100" : "bg-gray-100"
+                            isCompleted ? "bg-green-100" : hasPendingSubmission ? "bg-amber-100" : isInProgress ? "bg-blue-100" : "bg-gray-100"
                           }`}>
                             {isCompleted ? (
                               <CheckCircle2 className="h-6 w-6 text-green-600" />
+                            ) : hasPendingSubmission ? (
+                              <Clock className="h-6 w-6 text-amber-600" />
                             ) : isInProgress ? (
                               <PlayCircle className="h-6 w-6 text-blue-600" />
                             ) : (
@@ -500,7 +529,14 @@ export default async function TrailPage({ params }: Props) {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-gray-900 truncate">{module.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-gray-900 truncate">{module.title}</h3>
+                              {hasPendingSubmission && (
+                                <Badge className="bg-amber-100 text-amber-700 border-0 text-xs shrink-0">
+                                  На проверке
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-500 line-clamp-1">{module.description}</p>
                           </div>
                           <div className="hidden sm:flex items-center gap-4 text-sm text-gray-500 shrink-0 ml-4">

@@ -197,6 +197,37 @@ export async function POST(request: Request) {
       },
     })
 
+    // Instant progress unlock: Start next assessment module (non-PROJECT) automatically
+    // This allows the student to continue learning while waiting for review
+    if (courseModule.type !== "PROJECT") {
+      const nextModule = await prisma.module.findFirst({
+        where: {
+          trailId: courseModule.trailId,
+          order: { gt: courseModule.order },
+          type: { not: "PROJECT" },
+        },
+        orderBy: { order: "asc" },
+      })
+
+      if (nextModule) {
+        await prisma.moduleProgress.upsert({
+          where: {
+            userId_moduleId: {
+              userId: session.user.id,
+              moduleId: nextModule.id,
+            },
+          },
+          update: {},
+          create: {
+            userId: session.user.id,
+            moduleId: nextModule.id,
+            status: "IN_PROGRESS",
+            startedAt: new Date(),
+          },
+        })
+      }
+    }
+
     return NextResponse.json(submission)
   } catch (error) {
     if (error instanceof z.ZodError) {
