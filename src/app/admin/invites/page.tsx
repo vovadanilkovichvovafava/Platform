@@ -1,15 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban, ChevronDown } from "lucide-react"
+import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban, ChevronDown, X, Map } from "lucide-react"
 import Link from "next/link"
+
+interface Trail {
+  id: string
+  title: string
+  slug: string
+}
 
 interface Invite {
   id: string
@@ -20,6 +27,7 @@ interface Invite {
   expiresAt: string | null
   createdAt: string
   createdBy: { name: string; email: string }
+  selectedTrails?: Trail[]
 }
 
 // Cleanup period options for auto-deletion of exhausted invites
@@ -40,6 +48,12 @@ export default function AdminInvitesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const { showToast } = useToast()
   const { confirm } = useConfirm()
+
+  // Available trails for selection
+  const [availableTrails, setAvailableTrails] = useState<Trail[]>([])
+  const [selectedTrailIds, setSelectedTrailIds] = useState<string[]>([])
+  const [isTrailDropdownOpen, setIsTrailDropdownOpen] = useState(false)
+  const trailDropdownRef = useRef<HTMLDivElement>(null)
 
   const [newInvite, setNewInvite] = useState({
     code: "",
@@ -116,6 +130,56 @@ export default function AdminInvitesPage() {
     }
   }, [])
 
+  // Fetch available trails on mount
+  useEffect(() => {
+    const fetchTrails = async () => {
+      try {
+        const res = await fetch("/api/admin/trails")
+        if (res.ok) {
+          const data = await res.json()
+          // Map to simplified trail objects
+          setAvailableTrails(data.map((t: { id: string; title: string; slug: string }) => ({
+            id: t.id,
+            title: t.title,
+            slug: t.slug,
+          })))
+        }
+      } catch (error) {
+        console.error("Error fetching trails:", error)
+      }
+    }
+
+    if (session?.user?.role === "ADMIN" || session?.user?.role === "CO_ADMIN") {
+      fetchTrails()
+    }
+  }, [session])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (trailDropdownRef.current && !trailDropdownRef.current.contains(event.target as Node)) {
+        setIsTrailDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  // Toggle trail selection
+  const toggleTrailSelection = (trailId: string) => {
+    setSelectedTrailIds((prev) =>
+      prev.includes(trailId)
+        ? prev.filter((id) => id !== trailId)
+        : [...prev, trailId]
+    )
+  }
+
+  // Remove trail from selection
+  const removeTrail = (trailId: string) => {
+    setSelectedTrailIds((prev) => prev.filter((id) => id !== trailId))
+  }
+
   useEffect(() => {
     if (status === "loading") return
 
@@ -166,11 +230,13 @@ export default function AdminInvitesPage() {
         body: JSON.stringify({
           ...newInvite,
           code: newInvite.code.toUpperCase(),
+          trailIds: selectedTrailIds,
         }),
       })
 
       if (res.ok) {
         setNewInvite({ code: "", email: "", maxUses: 1, expiresAt: "" })
+        setSelectedTrailIds([]) // Clear selected trails
         setErrors({}) // Clear validation errors
         fetchInvites()
         showToast("Приглашение создано", "success")
@@ -420,6 +486,79 @@ export default function AdminInvitesPage() {
               </div>
             </div>
 
+            {/* Trail Multi-Select */}
+            {availableTrails.length > 0 && (
+              <div className="space-y-2">
+                <Label>Доступ к трейлам (опционально)</Label>
+                <div ref={trailDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsTrailDropdownOpen(!isTrailDropdownOpen)}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Map className="h-4 w-4 text-slate-400" />
+                      {selectedTrailIds.length === 0
+                        ? "Выберите трейлы..."
+                        : `Выбрано: ${selectedTrailIds.length}`}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isTrailDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isTrailDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                      {availableTrails.map((trail) => {
+                        const isSelected = selectedTrailIds.includes(trail.id)
+                        return (
+                          <label
+                            key={trail.id}
+                            className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
+                              isSelected ? "bg-orange-50" : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleTrailSelection(trail.id)}
+                            />
+                            <span className="text-sm text-slate-700 truncate">{trail.title}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected trails chips */}
+                {selectedTrailIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedTrailIds.map((trailId) => {
+                      const trail = availableTrails.find((t) => t.id === trailId)
+                      if (!trail) return null
+                      return (
+                        <span
+                          key={trailId}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-md text-xs"
+                        >
+                          {trail.title}
+                          <button
+                            type="button"
+                            onClick={() => removeTrail(trailId)}
+                            className="hover:text-orange-900 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-500">
+                  Студент получит доступ к выбранным трейлам при регистрации по приглашению
+                </p>
+              </div>
+            )}
+
             <Button type="submit" disabled={isCreating || hasErrors} className="bg-orange-500 hover:bg-orange-600">
               {isCreating ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -525,6 +664,22 @@ export default function AdminInvitesPage() {
                             </span>
                           )}
                         </div>
+
+                        {/* Selected Trails Display */}
+                        {invite.selectedTrails && invite.selectedTrails.length > 0 && (
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <Map className="h-3 w-3 text-slate-400" />
+                            {invite.selectedTrails.map((trail) => (
+                              <span
+                                key={trail.id}
+                                className="text-xs px-2 py-0.5 bg-orange-50 text-orange-700 rounded-md"
+                              >
+                                {trail.title}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
                         <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
                           <span>Создан {new Date(invite.createdAt).toLocaleDateString("ru")}</span>
                           {invite.expiresAt && (
