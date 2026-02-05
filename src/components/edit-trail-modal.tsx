@@ -99,7 +99,7 @@ export function EditTrailModal({
     icon: "Code",
     color: "#6366f1",
     duration: "",
-    isPublished: true,
+    isPublished: false,
     teacherVisibility: "ADMIN_ONLY",
     assignedTeacherId: null,
   })
@@ -138,7 +138,7 @@ export function EditTrailModal({
         icon: "Code",
         color: "#6366f1",
         duration: "",
-        isPublished: true,
+        isPublished: false,
         teacherVisibility: "ADMIN_ONLY",
         assignedTeacherId: null,
       })
