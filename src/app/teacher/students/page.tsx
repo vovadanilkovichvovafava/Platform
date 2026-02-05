@@ -62,8 +62,20 @@ export default async function TeacherStudentsPage() {
         },
       },
       moduleProgress: {
-        where: { status: "COMPLETED" },
-        select: { id: true },
+        where: {
+          status: "COMPLETED",
+          // Only count completed modules from enrolled trails
+          ...(assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+        },
+        select: {
+          id: true,
+          module: {
+            select: {
+              points: true,
+              trailId: true,
+            },
+          },
+        },
       },
       submissions: {
         // Filter submissions by assigned trails for non-admin
@@ -123,24 +135,37 @@ export default async function TeacherStudentsPage() {
   const trailNames = [...new Set(allTrails.map((t) => t.title))].sort()
 
   // Serialize students data for client component
-  const serializedStudents = students.map((student) => ({
-    id: student.id,
-    name: student.name,
-    email: student.email,
-    totalXP: student.totalXP,
-    enrollments: student.enrollments,
-    moduleProgress: student.moduleProgress,
-    submissions: student.submissions.map((s) => ({
-      ...s,
-      createdAt: s.createdAt.toISOString(),
-    })),
-    _count: student._count,
-    stats: getStudentStats(student.id),
-    maxXP: student.enrollments.reduce(
+  const serializedStudents = students.map((student) => {
+    // Get enrolled trail IDs for this student
+    const enrolledTrailIds = new Set(student.enrollments.map((e) => e.trail.id))
+
+    // Calculate XP only from completed modules in enrolled trails
+    const calculatedXP = student.moduleProgress
+      .filter((mp) => mp.module && enrolledTrailIds.has(mp.module.trailId))
+      .reduce((sum, mp) => sum + (mp.module?.points || 0), 0)
+
+    // Calculate max XP for enrolled trails
+    const maxXP = student.enrollments.reduce(
       (sum, e) => sum + (maxXPByTrail[e.trail.id] || 0),
       0
-    ),
-  }))
+    )
+
+    return {
+      id: student.id,
+      name: student.name,
+      email: student.email,
+      totalXP: calculatedXP,
+      enrollments: student.enrollments,
+      moduleProgress: student.moduleProgress,
+      submissions: student.submissions.map((s) => ({
+        ...s,
+        createdAt: s.createdAt.toISOString(),
+      })),
+      _count: student._count,
+      stats: getStudentStats(student.id),
+      maxXP,
+    }
+  })
 
   // Handle empty state for teachers with no assigned trails
   const hasNoAccess = assignedTrailIds !== null && assignedTrailIds.length === 0

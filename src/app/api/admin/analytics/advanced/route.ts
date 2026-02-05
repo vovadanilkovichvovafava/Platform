@@ -175,9 +175,9 @@ export async function GET(request: NextRequest) {
     // Ensure funnel consistency: each step count <= previous step count
     // This handles edge cases where data might be inconsistent
     const funnel = rawFunnel.map((step, index) => {
-      // First step is always the base (100%)
+      // First step: 100% only if there are students, otherwise 0%
       if (index === 0) {
-        return { ...step, percent: 100 }
+        return { ...step, percent: totalStudents > 0 ? 100 : 0 }
       }
       // For subsequent steps, cap the count at previous step's count
       const prevCount = rawFunnel[index - 1].count

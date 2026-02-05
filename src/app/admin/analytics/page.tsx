@@ -809,7 +809,7 @@ export default function AdvancedAnalyticsPage() {
               <div className="mb-4">
                 <button
                   onClick={() => setExpandedRisk(expandedRisk === "high" ? null : "high")}
-                  className="w-full flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                  className="w-full flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Badge className="bg-red-500">Высокий</Badge>
@@ -880,7 +880,7 @@ export default function AdvancedAnalyticsPage() {
               <div className="mb-4">
                 <button
                   onClick={() => setExpandedRisk(expandedRisk === "medium" ? null : "medium")}
-                  className="w-full flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+                  className="w-full flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Badge className="bg-yellow-500">Средний</Badge>
@@ -1075,7 +1075,7 @@ export default function AdvancedAnalyticsPage() {
                               ? "bg-green-500"
                               : "bg-blue-400"
                           }`}
-                          style={{ width: `${Math.max(stage.percent, 2)}%` }}
+                          style={{ width: `${stage.count > 0 ? Math.max(stage.percent, 2) : 0}%` }}
                         />
                       </div>
                       {index < data.funnel.length - 1 && (
@@ -1285,7 +1285,7 @@ export default function AdvancedAnalyticsPage() {
                     <div className="w-full flex items-center justify-between">
                       <button
                         onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)}
-                        className="flex items-center gap-3 flex-1"
+                        className="flex items-center gap-3 flex-1 cursor-pointer"
                       >
                         <CardTitle className="text-base">{trail.trailTitle}</CardTitle>
                         <Badge variant="outline" className="text-xs">
@@ -1308,7 +1308,7 @@ export default function AdvancedAnalyticsPage() {
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Link>
-                        <button onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)}>
+                        <button onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)} className="cursor-pointer">
                           {expandedDropoff === trail.trailId ? (
                             <ChevronUp className="h-5 w-5 text-gray-400" />
                           ) : (
@@ -1711,7 +1711,7 @@ export default function AdvancedAnalyticsPage() {
                             expandedStudentTrail === trailGroup.trailId ? null : trailGroup.trailId
                           )
                         }
-                        className="w-full flex items-center justify-between p-3 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                        className="w-full flex items-center justify-between p-3 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
                           <span className="font-medium text-indigo-900">{trailGroup.trailTitle}</span>

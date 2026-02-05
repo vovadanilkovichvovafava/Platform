@@ -106,6 +106,7 @@ export default async function StudentDetailPage({ params }: Props) {
               id: true,
               title: true,
               trailId: true,
+              points: true,
             },
           },
         },
@@ -156,11 +157,17 @@ export default async function StudentDetailPage({ params }: Props) {
     }])
   )
 
-  // Calculate total max XP
+  // Calculate total max XP from enrolled trails
   const totalMaxXP = student.enrollments.reduce(
     (sum, e) => sum + e.trail.modules.reduce((s, m) => s + m.points, 0),
     0
   )
+
+  // Calculate actual XP from completed modules in enrolled trails
+  const enrolledTrailIds = new Set(student.enrollments.map((e) => e.trailId))
+  const calculatedXP = student.moduleProgress
+    .filter((mp) => mp.status === "COMPLETED" && mp.module && enrolledTrailIds.has(mp.module.trailId))
+    .reduce((sum, mp) => sum + (mp.module?.points || 0), 0)
 
   // Group submissions by status
   const submissionStats = {
@@ -262,7 +269,7 @@ export default async function StudentDetailPage({ params }: Props) {
           <Card>
             <CardContent className="p-4 text-center">
               <Trophy className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-yellow-600">{student.totalXP}</p>
+              <p className="text-2xl font-bold text-yellow-600">{calculatedXP}</p>
               <p className="text-xs text-gray-500">из {totalMaxXP} XP</p>
             </CardContent>
           </Card>
