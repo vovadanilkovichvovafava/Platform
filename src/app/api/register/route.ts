@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         trails: {
           include: {
             trail: {
-              select: { id: true, isPublished: true },
+              select: { id: true },
             },
           },
         },
@@ -83,10 +83,11 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Get valid trail IDs from invite (filter out unpublished trails)
+    // Get trail IDs from invite
+    // Note: If admin attached a trail to invite, student should get access regardless of isPublished status
     const validTrailIds = invite.trails
       .map((t) => t.trail)
-      .filter((trail) => trail.isPublished) // Only published trails
+      .filter((trail) => trail !== null) // Filter out deleted trails
       .map((trail) => trail.id)
 
     // Use transaction to ensure atomicity
