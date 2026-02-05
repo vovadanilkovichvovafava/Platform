@@ -175,8 +175,10 @@ export function Header() {
     isVisibleForRole(item, session?.user?.role)
   )
 
-  // Separate items for desktop nav (first 4-6 items) and rest for dropdown
-  const desktopNavItems = visibleItems.slice(0, 6)
+  // Separate items for desktop nav (first 6 items) and overflow items
+  const MAX_DESKTOP_ITEMS = 6
+  const desktopNavItems = visibleItems.slice(0, MAX_DESKTOP_ITEMS)
+  const overflowNavItems = visibleItems.slice(MAX_DESKTOP_ITEMS)
   const dropdownNavItems = visibleItems
 
   return (
@@ -228,6 +230,37 @@ export function Header() {
                   {item.label}
                 </Link>
               ))}
+              {/* Overflow menu for items beyond limit */}
+              {overflowNavItems.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors flex items-center gap-1">
+                      Ещё
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48 bg-white border-slate-200" align="start">
+                    {overflowNavItems.map((item) => (
+                      <DropdownMenuItem
+                        key={item.id}
+                        asChild
+                        className={`cursor-pointer ${
+                          isPrivilegedItem(item)
+                            ? "text-orange-600 hover:text-orange-700 focus:text-orange-700 focus:bg-orange-50"
+                            : "text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100"
+                        }`}
+                      >
+                        <Link href={item.href}>
+                          <NavIcon name={item.icon} className="mr-2 h-4 w-4" />
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </nav>
           )}
         </div>
