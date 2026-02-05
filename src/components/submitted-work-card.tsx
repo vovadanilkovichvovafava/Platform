@@ -16,7 +16,8 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  XCircle
+  XCircle,
+  Bell,
 } from "lucide-react"
 
 interface Review {
@@ -34,6 +35,7 @@ interface Submission {
   comment: string | null
   status: string
   createdAt: string
+  lastRenotifiedAt?: string | null
   review?: Review | null
 }
 
@@ -76,6 +78,7 @@ export function SubmittedWorkCard({
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isRenotifying, setIsRenotifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -88,8 +91,46 @@ export function SubmittedWorkCard({
   })
 
   const canEdit = submission.status === "PENDING"
+  const canRenotify = submission.status === "PENDING"
   const status = statusConfig[submission.status as keyof typeof statusConfig] || statusConfig.PENDING
   const StatusIcon = status.icon
+
+  // Calculate renotify cooldown
+  const getRenotifyCooldown = () => {
+    if (!submission.lastRenotifiedAt) return null
+    const lastNotify = new Date(submission.lastRenotifiedAt).getTime()
+    const cooldownMs = 24 * 60 * 60 * 1000 // 24 hours
+    const remaining = cooldownMs - (Date.now() - lastNotify)
+    if (remaining <= 0) return null
+    return Math.ceil(remaining / (60 * 60 * 1000)) // hours remaining
+  }
+
+  const renotifyCooldownHours = getRenotifyCooldown()
+
+  const handleRenotify = async () => {
+    setIsRenotifying(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await fetch(`/api/submissions/${submission.id}/renotify`, {
+        method: "POST",
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Ошибка отправки уведомления")
+      }
+
+      setSuccess("Уведомление отправлено проверяющим")
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка отправки")
+    } finally {
+      setIsRenotifying(false)
+    }
+  }
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -155,17 +196,43 @@ export function SubmittedWorkCard({
             </Badge>
           </div>
 
-          {canEdit && !isEditing && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEditToggle}
-              className="gap-1"
-            >
-              <Pencil className="h-4 w-4" />
-              Редактировать
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canRenotify && !isEditing && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRenotify}
+                disabled={isRenotifying || renotifyCooldownHours !== null}
+                className="gap-1"
+                title={
+                  renotifyCooldownHours !== null
+                    ? `Можно отправить через ${renotifyCooldownHours} ч.`
+                    : "Напомнить проверяющим о работе"
+                }
+              >
+                {isRenotifying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Bell className="h-4 w-4" />
+                )}
+                {renotifyCooldownHours !== null
+                  ? `Через ${renotifyCooldownHours} ч.`
+                  : "Напомнить"}
+              </Button>
+            )}
+
+            {canEdit && !isEditing && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEditToggle}
+                className="gap-1"
+              >
+                <Pencil className="h-4 w-4" />
+                Редактировать
+              </Button>
+            )}
+          </div>
 
           {isEditing && (
             <Button

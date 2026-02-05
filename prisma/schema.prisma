@@ -251,6 +251,7 @@ model Submission {
   userId    String
   moduleId  String
   telegramNotifiedAt DateTime? // When TG notification was sent (idempotency)
+  lastRenotifiedAt   DateTime? // When last re-notification was sent (rate limit: once per day)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

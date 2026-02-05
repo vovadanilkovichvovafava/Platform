@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isAnyAdmin } from "@/lib/admin-access"
+import { isAnyAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -15,6 +15,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get allowed trail IDs for CO_ADMIN (null means all trails for ADMIN)
+    const allowedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+
+    // Validate that CO_ADMIN can only access their assigned trails
+    if (trailFilter !== "all" && allowedTrailIds !== null) {
+      if (!allowedTrailIds.includes(trailFilter)) {
+        return NextResponse.json({ error: "Нет доступа к этому trail" }, { status: 403 })
+      }
+    }
+
+    // Build trail filter for queries
+    // For CO_ADMIN: use their allowed trails (intersection with trailFilter if specified)
+    // For ADMIN: use trailFilter or all
+    const getEffectiveTrailFilter = () => {
+      if (allowedTrailIds === null) {
+        // ADMIN - use trailFilter directly
+        return trailFilter !== "all" ? { id: trailFilter } : {}
+      }
+      // CO_ADMIN - filter by allowed trails
+      if (trailFilter !== "all") {
+        return { id: trailFilter }
+      }
+      return { id: { in: allowedTrailIds } }
+    }
+
+    const effectiveTrailFilter = getEffectiveTrailFilter()
+
     // 1. Churn Risk Analysis
     // Students who haven't been active in 7+ days
     const sevenDaysAgo = new Date()
@@ -26,9 +53,22 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    // Get all students with their latest activity
+    // Build student filter based on allowed trails
+    // CO_ADMIN can only see students enrolled in their allowed trails
+    const studentWhereClause = allowedTrailIds === null
+      ? { role: "STUDENT" as const }
+      : {
+          role: "STUDENT" as const,
+          enrollments: {
+            some: {
+              trailId: { in: allowedTrailIds },
+            },
+          },
+        }
+
+    // Get all students with their latest activity (filtered by allowed trails for CO_ADMIN)
     const students = await prisma.user.findMany({
-      where: { role: "STUDENT" },
+      where: studentWhereClause,
       select: {
         id: true,
         name: true,
@@ -45,7 +85,9 @@ export async function GET(request: NextRequest) {
           select: {
             moduleProgress: { where: { status: "COMPLETED" } },
             submissions: true,
-            enrollments: true,
+            enrollments: allowedTrailIds === null
+              ? true
+              : { where: { trailId: { in: allowedTrailIds } } },
           },
         },
       },
@@ -93,22 +135,29 @@ export async function GET(request: NextRequest) {
 
     // Get students who STARTED at least one module (IN_PROGRESS or COMPLETED)
     // This requires a separate query since _count can only have one filter per relation
+    // For CO_ADMIN: only count modules from allowed trails
+    const moduleProgressFilter = allowedTrailIds === null
+      ? { status: { in: ["IN_PROGRESS", "COMPLETED"] } }
+      : {
+          status: { in: ["IN_PROGRESS", "COMPLETED"] },
+          module: { trailId: { in: allowedTrailIds } },
+        }
+
     const studentsWithStartedModules = await prisma.user.findMany({
       where: {
-        role: "STUDENT",
+        ...studentWhereClause,
         moduleProgress: {
-          some: {
-            status: { in: ["IN_PROGRESS", "COMPLETED"] },
-          },
+          some: moduleProgressFilter,
         },
       },
       select: { id: true },
     })
     const startedModules = studentsWithStartedModules.length
 
-    // Get certificates count
+    // Get certificates count (filtered by allowed trails for CO_ADMIN)
     const certificateHolders = await prisma.certificate.groupBy({
       by: ["userId"],
+      where: allowedTrailIds === null ? {} : { trailId: { in: allowedTrailIds } },
       _count: true,
     })
 
@@ -155,8 +204,9 @@ export async function GET(request: NextRequest) {
       totalActions: day._sum.actions || 0,
     }))
 
-    // 4. Module difficulty analysis
+    // 4. Module difficulty analysis (filtered by allowed trails for CO_ADMIN)
     const moduleStats = await prisma.module.findMany({
+      where: allowedTrailIds === null ? {} : { trailId: { in: allowedTrailIds } },
       select: {
         id: true,
         title: true,
@@ -180,10 +230,11 @@ export async function GET(request: NextRequest) {
 
     // Get submissions with reviews for each module (removed invalid groupBy)
 
-    // Calculate avg scores per module manually
+    // Calculate avg scores per module manually (filtered by allowed trails for CO_ADMIN)
     const submissions = await prisma.submission.findMany({
       where: {
         review: { isNot: null },
+        ...(allowedTrailIds === null ? {} : { module: { trailId: { in: allowedTrailIds } } }),
       },
       select: {
         moduleId: true,
@@ -222,8 +273,9 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 5. Get list of trails for filter dropdown
+    // 5. Get list of trails for filter dropdown (filtered by allowed trails for CO_ADMIN)
     const trailsList = await prisma.trail.findMany({
+      where: allowedTrailIds === null ? {} : { id: { in: allowedTrailIds } },
       select: {
         id: true,
         title: true,
@@ -239,7 +291,7 @@ export async function GET(request: NextRequest) {
     periodStart.setDate(periodStart.getDate() - periodDays)
 
     const moduleDropoffData = await prisma.trail.findMany({
-      where: trailFilter !== "all" ? { id: trailFilter } : {},
+      where: effectiveTrailFilter,
       select: {
         id: true,
         title: true,
@@ -330,9 +382,9 @@ export async function GET(request: NextRequest) {
     })
 
     // 7. Student Progress Statistics (для графиков развития)
-    // Trail progress analysis
+    // Trail progress analysis (filtered by allowed trails for CO_ADMIN)
     const trails = await prisma.trail.findMany({
-      where: trailFilter !== "all" ? { id: trailFilter } : {},
+      where: effectiveTrailFilter,
       select: {
         id: true,
         title: true,
@@ -399,9 +451,9 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    // Top performing students
+    // Top performing students (filtered by allowed trails for CO_ADMIN)
     const topStudents = await prisma.user.findMany({
-      where: { role: "STUDENT" },
+      where: studentWhereClause,
       select: {
         id: true,
         name: true,
@@ -409,9 +461,13 @@ export async function GET(request: NextRequest) {
         currentStreak: true,
         _count: {
           select: {
-            moduleProgress: { where: { status: "COMPLETED" } },
-            submissions: { where: { status: "APPROVED" } },
-            certificates: true,
+            moduleProgress: allowedTrailIds === null
+              ? { where: { status: "COMPLETED" } }
+              : { where: { status: "COMPLETED", module: { trailId: { in: allowedTrailIds } } } },
+            submissions: allowedTrailIds === null
+              ? { where: { status: "APPROVED" } }
+              : { where: { status: "APPROVED", module: { trailId: { in: allowedTrailIds } } } },
+            certificates: allowedTrailIds === null ? true : { where: { trailId: { in: allowedTrailIds } } },
           },
         },
       },
@@ -430,16 +486,21 @@ export async function GET(request: NextRequest) {
       certificates: s._count.certificates,
     }))
 
-    // Score distribution (for filtered submissions based on trail)
-    const reviewWhereClause = trailFilter !== "all"
-      ? {
-          submission: {
-            module: {
-              trailId: trailFilter
-            }
-          }
-        }
-      : {}
+    // Score distribution (for filtered submissions based on trail and allowed trails for CO_ADMIN)
+    const buildReviewWhereClause = () => {
+      if (allowedTrailIds === null) {
+        // ADMIN
+        return trailFilter !== "all"
+          ? { submission: { module: { trailId: trailFilter } } }
+          : {}
+      }
+      // CO_ADMIN - always filter by allowed trails
+      if (trailFilter !== "all") {
+        return { submission: { module: { trailId: trailFilter } } }
+      }
+      return { submission: { module: { trailId: { in: allowedTrailIds } } } }
+    }
+    const reviewWhereClause = buildReviewWhereClause()
 
     const allReviews = await prisma.review.findMany({
       where: reviewWhereClause,
@@ -460,8 +521,9 @@ export async function GET(request: NextRequest) {
     }
 
     // 8. Students by trail with detailed progress (для коллапсеров)
+    // Filtered by allowed trails for CO_ADMIN
     const trailStudentsData = await prisma.trail.findMany({
-      where: trailFilter !== "all" ? { id: trailFilter } : {},
+      where: effectiveTrailFilter,
       select: {
         id: true,
         title: true,
