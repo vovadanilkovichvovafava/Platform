@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged } from "@/lib/admin-access"
+import { isPrivileged, isAdmin as checkIsAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Users } from "lucide-react"
@@ -16,12 +16,41 @@ export default async function TeacherStudentsPage() {
     redirect("/dashboard")
   }
 
-  // Get all students with their progress
+  const isAdmin = checkIsAdmin(session.user.role)
+  const isCoAdmin = session.user.role === "CO_ADMIN"
+
+  // Get assigned trail IDs based on role
+  let assignedTrailIds: string[] | null = null // null = all trails (ADMIN)
+
+  if (isCoAdmin) {
+    // CO_ADMIN - get trails from AdminTrailAccess
+    assignedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+  } else if (!isAdmin) {
+    // TEACHER role - get assigned trails
+    assignedTrailIds = await getTeacherAllowedTrailIds(session.user.id)
+  }
+
+  // Build filter for students: only those enrolled in assigned trails
+  // ADMIN sees all students, others see only students in their assigned trails
+  const studentFilter = assignedTrailIds === null
+    ? { role: "STUDENT" as const }
+    : {
+        role: "STUDENT" as const,
+        enrollments: {
+          some: {
+            trailId: { in: assignedTrailIds },
+          },
+        },
+      }
+
+  // Get students with their progress (filtered by assigned trails)
   const students = await prisma.user.findMany({
-    where: { role: "STUDENT" },
+    where: studentFilter,
     orderBy: { totalXP: "desc" },
     include: {
       enrollments: {
+        // For non-admin, only show enrollments in assigned trails
+        where: assignedTrailIds !== null ? { trailId: { in: assignedTrailIds } } : undefined,
         include: {
           trail: {
             select: {
@@ -37,6 +66,8 @@ export default async function TeacherStudentsPage() {
         select: { id: true },
       },
       submissions: {
+        // Filter submissions by assigned trails for non-admin
+        where: assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : undefined,
         include: {
           module: {
             select: { title: true },
@@ -54,8 +85,9 @@ export default async function TeacherStudentsPage() {
     },
   })
 
-  // Get all trails with their modules to calculate max XP
+  // Get trails with their modules to calculate max XP (filtered for non-admin)
   const allTrails = await prisma.trail.findMany({
+    where: assignedTrailIds !== null ? { id: { in: assignedTrailIds } } : undefined,
     include: {
       modules: {
         select: {
@@ -71,9 +103,10 @@ export default async function TeacherStudentsPage() {
     maxXPByTrail[trail.id] = trail.modules.reduce((sum, m) => sum + m.points, 0)
   }
 
-  // Get submission stats per student
+  // Get submission stats per student (filtered by assigned trails for non-admin)
   const submissionStats = await prisma.submission.groupBy({
     by: ["userId", "status"],
+    where: assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : undefined,
     _count: true,
   })
 
@@ -109,6 +142,9 @@ export default async function TeacherStudentsPage() {
     ),
   }))
 
+  // Handle empty state for teachers with no assigned trails
+  const hasNoAccess = assignedTrailIds !== null && assignedTrailIds.length === 0
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -117,7 +153,11 @@ export default async function TeacherStudentsPage() {
           Ученики
         </h1>
         <p className="text-gray-600">
-          {students.length} студентов на платформе
+          {hasNoAccess
+            ? "У вас пока нет назначенных направлений"
+            : isAdmin
+              ? `${students.length} студентов на платформе`
+              : `${students.length} студентов в ваших направлениях`}
         </p>
       </div>
 

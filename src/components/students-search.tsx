@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -24,8 +25,12 @@ import {
   Search,
   Filter,
   SortAsc,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { pluralizeRu } from "@/lib/utils"
+
+const STUDENTS_PER_PAGE = 5
 
 interface StudentEnrollment {
   trailId: string
@@ -82,7 +87,9 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
   const [search, setSearch] = useState("")
   const [trailFilter, setTrailFilter] = useState("all")
   const [sortBy, setSortBy] = useState("xp")
+  const [currentPage, setCurrentPage] = useState(1)
 
+  // Filter and sort students
   const filteredStudents = useMemo(() => {
     let result = students.filter((student) => {
       const matchesSearch =
@@ -114,6 +121,29 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
     return result
   }, [students, search, trailFilter, sortBy])
 
+  // Pagination
+  const totalPages = Math.ceil(filteredStudents.length / STUDENTS_PER_PAGE)
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE
+    return filteredStudents.slice(startIndex, startIndex + STUDENTS_PER_PAGE)
+  }, [filteredStudents, currentPage])
+
+  // Reset to page 1 when filters change
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    setCurrentPage(1)
+  }
+
+  const handleTrailFilterChange = (value: string) => {
+    setTrailFilter(value)
+    setCurrentPage(1)
+  }
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value)
+    setCurrentPage(1)
+  }
+
   return (
     <>
       {/* Filters */}
@@ -124,13 +154,13 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Поиск по имени или email..."
                 className="pl-10"
               />
             </div>
             <div className="flex gap-2">
-              <Select value={trailFilter} onValueChange={setTrailFilter}>
+              <Select value={trailFilter} onValueChange={handleTrailFilterChange}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Trail" />
@@ -144,7 +174,7 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
+              <Select value={sortBy} onValueChange={handleSortChange}>
                 <SelectTrigger className="w-[180px]">
                   <SortAsc className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Сортировка" />
@@ -158,7 +188,7 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
               </Select>
             </div>
           </div>
-          {search && (
+          {(search || trailFilter !== "all") && (
             <p className="mt-2 text-sm text-gray-500">
               Найдено: {filteredStudents.length} из {students.length}
             </p>
@@ -182,8 +212,8 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredStudents.map((student) => {
+        <div className="space-y-3">
+          {paginatedStudents.map((student) => {
             const lastSubmission = student.submissions[0]
             const progressPercent =
               student.maxXP > 0
@@ -193,26 +223,26 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
             return (
               <Link key={student.id} href={`/teacher/students/${student.id}`}>
                 <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col md:flex-row md:items-center gap-3">
                       {/* Avatar & Info */}
-                      <div className="flex items-center gap-4 flex-1">
-                        <Avatar className="h-12 w-12">
-                          <AvatarFallback className="bg-blue-100 text-blue-700">
+                      <div className="flex items-center gap-3 flex-1">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
                             {getInitials(student.name)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-semibold text-gray-900">
+                          <h3 className="font-semibold text-gray-900 text-sm">
                             {student.name}
                           </h3>
-                          <p className="text-sm text-gray-500">{student.email}</p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-gray-500">{student.email}</p>
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                             {student.enrollments.map((e) => (
                               <Badge
                                 key={e.trailId}
                                 variant="secondary"
-                                className="text-xs"
+                                className="text-xs px-1.5 py-0"
                               >
                                 {e.trail.title}
                               </Badge>
@@ -222,39 +252,39 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
                       </div>
 
                       {/* Stats */}
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-4">
                         <div className="text-center">
                           <div className="flex items-center gap-1 text-purple-600">
-                            <CalendarDays className="h-4 w-4" />
-                            <span className="font-bold">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            <span className="font-bold text-sm">
                               {student._count.activityDays}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500">Актив. дней</p>
+                          <p className="text-xs text-gray-500">Актив.</p>
                         </div>
 
                         <div className="text-center">
                           <div className="flex items-center gap-1 text-blue-600">
-                            <BookOpen className="h-4 w-4" />
-                            <span className="font-bold">
+                            <BookOpen className="h-3.5 w-3.5" />
+                            <span className="font-bold text-sm">
                               {student.moduleProgress.length}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500">{pluralizeRu(student.moduleProgress.length, ["модуль", "модуля", "модулей"])}</p>
+                          <p className="text-xs text-gray-500">{pluralizeRu(student.moduleProgress.length, ["мод.", "мод.", "мод."])}</p>
                         </div>
 
                         <div className="text-center">
                           <div className="flex items-center gap-1 text-green-600">
-                            <CheckCircle2 className="h-4 w-4" />
-                            <span className="font-bold">{student.stats.approved}</span>
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span className="font-bold text-sm">{student.stats.approved}</span>
                           </div>
                           <p className="text-xs text-gray-500">Принято</p>
                         </div>
 
                         <div className="text-center">
                           <div className="flex items-center gap-1 text-orange-600">
-                            <Clock className="h-4 w-4" />
-                            <span className="font-bold">{student.stats.pending}</span>
+                            <Clock className="h-3.5 w-3.5" />
+                            <span className="font-bold text-sm">{student.stats.pending}</span>
                           </div>
                           <p className="text-xs text-gray-500">Ожидает</p>
                         </div>
@@ -263,19 +293,19 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
 
                     {/* XP Progress Bar */}
                     {student.maxXP > 0 && (
-                      <div className="mt-4 pt-4 border-t">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Trophy className="h-4 w-4 text-yellow-500" />
-                            <span className="text-sm font-medium text-gray-700">
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <Trophy className="h-3.5 w-3.5 text-yellow-500" />
+                            <span className="text-xs font-medium text-gray-700">
                               Прогресс XP
                             </span>
                           </div>
-                          <span className="text-sm font-bold text-yellow-600">
+                          <span className="text-xs font-bold text-yellow-600">
                             {student.totalXP} / {student.maxXP} XP
                           </span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all"
                             style={{
@@ -283,8 +313,8 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
                             }}
                           />
                         </div>
-                        <p className="text-xs text-gray-500 mt-1 text-right">
-                          {progressPercent}% завершено
+                        <p className="text-xs text-gray-500 mt-0.5 text-right">
+                          {Math.min(progressPercent, 100)}% завершено
                         </p>
                       </div>
                     )}
@@ -292,10 +322,10 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
                     {/* Last submission */}
                     {lastSubmission && (
                       <div
-                        className={`mt-4 pt-4 ${student.maxXP > 0 ? "" : "border-t"}`}
+                        className={`mt-3 pt-3 ${student.maxXP > 0 ? "" : "border-t"}`}
                       >
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <FileText className="h-4 w-4" />
+                        <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
+                          <FileText className="h-3.5 w-3.5" />
                           <span>Последняя работа:</span>
                           <span className="font-medium text-gray-700">
                             {lastSubmission.module.title}
@@ -333,6 +363,50 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
               </Link>
             )
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filteredStudents.length > STUDENTS_PER_PAGE && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-gray-500">
+            Показано {(currentPage - 1) * STUDENTS_PER_PAGE + 1}–
+            {Math.min(currentPage * STUDENTS_PER_PAGE, filteredStudents.length)} из{" "}
+            {filteredStudents.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Назад
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={page === currentPage ? "default" : "outline"}
+                  size="sm"
+                  className="w-8 h-8 p-0"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Вперёд
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </>
