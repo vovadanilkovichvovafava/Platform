@@ -951,28 +951,12 @@ export default function UnifiedContentPage() {
 
               {/* Admin-specific buttons */}
               {isAdmin && (
-                <>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/access?tab=teachers">
-                      <Users className="h-4 w-4 mr-2" />
-                      Учителя
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/access?tab=student-access">
-                      <Lock className="h-4 w-4 mr-2" />
-                      Доступ
-                    </Link>
-                  </Button>
-                  {isFullAdmin && (
-                    <Button asChild variant="outline" size="sm">
-                      <Link href="/admin/access?tab=admin-access">
-                        <Lock className="h-4 w-4 mr-2" />
-                        Доступ админов
-                      </Link>
-                    </Button>
-                  )}
-                </>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/admin/access">
+                    <Lock className="h-4 w-4 mr-2" />
+                    Доступы
+                  </Link>
+                </Button>
               )}
 
               {/* Analytics - both roles */}
