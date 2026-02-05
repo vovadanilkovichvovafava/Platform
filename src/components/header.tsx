@@ -11,9 +11,54 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award, Trophy, BarChart3, Menu, X, FolderKanban } from "lucide-react"
-import { useState, useEffect } from "react"
+import {
+  LogOut, User, Settings, BookOpen, ClipboardCheck, Flame, Shield, Award,
+  Trophy, BarChart3, Menu, X, FolderKanban, Home, Star, Heart, Bell,
+  Search, Plus, Check, ArrowRight, ExternalLink, FileText, Users,
+  Calendar, Clock, Target, Zap, Code, Database, Globe, Lock, Unlock, Edit, Trash2,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
 import { NotificationBell } from "@/components/notification-bell"
+import { NavbarPresetsEditor } from "@/components/navbar-presets-editor"
+
+// Icon map for dynamic rendering
+const ICON_MAP: Record<string, LucideIcon> = {
+  Flame, BookOpen, ClipboardCheck, Trophy, Settings,
+  FolderKanban, Shield, BarChart3, User, Award,
+  Home, Star, Heart, Bell, Search, Menu, Plus,
+  Check, X, ArrowRight, ExternalLink, FileText,
+  Users, Calendar, Clock, Target, Zap, Code,
+  Database, Globe, Lock, Unlock, Edit, Trash2,
+}
+
+// Type for navbar item from API
+interface NavbarItemDTO {
+  id: string
+  label: string
+  href: string
+  icon: string
+  order: number
+  visibleTo: string[]
+}
+
+// Default navbar items (fallback when no preset is active or API fails)
+const DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = [
+  { id: "default-1", label: "Dashboard", href: "/dashboard", icon: "Flame", order: 0, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { id: "default-2", label: "Trails", href: "/trails", icon: "BookOpen", order: 1, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { id: "default-3", label: "Мои работы", href: "/my-work", icon: "ClipboardCheck", order: 2, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { id: "default-4", label: "Лидерборд", href: "/leaderboard", icon: "Trophy", order: 3, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { id: "default-5", label: "Панель эксперта", href: "/teacher", icon: "Settings", order: 4, visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
+  { id: "default-6", label: "Контент", href: "/content", icon: "FolderKanban", order: 5, visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
+  { id: "default-7", label: "Админ панель", href: "/admin/invites", icon: "Shield", order: 6, visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { id: "default-8", label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", order: 7, visibleTo: ["CO_ADMIN", "ADMIN"] },
+]
+
+// Dropdown menu items (always shown, not from preset)
+const DROPDOWN_STATIC_ITEMS = [
+  { label: "Мой профиль", href: "/profile", icon: "User", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Сертификаты", href: "/certificates", icon: "Award", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+]
 
 // Страховка: обрабатываем notificationId из URL и отмечаем уведомление как прочитанное
 function useMarkNotificationFromUrl() {
@@ -46,31 +91,90 @@ function useMarkNotificationFromUrl() {
   }, [session?.user?.id])
 }
 
-// Helper to check if user has any admin role (ADMIN or CO_ADMIN)
-function isAnyAdminRole(role: string | undefined): boolean {
-  return role === "ADMIN" || role === "CO_ADMIN"
+// Hook to fetch active navbar preset
+function useNavbarPreset(isAuthenticated: boolean) {
+  const [items, setItems] = useState<NavbarItemDTO[]>(DEFAULT_NAVBAR_ITEMS)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setItems(DEFAULT_NAVBAR_ITEMS)
+      setIsLoaded(true)
+      return
+    }
+
+    const fetchPreset = async () => {
+      try {
+        const res = await fetch("/api/navbar-preset")
+        if (res.ok) {
+          const data = await res.json()
+          if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+            setItems(data.items)
+          }
+        }
+      } catch {
+        // Silently fail - use default items
+      } finally {
+        setIsLoaded(true)
+      }
+    }
+
+    fetchPreset()
+  }, [isAuthenticated])
+
+  return { items, setItems, isLoaded }
 }
 
-// Helper to check if user is privileged (TEACHER, CO_ADMIN, or ADMIN)
-function isPrivilegedRole(role: string | undefined): boolean {
-  return role === "TEACHER" || role === "CO_ADMIN" || role === "ADMIN"
+// Helper to check if item is visible for role
+function isVisibleForRole(item: NavbarItemDTO, role: string | undefined): boolean {
+  if (!role) return false
+  return item.visibleTo.includes(role)
+}
+
+// Helper to check if item is privileged (for styling)
+function isPrivilegedItem(item: NavbarItemDTO): boolean {
+  // If visible to admin/co_admin/teacher but not to student, it's a privileged item
+  return !item.visibleTo.includes("STUDENT") && (
+    item.visibleTo.includes("TEACHER") ||
+    item.visibleTo.includes("CO_ADMIN") ||
+    item.visibleTo.includes("ADMIN")
+  )
+}
+
+// Render icon component by name
+function NavIcon({ name, className = "h-4 w-4" }: { name: string; className?: string }) {
+  const Icon = ICON_MAP[name]
+  if (!Icon) return <Flame className={className} /> // Fallback icon
+  return <Icon className={className} />
 }
 
 export function Header() {
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // Fetch navbar preset items
+  const { items: navbarItems, setItems: setNavbarItems } = useNavbarPreset(!!session?.user?.id)
+
   // Страховка: обрабатываем notificationId из URL при переходе по ссылке из уведомления
   useMarkNotificationFromUrl()
 
-  const getInitials = (name: string) => {
+  const getInitials = useCallback((name: string) => {
     return name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2)
-  }
+  }, [])
+
+  // Filter items visible for current user role
+  const visibleItems = navbarItems.filter((item) =>
+    isVisibleForRole(item, session?.user?.role)
+  )
+
+  // Separate items for desktop nav (first 4-6 items) and rest for dropdown
+  const desktopNavItems = visibleItems.slice(0, 6)
+  const dropdownNavItems = visibleItems
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
@@ -105,56 +209,22 @@ export function Header() {
             </div>
           </Link>
 
+          {/* Desktop Navigation */}
           {session && (
             <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/dashboard"
-                className="text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/trails"
-                className="text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors"
-              >
-                Trails
-              </Link>
-              <Link
-                href="/my-work"
-                className="text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors"
-              >
-                Мои работы
-              </Link>
-              <Link
-                href="/leaderboard"
-                className="text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors"
-              >
-                Лидерборд
-              </Link>
-              {isPrivilegedRole(session.user.role) && (
-                <>
-                  <Link
-                    href="/teacher"
-                    className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
-                  >
-                    Панель эксперта
-                  </Link>
-                  <Link
-                    href="/content"
-                    className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
-                  >
-                    Контент
-                  </Link>
-                </>
-              )}
-              {isAnyAdminRole(session.user.role) && (
+              {desktopNavItems.map((item) => (
                 <Link
-                  href="/admin/invites"
-                  className="text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors"
+                  key={item.id}
+                  href={item.href}
+                  className={`text-sm font-medium transition-colors ${
+                    isPrivilegedItem(item)
+                      ? "text-orange-500 hover:text-orange-600"
+                      : "text-slate-600 hover:text-orange-500"
+                  }`}
                 >
-                  Админ панель
+                  {item.label}
                 </Link>
-              )}
+              ))}
             </nav>
           )}
         </div>
@@ -162,6 +232,12 @@ export function Header() {
         <div className="flex items-center gap-2">
           {session ? (
             <>
+              {/* Navbar presets editor - only for admins */}
+              <NavbarPresetsEditor
+                userRole={session.user.role || "STUDENT"}
+                currentItems={navbarItems}
+                onItemsChange={setNavbarItems}
+              />
               <NotificationBell />
               <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -183,76 +259,49 @@ export function Header() {
                   </div>
                 </div>
                 <DropdownMenuSeparator className="bg-slate-100" />
-                <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                  <Link href="/profile" className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    Мой профиль
-                  </Link>
-                </DropdownMenuItem>
+
+                {/* Static items (Profile, Certificates) */}
+                {DROPDOWN_STATIC_ITEMS.filter((item) =>
+                  item.visibleTo.includes(session.user.role || "STUDENT")
+                ).map((item) => (
+                  <DropdownMenuItem
+                    key={item.href}
+                    asChild
+                    className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100"
+                  >
+                    <Link href={item.href} className="cursor-pointer">
+                      <NavIcon name={item.icon} className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+
                 <DropdownMenuSeparator className="bg-slate-100" />
-                <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                  <Link href="/dashboard" className="cursor-pointer">
-                    <Flame className="mr-2 h-4 w-4" />
-                    Dashboard
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                  <Link href="/trails" className="cursor-pointer">
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Trails
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                  <Link href="/my-work" className="cursor-pointer">
-                    <ClipboardCheck className="mr-2 h-4 w-4" />
-                    Мои работы
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                  <Link href="/certificates" className="cursor-pointer">
-                    <Award className="mr-2 h-4 w-4" />
-                    Сертификаты
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                  <Link href="/leaderboard" className="cursor-pointer">
-                    <Trophy className="mr-2 h-4 w-4" />
-                    Лидерборд
-                  </Link>
-                </DropdownMenuItem>
-                {isPrivilegedRole(session.user.role) && (
-                  <>
-                    <DropdownMenuSeparator className="bg-slate-100" />
-                    <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                      <Link href="/teacher" className="cursor-pointer">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Панель эксперта
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                      <Link href="/content" className="cursor-pointer">
-                        <FolderKanban className="mr-2 h-4 w-4" />
-                        Контент
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {isAnyAdminRole(session.user.role) && (
-                  <>
-                    <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                      <Link href="/admin/invites" className="cursor-pointer">
-                        <Shield className="mr-2 h-4 w-4" />
-                        Админ панель
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100">
-                      <Link href="/admin/analytics" className="cursor-pointer">
-                        <BarChart3 className="mr-2 h-4 w-4" />
-                        Аналитика
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
+
+                {/* Dynamic items from preset */}
+                {dropdownNavItems.map((item, index) => {
+                  const isPrivileged = isPrivilegedItem(item)
+                  // Add separator before privileged items
+                  const showSeparator = isPrivileged &&
+                    index > 0 &&
+                    !isPrivilegedItem(dropdownNavItems[index - 1])
+
+                  return (
+                    <div key={item.id}>
+                      {showSeparator && <DropdownMenuSeparator className="bg-slate-100" />}
+                      <DropdownMenuItem
+                        asChild
+                        className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100"
+                      >
+                        <Link href={item.href} className="cursor-pointer">
+                          <NavIcon name={item.icon} className="mr-2 h-4 w-4" />
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    </div>
+                  )
+                })}
+
                 <DropdownMenuSeparator className="bg-slate-100" />
                 <DropdownMenuItem
                   className="cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50"
@@ -276,78 +325,21 @@ export function Header() {
       {session && mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white">
           <nav className="container mx-auto px-4 py-3 space-y-1">
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
-            >
-              <Flame className="h-4 w-4" />
-              Dashboard
-            </Link>
-            <Link
-              href="/trails"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
-            >
-              <BookOpen className="h-4 w-4" />
-              Trails
-            </Link>
-            <Link
-              href="/my-work"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              Мои работы
-            </Link>
-            <Link
-              href="/leaderboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
-            >
-              <Trophy className="h-4 w-4" />
-              Лидерборд
-            </Link>
-            {isPrivilegedRole(session.user.role) && (
-              <>
-                <Link
-                  href="/teacher"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
-                >
-                  <Settings className="h-4 w-4" />
-                  Панель эксперта
-                </Link>
-                <Link
-                  href="/content"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
-                >
-                  <FolderKanban className="h-4 w-4" />
-                  Контент
-                </Link>
-              </>
-            )}
-            {isAnyAdminRole(session.user.role) && (
-              <>
-                <Link
-                  href="/admin/invites"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
-                >
-                  <Shield className="h-4 w-4" />
-                  Админ панель
-                </Link>
-                <Link
-                  href="/admin/analytics"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-lg"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  Аналитика
-                </Link>
-              </>
-            )}
+            {visibleItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg ${
+                  isPrivilegedItem(item)
+                    ? "text-orange-600 hover:bg-orange-50"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                <NavIcon name={item.icon} />
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </div>
       )}
