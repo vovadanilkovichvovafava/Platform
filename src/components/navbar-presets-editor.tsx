@@ -361,12 +361,12 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
 
   // Edit mode UI - rendered via portal to escape header stacking context
   const editModal = isEditing && mounted ? createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-20">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-10 sm:pt-20 px-2 sm:px-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-slate-900">
+          <div className="p-3 sm:p-4 border-b border-slate-200 flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
                 {isCreatingNew ? "Новый пресет" : "Редактирование navbar"}
               </h3>
               {isCreatingNew && (
@@ -380,13 +380,13 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
                 />
               )}
             </div>
-            <button onClick={handleCancelEdit} className="p-2 hover:bg-slate-100 rounded-lg">
-              <X className="h-5 w-5 text-slate-500" />
+            <button onClick={handleCancelEdit} className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg ml-2 flex-shrink-0">
+              <X className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500" />
             </button>
           </div>
 
           {/* Items list */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2">
             {editItems.map((item, index) => (
               <div
                 key={item.id}
@@ -394,17 +394,17 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
-                className={`flex items-center gap-2 p-3 bg-slate-50 rounded-lg border transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-slate-50 rounded-lg border transition-all ${
                   dragOverIndex === index ? "border-orange-400 bg-orange-50" : "border-transparent"
                 } ${draggedIndex === index ? "opacity-50" : ""}`}
               >
-                <GripVertical className="h-4 w-4 text-slate-400 cursor-grab" />
-                <NavIcon name={item.icon} className="h-4 w-4 text-slate-600" />
-                <span className="flex-1 text-sm font-medium text-slate-700">{item.label}</span>
-                <span className="text-xs text-slate-400">{item.href}</span>
+                <GripVertical className="h-4 w-4 text-slate-400 cursor-grab flex-shrink-0" />
+                <NavIcon name={item.icon} className="h-4 w-4 text-slate-600 flex-shrink-0" />
+                <span className="flex-1 text-sm font-medium text-slate-700 truncate">{item.label}</span>
+                <span className="text-xs text-slate-400 hidden sm:block">{item.href}</span>
                 <button
                   onClick={() => handleDeleteItem(index)}
-                  className="p-1 hover:bg-red-100 rounded text-red-500"
+                  className="p-1 hover:bg-red-100 rounded text-red-500 flex-shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -412,33 +412,33 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
             ))}
 
             {editItems.length === 0 && (
-              <div className="text-center py-8 text-slate-400">
+              <div className="text-center py-6 sm:py-8 text-slate-400 text-sm">
                 Нет элементов. Добавьте из меню ниже.
               </div>
             )}
           </div>
 
           {/* Add button */}
-          <div className="p-4 border-t border-slate-200" ref={addMenuRef}>
+          <div className="p-3 sm:p-4 border-t border-slate-200" ref={addMenuRef}>
             <div className="relative">
               <button
                 onClick={() => setShowAddMenu(!showAddMenu)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
+                className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-dashed border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 text-sm"
               >
                 <Plus className="h-4 w-4" />
                 Добавить элемент
               </button>
 
               {showAddMenu && availableToAdd.length > 0 && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 sm:max-h-48 overflow-y-auto">
                   {availableToAdd.map((item) => (
                     <button
                       key={item.href}
                       onClick={() => handleAddItem(item)}
                       className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-left"
                     >
-                      <NavIcon name={item.icon} className="h-4 w-4 text-slate-500" />
-                      <span className="text-sm text-slate-700">{item.label}</span>
+                      <NavIcon name={item.icon} className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                      <span className="text-sm text-slate-700 truncate">{item.label}</span>
                     </button>
                   ))}
                 </div>
@@ -447,24 +447,25 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-slate-200 flex items-center justify-end gap-2">
+          <div className="p-3 sm:p-4 border-t border-slate-200 flex items-center justify-end gap-2">
             <button
               onClick={handleCancelEdit}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
             >
               Отмена
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving || (isCreatingNew && !newPresetName.trim())}
-              className="px-4 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg disabled:opacity-50 flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg disabled:opacity-50 flex items-center gap-2"
             >
               {isSaving ? (
                 <>Сохранение...</>
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  Сохранить
+                  <span className="hidden sm:inline">Сохранить</span>
+                  <span className="sm:hidden">OK</span>
                 </>
               )}
             </button>
@@ -483,26 +484,26 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+          className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
         >
-          <Layers className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">
+          <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          <span className="hidden sm:inline max-w-[80px] truncate">
             {activePresetId ? presets.find(p => p.id === activePresetId)?.name || "Пресет" : "По умолчанию"}
           </span>
-          <ChevronDown className="h-3 w-3" />
+          <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+          <div className="absolute right-0 top-full mt-1 w-40 sm:w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
             {/* Default option */}
             <button
               onClick={() => handleSelectPreset("default")}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 ${
+              className={`w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm hover:bg-slate-50 ${
                 !activePresetId ? "text-orange-600 bg-orange-50" : "text-slate-700"
               }`}
             >
-              <Check className={`h-4 w-4 ${!activePresetId ? "opacity-100" : "opacity-0"}`} />
-              По умолчанию
+              <Check className={`h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 ${!activePresetId ? "opacity-100" : "opacity-0"}`} />
+              <span className="truncate">По умолчанию</span>
             </button>
 
             {presets.length > 0 && <div className="border-t border-slate-100" />}
@@ -517,9 +518,9 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
               >
                 <button
                   onClick={() => handleSelectPreset(preset.id)}
-                  className="flex-1 flex items-center gap-2 px-3 py-2 text-sm text-left"
+                  className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-left min-w-0"
                 >
-                  <Check className={`h-4 w-4 flex-shrink-0 ${preset.isActive ? "opacity-100" : "opacity-0"}`} />
+                  <Check className={`h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 ${preset.isActive ? "opacity-100" : "opacity-0"}`} />
                   <span className="truncate">{preset.name}</span>
                 </button>
                 {/* Delete button - only for non-active presets */}
@@ -527,10 +528,10 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
                   <button
                     onClick={(e) => handleDeletePreset(preset.id, e)}
                     disabled={deletingPresetId === preset.id}
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded mr-1 disabled:opacity-50"
+                    className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded mr-0.5 sm:mr-1 disabled:opacity-50 flex-shrink-0"
                     title="Удалить пресет"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </button>
                 )}
               </div>
@@ -541,10 +542,10 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
             {/* Create new */}
             <button
               onClick={handleCreateNew}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-orange-600 hover:bg-orange-50"
+              className="w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-orange-600 hover:bg-orange-50"
             >
-              <Plus className="h-4 w-4" />
-              Создать пресет
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="truncate">Создать пресет</span>
             </button>
           </div>
         )}
@@ -553,10 +554,10 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
       {/* Edit button */}
       <button
         onClick={handleStartEdit}
-        className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+        className="p-1 sm:p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
         title="Редактировать navbar"
       >
-        <Edit className="h-4 w-4" />
+        <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
       </button>
     </div>
     </>
