@@ -97,7 +97,7 @@ export function EditTrailModal({
 
   // Check if user is admin (only admins can change teacherVisibility)
   const isAdmin = session?.user?.role === "ADMIN"
-  const [form, setForm] = useState<TrailFormData & { password?: string }>({
+  const [form, setForm] = useState<TrailFormData & { password?: string; passwordConfirm?: string }>({
     id: "",
     title: "",
     subtitle: "",
@@ -112,8 +112,10 @@ export function EditTrailModal({
     passwordHint: null,
     createdById: null,
     password: "", // Local state for new password
+    passwordConfirm: "", // Local state for password confirmation
   })
   const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
 
   // Check if current user is the creator (can edit password settings)
   const isCreator = mode === "create" || (trail?.createdById === session?.user?.id)
@@ -169,8 +171,10 @@ export function EditTrailModal({
         passwordHint: null,
         createdById: null,
         password: "",
+        passwordConfirm: "",
       })
       setShowPassword(false)
+      setShowPasswordConfirm(false)
     } else if (trail) {
       setForm({
         id: trail.id,
@@ -187,8 +191,10 @@ export function EditTrailModal({
         passwordHint: trail.passwordHint || null,
         createdById: trail.createdById || null,
         password: "", // Never show existing password
+        passwordConfirm: "", // Never show existing password
       })
       setShowPassword(false)
+      setShowPasswordConfirm(false)
     }
   }, [trail, mode, open])
 
@@ -208,6 +214,14 @@ export function EditTrailModal({
     if (mode === "create" && form.isPasswordProtected && !form.password?.trim()) {
       showToast("Пароль обязателен для защищённого трейла", "error")
       return
+    }
+
+    // Validate: passwords must match when setting a new password
+    if (form.isPasswordProtected && form.password?.trim()) {
+      if (form.password !== form.passwordConfirm) {
+        showToast("Пароли не совпадают", "error")
+        return
+      }
     }
 
     try {
@@ -452,6 +466,7 @@ export function EditTrailModal({
                       ...form,
                       isPasswordProtected: checked,
                       password: checked ? form.password : "",
+                      passwordConfirm: checked ? form.passwordConfirm : "",
                       passwordHint: checked ? form.passwordHint : null,
                     })
                   }
@@ -492,6 +507,41 @@ export function EditTrailModal({
                         )}
                       </button>
                     </div>
+                  </div>
+
+                  {/* Password confirmation input */}
+                  <div>
+                    <Label htmlFor="trailPasswordConfirm" className="text-amber-900">
+                      Подтвердите пароль {mode === "create" || form.password ? "*" : "(если меняете)"}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="trailPasswordConfirm"
+                        type={showPasswordConfirm ? "text" : "password"}
+                        value={form.passwordConfirm || ""}
+                        onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
+                        placeholder="Повторите пароль..."
+                        className={`pr-10 ${
+                          form.password && form.passwordConfirm && form.password !== form.passwordConfirm
+                            ? "border-red-500 focus:ring-red-500"
+                            : ""
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPasswordConfirm ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {form.password && form.passwordConfirm && form.password !== form.passwordConfirm && (
+                      <p className="text-xs text-red-600 mt-1">Пароли не совпадают</p>
+                    )}
                   </div>
 
                   {/* Password hint */}
