@@ -16,6 +16,7 @@ import {
   Trophy, BarChart3, Menu, X, FolderKanban, Home, Star, Heart, Bell,
   Search, Plus, Check, ArrowRight, ExternalLink, FileText, Users,
   Calendar, Clock, Target, Zap, Code, Database, Globe, Lock, Unlock, Edit, Trash2,
+  GraduationCap, History, UserCheck, BookMarked, Layers, PenTool, Eye, MessageSquare,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
@@ -30,6 +31,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Check, X, ArrowRight, ExternalLink, FileText,
   Users, Calendar, Clock, Target, Zap, Code,
   Database, Globe, Lock, Unlock, Edit, Trash2,
+  GraduationCap, History, UserCheck, BookMarked,
+  Layers, PenTool, Eye, MessageSquare,
 }
 
 // Type for navbar item from API

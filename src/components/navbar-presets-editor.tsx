@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import {
   ChevronDown, Edit, Plus, Check, X, GripVertical, Trash2, Save,
   Flame, BookOpen, ClipboardCheck, Trophy, Settings, FolderKanban,
   Shield, BarChart3, User, Award, Home, Star, Heart, Bell, Search,
   Menu, ArrowRight, ExternalLink, FileText, Users, Calendar, Clock,
-  Target, Zap, Code, Database, Globe, Lock, Unlock,
+  Target, Zap, Code, Database, Globe, Lock, Unlock, GraduationCap,
+  History, UserCheck, BookMarked, Layers, PenTool, Eye, MessageSquare,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useToast } from "@/components/ui/toast"
@@ -19,6 +21,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Check, X, ArrowRight, ExternalLink, FileText,
   Users, Calendar, Clock, Target, Zap, Code,
   Database, Globe, Lock, Unlock, Edit, Trash2,
+  GraduationCap, History, UserCheck, BookMarked,
+  Layers, PenTool, Eye, MessageSquare,
 }
 
 // Navbar item type
@@ -39,19 +43,35 @@ interface PresetListItem {
   itemsCount: number
 }
 
-// Available menu items that can be added
+// Available menu items that can be added - comprehensive list of all useful pages
 const AVAILABLE_ITEMS: Omit<NavbarItemDTO, "id" | "order">[] = [
+  // Student pages
   { label: "Dashboard", href: "/dashboard", icon: "Flame", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Trails", href: "/trails", icon: "BookOpen", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Мои работы", href: "/my-work", icon: "ClipboardCheck", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Лидерборд", href: "/leaderboard", icon: "Trophy", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Сертификаты", href: "/certificates", icon: "Award", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Мой профиль", href: "/profile", icon: "User", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Контент", href: "/content", icon: "FolderKanban", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Главная", href: "/", icon: "Home", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+
+  // Teacher pages
   { label: "Панель эксперта", href: "/teacher", icon: "Settings", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
-  { label: "Контент", href: "/content", icon: "FolderKanban", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Аналитика эксперта", href: "/teacher/analytics", icon: "BarChart3", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Контент эксперта", href: "/teacher/content", icon: "Layers", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Статистика эксперта", href: "/teacher/stats", icon: "Target", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Мои студенты", href: "/teacher/students", icon: "GraduationCap", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
+
+  // Admin pages
   { label: "Админ панель", href: "/admin/invites", icon: "Shield", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "Пользователи", href: "/admin/users", icon: "Users", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "Приглашения", href: "/admin/invites", icon: "FileText", visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { label: "Эксперты", href: "/admin/teachers", icon: "UserCheck", visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { label: "История", href: "/admin/history", icon: "History", visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { label: "Админ контент", href: "/admin/content", icon: "Database", visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { label: "Доступы", href: "/admin/access", icon: "Lock", visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { label: "Админ доступы", href: "/admin/admin-access", icon: "Unlock", visibleTo: ["ADMIN"] },
 ]
 
 // Render icon
@@ -77,6 +97,8 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
   const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [deletingPresetId, setDeletingPresetId] = useState<string | null>(null)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
   const addMenuRef = useRef<HTMLDivElement>(null)
@@ -84,6 +106,11 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
   // Drag state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  // Mount state for portal
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Only show for admins
   const isAdmin = userRole === "ADMIN" || userRole === "CO_ADMIN"
@@ -221,9 +248,20 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
   // Select preset
   const handleSelectPreset = async (presetId: string) => {
     if (presetId === "default") {
-      // Deactivate all presets - use default (reload will fetch default items)
-      setActivePresetId(null)
-      window.location.reload()
+      // Deactivate all presets via API
+      try {
+        const res = await fetch("/api/admin/navbar-presets", { method: "PATCH" })
+        if (res.ok) {
+          showToast("Переключено на настройки по умолчанию", "success")
+          setActivePresetId(null)
+          setIsOpen(false)
+          window.location.reload()
+        } else {
+          showToast("Ошибка при переключении", "error")
+        }
+      } catch {
+        showToast("Ошибка при переключении", "error")
+      }
       return
     }
 
@@ -238,6 +276,29 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
       }
     } catch {
       showToast("Ошибка активации", "error")
+    }
+  }
+
+  // Delete preset
+  const handleDeletePreset = async (presetId: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent selecting the preset
+
+    if (deletingPresetId) return // Already deleting
+
+    setDeletingPresetId(presetId)
+    try {
+      const res = await fetch(`/api/admin/navbar-presets/${presetId}`, { method: "DELETE" })
+      if (res.ok) {
+        showToast("Пресет удалён", "success")
+        fetchPresets()
+      } else {
+        const data = await res.json()
+        showToast(data.error || "Ошибка удаления", "error")
+      }
+    } catch {
+      showToast("Ошибка удаления", "error")
+    } finally {
+      setDeletingPresetId(null)
     }
   }
 
@@ -299,11 +360,10 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
 
   if (!isAdmin) return null
 
-  // Edit mode UI
-  if (isEditing) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-black/50 flex items-start justify-center pt-20">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+  // Edit mode UI - rendered via portal to escape header stacking context
+  const editModal = isEditing && mounted ? createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-20">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="p-4 border-b border-slate-200 flex items-center justify-between">
             <div>
@@ -410,13 +470,15 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
               )}
             </button>
           </div>
-        </div>
       </div>
-    )
-  }
+    </div>,
+    document.body
+  ) : null
 
   // Normal view - dropdown and edit button
   return (
+    <>
+      {editModal}
     <div className="flex items-center gap-1" ref={dropdownRef}>
       {/* Preset selector dropdown */}
       <div className="relative">
@@ -448,16 +510,31 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
 
             {/* Custom presets */}
             {presets.map((preset) => (
-              <button
+              <div
                 key={preset.id}
-                onClick={() => handleSelectPreset(preset.id)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 ${
+                className={`flex items-center hover:bg-slate-50 ${
                   preset.isActive ? "text-orange-600 bg-orange-50" : "text-slate-700"
                 }`}
               >
-                <Check className={`h-4 w-4 ${preset.isActive ? "opacity-100" : "opacity-0"}`} />
-                {preset.name}
-              </button>
+                <button
+                  onClick={() => handleSelectPreset(preset.id)}
+                  className="flex-1 flex items-center gap-2 px-3 py-2 text-sm text-left"
+                >
+                  <Check className={`h-4 w-4 flex-shrink-0 ${preset.isActive ? "opacity-100" : "opacity-0"}`} />
+                  <span className="truncate">{preset.name}</span>
+                </button>
+                {/* Delete button - only for non-active presets */}
+                {!preset.isActive && (
+                  <button
+                    onClick={(e) => handleDeletePreset(preset.id, e)}
+                    disabled={deletingPresetId === preset.id}
+                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded mr-1 disabled:opacity-50"
+                    title="Удалить пресет"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             ))}
 
             <div className="border-t border-slate-100" />
@@ -483,5 +560,6 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
         <Edit className="h-4 w-4" />
       </button>
     </div>
+    </>
   )
 }
