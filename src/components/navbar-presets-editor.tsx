@@ -69,7 +69,6 @@ const AVAILABLE_ITEMS: Omit<NavbarItemDTO, "id" | "order">[] = [
   { label: "Приглашения", href: "/admin/invites", icon: "FileText", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "Эксперты", href: "/admin/teachers", icon: "UserCheck", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "История", href: "/admin/history", icon: "History", visibleTo: ["CO_ADMIN", "ADMIN"] },
-  { label: "Админ контент", href: "/admin/content", icon: "Database", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "Доступы", href: "/admin/access", icon: "Lock", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "Админ доступы", href: "/admin/admin-access", icon: "Unlock", visibleTo: ["ADMIN"] },
 ]
