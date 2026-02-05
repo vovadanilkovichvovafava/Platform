@@ -126,6 +126,16 @@ export function EditTrailModal({
     }
   }, [open])
 
+  // Block background scroll when modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden"
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [open])
+
   // Reset form when trail changes or modal opens
   useEffect(() => {
     if (mode === "create") {
@@ -233,7 +243,7 @@ export function EditTrailModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <Card className="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto overscroll-contain">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -282,6 +292,7 @@ export function EditTrailModal({
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Полное описание trail (markdown поддерживается)"
               rows={3}
+              className="resize-none"
             />
           </div>
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,6 +58,16 @@ export function CreateModuleModal({
     duration: "15 мин",
   })
 
+  // Block background scroll when modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden"
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [open])
+
   const handleSubmit = async () => {
     if (!form.title.trim()) return
 
@@ -94,7 +104,7 @@ export function CreateModuleModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <Card className="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto overscroll-contain">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Добавить модуль</CardTitle>
@@ -123,7 +133,8 @@ export function CreateModuleModal({
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Краткое описание модуля"
-              rows={2}
+              rows={3}
+              className="resize-none"
             />
           </div>
 
