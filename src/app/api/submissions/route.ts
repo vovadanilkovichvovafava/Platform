@@ -147,12 +147,19 @@ export async function POST(request: Request) {
       allTeachers.forEach((t: { id: string }) => userIdsToNotify.add(t.id))
     }
 
-    // 3. Always notify all admins and co-admins
-    const allAdmins = await prisma.user.findMany({
-      where: { role: { in: ["ADMIN", "CO_ADMIN"] } },
+    // 3. Add admins and co-admins who have access to this trail
+    const admins = await prisma.user.findMany({
+      where: { role: "ADMIN" },
       select: { id: true },
     })
-    allAdmins.forEach((a: { id: string }) => userIdsToNotify.add(a.id))
+    admins.forEach((a: { id: string }) => userIdsToNotify.add(a.id))
+
+    // For CO_ADMINs, only add those with explicit access to this trail
+    const coAdminsWithAccess = await prisma.adminTrailAccess.findMany({
+      where: { trailId: courseModule.trailId },
+      select: { adminId: true },
+    })
+    coAdminsWithAccess.forEach((ca: { adminId: string }) => userIdsToNotify.add(ca.adminId))
 
     // Create notifications for all teachers and admins
     if (userIdsToNotify.size > 0) {
