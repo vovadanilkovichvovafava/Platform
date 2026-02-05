@@ -3,12 +3,39 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { checkAndAwardAchievements } from "@/lib/check-achievements"
+import { isPrivileged, isAdmin, getTeacherAllowedTrailIds, adminHasTrailAccess } from "@/lib/admin-access"
+
+/**
+ * Check if the current user has access to manage the given trail
+ * - ADMIN: always has access
+ * - CO_ADMIN: must have explicit AdminTrailAccess
+ * - TEACHER: must be assigned to trail or trail has ALL_TEACHERS visibility
+ */
+async function hasTrailAccess(
+  userId: string,
+  role: string,
+  trailId: string
+): Promise<boolean> {
+  // ADMIN has access to all trails
+  if (isAdmin(role)) {
+    return true
+  }
+
+  // CO_ADMIN - check AdminTrailAccess
+  if (role === "CO_ADMIN") {
+    return await adminHasTrailAccess(userId, role, trailId)
+  }
+
+  // TEACHER - check TrailTeacher assignment or ALL_TEACHERS visibility
+  const teacherTrailIds = await getTeacherAllowedTrailIds(userId)
+  return teacherTrailIds.includes(trailId)
+}
 
 // POST - Teacher marks a module as skipped for a student
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+    if (!session || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -27,13 +54,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 })
     }
 
-    // Check module exists
-    const module = await prisma.module.findUnique({
+    // Check module exists and get trail info
+    const courseModule = await prisma.module.findUnique({
       where: { id: moduleId },
+      select: {
+        id: true,
+        points: true,
+        trailId: true,
+      },
     })
 
-    if (!module) {
+    if (!courseModule) {
       return NextResponse.json({ error: "Module not found" }, { status: 404 })
+    }
+
+    // Check if user has access to this trail
+    const canAccess = await hasTrailAccess(session.user.id, session.user.role, courseModule.trailId)
+    if (!canAccess) {
+      return NextResponse.json(
+        { error: "Вы не назначены на этот курс" },
+        { status: 403 }
+      )
     }
 
     // Check if progress already exists
@@ -83,7 +124,7 @@ export async function POST(request: Request) {
       await prisma.user.update({
         where: { id: studentId },
         data: {
-          totalXP: { increment: module.points },
+          totalXP: { increment: courseModule.points },
         },
       })
     }
@@ -102,7 +143,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+    if (!session || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -112,6 +153,29 @@ export async function DELETE(request: Request) {
 
     if (!studentId || !moduleId) {
       return NextResponse.json({ error: "Missing studentId or moduleId" }, { status: 400 })
+    }
+
+    // Get module with trail info for access check
+    const courseModule = await prisma.module.findUnique({
+      where: { id: moduleId },
+      select: {
+        id: true,
+        points: true,
+        trailId: true,
+      },
+    })
+
+    if (!courseModule) {
+      return NextResponse.json({ error: "Module not found" }, { status: 404 })
+    }
+
+    // Check if user has access to this trail
+    const canAccess = await hasTrailAccess(session.user.id, session.user.role, courseModule.trailId)
+    if (!canAccess) {
+      return NextResponse.json(
+        { error: "Вы не назначены на этот курс" },
+        { status: 403 }
+      )
     }
 
     // Find the progress
@@ -133,15 +197,6 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Cannot revert - module was completed by student" }, { status: 400 })
     }
 
-    // Get module points
-    const module = await prisma.module.findUnique({
-      where: { id: moduleId },
-    })
-
-    if (!module) {
-      return NextResponse.json({ error: "Module not found" }, { status: 404 })
-    }
-
     // Delete progress
     await prisma.moduleProgress.delete({
       where: {
@@ -156,7 +211,7 @@ export async function DELETE(request: Request) {
     await prisma.user.update({
       where: { id: studentId },
       data: {
-        totalXP: { decrement: module.points },
+        totalXP: { decrement: courseModule.points },
       },
     })
 

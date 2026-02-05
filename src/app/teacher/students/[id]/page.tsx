@@ -4,7 +4,7 @@ import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { pluralizeRu } from "@/lib/utils"
-import { isPrivileged } from "@/lib/admin-access"
+import { isPrivileged, isAdmin, getTeacherAllowedTrailIds, getAdminAllowedTrailIds } from "@/lib/admin-access"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -50,10 +50,35 @@ export default async function StudentDetailPage({ params }: Props) {
     redirect("/dashboard")
   }
 
+  // Get allowed trail IDs based on user role
+  // ADMIN: null (all trails), TEACHER/CO_ADMIN: specific trail IDs
+  let allowedTrailIds: string[] | null = null
+
+  if (!isAdmin(session.user.role)) {
+    if (session.user.role === "CO_ADMIN") {
+      allowedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+    } else {
+      // TEACHER
+      allowedTrailIds = await getTeacherAllowedTrailIds(session.user.id)
+    }
+  }
+
+  // Get IDs of submissions that this user reviewed (exception: can see if reviewed)
+  const reviewedSubmissionIds = await prisma.review.findMany({
+    where: { reviewerId: session.user.id },
+    select: { submissionId: true },
+  }).then((reviews) => reviews.map((r) => r.submissionId))
+
+  // Build enrollment filter
+  const enrollmentFilter = allowedTrailIds === null
+    ? {}
+    : { trailId: { in: allowedTrailIds } }
+
   const student = await prisma.user.findUnique({
     where: { id, role: "STUDENT" },
     include: {
       enrollments: {
+        where: enrollmentFilter,
         include: {
           trail: {
             include: {
@@ -72,6 +97,9 @@ export default async function StudentDetailPage({ params }: Props) {
         },
       },
       moduleProgress: {
+        where: allowedTrailIds === null
+          ? {}
+          : { module: { trailId: { in: allowedTrailIds } } },
         include: {
           module: {
             select: {
@@ -83,6 +111,14 @@ export default async function StudentDetailPage({ params }: Props) {
         },
       },
       submissions: {
+        where: allowedTrailIds === null
+          ? {}
+          : {
+              OR: [
+                { module: { trailId: { in: allowedTrailIds } } },
+                { id: { in: reviewedSubmissionIds } }, // Exception: can see if reviewed
+              ],
+            },
         orderBy: { createdAt: "desc" },
         include: {
           module: {
