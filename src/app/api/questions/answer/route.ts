@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
 import { recordActivity } from "@/lib/activity"
+import { checkTrailPasswordAccess } from "@/lib/trail-password"
 
 const answerSchema = z.object({
   questionId: z.string().min(1, "ID вопроса обязателен"),
@@ -41,14 +42,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { questionId, selectedAnswer, isInteractive, interactiveResult } = answerSchema.parse(body)
 
-    // Get question with module info
+    // Get question with module and trail info
     const question = await prisma.question.findUnique({
       where: { id: questionId },
-      include: { module: true },
+      include: {
+        module: {
+          include: {
+            trail: {
+              select: {
+                id: true,
+                isPasswordProtected: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!question) {
       return NextResponse.json({ error: "Question not found" }, { status: 404 })
+    }
+
+    // Check trail password access
+    if (question.module.trail.isPasswordProtected) {
+      const passwordAccess = await checkTrailPasswordAccess(question.module.trail.id, session.user.id)
+      if (!passwordAccess.hasAccess) {
+        return NextResponse.json({ error: "Доступ запрещён. Требуется пароль к trail." }, { status: 403 })
+      }
     }
 
     // Get or create attempt record

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { checkTrailPasswordAccess } from "@/lib/trail-password"
 
 const updateProgressSchema = z.object({
   taskProgressId: z.string().min(1, "ID прогресса обязателен"),
@@ -25,6 +26,23 @@ export async function GET(request: NextRequest) {
 
     if (!trailId) {
       return NextResponse.json({ error: "Не указан trailId" }, { status: 400 })
+    }
+
+    // Check trail password access
+    const trail = await prisma.trail.findUnique({
+      where: { id: trailId },
+      select: { isPasswordProtected: true },
+    })
+
+    if (!trail) {
+      return NextResponse.json({ error: "Trail не найден" }, { status: 404 })
+    }
+
+    if (trail.isPasswordProtected) {
+      const passwordAccess = await checkTrailPasswordAccess(trailId, session.user.id)
+      if (!passwordAccess.hasAccess) {
+        return NextResponse.json({ error: "Доступ запрещён. Требуется пароль к trail." }, { status: 403 })
+      }
     }
 
     let taskProgress = await prisma.taskProgress.findUnique({

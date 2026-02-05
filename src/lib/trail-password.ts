@@ -17,8 +17,6 @@ export type TrailAccessResult = {
     | "public" // Trail is not password protected
     | "creator" // User is the creator of the trail
     | "password_unlocked" // User has unlocked via password
-    | "enrolled" // User has enrollment (student bound to trail)
-    | "student_access" // User has StudentTrailAccess record
     | "no_access" // No access to protected trail
     | "not_authenticated" // User not logged in
 }
@@ -29,10 +27,10 @@ export type TrailAccessResult = {
  * 1. Trail is not password protected
  * 2. User is the creator (owner) of the trail
  * 3. User has TrailPasswordAccess record (unlocked via password)
- * 4. User has Enrollment record (student already bound)
- * 5. User has StudentTrailAccess record (granted by admin)
  *
- * NOTE: Admin/Teacher roles do NOT automatically grant access
+ * NOTE: Password protection is an ADDITIONAL layer of security.
+ * Even users with Enrollment or StudentTrailAccess must enter the password.
+ * Admin/Teacher roles also do NOT automatically grant access.
  */
 export async function checkTrailPasswordAccess(
   trailId: string,
@@ -66,7 +64,7 @@ export async function checkTrailPasswordAccess(
     return { hasAccess: true, reason: "creator" }
   }
 
-  // Check if user has password access
+  // Check if user has password access (entered correct password)
   const passwordAccess = await prisma.trailPasswordAccess.findUnique({
     where: {
       userId_trailId: { userId, trailId },
@@ -77,29 +75,7 @@ export async function checkTrailPasswordAccess(
     return { hasAccess: true, reason: "password_unlocked" }
   }
 
-  // Check if user is enrolled (student bound to trail)
-  const enrollment = await prisma.enrollment.findUnique({
-    where: {
-      userId_trailId: { userId, trailId },
-    },
-  })
-
-  if (enrollment) {
-    return { hasAccess: true, reason: "enrolled" }
-  }
-
-  // Check if user has StudentTrailAccess
-  const studentAccess = await prisma.studentTrailAccess.findUnique({
-    where: {
-      studentId_trailId: { studentId: userId, trailId },
-    },
-  })
-
-  if (studentAccess) {
-    return { hasAccess: true, reason: "student_access" }
-  }
-
-  // No access
+  // No access - password required
   return { hasAccess: false, reason: "no_access" }
 }
 
