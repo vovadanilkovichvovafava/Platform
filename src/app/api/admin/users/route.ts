@@ -3,13 +3,14 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { isAnyAdmin, isAdmin } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 const updateUserSchema = z.object({
   role: z.enum(["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]).optional(),
 })
 
 // GET - List all users (admin only)
+// CO_ADMIN sees only users connected to their assigned trails
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -18,7 +19,50 @@ export async function GET() {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
+    // Get allowed trail IDs for CO_ADMIN (null for ADMIN = all trails)
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    // Build where clause based on role
+    let whereClause = {}
+
+    if (allowedTrailIds !== null) {
+      // CO_ADMIN: filter users by their connection to allowed trails
+      whereClause = {
+        OR: [
+          // Students enrolled in allowed trails
+          {
+            role: "STUDENT",
+            enrollments: {
+              some: { trailId: { in: allowedTrailIds } }
+            }
+          },
+          // Teachers assigned to allowed trails
+          {
+            role: "TEACHER",
+            teacherTrails: {
+              some: { trailId: { in: allowedTrailIds } }
+            }
+          },
+          // CO_ADMIN/ADMIN users assigned to allowed trails
+          {
+            role: { in: ["CO_ADMIN", "ADMIN"] },
+            adminTrailAccess: {
+              some: { trailId: { in: allowedTrailIds } }
+            }
+          },
+          // Include self (current CO_ADMIN can always see themselves)
+          {
+            id: session.user.id
+          }
+        ]
+      }
+    }
+
     const users = await prisma.user.findMany({
+      where: whereClause,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -65,10 +109,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Нельзя удалить свой аккаунт" }, { status: 400 })
     }
 
-    // Get target user to check role
+    // Get target user to check role and trail connections
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: {
+        role: true,
+        enrollments: { select: { trailId: true } },
+        teacherTrails: { select: { trailId: true } },
+      },
     })
 
     if (!targetUser) {
@@ -81,6 +129,34 @@ export async function DELETE(request: NextRequest) {
         { error: "Только главный админ может удалять админов" },
         { status: 403 }
       )
+    }
+
+    // CO_ADMIN: verify access to user based on trails
+    if (!isAdmin(session.user.role)) {
+      const allowedTrailIds = await getAdminAllowedTrailIds(
+        session.user.id,
+        session.user.role
+      )
+
+      if (allowedTrailIds !== null) {
+        // Get target user's trail connections
+        const userTrailIds = [
+          ...targetUser.enrollments.map((e) => e.trailId),
+          ...targetUser.teacherTrails.map((t) => t.trailId),
+        ]
+
+        // Check if there's at least one overlapping trail
+        const hasAccess = userTrailIds.some((trailId) =>
+          allowedTrailIds.includes(trailId)
+        )
+
+        if (!hasAccess) {
+          return NextResponse.json(
+            { error: "Нет доступа к этому пользователю" },
+            { status: 403 }
+          )
+        }
+      }
     }
 
     // Delete in transaction to ensure consistency
@@ -136,10 +212,14 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const data = updateUserSchema.parse(body)
 
-    // Get target user to check current role
+    // Get target user to check current role and trail connections
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: {
+        role: true,
+        enrollments: { select: { trailId: true } },
+        teacherTrails: { select: { trailId: true } },
+      },
     })
 
     if (!targetUser) {
@@ -164,6 +244,32 @@ export async function PATCH(request: NextRequest) {
           { error: "Только главный админ может изменять роли админов" },
           { status: 403 }
         )
+      }
+
+      // CO_ADMIN: verify access to user based on trails
+      const allowedTrailIds = await getAdminAllowedTrailIds(
+        session.user.id,
+        session.user.role
+      )
+
+      if (allowedTrailIds !== null) {
+        // Get target user's trail connections
+        const userTrailIds = [
+          ...targetUser.enrollments.map((e) => e.trailId),
+          ...targetUser.teacherTrails.map((t) => t.trailId),
+        ]
+
+        // Check if there's at least one overlapping trail
+        const hasAccess = userTrailIds.some((trailId) =>
+          allowedTrailIds.includes(trailId)
+        )
+
+        if (!hasAccess) {
+          return NextResponse.json(
+            { error: "Нет доступа к этому пользователю" },
+            { status: 403 }
+          )
+        }
       }
     }
 
