@@ -21,6 +21,8 @@ import {
   EyeOff,
   Users,
   ChevronDown,
+  Lock,
+  KeyRound,
 } from "lucide-react"
 
 const iconOptions = [
@@ -54,6 +56,10 @@ export interface TrailFormData {
   isPublished: boolean
   teacherVisibility?: string
   assignedTeacherId?: string | null
+  // Password protection
+  isPasswordProtected?: boolean
+  passwordHint?: string | null
+  createdById?: string | null // Creator of the trail
 }
 
 interface Teacher {
@@ -91,7 +97,7 @@ export function EditTrailModal({
 
   // Check if user is admin (only admins can change teacherVisibility)
   const isAdmin = session?.user?.role === "ADMIN"
-  const [form, setForm] = useState<TrailFormData>({
+  const [form, setForm] = useState<TrailFormData & { password?: string }>({
     id: "",
     title: "",
     subtitle: "",
@@ -102,7 +108,15 @@ export function EditTrailModal({
     isPublished: false,
     teacherVisibility: "ADMIN_ONLY",
     assignedTeacherId: null,
+    isPasswordProtected: false,
+    passwordHint: null,
+    createdById: null,
+    password: "", // Local state for new password
   })
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Check if current user is the creator (can edit password settings)
+  const isCreator = mode === "create" || (trail?.createdById === session?.user?.id)
 
   // Fetch teachers list
   useEffect(() => {
@@ -151,7 +165,12 @@ export function EditTrailModal({
         isPublished: false,
         teacherVisibility: "ADMIN_ONLY",
         assignedTeacherId: null,
+        isPasswordProtected: false,
+        passwordHint: null,
+        createdById: null,
+        password: "",
       })
+      setShowPassword(false)
     } else if (trail) {
       setForm({
         id: trail.id,
@@ -164,7 +183,12 @@ export function EditTrailModal({
         isPublished: trail.isPublished,
         teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
         assignedTeacherId: trail.assignedTeacherId || null,
+        isPasswordProtected: trail.isPasswordProtected || false,
+        passwordHint: trail.passwordHint || null,
+        createdById: trail.createdById || null,
+        password: "", // Never show existing password
       })
+      setShowPassword(false)
     }
   }, [trail, mode, open])
 
@@ -177,6 +201,12 @@ export function EditTrailModal({
     // Validate: if SPECIFIC visibility, teacher must be selected (edit mode only, admin only)
     if (mode === "edit" && isAdmin && form.teacherVisibility === "SPECIFIC" && !form.assignedTeacherId) {
       showToast("Выберите учителя для конкретного назначения", "error")
+      return
+    }
+
+    // Validate: if password protected is enabled in create mode, password is required
+    if (mode === "create" && form.isPasswordProtected && !form.password?.trim()) {
+      showToast("Пароль обязателен для защищённого трейла", "error")
       return
     }
 
@@ -198,6 +228,19 @@ export function EditTrailModal({
       if (mode === "edit" && isAdmin) {
         payload.teacherVisibility = form.teacherVisibility
         payload.assignedTeacherId = form.teacherVisibility === "SPECIFIC" ? form.assignedTeacherId : null
+      }
+
+      // Include password protection fields (only if user is creator)
+      if (isCreator) {
+        payload.isPasswordProtected = form.isPasswordProtected
+
+        if (form.isPasswordProtected) {
+          // Include password only if provided (new or changed)
+          if (form.password?.trim()) {
+            payload.password = form.password.trim()
+          }
+          payload.passwordHint = form.passwordHint?.trim() || null
+        }
       }
 
       let res: Response
@@ -385,6 +428,98 @@ export function EditTrailModal({
             />
           </div>
 
+          {/* Password Protection - Creator only */}
+          {isCreator && (
+            <div className="space-y-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-amber-600" />
+                  <div>
+                    <span className="text-sm font-medium text-amber-900">
+                      Защита паролем
+                    </span>
+                    <p className="text-xs text-amber-700">
+                      {form.isPasswordProtected
+                        ? "Требуется пароль для доступа"
+                        : "Доступ без пароля"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={form.isPasswordProtected}
+                  onCheckedChange={(checked) =>
+                    setForm({
+                      ...form,
+                      isPasswordProtected: checked,
+                      password: checked ? form.password : "",
+                      passwordHint: checked ? form.passwordHint : null,
+                    })
+                  }
+                />
+              </div>
+
+              {form.isPasswordProtected && (
+                <div className="space-y-3 pt-2 border-t border-amber-200">
+                  {/* Password input */}
+                  <div>
+                    <Label htmlFor="trailPassword" className="text-amber-900">
+                      {mode === "edit" && trail?.isPasswordProtected
+                        ? "Новый пароль (оставьте пустым для сохранения текущего)"
+                        : "Пароль *"}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="trailPassword"
+                        type={showPassword ? "text" : "password"}
+                        value={form.password || ""}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        placeholder={
+                          mode === "edit" && trail?.isPasswordProtected
+                            ? "Введите новый пароль..."
+                            : "Введите пароль..."
+                        }
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Password hint */}
+                  <div>
+                    <Label htmlFor="trailPasswordHint" className="text-amber-900">
+                      Подсказка (опционально)
+                    </Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-400" />
+                      <Input
+                        id="trailPasswordHint"
+                        value={form.passwordHint || ""}
+                        onChange={(e) => setForm({ ...form, passwordHint: e.target.value })}
+                        placeholder="Подсказка для студентов..."
+                        className="pl-8"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-amber-700">
+                    Доступ получают: создатель, пользователи с паролем, привязанные студенты.
+                    Роль admin/teacher не даёт автоматического доступа.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Teacher Visibility - Admin only */}
           {isAdmin && (
             <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
@@ -422,7 +557,7 @@ export function EditTrailModal({
                     </div>
                   ) : teachers.length === 0 ? (
                     <div className="p-2 text-sm text-amber-700 bg-amber-50 rounded-lg border border-amber-200">
-                      Нет учителей для назначения. Сначала создайте учителя в разделе "Пользователи".
+                      Нет учителей для назначения. Сначала создайте учителя в разделе &quot;Пользователи&quot;.
                     </div>
                   ) : (
                     <>

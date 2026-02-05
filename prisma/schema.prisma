@@ -23,21 +23,23 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  enrollments      Enrollment[]
-  moduleProgress   ModuleProgress[]
-  unitProgress     UnitProgress[]
-  submissions      Submission[]
-  reviews          Review[]           @relation("Reviewer")
-  questionAttempts QuestionAttempt[]
-  taskProgress     TaskProgress[]
-  invitesCreated   Invite[]           @relation("InviteCreator")
-  teacherTrails    TrailTeacher[]     @relation("TeacherTrails")
-  trailAccess      StudentTrailAccess[]
-  activityDays     UserActivity[]
-  notifications    Notification[]
-  certificates     Certificate[]
-  achievements     UserAchievement[]
-  adminTrailAccess AdminTrailAccess[] @relation("AdminTrails")
+  enrollments          Enrollment[]
+  moduleProgress       ModuleProgress[]
+  unitProgress         UnitProgress[]
+  submissions          Submission[]
+  reviews              Review[]              @relation("Reviewer")
+  questionAttempts     QuestionAttempt[]
+  taskProgress         TaskProgress[]
+  invitesCreated       Invite[]              @relation("InviteCreator")
+  teacherTrails        TrailTeacher[]        @relation("TeacherTrails")
+  trailAccess          StudentTrailAccess[]
+  activityDays         UserActivity[]
+  notifications        Notification[]
+  certificates         Certificate[]
+  achievements         UserAchievement[]
+  adminTrailAccess     AdminTrailAccess[]    @relation("AdminTrails")
+  createdTrails        Trail[]               @relation("CreatedTrails")
+  trailPasswordAccess  TrailPasswordAccess[]
 }
 
 // Track daily user activity (one record per day per user)
@@ -91,29 +93,39 @@ model InviteTrail {
 }
 
 model Trail {
-  id                String   @id @default(cuid())
-  slug              String   @unique
-  title             String
-  subtitle          String
-  description       String
-  icon              String
-  color             String
-  duration          String
-  order             Int      @default(0)
-  isPublished       Boolean  @default(true)
-  isRestricted      Boolean  @default(true) // If true, only specific students can access (secure by default)
-  teacherVisibility String   @default("ADMIN_ONLY") // ADMIN_ONLY, ALL_TEACHERS, SPECIFIC
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  title               String
+  subtitle            String
+  description         String
+  icon                String
+  color               String
+  duration            String
+  order               Int      @default(0)
+  isPublished         Boolean  @default(true)
+  isRestricted        Boolean  @default(true) // If true, only specific students can access (secure by default)
+  teacherVisibility   String   @default("ADMIN_ONLY") // ADMIN_ONLY, ALL_TEACHERS, SPECIFIC
+  // Password protection
+  isPasswordProtected Boolean  @default(false) // If true, requires password to access
+  passwordHash        String?  // bcrypt hash of trail password
+  passwordHint        String?  // Optional hint for password
+  createdById         String?  // Creator/owner of the trail (always has access)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  modules       Module[]
-  enrollments   Enrollment[]
-  taskProgress  TaskProgress[]
-  studentAccess StudentTrailAccess[]
-  teachers      TrailTeacher[]
-  certificates  Certificate[]
-  adminAccess   AdminTrailAccess[]
-  invites       InviteTrail[]
+  modules          Module[]
+  enrollments      Enrollment[]
+  taskProgress     TaskProgress[]
+  studentAccess    StudentTrailAccess[]
+  teachers         TrailTeacher[]
+  certificates     Certificate[]
+  adminAccess      AdminTrailAccess[]
+  invites          InviteTrail[]
+  passwordAccess   TrailPasswordAccess[]
+  passwordAttempts TrailPasswordAttempt[]
+  creator          User?                  @relation("CreatedTrails", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([createdById])
 }
 
 model Module {
@@ -464,4 +476,36 @@ model NavbarItem {
 
   @@index([presetId])
   @@index([order])
+}
+
+// Track users who unlocked a password-protected trail
+model TrailPasswordAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  trailId    String
+  unlockedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trailId])
+  @@index([userId])
+  @@index([trailId])
+}
+
+// Audit log for password attempts (no plaintext passwords stored)
+model TrailPasswordAttempt {
+  id        String   @id @default(cuid())
+  trailId   String
+  userId    String?  // Nullable if not logged in (but we require login)
+  ipAddress String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@index([trailId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([ipAddress])
 }
