@@ -37,7 +37,7 @@ const trailSchema = z.object({
   // Password protection fields
   isPasswordProtected: z.boolean().default(false),
   password: z.string().optional(), // Plaintext password, will be hashed
-  passwordHint: z.string().optional(),
+  passwordHint: z.string().nullable().optional(),
 })
 
 // GET - List all trails with modules (filtered by admin access)
