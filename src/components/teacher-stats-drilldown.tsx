@@ -267,7 +267,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center justify-between group"
+                  className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center justify-between group cursor-pointer"
                   style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, transparent 100%)` }}
                 >
                 <div className="flex items-center gap-3 flex-1">
