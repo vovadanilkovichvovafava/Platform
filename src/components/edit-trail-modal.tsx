@@ -291,8 +291,8 @@ export function EditTrailModal({
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Полное описание trail (markdown поддерживается)"
-              rows={3}
-              className="resize-none"
+              rows={6}
+              className="resize-y max-h-80"
             />
           </div>
 

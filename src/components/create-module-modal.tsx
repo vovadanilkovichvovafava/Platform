@@ -133,8 +133,8 @@ export function CreateModuleModal({
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Краткое описание модуля"
-              rows={3}
-              className="resize-none"
+              rows={6}
+              className="resize-y max-h-80"
             />
           </div>
 
