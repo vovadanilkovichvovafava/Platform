@@ -18,6 +18,21 @@ const cspHeader = `
 const nextConfig: NextConfig = {
   // Prevent 307 redirects for trailing slash - important for webhooks (Telegram)
   skipTrailingSlashRedirect: true,
+  async redirects() {
+    return [
+      // Legacy routes -> unified /admin/access page with tabs
+      {
+        source: '/admin/teachers',
+        destination: '/admin/access?tab=teachers',
+        permanent: true,
+      },
+      {
+        source: '/admin/admin-access',
+        destination: '/admin/access?tab=admin-access',
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

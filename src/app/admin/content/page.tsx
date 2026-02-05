@@ -876,13 +876,13 @@ export default function AdminContentPage() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <Button asChild variant="outline" size="sm">
-                <Link href="/admin/teachers">
+                <Link href="/admin/access?tab=teachers">
                   <Users className="h-4 w-4 mr-2" />
                   Учителя
                 </Link>
               </Button>
               <Button asChild variant="outline" size="sm">
-                <Link href="/admin/access">
+                <Link href="/admin/access?tab=student-access">
                   <Lock className="h-4 w-4 mr-2" />
                   Доступ
                 </Link>
