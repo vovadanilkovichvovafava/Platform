@@ -24,9 +24,18 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { inviteCode, email, password, name } = registerSchema.parse(body)
 
-    // 1. Validate invite code
+    // 1. Validate invite code and get associated trails
     const invite = await prisma.invite.findUnique({
       where: { code: inviteCode.toUpperCase() },
+      include: {
+        trails: {
+          include: {
+            trail: {
+              select: { id: true, isPublished: true },
+            },
+          },
+        },
+      },
     })
 
     if (!invite) {
@@ -74,6 +83,12 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
+    // Get valid trail IDs from invite (filter out unpublished trails)
+    const validTrailIds = invite.trails
+      .map((t) => t.trail)
+      .filter((trail) => trail.isPublished) // Only published trails
+      .map((trail) => trail.id)
+
     // Use transaction to ensure atomicity
     const user = await prisma.$transaction(async (tx) => {
       // Increment invite usage
@@ -83,7 +98,7 @@ export async function POST(request: Request) {
       })
 
       // Create user
-      return tx.user.create({
+      const newUser = await tx.user.create({
         data: {
           email,
           password: hashedPassword,
@@ -92,6 +107,19 @@ export async function POST(request: Request) {
           invitedBy: invite.createdById,
         },
       })
+
+      // Assign trail access from invite
+      if (validTrailIds.length > 0) {
+        await tx.studentTrailAccess.createMany({
+          data: validTrailIds.map((trailId) => ({
+            studentId: newUser.id,
+            trailId,
+          })),
+          skipDuplicates: true, // Prevent errors on re-registration attempts
+        })
+      }
+
+      return newUser
     })
 
     return NextResponse.json({

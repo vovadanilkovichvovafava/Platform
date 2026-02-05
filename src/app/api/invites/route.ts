@@ -3,13 +3,14 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { isAnyAdmin } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 const createInviteSchema = z.object({
   code: z.string().min(3, "Код должен быть минимум 3 символа").toUpperCase(),
   email: z.string().email().optional().or(z.literal("")),
   maxUses: z.number().min(1).default(1),
   expiresAt: z.string().optional(),
+  trailIds: z.array(z.string()).optional().default([]),
 })
 
 // Cleanup periods in milliseconds
@@ -63,10 +64,24 @@ export async function GET(request: Request) {
         createdBy: {
           select: { name: true, email: true },
         },
+        trails: {
+          include: {
+            trail: {
+              select: { id: true, title: true, slug: true },
+            },
+          },
+        },
       },
     })
 
-    return NextResponse.json(invites)
+    // Transform to flatten trails for easier frontend consumption
+    const invitesWithTrails = invites.map((invite) => ({
+      ...invite,
+      selectedTrails: invite.trails.map((t) => t.trail),
+      trails: undefined, // Remove the nested structure
+    }))
+
+    return NextResponse.json(invitesWithTrails)
   } catch (error) {
     console.error("Error fetching invites:", error)
     return NextResponse.json({ error: "Ошибка при получении приглашений" }, { status: 500 })
@@ -94,17 +109,91 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Такой код уже существует" }, { status: 400 })
     }
 
-    const invite = await prisma.invite.create({
-      data: {
-        code: data.code,
-        email: data.email || null,
-        maxUses: data.maxUses,
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-        createdById: session.user.id,
+    // Validate trailIds if provided
+    const trailIds = [...new Set(data.trailIds)] // Remove duplicates
+
+    if (trailIds.length > 0) {
+      // Verify all trails exist
+      const existingTrails = await prisma.trail.findMany({
+        where: { id: { in: trailIds } },
+        select: { id: true },
+      })
+
+      const existingTrailIds = new Set(existingTrails.map((t) => t.id))
+      const invalidIds = trailIds.filter((id) => !existingTrailIds.has(id))
+
+      if (invalidIds.length > 0) {
+        return NextResponse.json(
+          { error: "Некоторые трейлы не найдены" },
+          { status: 400 }
+        )
+      }
+
+      // CO_ADMIN: verify access to selected trails
+      if (!isAdmin(session.user.role)) {
+        const allowedTrailIds = await getAdminAllowedTrailIds(
+          session.user.id,
+          session.user.role
+        )
+
+        if (allowedTrailIds !== null) {
+          const allowedSet = new Set(allowedTrailIds)
+          const forbiddenIds = trailIds.filter((id) => !allowedSet.has(id))
+
+          if (forbiddenIds.length > 0) {
+            return NextResponse.json(
+              { error: "Доступ к некоторым трейлам запрещён" },
+              { status: 403 }
+            )
+          }
+        }
+      }
+    }
+
+    // Create invite with trail associations in a transaction
+    const invite = await prisma.$transaction(async (tx) => {
+      const newInvite = await tx.invite.create({
+        data: {
+          code: data.code,
+          email: data.email || null,
+          maxUses: data.maxUses,
+          expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+          createdById: session.user.id,
+        },
+      })
+
+      // Create trail associations
+      if (trailIds.length > 0) {
+        await tx.inviteTrail.createMany({
+          data: trailIds.map((trailId) => ({
+            inviteId: newInvite.id,
+            trailId,
+          })),
+        })
+      }
+
+      return newInvite
+    })
+
+    // Fetch the complete invite with trails for response
+    const completeInvite = await prisma.invite.findUnique({
+      where: { id: invite.id },
+      include: {
+        trails: {
+          include: {
+            trail: {
+              select: { id: true, title: true, slug: true },
+            },
+          },
+        },
       },
     })
 
-    return NextResponse.json(invite)
+    return NextResponse.json({
+      ...completeInvite,
+      selectedTrails: completeInvite?.trails.map((t) => t.trail) || [],
+      trails: undefined,
+    })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors[0].message }, { status: 400 })
