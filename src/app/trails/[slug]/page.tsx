@@ -27,6 +27,8 @@ import {
 } from "lucide-react"
 import { ClaimCertificateButton } from "@/components/claim-certificate-button"
 import { TrailEditButton } from "@/components/trail-edit-button"
+import { TrailPasswordForm } from "@/components/trail-password-form"
+import { checkTrailPasswordAccess } from "@/lib/trail-password"
 
 const iconMap: Record<string, LucideIcon> = {
   Code,
@@ -57,6 +59,24 @@ export default async function TrailPage({ params }: Props) {
       },
     },
   })
+
+  // Fetch password protection fields separately (not included in 'include')
+  const trailWithPassword = trail ? await prisma.trail.findUnique({
+    where: { id: trail.id },
+    select: {
+      isPasswordProtected: true,
+      passwordHint: true,
+      createdById: true,
+    },
+  }) : null
+
+  // Merge password fields into trail
+  const trailData = trail ? {
+    ...trail,
+    isPasswordProtected: trailWithPassword?.isPasswordProtected ?? false,
+    passwordHint: trailWithPassword?.passwordHint ?? null,
+    createdById: trailWithPassword?.createdById ?? null,
+  } : null
 
   if (!trail) {
     notFound()
@@ -106,6 +126,20 @@ export default async function TrailPage({ params }: Props) {
         redirect("/trails") // Redirect to trails list if no access
       }
     }
+  }
+
+  // Check password protection access
+  // IMPORTANT: Even privileged users (admin/teacher) don't get automatic access
+  // Only: creator, users who entered password, enrolled students get access
+  let needsPasswordUnlock = false
+  if (trailData?.isPasswordProtected && session) {
+    const passwordAccessResult = await checkTrailPasswordAccess(trail.id, session.user.id)
+    if (!passwordAccessResult.hasAccess) {
+      needsPasswordUnlock = true
+    }
+  } else if (trailData?.isPasswordProtected && !session) {
+    // Not logged in - redirect to login
+    redirect("/login")
   }
 
   let isEnrolled = false
@@ -278,6 +312,20 @@ export default async function TrailPage({ params }: Props) {
       return taskProgress.seniorStatus
     }
     return "LOCKED"
+  }
+
+  // Show password unlock form if trail is password protected and user doesn't have access
+  if (needsPasswordUnlock) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <TrailPasswordForm
+          trailId={trail.id}
+          trailTitle={trail.title}
+          trailColor={trail.color}
+          hint={trailData?.passwordHint}
+        />
+      </div>
+    )
   }
 
   return (

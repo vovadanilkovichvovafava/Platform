@@ -46,22 +46,66 @@ export default async function TrailsPage() {
       duration: true,
       isPublished: true,
       isRestricted: true,
+      isPasswordProtected: true,
+      createdById: true,
       modules: {
         select: { id: true },
       },
     },
   })
 
+  // Get password access records for logged in user
+  let passwordAccessTrailIds: string[] = []
+  let enrolledTrailIdsForPassword: string[] = []
+  if (session) {
+    const passwordAccessRecords = await prisma.trailPasswordAccess.findMany({
+      where: { userId: session.user.id },
+      select: { trailId: true },
+    })
+    passwordAccessTrailIds = passwordAccessRecords.map((r) => r.trailId)
+
+    // Get enrollments for password-protected trail access check
+    const enrollmentsForPassword = await prisma.enrollment.findMany({
+      where: { userId: session.user.id },
+      select: { trailId: true },
+    })
+    enrolledTrailIdsForPassword = enrollmentsForPassword.map((e) => e.trailId)
+  }
+
   // Filter out restricted trails user doesn't have access to
   // Admins and teachers can see all published trails
+  // IMPORTANT: Password-protected trails are hidden unless user has access
   const trails = allTrails.filter((trail) => {
-    // If user has explicit access, always show (even if unpublished or restricted)
+    // If user has explicit StudentTrailAccess, always show
     if (accessibleTrailIds.includes(trail.id)) return true
     // For unpublished trails without explicit access - hide
     if (!trail.isPublished) return false
+
+    // Check password protection
+    // Password-protected trails should only show if:
+    // 1. User is the creator
+    // 2. User has password access
+    // 3. User is enrolled (student bound)
+    // Note: isPrivileged (admin/teacher) does NOT grant automatic access to password-protected trails
+    if (trail.isPasswordProtected) {
+      if (!session) return false
+
+      // Creator always has access
+      if (trail.createdById === session.user.id) return true
+
+      // User has unlocked via password
+      if (passwordAccessTrailIds.includes(trail.id)) return true
+
+      // User is enrolled (student bound to trail)
+      if (enrolledTrailIdsForPassword.includes(trail.id)) return true
+
+      // No password access - hide trail
+      return false
+    }
+
     // Public trail (not restricted)
     if (!trail.isRestricted) return true
-    // Admin/Teacher/CO_ADMIN can see all published trails
+    // Admin/Teacher/CO_ADMIN can see all published non-password-protected trails
     if (isPrivileged) return true
     // Not logged in, can't see restricted
     if (!session) return false

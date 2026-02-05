@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, isAdmin, getAdminTrailFilter, isPrivileged } from "@/lib/admin-access"
+import { hashTrailPassword } from "@/lib/trail-password"
 
 // Transliterate Cyrillic to Latin for URL-safe slugs
 const translitMap: Record<string, string> = {
@@ -33,6 +34,10 @@ const trailSchema = z.object({
   color: z.string().default("#6366f1"),
   duration: z.string().default(""),
   isPublished: z.boolean().default(true),
+  // Password protection fields
+  isPasswordProtected: z.boolean().default(false),
+  password: z.string().optional(), // Plaintext password, will be hashed
+  passwordHint: z.string().optional(),
 })
 
 // GET - List all trails with modules (filtered by admin access)
@@ -103,8 +108,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = trailSchema.parse(body)
 
+    // Extract password fields (not stored directly)
+    const { password, isPasswordProtected, passwordHint, ...trailData } = data
+
+    // Validate: if password protected, password is required
+    if (isPasswordProtected && !password) {
+      return NextResponse.json(
+        { error: "Пароль обязателен для защищенного трейла" },
+        { status: 400 }
+      )
+    }
+
+    // Hash password if provided
+    let passwordHash: string | undefined
+    if (isPasswordProtected && password) {
+      passwordHash = await hashTrailPassword(password)
+    }
+
     // Generate slug from title (transliterate Cyrillic to Latin)
-    const slug = generateSlug(data.title)
+    const slug = generateSlug(trailData.title)
 
     // Get max order
     const maxOrder = await prisma.trail.aggregate({
@@ -114,10 +136,16 @@ export async function POST(request: NextRequest) {
     // New trails are restricted by default
     const trail = await prisma.trail.create({
       data: {
-        ...data,
+        ...trailData,
         slug,
         order: (maxOrder._max.order || 0) + 1,
         isRestricted: true, // By default, trails are restricted
+        // Password protection
+        isPasswordProtected,
+        passwordHash,
+        passwordHint: isPasswordProtected ? passwordHint : null,
+        // Creator tracking
+        createdById: session.user.id,
       },
     })
 

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, isAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
+import { hashTrailPassword, revokeAllPasswordAccess } from "@/lib/trail-password"
 
 const trailUpdateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -15,6 +16,11 @@ const trailUpdateSchema = z.object({
   isPublished: z.boolean().optional(),
   teacherVisibility: z.enum(["ADMIN_ONLY", "ALL_TEACHERS", "SPECIFIC"]).optional(),
   assignedTeacherId: z.string().nullable().optional(), // For SPECIFIC visibility
+  // Password protection fields
+  isPasswordProtected: z.boolean().optional(),
+  password: z.string().optional(), // New password (will be hashed)
+  passwordHint: z.string().nullable().optional(),
+  removePassword: z.boolean().optional(), // Flag to remove password protection
 })
 
 interface Props {
@@ -95,6 +101,18 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
+    // Get trail to check creator
+    const existingTrail = await prisma.trail.findUnique({
+      where: { id },
+      select: { createdById: true, isPasswordProtected: true },
+    })
+
+    if (!existingTrail) {
+      return NextResponse.json({ error: "Trail не найден" }, { status: 404 })
+    }
+
+    const isCreator = existingTrail.createdById === session.user.id
+
     // Check access based on role
     if (session.user.role === "TEACHER") {
       // Teachers can only update trails they are assigned to
@@ -114,8 +132,16 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const body = await request.json()
     const data = trailUpdateSchema.parse(body)
 
-    // Extract teacher assignment data
-    const { assignedTeacherId, teacherVisibility, ...trailData } = data
+    // Extract special fields
+    const {
+      assignedTeacherId,
+      teacherVisibility,
+      password,
+      isPasswordProtected,
+      passwordHint,
+      removePassword,
+      ...trailData
+    } = data
 
     // RBAC: Only ADMIN can change teacherVisibility
     if (!isAdmin(session.user.role) && teacherVisibility !== undefined) {
@@ -125,10 +151,72 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       )
     }
 
-    // Update trail (include teacherVisibility only for ADMIN)
-    const updateData = isAdmin(session.user.role)
-      ? { ...trailData, ...(teacherVisibility !== undefined && { teacherVisibility }) }
-      : trailData
+    // RBAC: Only creator can change password settings
+    const wantsPasswordChange = password !== undefined || isPasswordProtected !== undefined || removePassword
+    if (wantsPasswordChange && !isCreator) {
+      return NextResponse.json(
+        { error: "Только создатель трейла может изменять настройки пароля" },
+        { status: 403 }
+      )
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = { ...trailData }
+
+    // Include teacherVisibility only for ADMIN
+    if (isAdmin(session.user.role) && teacherVisibility !== undefined) {
+      updateData.teacherVisibility = teacherVisibility
+    }
+
+    // Handle password changes (only for creator)
+    if (isCreator) {
+      if (removePassword) {
+        // Remove password protection
+        updateData.isPasswordProtected = false
+        updateData.passwordHash = null
+        updateData.passwordHint = null
+        // Revoke all password access (they can re-enter password if protection is re-enabled)
+        await revokeAllPasswordAccess(id)
+      } else if (isPasswordProtected !== undefined) {
+        updateData.isPasswordProtected = isPasswordProtected
+
+        if (isPasswordProtected) {
+          // If enabling protection with new password
+          if (password) {
+            updateData.passwordHash = await hashTrailPassword(password)
+            // Revoke existing access since password changed
+            await revokeAllPasswordAccess(id)
+          } else if (!existingTrail.isPasswordProtected) {
+            // Enabling protection without providing password
+            return NextResponse.json(
+              { error: "Пароль обязателен для включения защиты" },
+              { status: 400 }
+            )
+          }
+
+          // Update hint
+          if (passwordHint !== undefined) {
+            updateData.passwordHint = passwordHint
+          }
+        } else {
+          // Disabling protection
+          updateData.passwordHash = null
+          updateData.passwordHint = null
+        }
+      } else if (password) {
+        // Just changing password (not toggling protection)
+        updateData.passwordHash = await hashTrailPassword(password)
+        // Revoke existing access since password changed
+        await revokeAllPasswordAccess(id)
+
+        if (passwordHint !== undefined) {
+          updateData.passwordHint = passwordHint
+        }
+      } else if (passwordHint !== undefined) {
+        // Just updating hint
+        updateData.passwordHint = passwordHint
+      }
+    }
 
     const trail = await prisma.trail.update({
       where: { id },
