@@ -1001,8 +1001,11 @@ export default function UnifiedContentPage() {
 
           {/* Role indicator */}
           <div className="mt-4 flex items-center gap-2">
-            <Badge variant={isAdmin ? "default" : "secondary"} className={isAdmin ? "bg-purple-600" : "bg-blue-600"}>
-              {isAdmin ? "Администратор" : "Учитель"}
+            <Badge
+              variant={isFullAdmin ? "default" : "secondary"}
+              className={isFullAdmin ? "bg-purple-600" : session?.user?.role === "CO_ADMIN" ? "bg-indigo-600" : "bg-blue-600"}
+            >
+              {isFullAdmin ? "Администратор" : session?.user?.role === "CO_ADMIN" ? "Со-администратор" : "Учитель"}
             </Badge>
             {!isAdmin && (
               <span className="text-sm text-gray-500">
