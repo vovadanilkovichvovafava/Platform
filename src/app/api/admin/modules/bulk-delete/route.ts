@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { checkTrailPasswordAccess } from "@/lib/trail-password"
 
 const bulkDeleteSchema = z.object({
   moduleIds: z.array(z.string()).min(1),
@@ -33,6 +34,26 @@ export async function POST(request: NextRequest) {
         const unauthorizedModules = modules.filter(m => !allowedTrailIds.includes(m.trailId))
         if (unauthorizedModules.length > 0) {
           return NextResponse.json({ error: "Нет доступа к некоторым модулям" }, { status: 403 })
+        }
+      }
+    }
+
+    // Check password access for all unique trails that are password protected
+    const uniqueTrailIds = [...new Set(modules.map(m => m.trailId))]
+    const trails = await prisma.trail.findMany({
+      where: { id: { in: uniqueTrailIds } },
+      select: { id: true, createdById: true, isPasswordProtected: true },
+    })
+
+    for (const trail of trails) {
+      const isCreator = trail.createdById === session.user.id
+      if (!isCreator && trail.isPasswordProtected) {
+        const passwordAccess = await checkTrailPasswordAccess(trail.id, session.user.id)
+        if (!passwordAccess.hasAccess) {
+          return NextResponse.json(
+            { error: "Для удаления модулей из защищённого трейла необходимо ввести пароль", requiresPassword: true },
+            { status: 403 }
+          )
         }
       }
     }
