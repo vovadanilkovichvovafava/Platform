@@ -485,7 +485,7 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
         >
-          <Menu className="h-3.5 w-3.5" />
+          <Layers className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">
             {activePresetId ? presets.find(p => p.id === activePresetId)?.name || "Пресет" : "По умолчанию"}
           </span>
