@@ -185,7 +185,7 @@ export default async function HomePage() {
       </section>
 
       {/* Trails Section */}
-      <section className="py-20 bg-white">
+      <section id="trails-section" className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <p className="text-orange-500 text-sm font-medium tracking-wider uppercase mb-3">
