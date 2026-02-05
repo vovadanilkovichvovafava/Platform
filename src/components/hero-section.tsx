@@ -53,16 +53,27 @@ export function HeroSection({ isLoggedIn = false }: HeroSectionProps) {
                 <Link href="/login">Войти в систему</Link>
               </Button>
             )}
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 px-8 text-base font-semibold bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:border-white/50"
-              onClick={() => {
-                document.getElementById('trails-section')?.scrollIntoView({ behavior: 'smooth' })
-              }}
-            >
-              Смотреть trails
-            </Button>
+            {isLoggedIn ? (
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 px-8 text-base font-semibold bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:border-white/50"
+              >
+                <Link href="/trails">Смотреть trails</Link>
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 px-8 text-base font-semibold bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:border-white/50"
+                onClick={() => {
+                  document.getElementById('trails-section')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              >
+                Смотреть trails
+              </Button>
+            )}
           </div>
         </div>
       </div>
