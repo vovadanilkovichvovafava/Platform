@@ -35,7 +35,17 @@ export default async function TrailsPage() {
   const allTrails = await prisma.trail.findMany({
     where: whereClause,
     orderBy: { order: "asc" },
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      subtitle: true,
+      description: true,
+      icon: true,
+      color: true,
+      duration: true,
+      isPublished: true,
+      isRestricted: true,
       modules: {
         select: { id: true },
       },
