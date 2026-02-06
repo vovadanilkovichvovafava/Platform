@@ -1178,76 +1178,62 @@ export default function UnifiedContentPage() {
                         <span className="text-sm text-gray-500">
                           {trail.modules.length} {pluralizeRu(trail.modules.length, ["модуль", "модуля", "модулей"])}
                         </span>
-                        {isTrailLocked(trail) ? (
-                          <>
-                            <Badge className="bg-amber-100 text-amber-700 border-amber-300 border">
-                              <Lock className="h-3 w-3 mr-1" />
-                              Заблокирован
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => guardTrailAction(trail, () => {})}
-                              className="text-amber-700 border-amber-300 hover:bg-amber-50"
-                            >
-                              <Lock className="h-4 w-4 mr-1" />
-                              Ввести пароль
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            {isAdmin && (
-                              <Button
-                                size="sm"
-                                variant={isAllSelectedInTrail(trail.id) ? "default" : "ghost"}
-                                onClick={() => toggleSelectAllInTrail(trail.id)}
-                                title={isAllSelectedInTrail(trail.id) ? "Снять выделение" : "Выбрать все модули"}
-                                className={isAllSelectedInTrail(trail.id) ? "bg-blue-600 hover:bg-blue-700" : ""}
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {isAdmin && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => openEditTrailModal(trail)}
-                                title="Редактировать trail"
-                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {(!trail.isPasswordProtected || trail.createdById === session?.user?.id) && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => exportContent(trail.id)}
-                                title="Экспорт trail"
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {isAdmin && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openModuleModal(trail.id)}
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Модуль
-                              </Button>
-                            )}
-                            {isAdmin && (
-                              <Button
-                                size="sm"
-                                variant="ghost-destructive"
-                                onClick={() => deleteTrail(trail.id, trail.title)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </>
+                        {isTrailLocked(trail) && (
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-300 border">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Заблокирован
+                          </Badge>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant={isAllSelectedInTrail(trail.id) ? "default" : "ghost"}
+                            onClick={() => guardTrailAction(trail, () => toggleSelectAllInTrail(trail.id))}
+                            title={isAllSelectedInTrail(trail.id) ? "Снять выделение" : "Выбрать все модули"}
+                            className={isAllSelectedInTrail(trail.id) ? "bg-blue-600 hover:bg-blue-700" : ""}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditTrailModal(trail)}
+                            title="Редактировать trail"
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {(!trail.isPasswordProtected || trail.createdById === session?.user?.id) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => guardTrailAction(trail, () => exportContent(trail.id))}
+                            title="Экспорт trail"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => guardTrailAction(trail, () => openModuleModal(trail.id))}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Модуль
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost-destructive"
+                            onClick={() => guardTrailAction(trail, () => deleteTrail(trail.id, trail.title))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     </div>
