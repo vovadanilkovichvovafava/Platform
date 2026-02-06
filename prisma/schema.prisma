@@ -458,11 +458,11 @@ model NavbarPreset {
   id        String   @id @default(cuid())
   name      String   // Preset name, e.g., "Default", "Minimal", "Full"
   isActive  Boolean  @default(false) // Only one preset per admin can be active
-  adminId   String   // The admin who owns this preset
+  adminId   String?  // The admin who owns this preset (nullable for legacy rows)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  admin User         @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  admin User?        @relation(fields: [adminId], references: [id], onDelete: Cascade)
   items NavbarItem[]
 
   @@index([isActive])
