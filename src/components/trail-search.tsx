@@ -15,6 +15,7 @@ interface Trail {
   color: string
   duration: string
   modules: { id: string }[]
+  isPasswordProtected?: boolean
 }
 
 interface TrailSearchProps {
@@ -74,6 +75,7 @@ export function TrailSearch({ trails, enrolledTrailIds, progressMap }: TrailSear
               trail={trail}
               enrolled={enrolledTrailIds.includes(trail.id)}
               progress={progressMap[trail.id] || 0}
+              locked={trail.isPasswordProtected}
             />
           ))}
         </div>

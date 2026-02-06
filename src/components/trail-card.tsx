@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Clock, BookOpen, ArrowRight } from "lucide-react"
+import { Clock, BookOpen, ArrowRight, Lock } from "lucide-react"
 import { pluralizeRu } from "@/lib/utils"
 
 // Custom SVG icons for trails - more polished design
@@ -48,9 +48,11 @@ interface TrailCardProps {
   }
   progress?: number
   enrolled?: boolean
+  /** Password-protected trail — shows lock badge */
+  locked?: boolean
 }
 
-export function TrailCard({ trail, progress = 0, enrolled = false }: TrailCardProps) {
+export function TrailCard({ trail, progress = 0, enrolled = false, locked = false }: TrailCardProps) {
   const Icon = TrailIcons[trail.icon] || TrailIcons.Code
   const moduleCount = trail.modules?.length || 0
 
@@ -70,9 +72,14 @@ export function TrailCard({ trail, progress = 0, enrolled = false }: TrailCardPr
           </div>
 
           {/* Title */}
-          <h3 className="font-semibold text-lg text-slate-900 mb-2 group-hover:text-orange-500 transition-colors">
-            {trail.title}
-          </h3>
+          <div className="flex items-start gap-2 mb-2">
+            <h3 className="font-semibold text-lg text-slate-900 group-hover:text-orange-500 transition-colors">
+              {trail.title}
+            </h3>
+            {locked && (
+              <Lock className="h-4 w-4 text-amber-500 shrink-0 mt-1.5" />
+            )}
+          </div>
 
           {/* Subtitle */}
           <p className="text-sm text-slate-500 mb-4 line-clamp-2 flex-grow">

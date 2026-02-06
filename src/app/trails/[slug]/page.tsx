@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { ROLE_STUDENT, studentHasTrailAccess } from "@/lib/admin-access"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +28,7 @@ import {
 import { ClaimCertificateButton } from "@/components/claim-certificate-button"
 import { TrailEditButton } from "@/components/trail-edit-button"
 import { TrailPasswordForm } from "@/components/trail-password-form"
-import { checkTrailPasswordAccess } from "@/lib/trail-password"
+import { resolveTrailAccess } from "@/lib/trail-access"
 
 const iconMap: Record<string, LucideIcon> = {
   Code,
@@ -61,71 +60,83 @@ export default async function TrailPage({ params }: Props) {
     },
   })
 
-  // Fetch password protection fields separately (not included in 'include')
-  const trailWithPassword = trail ? await prisma.trail.findUnique({
-    where: { id: trail.id },
-    select: {
-      isPasswordProtected: true,
-      passwordHint: true,
-      createdById: true,
-    },
-  }) : null
-
-  // Merge password fields into trail
-  const trailData = trail ? {
-    ...trail,
-    isPasswordProtected: trailWithPassword?.isPasswordProtected ?? false,
-    passwordHint: trailWithPassword?.passwordHint ?? null,
-    createdById: trailWithPassword?.createdById ?? null,
-  } : null
-
   if (!trail) {
     notFound()
   }
 
-  // Check access for trails
+  // ── Unified access check (PASSWORD > PUBLIC > HIDDEN/ASSIGNED) ──────────
   const isPrivilegedUser = session?.user.role === "ADMIN" || session?.user.role === "TEACHER" || session?.user.role === "CO_ADMIN"
 
-  // Students must have explicit StudentTrailAccess for ANY trail
-  if (session?.user.role === ROLE_STUDENT) {
-    const hasAccess = await studentHasTrailAccess(session.user.id, trail.id)
-    if (!hasAccess) {
-      redirect("/trails")
-    }
-  }
-  // For unpublished trails, non-privileged users without session get redirected
-  else if (!trail.isPublished) {
-    if (!session) {
-      redirect("/login")
-    }
-    // Non-student, non-privileged (shouldn't happen, but safe fallback)
-    if (!isPrivilegedUser) {
-      redirect("/trails")
-    }
-  }
-  // For restricted published trails, unauthenticated users get redirected
-  else if (trail.isRestricted) {
-    if (!session) {
-      redirect("/login")
-    }
-    if (!isPrivilegedUser) {
-      redirect("/trails")
-    }
+  // Check student access record
+  let hasStudentAccess = false
+  let hasPasswordAccess = false
+  let isEnrolledForAccess = false
+
+  if (session && !isPrivilegedUser) {
+    const studentAccess = await prisma.studentTrailAccess.findUnique({
+      where: {
+        studentId_trailId: {
+          studentId: session.user.id,
+          trailId: trail.id,
+        },
+      },
+    })
+    hasStudentAccess = !!studentAccess
   }
 
-  // Check password protection access
-  // IMPORTANT: Even privileged users (admin/teacher) don't get automatic access
-  // Only: creator, users who entered password, enrolled students get access
-  let needsPasswordUnlock = false
-  if (trailData?.isPasswordProtected && session) {
-    const passwordAccessResult = await checkTrailPasswordAccess(trail.id, session.user.id)
-    if (!passwordAccessResult.hasAccess) {
-      needsPasswordUnlock = true
+  if (session && trail.isPasswordProtected) {
+    const passwordAccess = await prisma.trailPasswordAccess.findUnique({
+      where: {
+        userId_trailId: {
+          userId: session.user.id,
+          trailId: trail.id,
+        },
+      },
+    })
+    hasPasswordAccess = !!passwordAccess
+
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_trailId: {
+          userId: session.user.id,
+          trailId: trail.id,
+        },
+      },
+    })
+    isEnrolledForAccess = !!enrollment
+  }
+
+  const accessDecision = resolveTrailAccess(
+    {
+      isPublished: trail.isPublished,
+      isRestricted: trail.isRestricted,
+      isPasswordProtected: trail.isPasswordProtected,
+      createdById: trail.createdById,
+    },
+    {
+      isAuthenticated: !!session,
+      userId: session?.user.id ?? null,
+      isPrivileged: isPrivilegedUser,
+      hasStudentAccess,
+      hasPasswordAccess,
+      isEnrolled: isEnrolledForAccess,
+    },
+  )
+
+  // Handle access denial
+  if (!accessDecision.visible && !accessDecision.needsPassword) {
+    if (accessDecision.reason === "login_required") {
+      redirect("/login")
     }
-  } else if (trailData?.isPasswordProtected && !session) {
-    // Not logged in - redirect to login
+    redirect("/trails")
+  }
+
+  // Password-protected trails require authentication to submit the password form
+  if (accessDecision.needsPassword && !session) {
     redirect("/login")
   }
+
+  const needsPasswordUnlock = accessDecision.needsPassword
 
   let isEnrolled = false
   const moduleProgressMap: Record<string, string> = {}
@@ -323,7 +334,7 @@ export default async function TrailPage({ params }: Props) {
           trailId={trail.id}
           trailTitle={trail.title}
           trailColor={trail.color}
-          hint={trailData?.passwordHint}
+          hint={trail.passwordHint}
         />
       </div>
     )
@@ -369,6 +380,10 @@ export default async function TrailPage({ params }: Props) {
                       color: trail.color,
                       duration: trail.duration,
                       isPublished: trail.isPublished,
+                      isRestricted: trail.isRestricted,
+                      isPasswordProtected: trail.isPasswordProtected,
+                      passwordHint: trail.passwordHint,
+                      createdById: trail.createdById,
                     }}
                   />
                 )}

@@ -22,6 +22,7 @@ import {
   Users,
   ChevronDown,
   Lock,
+  Unlock,
   KeyRound,
 } from "lucide-react"
 
@@ -54,6 +55,7 @@ export interface TrailFormData {
   color: string
   duration: string
   isPublished: boolean
+  isRestricted?: boolean // true = hidden/assigned only, false = public to all students
   teacherVisibility?: string
   assignedTeacherId?: string | null
   // Password protection
@@ -106,6 +108,7 @@ export function EditTrailModal({
     color: "#6366f1",
     duration: "",
     isPublished: false,
+    isRestricted: true, // Restricted by default (secure)
     teacherVisibility: "ADMIN_ONLY",
     assignedTeacherId: null,
     isPasswordProtected: false,
@@ -165,6 +168,7 @@ export function EditTrailModal({
         color: "#6366f1",
         duration: "",
         isPublished: false,
+        isRestricted: true, // Restricted by default (secure)
         teacherVisibility: "ADMIN_ONLY",
         assignedTeacherId: null,
         isPasswordProtected: false,
@@ -185,6 +189,7 @@ export function EditTrailModal({
         color: trail.color || "#6366f1",
         duration: trail.duration || "",
         isPublished: trail.isPublished,
+        isRestricted: trail.isRestricted ?? true,
         teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
         assignedTeacherId: trail.assignedTeacherId || null,
         isPasswordProtected: trail.isPasswordProtected || false,
@@ -236,6 +241,7 @@ export function EditTrailModal({
         color: form.color,
         duration: form.duration.trim(),
         isPublished: form.isPublished,
+        isRestricted: form.isRestricted,
       }
 
       // Only include teacherVisibility for admins in edit mode
@@ -427,18 +433,43 @@ export function EditTrailModal({
               )}
               <div>
                 <span className="text-sm font-medium">
-                  {form.isPublished ? "Опубликован" : "Скрыт"}
+                  {form.isPublished ? "Опубликован" : "Черновик"}
                 </span>
                 <p className="text-xs text-gray-500">
                   {form.isPublished
-                    ? "Trail виден всем пользователям"
-                    : "Trail скрыт от студентов"}
+                    ? "Trail доступен на платформе"
+                    : "Trail скрыт от всех (черновик)"}
                 </p>
               </div>
             </div>
             <Switch
               checked={form.isPublished}
               onCheckedChange={(checked) => setForm({ ...form, isPublished: checked })}
+            />
+          </div>
+
+          {/* Student visibility toggle (isRestricted) */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              {!form.isRestricted ? (
+                <Unlock className="h-4 w-4 text-green-600" />
+              ) : (
+                <Lock className="h-4 w-4 text-orange-500" />
+              )}
+              <div>
+                <span className="text-sm font-medium">
+                  {!form.isRestricted ? "Виден всем студентам" : "Ограниченный доступ"}
+                </span>
+                <p className="text-xs text-gray-500">
+                  {!form.isRestricted
+                    ? "Все студенты видят этот trail"
+                    : "Только студенты с выданным доступом"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={!form.isRestricted}
+              onCheckedChange={(checked) => setForm({ ...form, isRestricted: !checked })}
             />
           </div>
 
