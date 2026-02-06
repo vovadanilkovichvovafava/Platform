@@ -115,8 +115,8 @@ const authMiddleware = withAuth(
   }
 )
 
-// Feature flag: leaderboard enabled (read from env, defaults to disabled)
-const LEADERBOARD_ENABLED = process.env.NEXT_PUBLIC_LEADERBOARD_ENABLED === "true"
+// Feature flag: leaderboard enabled (hardcoded, change in src/lib/feature-flags.ts to re-enable)
+const LEADERBOARD_ENABLED = false
 
 // Combined middleware: rate limit first, then auth
 export default function middleware(request: NextRequest) {
