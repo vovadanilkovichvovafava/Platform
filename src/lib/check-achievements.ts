@@ -9,7 +9,6 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
       where: { id: userId },
       select: {
         totalXP: true,
-        currentStreak: true,
         telegramChatId: true,
         _count: {
           select: {
@@ -171,38 +170,6 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
     }
     if (user.totalXP >= 15000 && !existingIds.has("XP_15000")) {
       toAward.push("XP_15000")
-    }
-
-    // === STREAK ACHIEVEMENTS (existing + new) ===
-    if (user.currentStreak >= 3 && !existingIds.has("STREAK_3")) {
-      toAward.push("STREAK_3")
-    }
-    if (user.currentStreak >= 5 && !existingIds.has("STREAK_5")) {
-      toAward.push("STREAK_5")
-    }
-    if (user.currentStreak >= 7 && !existingIds.has("STREAK_7")) {
-      toAward.push("STREAK_7")
-    }
-    if (user.currentStreak >= 14 && !existingIds.has("STREAK_14")) {
-      toAward.push("STREAK_14")
-    }
-    if (user.currentStreak >= 21 && !existingIds.has("STREAK_21")) {
-      toAward.push("STREAK_21")
-    }
-    if (user.currentStreak >= 30 && !existingIds.has("STREAK_30")) {
-      toAward.push("STREAK_30")
-    }
-    if (user.currentStreak >= 45 && !existingIds.has("STREAK_45")) {
-      toAward.push("STREAK_45")
-    }
-    if (user.currentStreak >= 90 && !existingIds.has("STREAK_90")) {
-      toAward.push("STREAK_90")
-    }
-    if (user.currentStreak >= 100 && !existingIds.has("STREAK_100")) {
-      toAward.push("STREAK_100")
-    }
-    if (user.currentStreak >= 180 && !existingIds.has("STREAK_180")) {
-      toAward.push("STREAK_180")
     }
 
     // === PERFECT SCORES (existing + new) ===

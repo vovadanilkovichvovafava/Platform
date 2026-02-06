@@ -28,7 +28,6 @@ async function main() {
       name: "Vova Admin",
       role: "ADMIN",
       totalXP: 0,
-      currentStreak: 0,
     },
   })
 
@@ -50,7 +49,6 @@ async function main() {
       name: "Alex Mentor",
       role: "TEACHER",
       totalXP: 0,
-      currentStreak: 0,
       invitedBy: admin.id,
     },
   })
@@ -62,7 +60,6 @@ async function main() {
       name: "Max Learner",
       role: "STUDENT",
       totalXP: 125,
-      currentStreak: 3,
       invitedBy: admin.id,
     },
   })

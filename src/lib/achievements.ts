@@ -112,32 +112,6 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     rarity: "legendary",
   },
 
-  // Streaks
-  STREAK_3: {
-    id: "STREAK_3",
-    name: "Разогрев",
-    description: "Активность 3 дня подряд",
-    icon: "streamline-freehand:movies-hot-trending",
-    color: RARITY_COLORS.common,
-    rarity: "common",
-  },
-  STREAK_7: {
-    id: "STREAK_7",
-    name: "Недельный марафон",
-    description: "Активность 7 дней подряд",
-    icon: "streamline-freehand:fireworks-2",
-    color: RARITY_COLORS.uncommon,
-    rarity: "uncommon",
-  },
-  STREAK_30: {
-    id: "STREAK_30",
-    name: "Месячный челлендж",
-    description: "Активность 30 дней подряд",
-    icon: "streamline-freehand:strategy-business-success-peak",
-    color: RARITY_COLORS.epic,
-    rarity: "epic",
-  },
-
   // Perfect scores
   PERFECT_10: {
     id: "PERFECT_10",
@@ -310,64 +284,6 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: "Бессмертный",
     description: "Заработайте 15000 XP",
     icon: "streamline-freehand:wealth-gold-bars",
-    color: RARITY_COLORS.legendary,
-    rarity: "legendary",
-  },
-
-  // === СТРИКИ: Серии активности ===
-  STREAK_5: {
-    id: "STREAK_5",
-    name: "Пять дней",
-    description: "Активность 5 дней подряд",
-    icon: "streamline-freehand:time-clock-circle",
-    color: RARITY_COLORS.common,
-    rarity: "common",
-  },
-  STREAK_14: {
-    id: "STREAK_14",
-    name: "Две недели",
-    description: "Активность 14 дней подряд",
-    icon: "streamline-freehand:time-hourglass-triangle",
-    color: RARITY_COLORS.uncommon,
-    rarity: "uncommon",
-  },
-  STREAK_21: {
-    id: "STREAK_21",
-    name: "Три недели",
-    description: "Активность 21 день подряд",
-    icon: "streamline-freehand:calendar-date",
-    color: RARITY_COLORS.uncommon,
-    rarity: "uncommon",
-  },
-  STREAK_45: {
-    id: "STREAK_45",
-    name: "Полтора месяца",
-    description: "Активность 45 дней подряд",
-    icon: "streamline-freehand:calendar-grid",
-    color: RARITY_COLORS.rare,
-    rarity: "rare",
-  },
-  STREAK_90: {
-    id: "STREAK_90",
-    name: "Квартал силы",
-    description: "Активность 90 дней подряд",
-    icon: "streamline-freehand:timer-countdown-ten",
-    color: RARITY_COLORS.epic,
-    rarity: "epic",
-  },
-  STREAK_100: {
-    id: "STREAK_100",
-    name: "Сто дней",
-    description: "Активность 100 дней подряд",
-    icon: "streamline-freehand:waiting-room-clock",
-    color: RARITY_COLORS.epic,
-    rarity: "epic",
-  },
-  STREAK_180: {
-    id: "STREAK_180",
-    name: "Полугодовой марафон",
-    description: "Активность 180 дней подряд",
-    icon: "streamline-freehand:time-wrist-watch-1",
     color: RARITY_COLORS.legendary,
     rarity: "legendary",
   },

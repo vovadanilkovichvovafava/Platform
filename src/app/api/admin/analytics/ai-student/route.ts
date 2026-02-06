@@ -128,7 +128,6 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true, // Only for response display, not sent to AI
         totalXP: true,
-        // Note: currentStreak removed - not included in AI analysis payload
         activityDays: {
           orderBy: { date: "desc" },
           take: 1,

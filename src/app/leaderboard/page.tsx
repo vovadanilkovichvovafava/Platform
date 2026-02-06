@@ -10,7 +10,6 @@ import {
   Trophy,
   Medal,
   Star,
-  Flame,
   Award,
   RefreshCw,
   Crown,
@@ -27,7 +26,6 @@ interface LeaderboardEntry {
   id: string
   name: string
   totalXP: number
-  streak: number
   avatarUrl: string | null
   modulesCompleted: number
   certificates: number
@@ -226,12 +224,6 @@ export default function LeaderboardPage() {
                       <Target className="h-3 w-3" />
                       {leaderboard[1].modulesCompleted}
                     </span>
-                    {leaderboard[1].streak > 0 && (
-                      <span className="flex items-center gap-1 text-orange-500">
-                        <Flame className="h-3 w-3" />
-                        {leaderboard[1].streak}
-                      </span>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -268,12 +260,6 @@ export default function LeaderboardPage() {
                       <Target className="h-3 w-3 mr-1" />
                       {leaderboard[0].modulesCompleted} {pluralizeRu(leaderboard[0].modulesCompleted, ["модуль", "модуля", "модулей"])}
                     </Badge>
-                    {leaderboard[0].streak > 0 && (
-                      <Badge className="bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100">
-                        <Flame className="h-3 w-3 mr-1" />
-                        {leaderboard[0].streak} дней
-                      </Badge>
-                    )}
                   </div>
                   {leaderboard[0].certificates > 0 && (
                     <div className="mt-3 flex items-center justify-center gap-1 text-xs text-yellow-600">
@@ -315,12 +301,6 @@ export default function LeaderboardPage() {
                       <Target className="h-3 w-3" />
                       {leaderboard[2].modulesCompleted}
                     </span>
-                    {leaderboard[2].streak > 0 && (
-                      <span className="flex items-center gap-1 text-orange-400">
-                        <Flame className="h-3 w-3" />
-                        {leaderboard[2].streak}
-                      </span>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -387,12 +367,6 @@ export default function LeaderboardPage() {
                           <span className="flex items-center gap-1 text-purple-500">
                             <Award className="h-3 w-3" />
                             {entry.certificates}
-                          </span>
-                        )}
-                        {entry.streak > 0 && (
-                          <span className="flex items-center gap-1 text-orange-500">
-                            <Flame className="h-3 w-3" />
-                            {entry.streak} дней
                           </span>
                         )}
                       </div>

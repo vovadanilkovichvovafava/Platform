@@ -75,7 +75,6 @@ export async function GET(request: NextRequest) {
         email: true,
         createdAt: true,
         totalXP: true,
-        currentStreak: true,
         activityDays: {
           orderBy: { date: "desc" },
           take: 1,
@@ -458,7 +457,6 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         totalXP: true,
-        currentStreak: true,
         _count: {
           select: {
             moduleProgress: allowedTrailIds === null
@@ -480,7 +478,6 @@ export async function GET(request: NextRequest) {
       id: s.id,
       name: s.name,
       totalXP: s.totalXP,
-      currentStreak: s.currentStreak,
       modulesCompleted: s._count.moduleProgress,
       approvedWorks: s._count.submissions,
       certificates: s._count.certificates,
@@ -537,7 +534,6 @@ export async function GET(request: NextRequest) {
                 id: true,
                 name: true,
                 totalXP: true,
-                currentStreak: true,
               },
             },
           },
@@ -603,7 +599,6 @@ export async function GET(request: NextRequest) {
               id: userId,
               name: enrollment.user.name,
               totalXP: enrollment.user.totalXP,
-              currentStreak: enrollment.user.currentStreak,
               modulesCompleted: progress,
               totalModules: moduleIds.length,
               completionPercent: moduleIds.length > 0 ? Math.round((progress / moduleIds.length) * 100) : 0,

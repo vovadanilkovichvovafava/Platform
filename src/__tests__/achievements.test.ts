@@ -5,8 +5,8 @@ describe("Achievements", () => {
   const allAchievements = getAllAchievements()
   const validRarities = ["common", "uncommon", "rare", "epic", "legendary"] as const
 
-  it("should have exactly 80 achievements (20 existing + 60 new)", () => {
-    expect(allAchievements.length).toBe(80)
+  it("should have exactly 70 achievements (after removing streak achievements)", () => {
+    expect(allAchievements.length).toBe(70)
   })
 
   it("should have no duplicate IDs", () => {
@@ -120,9 +120,9 @@ describe("Achievements", () => {
       }
     })
 
-    it("should have streak achievements", () => {
-      const streakAchievements = ["STREAK_5", "STREAK_14", "STREAK_21", "STREAK_45", "STREAK_90", "STREAK_100", "STREAK_180"]
-      for (const id of streakAchievements) {
+    it("should have perfect streak achievements", () => {
+      const perfectStreakAchievements = ["PERFECT_STREAK_3", "PERFECT_STREAK_5"]
+      for (const id of perfectStreakAchievements) {
         expect(getAchievement(id)).toBeDefined()
       }
     })
