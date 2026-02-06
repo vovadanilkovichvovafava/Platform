@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     await recordActivity(session.user.id)
 
     const body = await request.json()
-    const { questionId, selectedAnswer, isInteractive, interactiveResult } = answerSchema.parse(body)
+    const { questionId, selectedAnswer, isInteractive, interactiveResult, interactiveAttempts } = answerSchema.parse(body)
 
     // Get question with module and trail info
     const question = await prisma.question.findUnique({
@@ -141,51 +141,78 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      let message: string
+      if (isCorrect) {
+        if (isReplay) {
+          message = "Правильно!"
+        } else if (newAttempts === 2) {
+          message = `Правильно! +${earnedScore} XP (65% за вторую попытку)`
+        } else {
+          message = `Правильно! +${earnedScore} XP (35% за третью попытку)`
+        }
+      } else if (newAttempts >= 3) {
+        message = "Неправильно. Попытки исчерпаны."
+      } else {
+        message = `Неправильно. Осталось попыток: ${3 - newAttempts}`
+      }
+
       return NextResponse.json({
         success: true,
         isCorrect,
         attempts: newAttempts,
         earnedScore: isCorrect ? earnedScore : 0,
         correctAnswer: !isCorrect && newAttempts >= 3 ? question.correctAnswer : undefined,
-        message: isCorrect
-          ? (isReplay ? "Правильно!" : `Правильно! +${earnedScore} XP`)
-          : newAttempts >= 3
-          ? "Неправильно. Попытки исчерпаны."
-          : `Неправильно. Осталось попыток: ${3 - newAttempts}`,
+        message,
       })
     } else {
-      // First attempt — no XP or first-attempt bonus on replay
-      const isFirstAttemptBonus = isCorrect && !isReplay
-      const earnedScore = isFirstAttemptBonus ? calculateScore(question.module.points / 3, 1) : 0
+      // For interactive exercises, use the client-reported attempt count (capped at 3)
+      // Interactive exercises handle retries client-side and only report once on completion
+      const actualAttempts = (isInteractive && interactiveAttempts)
+        ? Math.max(1, Math.min(interactiveAttempts, 3))
+        : 1
+
+      // No XP on replay
+      const earnedScore = isCorrect && !isReplay ? calculateScore(question.module.points / 3, actualAttempts) : 0
 
       attempt = await prisma.questionAttempt.create({
         data: {
           userId: session.user.id,
           questionId: questionId,
-          attempts: 1,
+          attempts: actualAttempts,
           isCorrect: isCorrect,
           earnedScore: earnedScore,
         },
       })
 
       // Update user XP if correct and not a replay
-      if (isFirstAttemptBonus) {
+      if (isCorrect && !isReplay && earnedScore > 0) {
         await prisma.user.update({
           where: { id: session.user.id },
           data: { totalXP: { increment: earnedScore } },
         })
       }
 
+      let message: string
+      if (isCorrect) {
+        if (isReplay) {
+          message = "Правильно!"
+        } else if (actualAttempts === 1) {
+          message = `Правильно! +${earnedScore} XP (100% за первую попытку)`
+        } else if (actualAttempts === 2) {
+          message = `Правильно! +${earnedScore} XP (65% за вторую попытку)`
+        } else {
+          message = `Правильно! +${earnedScore} XP (35% за третью попытку)`
+        }
+      } else {
+        message = `Неправильно. Осталось попыток: ${3 - actualAttempts}`
+      }
+
       return NextResponse.json({
         success: true,
         isCorrect,
-        attempts: 1,
+        attempts: actualAttempts,
         earnedScore,
-        message: isCorrect
-          ? (isFirstAttemptBonus
-            ? `Правильно! +${earnedScore} XP (100% за первую попытку)`
-            : (isReplay ? "Правильно!" : `Правильно! +${earnedScore} XP`))
-          : "Неправильно. Осталось попыток: 2",
+        message,
       })
     }
   } catch (error) {
