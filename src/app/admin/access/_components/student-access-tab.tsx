@@ -28,6 +28,9 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { AdminTrailPasswordModal } from "@/components/admin-trail-password-modal"
+import { InfoHint } from "@/components/ui/info-hint"
+import { HowItWorks } from "@/components/ui/how-it-works"
+import { adminHelpHints, adminPageLegends } from "@/lib/admin-help-texts"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -650,6 +653,9 @@ export function StudentAccessTab() {
         </div>
       )}
 
+      {/* How it works legend */}
+      <HowItWorks legend={adminPageLegends.studentAccess} className="mb-6" />
+
       {/* ── Trail Status Card ────────────────────────────────────────── */}
       <Card className="mb-8">
         <CardHeader>
@@ -732,9 +738,12 @@ export function StudentAccessTab() {
                             <EyeOff className="h-4 w-4 text-gray-400" />
                           )}
                           <div>
-                            <span className="text-sm font-medium">
-                              Опубликован
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-medium">
+                                Опубликован
+                              </span>
+                              <InfoHint hint={adminHelpHints.studentAccess.trailPublished.shortHint} side="right" />
+                            </div>
                             <p className="text-xs text-gray-500">
                               Trail доступен на платформе
                             </p>
@@ -756,9 +765,12 @@ export function StudentAccessTab() {
                             <Lock className="h-4 w-4 text-orange-500" />
                           )}
                           <div>
-                            <span className="text-sm font-medium">
-                              Виден всем студентам
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-medium">
+                                Виден всем студентам
+                              </span>
+                              <InfoHint hint={adminHelpHints.studentAccess.trailRestricted.shortHint} side="right" />
+                            </div>
                             <p className="text-xs text-gray-500">
                               Все студенты видят этот trail
                             </p>
@@ -777,9 +789,12 @@ export function StudentAccessTab() {
                           <div className="flex items-center gap-2">
                             <KeyRound className="h-4 w-4 text-amber-600" />
                             <div>
-                              <span className="text-sm font-medium text-amber-900">
-                                Защита паролем
-                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm font-medium text-amber-900">
+                                  Защита паролем
+                                </span>
+                                <InfoHint hint={adminHelpHints.studentAccess.trailPasswordProtection.shortHint} side="right" />
+                              </div>
                               <p className="text-xs text-amber-700">
                                 {trail.isPasswordProtected
                                   ? "Требуется пароль для доступа"
@@ -837,6 +852,7 @@ export function StudentAccessTab() {
             <CardTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
               Выдать доступ к ограниченному Trail
+              <InfoHint hint={adminHelpHints.studentAccess.grantAccess.shortHint} side="right" />
             </CardTitle>
           </CardHeader>
           <CardContent>
