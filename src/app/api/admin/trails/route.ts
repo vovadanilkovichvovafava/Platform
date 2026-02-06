@@ -52,7 +52,7 @@ export async function GET() {
     // Build where clause based on role
     // ADMIN: no filter (sees all)
     // CO_ADMIN: filter by AdminTrailAccess
-    // TEACHER: handled separately via TrailTeacher
+    // TEACHER: filter by TrailTeacher + ALL_TEACHERS visibility
     let whereClause = {}
 
     if (isAnyAdmin(session.user.role) && !isAdmin(session.user.role)) {
@@ -61,6 +61,11 @@ export async function GET() {
       if (trailFilter) {
         whereClause = trailFilter
       }
+    } else if (session.user.role === "TEACHER") {
+      // TEACHER - filter by assigned trails (TrailTeacher + ALL_TEACHERS)
+      const { getTeacherAllowedTrailIds } = await import("@/lib/admin-access")
+      const allowedIds = await getTeacherAllowedTrailIds(session.user.id)
+      whereClause = { id: { in: allowedIds } }
     }
 
     const trails = await prisma.trail.findMany({
@@ -96,12 +101,12 @@ export async function GET() {
   }
 }
 
-// POST - Create new trail (Admin or Teacher - creator gets auto-assigned)
+// POST - Create new trail (Admin and CO_ADMIN only, TEACHER cannot create)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isPrivileged(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 

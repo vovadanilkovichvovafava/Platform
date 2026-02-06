@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, privilegedHasTrailAccess } from "@/lib/admin-access"
 
 // In-memory rate limiting for delete operations (1.5s cooldown)
 // Key: `userId:submissionId`, Value: timestamp of last delete attempt
@@ -26,7 +27,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+    if (!session || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
@@ -72,32 +73,17 @@ export async function DELETE(
       )
     }
 
-    // Check if teacher has access to this trail (or is admin)
-    if (session.user.role === "TEACHER") {
-      // Check 1: Is teacher specifically assigned to this trail?
-      const teacherAssignment = await prisma.trailTeacher.findUnique({
-        where: {
-          trailId_teacherId: {
-            trailId: submission.module.trailId,
-            teacherId: session.user.id,
-          },
-        },
-      })
-
-      // Check 2: Is trail visible to all teachers?
-      const trail = await prisma.trail.findUnique({
-        where: { id: submission.module.trailId },
-        select: { teacherVisibility: true },
-      })
-
-      const hasAccess = teacherAssignment || trail?.teacherVisibility === "ALL_TEACHERS"
-
-      if (!hasAccess) {
-        return NextResponse.json(
-          { error: "У вас нет доступа к этому направлению" },
-          { status: 403 }
-        )
-      }
+    // Check if user has access to this trail (ADMIN always, CO_ADMIN/TEACHER by assignment)
+    const hasAccess = await privilegedHasTrailAccess(
+      session.user.id,
+      session.user.role,
+      submission.module.trailId
+    )
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: "У вас нет доступа к этому направлению" },
+        { status: 403 }
+      )
     }
 
     // Delete the submission

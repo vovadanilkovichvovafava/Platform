@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, privilegedHasTrailAccess } from "@/lib/admin-access"
 import { z } from "zod"
 
 const reviewSchema = z.object({
@@ -15,27 +16,6 @@ const reviewSchema = z.object({
   comment: z.string().optional(),
   modulePoints: z.number().default(0),
 })
-
-// Helper to check if teacher has access to trail
-// Access is granted if:
-// 1. Teacher is specifically assigned to the trail (in TrailTeacher)
-// 2. Trail has teacherVisibility = "ALL_TEACHERS"
-async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Promise<boolean> {
-  // Check 1: Is teacher specifically assigned?
-  const assignment = await prisma.trailTeacher.findUnique({
-    where: {
-      trailId_teacherId: { trailId, teacherId },
-    },
-  })
-  if (assignment) return true
-
-  // Check 2: Is trail visible to all teachers?
-  const trail = await prisma.trail.findUnique({
-    where: { id: trailId },
-    select: { teacherVisibility: true },
-  })
-  return trail?.teacherVisibility === "ALL_TEACHERS"
-}
 
 // Helper to update TaskProgress based on project level and result
 // status: APPROVED = go up, REVISION = stay (retry), FAILED = go down
@@ -111,12 +91,11 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    // Allow both TEACHER and ADMIN roles
-    if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+    // Allow TEACHER, CO_ADMIN, and ADMIN roles
+    if (!session?.user?.id || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    const isAdmin = session.user.role === "ADMIN"
     const body = await request.json()
     const data = reviewSchema.parse(body)
 
@@ -130,12 +109,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    // Verify teacher is assigned to this trail (ADMIN can review any trail)
-    if (!isAdmin) {
-      const isAssigned = await isTeacherAssignedToTrail(session.user.id, moduleForCheck.trailId)
-      if (!isAssigned) {
-        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
-      }
+    // Verify user has access to this trail (ADMIN always, CO_ADMIN/TEACHER by assignment)
+    const hasAccess = await privilegedHasTrailAccess(session.user.id, session.user.role, moduleForCheck.trailId)
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
     }
 
     // Create review

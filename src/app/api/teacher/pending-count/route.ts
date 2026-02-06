@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
 
 // GET - Get pending submissions count for teacher/admin
 export async function GET() {
@@ -12,39 +13,22 @@ export async function GET() {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    // Only allow TEACHER and ADMIN roles
-    if (session.user.role !== "TEACHER" && session.user.role !== "ADMIN") {
+    // Allow TEACHER, CO_ADMIN, and ADMIN roles
+    if (!isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 })
     }
 
-    const isAdmin = session.user.role === "ADMIN"
+    const assignedTrailIds = await getPrivilegedAllowedTrailIds(session.user.id, session.user.role)
 
     let pendingCount = 0
 
-    if (isAdmin) {
-      // Admin sees all pending submissions
+    if (assignedTrailIds === null) {
+      // ADMIN - sees all pending submissions
       pendingCount = await prisma.submission.count({
         where: { status: "PENDING" },
       })
-    } else {
-      // Teacher sees trails with teacherVisibility = "ALL_TEACHERS" + specifically assigned trails
-      const allTeacherTrails = await prisma.trail.findMany({
-        where: { teacherVisibility: "ALL_TEACHERS" },
-        select: { id: true },
-      })
-
-      const specificAssignments = await prisma.trailTeacher.findMany({
-        where: { teacherId: session.user.id },
-        select: { trailId: true },
-      })
-
-      const allTrailIds = new Set([
-        ...allTeacherTrails.map((t) => t.id),
-        ...specificAssignments.map((a) => a.trailId),
-      ])
-
-      const assignedTrailIds = Array.from(allTrailIds)
-
+    } else if (assignedTrailIds.length > 0) {
+      // CO_ADMIN / TEACHER - sees only assigned trails
       pendingCount = await prisma.submission.count({
         where: {
           status: "PENDING",

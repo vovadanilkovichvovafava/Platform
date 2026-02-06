@@ -92,4 +92,5 @@ export interface QuestionFormData {
 export interface ModuleEditorProps {
   moduleId: string
   backUrl: string
+  readOnly?: boolean
 }
