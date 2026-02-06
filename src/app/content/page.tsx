@@ -80,6 +80,7 @@ interface Trail {
   color: string
   duration: string
   isPublished: boolean
+  isRestricted: boolean
   teacherVisibility: string
   teachers: TrailTeacherAssignment[]
   modules: Module[]
@@ -312,6 +313,7 @@ export default function UnifiedContentPage() {
       color: trail.color,
       duration: trail.duration,
       isPublished: trail.isPublished,
+      isRestricted: trail.isRestricted,
       teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
       assignedTeacherId,
       // Password protection fields

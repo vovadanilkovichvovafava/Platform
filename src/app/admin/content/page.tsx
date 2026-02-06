@@ -78,9 +78,13 @@ interface Trail {
   color: string
   duration: string
   isPublished: boolean
+  isRestricted: boolean
   teacherVisibility: string
   teachers: TrailTeacherAssignment[]
   modules: Module[]
+  isPasswordProtected?: boolean
+  passwordHint?: string | null
+  createdById?: string | null
 }
 
 const iconMap: Record<string, typeof Code> = {
@@ -287,8 +291,12 @@ export default function AdminContentPage() {
       color: trail.color,
       duration: trail.duration,
       isPublished: trail.isPublished,
+      isRestricted: trail.isRestricted,
       teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
       assignedTeacherId,
+      isPasswordProtected: trail.isPasswordProtected,
+      passwordHint: trail.passwordHint,
+      createdById: trail.createdById,
     })
     setShowEditTrailModal(true)
   }
