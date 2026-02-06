@@ -282,6 +282,9 @@ export function EditTrailModal({
 
       if (!res.ok) {
         const data = await res.json()
+        if (data.passwordRequired) {
+          throw new Error("Для редактирования этого trail необходимо ввести пароль. Закройте окно и попробуйте снова.")
+        }
         throw new Error(data.error || (mode === "create" ? "Ошибка создания" : "Ошибка сохранения"))
       }
 

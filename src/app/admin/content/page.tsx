@@ -44,6 +44,7 @@ import {
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
+import { AdminTrailPasswordModal } from "@/components/admin-trail-password-modal"
 
 interface Module {
   id: string
@@ -128,6 +129,11 @@ export default function AdminContentPage() {
   // Edit trail modal
   const [showEditTrailModal, setShowEditTrailModal] = useState(false)
   const [editingTrail, setEditingTrail] = useState<TrailFormData | null>(null)
+
+  // Password verification modal (for password-protected trails)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordTrail, setPasswordTrail] = useState<Trail | null>(null)
+  const [passwordIsExpired, setPasswordIsExpired] = useState(false)
 
   // Create module modal
   const [showModuleModal, setShowModuleModal] = useState(false)
@@ -275,9 +281,8 @@ export default function AdminContentPage() {
     setShowModuleModal(true)
   }
 
-  // Open edit trail modal
-  const openEditTrailModal = (trail: Trail) => {
-    // Get assigned teacher ID if visibility is SPECIFIC
+  // Proceed to open edit modal (called directly or after password verification)
+  const proceedToEditModal = (trail: Trail) => {
     const assignedTeacherId = trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0
       ? trail.teachers[0].teacher.id
       : null
@@ -299,6 +304,38 @@ export default function AdminContentPage() {
       createdById: trail.createdById,
     })
     setShowEditTrailModal(true)
+  }
+
+  // Open edit trail modal with password check
+  const openEditTrailModal = async (trail: Trail) => {
+    // If trail is password-protected, check if admin needs to enter password
+    if (trail.isPasswordProtected) {
+      try {
+        const res = await fetch(`/api/admin/trails/${trail.id}/password-status`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.needsPassword) {
+            setPasswordTrail(trail)
+            setPasswordIsExpired(data.isExpired)
+            setShowPasswordModal(true)
+            return
+          }
+        }
+      } catch {
+        // On error, still try to open - server PATCH will enforce
+      }
+    }
+
+    proceedToEditModal(trail)
+  }
+
+  // Called when password is successfully entered
+  const handlePasswordSuccess = () => {
+    setShowPasswordModal(false)
+    if (passwordTrail) {
+      proceedToEditModal(passwordTrail)
+      setPasswordTrail(null)
+    }
   }
 
   // Handle trail save
@@ -1002,6 +1039,12 @@ export default function AdminContentPage() {
                             <Badge className="bg-purple-100 text-purple-700 border-0">
                               <Users className="h-3 w-3 mr-1" />
                               {trail.teachers[0].teacher.name}
+                            </Badge>
+                          )}
+                          {trail.isPasswordProtected && (
+                            <Badge className="bg-amber-100 text-amber-700 border-0">
+                              <Lock className="h-3 w-3 mr-1" />
+                              Пароль
                             </Badge>
                           )}
                         </div>
@@ -1901,6 +1944,22 @@ export default function AdminContentPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Admin Password Verification Modal */}
+      {passwordTrail && (
+        <AdminTrailPasswordModal
+          open={showPasswordModal}
+          trailId={passwordTrail.id}
+          trailTitle={passwordTrail.title}
+          trailColor={passwordTrail.color}
+          isExpired={passwordIsExpired}
+          onClose={() => {
+            setShowPasswordModal(false)
+            setPasswordTrail(null)
+          }}
+          onSuccess={handlePasswordSuccess}
+        />
       )}
 
       {/* Edit Trail Modal */}

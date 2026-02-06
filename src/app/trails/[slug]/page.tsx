@@ -84,6 +84,9 @@ export default async function TrailPage({ params }: Props) {
     hasStudentAccess = !!studentAccess
   }
 
+  // Admin password TTL: 4 hours (must match trail-policy.ts ADMIN_PASSWORD_TTL_MS)
+  const ADMIN_PASSWORD_TTL_MS = 4 * 60 * 60 * 1000
+
   if (session && trail.isPasswordProtected) {
     const passwordAccess = await prisma.trailPasswordAccess.findUnique({
       where: {
@@ -92,8 +95,19 @@ export default async function TrailPage({ params }: Props) {
           trailId: trail.id,
         },
       },
+      select: { unlockedAt: true },
     })
-    hasPasswordAccess = !!passwordAccess
+
+    if (passwordAccess) {
+      if (isPrivilegedUser && trail.createdById !== session.user.id) {
+        // For privileged non-creator users: apply TTL
+        const elapsed = Date.now() - passwordAccess.unlockedAt.getTime()
+        hasPasswordAccess = elapsed <= ADMIN_PASSWORD_TTL_MS
+      } else {
+        // For students and creators: permanent access
+        hasPasswordAccess = true
+      }
+    }
 
     const enrollment = await prisma.enrollment.findUnique({
       where: {
