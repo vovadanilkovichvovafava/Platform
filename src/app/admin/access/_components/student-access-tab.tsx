@@ -729,6 +729,15 @@ export function StudentAccessTab() {
                   {/* Expanded toggles — never show for locked trails */}
                   {isExpanded && !isTrailLocked(trail) && (
                     <div className="p-4 space-y-3 border-t bg-white">
+                      {/* Targeted invite warning */}
+                      <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200 text-blue-800 text-xs">
+                        <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+                        <p>
+                          Таргетно приглашённые студенты <span className="font-semibold">ВСЕГДА</span> видят трейл.
+                          Все слайдеры, кроме <span className="font-semibold">Пароля</span>, игнорируют таргетированно приглашённых.
+                        </p>
+                      </div>
+
                       {/* Published toggle */}
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-2">
