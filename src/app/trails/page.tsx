@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { TrailSearch } from "@/components/trail-search"
+import { ROLE_STUDENT } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 
@@ -19,18 +20,25 @@ export default async function TrailsPage() {
   }
 
   const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER" || session?.user.role === "CO_ADMIN"
+  const isStudent = session?.user.role === ROLE_STUDENT
 
-  // Build query to include:
-  // 1. All published trails (for everyone)
-  // 2. Unpublished trails that user has explicit access to (for students with StudentTrailAccess)
-  const whereClause = accessibleTrailIds.length > 0
-    ? {
-        OR: [
-          { isPublished: true },
-          { id: { in: accessibleTrailIds } }, // Include trails user has access to, even if unpublished
-        ],
-      }
-    : { isPublished: true }
+  // Build query based on role:
+  // Students: ONLY see trails they have explicit StudentTrailAccess to
+  // Privileged/unauthenticated: see published + explicitly accessible
+  let whereClause
+  if (isStudent) {
+    // Students only see assigned trails
+    whereClause = { id: { in: accessibleTrailIds } }
+  } else if (accessibleTrailIds.length > 0) {
+    whereClause = {
+      OR: [
+        { isPublished: true },
+        { id: { in: accessibleTrailIds } },
+      ],
+    }
+  } else {
+    whereClause = { isPublished: true }
+  }
 
   const allTrails = await prisma.trail.findMany({
     where: whereClause,
@@ -72,10 +80,14 @@ export default async function TrailsPage() {
     enrolledTrailIdsForPassword = enrollmentsForPassword.map((e) => e.trailId)
   }
 
-  // Filter out restricted trails user doesn't have access to
-  // Admins and teachers can see all published trails
+  // Filter out trails user doesn't have access to
+  // Students: already filtered by query (only assigned trails), show all
+  // Privileged: see all published trails
   // IMPORTANT: Password-protected trails are hidden unless user has access
   const trails = allTrails.filter((trail) => {
+    // Students already got only their assigned trails from the query - show all
+    if (isStudent) return true
+
     // If user has explicit StudentTrailAccess, always show
     if (accessibleTrailIds.includes(trail.id)) return true
     // For unpublished trails without explicit access - hide

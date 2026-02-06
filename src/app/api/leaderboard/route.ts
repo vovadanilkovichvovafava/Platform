@@ -2,19 +2,30 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { getAdminAllowedTrailIds, getStudentAllowedTrailIds, ROLE_STUDENT, ROLE_CO_ADMIN } from "@/lib/admin-access"
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    // Build where clause - CO_ADMIN sees only students from their trails
+    // Build where clause based on role
     let whereClause: { role: string; enrollments?: { some: { trailId: { in: string[] } } } } = {
       role: "STUDENT"
     }
 
-    // If CO_ADMIN, filter by their assigned trails
-    if (session?.user?.role === "CO_ADMIN") {
+    // STUDENT: only see students enrolled in their assigned trails
+    if (session?.user?.role === ROLE_STUDENT) {
+      const allowedTrailIds = await getStudentAllowedTrailIds(session.user.id)
+
+      whereClause = {
+        role: "STUDENT",
+        enrollments: {
+          some: { trailId: { in: allowedTrailIds } }
+        }
+      }
+    }
+    // CO_ADMIN: filter by their assigned trails
+    else if (session?.user?.role === ROLE_CO_ADMIN) {
       const allowedTrailIds = await getAdminAllowedTrailIds(
         session.user.id,
         session.user.role
