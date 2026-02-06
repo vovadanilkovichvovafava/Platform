@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, adminHasTrailAccess } from "@/lib/admin-access"
+import { guardTrailPassword } from "@/lib/trail-password"
 
 const reorderSchema = z.object({
   moduleIds: z.array(z.string()).min(1),
@@ -27,6 +28,15 @@ export async function POST(request: NextRequest) {
       if (!hasAccess) {
         return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
       }
+    }
+
+    // Password check — no role exceptions, only creator bypasses
+    const passwordGuard = await guardTrailPassword(trailId, session.user.id)
+    if (passwordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для изменения порядка модулей необходимо ввести пароль", passwordRequired: true },
+        { status: 403 }
+      )
     }
 
     // Get trail name for audit log

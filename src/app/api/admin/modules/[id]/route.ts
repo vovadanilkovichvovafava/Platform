@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, isAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
+import { guardTrailPassword } from "@/lib/trail-password"
 
 const moduleUpdateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -61,6 +62,15 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
     }
 
+    // Password check — no role exceptions, only creator bypasses
+    const passwordGuard = await guardTrailPassword(courseModule.trail.id, session.user.id)
+    if (passwordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для доступа к модулям этого trail необходимо ввести пароль", passwordRequired: true },
+        { status: 403 }
+      )
+    }
+
     // Find adjacent modules for navigation
     const trailModules = courseModule.trail.modules
     const currentIndex = trailModules.findIndex((m) => m.id === id)
@@ -107,6 +117,15 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       }
     }
     // ADMIN has access to all
+
+    // Password check — no role exceptions, only creator bypasses
+    const passwordGuard = await guardTrailPassword(existingModule.trailId, session.user.id)
+    if (passwordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для редактирования модулей этого trail необходимо ввести пароль", passwordRequired: true },
+        { status: 403 }
+      )
+    }
 
     const body = await request.json()
     const data = moduleUpdateSchema.parse(body)
@@ -155,6 +174,15 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       }
     }
     // ADMIN has access to all
+
+    // Password check — no role exceptions, only creator bypasses
+    const deletePasswordGuard = await guardTrailPassword(existingModule.trailId, session.user.id)
+    if (deletePasswordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для удаления модулей этого trail необходимо ввести пароль", passwordRequired: true },
+        { status: 403 }
+      )
+    }
 
     await prisma.module.delete({
       where: { id },

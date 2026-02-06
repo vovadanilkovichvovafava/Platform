@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { guardTrailPassword } from "@/lib/trail-password"
 
 const bulkDeleteSchema = z.object({
   moduleIds: z.array(z.string()).min(1),
@@ -34,6 +35,18 @@ export async function POST(request: NextRequest) {
         if (unauthorizedModules.length > 0) {
           return NextResponse.json({ error: "Нет доступа к некоторым модулям" }, { status: 403 })
         }
+      }
+    }
+
+    // Password check — check all unique trails involved (no role exceptions)
+    const uniqueTrailIds = [...new Set(modules.map(m => m.trailId))]
+    for (const trailId of uniqueTrailIds) {
+      const passwordGuard = await guardTrailPassword(trailId, session.user.id)
+      if (passwordGuard.denied) {
+        return NextResponse.json(
+          { error: "Для удаления модулей из защищённого trail необходимо ввести пароль", passwordRequired: true },
+          { status: 403 }
+        )
       }
     }
 

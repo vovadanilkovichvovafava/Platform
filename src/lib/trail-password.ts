@@ -205,3 +205,68 @@ export async function getTrailPasswordHint(
 
   return trail?.passwordHint ?? null
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Unified guard — role-agnostic, used by ALL pages and API routes
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Unified server-side guard for trail password access.
+ * Role-agnostic: applies to ADMIN, CO_ADMIN, TEACHER, STUDENT equally.
+ *
+ * Rules:
+ *  1. Trail not password-protected → allowed.
+ *  2. User is the creator of the trail → allowed (no password needed).
+ *  3. User has a valid TrailPasswordAccess record → allowed.
+ *  4. Otherwise → denied (password_required).
+ *
+ * Usage:
+ *   const guard = await guardTrailPassword(trailId, userId)
+ *   if (guard.denied) { /* return 403 or show password form * / }
+ */
+export async function guardTrailPassword(
+  trailId: string,
+  userId: string | null,
+): Promise<
+  | { denied: false }
+  | { denied: true; reason: "not_authenticated" | "password_required" | "trail_not_found" }
+> {
+  const trail = await prisma.trail.findUnique({
+    where: { id: trailId },
+    select: {
+      isPasswordProtected: true,
+      createdById: true,
+    },
+  })
+
+  if (!trail) {
+    return { denied: true, reason: "trail_not_found" }
+  }
+
+  if (!trail.isPasswordProtected) {
+    return { denied: false }
+  }
+
+  if (!userId) {
+    return { denied: true, reason: "not_authenticated" }
+  }
+
+  // Creator always has access
+  if (trail.createdById === userId) {
+    return { denied: false }
+  }
+
+  // Check TrailPasswordAccess record
+  const passwordAccess = await prisma.trailPasswordAccess.findUnique({
+    where: {
+      userId_trailId: { userId, trailId },
+    },
+    select: { id: true },
+  })
+
+  if (passwordAccess) {
+    return { denied: false }
+  }
+
+  return { denied: true, reason: "password_required" }
+}

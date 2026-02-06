@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, isAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
-import { hashTrailPassword, revokeAllPasswordAccess } from "@/lib/trail-password"
+import { hashTrailPassword, revokeAllPasswordAccess, guardTrailPassword } from "@/lib/trail-password"
 import { canViewTrail, canEditTrail } from "@/lib/trail-policy"
 
 const trailUpdateSchema = z.object({
@@ -76,6 +76,15 @@ export async function GET(request: NextRequest, { params }: Props) {
       const hasAccess = await privilegedHasTrailAccess(session.user.id, session.user.role, id)
       if (!hasAccess) {
         return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
+      }
+
+      // TEACHER: password check (no role exceptions)
+      const passwordGuard = await guardTrailPassword(id, session.user.id)
+      if (passwordGuard.denied) {
+        return NextResponse.json(
+          { error: "Для доступа к этому trail необходимо ввести пароль", passwordRequired: true },
+          { status: 403 }
+        )
       }
     }
 
@@ -371,6 +380,15 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       }
     }
     // ADMIN has access to all
+
+    // Password check for deletion (no role exceptions — only creator bypasses)
+    const passwordGuard = await guardTrailPassword(id, session.user.id)
+    if (passwordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для удаления этого trail необходимо ввести пароль", passwordRequired: true },
+        { status: 403 }
+      )
+    }
 
     await prisma.trail.delete({
       where: { id },

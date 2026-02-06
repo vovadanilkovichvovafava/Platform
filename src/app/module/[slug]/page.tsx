@@ -70,8 +70,8 @@ export default async function ModulePage({ params }: Props) {
     notFound()
   }
 
-  // Check if user is admin or teacher (privileged users can view any module)
-  const isPrivileged = session.user.role === "ADMIN" || session.user.role === "TEACHER"
+  // Check if user is admin, co-admin, or teacher (privileged users can view any module)
+  const isPrivileged = session.user.role === "ADMIN" || session.user.role === "TEACHER" || session.user.role === "CO_ADMIN"
 
   // Check enrollment for students only
   let enrollment = null
