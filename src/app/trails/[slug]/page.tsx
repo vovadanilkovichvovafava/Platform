@@ -29,6 +29,7 @@ import { ClaimCertificateButton } from "@/components/claim-certificate-button"
 import { TrailEditButton } from "@/components/trail-edit-button"
 import { TrailPasswordForm } from "@/components/trail-password-form"
 import { resolveTrailAccess } from "@/lib/trail-access"
+import { guardTrailPassword } from "@/lib/trail-password"
 
 const iconMap: Record<string, LucideIcon> = {
   Code,
@@ -51,12 +52,23 @@ export default async function TrailPage({ params }: Props) {
   const { slug } = await params
   const session = await getServerSession(authOptions)
 
+  // Step 1: Load trail metadata WITHOUT modules (no data leak before password check)
   const trail = await prisma.trail.findUnique({
     where: { slug },
-    include: {
-      modules: {
-        orderBy: { order: "asc" },
-      },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      subtitle: true,
+      description: true,
+      icon: true,
+      color: true,
+      duration: true,
+      isPublished: true,
+      isRestricted: true,
+      isPasswordProtected: true,
+      passwordHint: true,
+      createdById: true,
     },
   })
 
@@ -152,6 +164,27 @@ export default async function TrailPage({ params }: Props) {
 
   const needsPasswordUnlock = accessDecision.needsPassword
 
+  // Show password unlock form if trail is password protected and user doesn't have access
+  // IMPORTANT: modules are NOT loaded yet — no data leak
+  if (needsPasswordUnlock) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <TrailPasswordForm
+          trailId={trail.id}
+          trailTitle={trail.title}
+          trailColor={trail.color}
+          hint={trail.passwordHint}
+        />
+      </div>
+    )
+  }
+
+  // Step 2: Access granted — NOW load modules
+  const trailModulesData = await prisma.module.findMany({
+    where: { trailId: trail.id },
+    orderBy: { order: "asc" },
+  })
+
   let isEnrolled = false
   const moduleProgressMap: Record<string, string> = {}
   let taskProgress: { currentLevel: string; middleStatus: string; juniorStatus: string; seniorStatus: string } | null = null
@@ -175,7 +208,7 @@ export default async function TrailPage({ params }: Props) {
       const progress = await prisma.moduleProgress.findMany({
         where: {
           userId: session.user.id,
-          moduleId: { in: trail.modules.map((m) => m.id) },
+          moduleId: { in: trailModulesData.map((m) => m.id) },
         },
       })
       progress.forEach((p) => {
@@ -186,7 +219,7 @@ export default async function TrailPage({ params }: Props) {
       const submissions = await prisma.submission.findMany({
         where: {
           userId: session.user.id,
-          moduleId: { in: trail.modules.map((m) => m.id) },
+          moduleId: { in: trailModulesData.map((m) => m.id) },
           status: "PENDING",
         },
         select: { moduleId: true },
@@ -225,8 +258,8 @@ export default async function TrailPage({ params }: Props) {
   }
 
   // Separate assessment modules and project modules
-  const assessmentModules = trail.modules.filter(m => m.type !== "PROJECT")
-  const projectModules = trail.modules.filter(m => m.type === "PROJECT")
+  const assessmentModules = trailModulesData.filter(m => m.type !== "PROJECT")
+  const projectModules = trailModulesData.filter(m => m.type === "PROJECT")
 
   // Check if all assessments are completed
   const assessmentCompletedCount = assessmentModules.filter(
@@ -247,7 +280,7 @@ export default async function TrailPage({ params }: Props) {
     ? Math.round((assessmentCompletedCount / assessmentModules.length) * 100)
     : 0
 
-  const totalXP = trail.modules.reduce((sum, m) => sum + m.points, 0)
+  const totalXP = trailModulesData.reduce((sum, m) => sum + m.points, 0)
   const Icon = iconMap[trail.icon] || Code
 
   // Check if user is admin or teacher (to show level badges)
@@ -263,6 +296,12 @@ export default async function TrailPage({ params }: Props) {
     const session = await getServerSession(authOptions)
     if (!session || !session.user?.id) {
       redirect("/login")
+    }
+
+    // Server-side password guard: prevent enrollment without password
+    const passwordGuard = await guardTrailPassword(trailId, session.user.id)
+    if (passwordGuard.denied) {
+      redirect(`/trails/${slug}`)
     }
 
     try {
@@ -338,20 +377,6 @@ export default async function TrailPage({ params }: Props) {
       return taskProgress.seniorStatus
     }
     return "LOCKED"
-  }
-
-  // Show password unlock form if trail is password protected and user doesn't have access
-  if (needsPasswordUnlock) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <TrailPasswordForm
-          trailId={trail.id}
-          trailTitle={trail.title}
-          trailColor={trail.color}
-          hint={trail.passwordHint}
-        />
-      </div>
-    )
   }
 
   return (

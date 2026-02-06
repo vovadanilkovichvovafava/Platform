@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { adminHasTrailAccess, isAnyAdmin } from "@/lib/admin-access"
+import { guardTrailPassword } from "@/lib/trail-password"
 
 // Transliterate Cyrillic to Latin for URL-safe slugs
 const translitMap: Record<string, string> = {
@@ -58,6 +59,15 @@ export async function POST(request: NextRequest) {
       }
     }
     // ADMIN has access to all
+
+    // Password check — no role exceptions, only creator bypasses
+    const passwordGuard = await guardTrailPassword(data.trailId, session.user.id)
+    if (passwordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для создания модулей в этом trail необходимо ввести пароль", passwordRequired: true },
+        { status: 403 }
+      )
+    }
 
     // Generate slug from title (transliterate Cyrillic to Latin)
     const slug = generateSlug(data.title)

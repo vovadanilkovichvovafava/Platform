@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
+import { guardTrailPassword } from "@/lib/trail-password"
 import { recordActivity } from "@/lib/activity"
 import { processAchievementEvent } from "@/lib/achievement-service"
 import {
@@ -89,6 +90,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Этот модуль не требует отправки работы" },
         { status: 400 }
+      )
+    }
+
+    // Password check — no role exceptions, only creator bypasses
+    const passwordGuard = await guardTrailPassword(courseModule.trailId, session.user.id)
+    if (passwordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для отправки работы необходимо ввести пароль к trail" },
+        { status: 403 }
       )
     }
 
