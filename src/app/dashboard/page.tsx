@@ -38,7 +38,14 @@ function getInitials(name: string) {
     .slice(0, 2)
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ achievement?: string }>
+}) {
+  const params = await searchParams
+  const highlightAchievementId = params.achievement || null
+
   const session = await getServerSession(authOptions)
 
   if (!session || !session.user?.id) {
@@ -434,6 +441,7 @@ export default async function DashboardPage() {
             compact={false}
             collapsible={true}
             defaultExpanded={true}
+            highlightId={highlightAchievementId}
           />
         </section>
 

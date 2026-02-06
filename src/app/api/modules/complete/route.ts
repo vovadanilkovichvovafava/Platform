@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { recordActivity } from "@/lib/activity"
+import { processAchievementEvent } from "@/lib/achievement-service"
 
 export async function POST(request: NextRequest) {
   try {
@@ -132,10 +133,19 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Check and award achievements after module completion
+    const completedAt = new Date()
+    const awardedAchievements = await processAchievementEvent(
+      "MODULE_COMPLETED",
+      session.user.id,
+      { completedAt }
+    )
+
     return NextResponse.json({
       success: true,
       earnedXP,
       nextModuleSlug: nextModule?.slug,
+      awardedAchievements,
     })
   } catch (error) {
     console.error("Error completing module:", error)

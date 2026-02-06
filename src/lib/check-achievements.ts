@@ -320,7 +320,7 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
           type: "ACHIEVEMENT_EARNED",
           title: `Достижение: ${def?.name || achievementId}`,
           message: def?.description || "Вы получили новое достижение!",
-          link: "/profile",
+          link: `/dashboard?achievement=${achievementId}`,
         }
       })
 
@@ -376,7 +376,7 @@ export async function checkTimeBasedAchievements(
           type: "ACHIEVEMENT_EARNED",
           title: `Достижение: ${def?.name || achievementId}`,
           message: def?.description || "Вы получили новое достижение!",
-          link: "/profile",
+          link: `/dashboard?achievement=${achievementId}`,
         }
       })
 
@@ -426,7 +426,7 @@ export async function checkComebackAchievement(userId: string): Promise<string[]
           type: "ACHIEVEMENT_EARNED",
           title: `Достижение: ${def?.name || "COMEBACK"}`,
           message: def?.description || "Вы получили новое достижение!",
-          link: "/profile",
+          link: "/dashboard?achievement=COMEBACK",
         },
       })
 
@@ -472,7 +472,7 @@ export async function checkPersistentAchievement(userId: string): Promise<string
           type: "ACHIEVEMENT_EARNED",
           title: `Достижение: ${def?.name || "PERSISTENT"}`,
           message: def?.description || "Вы получили новое достижение!",
-          link: "/profile",
+          link: "/dashboard?achievement=PERSISTENT",
         },
       })
 
@@ -549,7 +549,7 @@ export async function checkSpeedAchievements(userId: string): Promise<string[]> 
           type: "ACHIEVEMENT_EARNED",
           title: `Достижение: ${def?.name || achievementId}`,
           message: def?.description || "Вы получили новое достижение!",
-          link: "/profile",
+          link: `/dashboard?achievement=${achievementId}`,
         }
       })
 

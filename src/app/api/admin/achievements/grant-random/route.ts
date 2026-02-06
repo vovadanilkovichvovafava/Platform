@@ -72,7 +72,25 @@ export async function POST(request: Request) {
         type: "ACHIEVEMENT_EARNED",
         title: `Достижение: ${achievementDef.name}`,
         message: achievementDef.description,
-        link: "/profile",
+        link: `/dashboard?achievement=${randomAchievementId}`,
+      },
+    })
+
+    // Audit log: who granted what to whom
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        userName: session.user.name || "Admin",
+        action: "CREATE",
+        entityType: "ACHIEVEMENT",
+        entityId: randomAchievementId,
+        entityName: achievementDef.name,
+        details: JSON.stringify({
+          targetUserId: userId,
+          targetUserName: user.name,
+          achievementId: randomAchievementId,
+          rarity: achievementDef.rarity,
+        }),
       },
     })
 

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
 import { recordActivity } from "@/lib/activity"
+import { processAchievementEvent } from "@/lib/achievement-service"
 import {
   sendTelegramMessage,
   buildSubmissionNotificationMessage,
@@ -234,6 +235,11 @@ export async function POST(request: Request) {
         })
       }
     }
+
+    // Check and award achievements after submission (non-blocking)
+    processAchievementEvent("SUBMISSION_CREATED", session.user.id).catch((err) =>
+      console.error("Achievement check after submission failed:", err)
+    )
 
     return NextResponse.json(submission)
   } catch (error) {

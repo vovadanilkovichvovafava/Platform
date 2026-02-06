@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, XCircle, HelpCircle, RotateCcw, BookOpen } from "lucide-react"
+import { useToast } from "@/components/ui/toast"
 import Link from "next/link"
 import { MatchingExercise, OrderingExercise, CaseAnalysisExercise, TrueFalseExercise, FillBlankExercise } from "@/components/exercises"
 import {
@@ -156,6 +157,7 @@ export function AssessmentSection({
   userId,
 }: AssessmentSectionProps) {
   const router = useRouter()
+  const { showAchievementToast } = useToast()
 
   // МОДУЛЬ 4: Детерминированная рандомизация порядка вопросов
   // Shuffle вопросов на уровне модуля (если есть userId)
@@ -255,7 +257,21 @@ export function AssessmentSection({
       })
 
       if (response.ok) {
+        const data = await response.json()
         setIsCompleted(true)
+
+        // Show achievement toasts
+        if (data.awardedAchievements?.length > 0) {
+          for (const achievement of data.awardedAchievements) {
+            showAchievementToast({
+              achievementId: achievement.id,
+              name: achievement.name,
+              rarity: achievement.rarity,
+              description: achievement.description,
+            })
+          }
+        }
+
         router.refresh()
       }
     } catch (error) {
@@ -403,7 +419,21 @@ export function AssessmentSection({
       })
 
       if (response.ok) {
+        const data = await response.json()
         setIsCompleted(true)
+
+        // Show achievement toasts
+        if (data.awardedAchievements?.length > 0) {
+          for (const achievement of data.awardedAchievements) {
+            showAchievementToast({
+              achievementId: achievement.id,
+              name: achievement.name,
+              rarity: achievement.rarity,
+              description: achievement.description,
+            })
+          }
+        }
+
         router.refresh()
       }
     } catch (error) {

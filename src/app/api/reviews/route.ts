@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { isPrivileged, privilegedHasTrailAccess } from "@/lib/admin-access"
+import { processAchievementEvent } from "@/lib/achievement-service"
 import { z } from "zod"
 
 const reviewSchema = z.object({
@@ -203,6 +204,12 @@ export async function POST(request: Request) {
         })
       }
     }
+
+    // Check and award achievements for the student after review
+    // Non-blocking: don't fail the review if achievement check errors
+    processAchievementEvent("REVIEW_RECEIVED", data.userId).catch((err) =>
+      console.error("Achievement check after review failed:", err)
+    )
 
     return NextResponse.json(review)
   } catch (error) {
