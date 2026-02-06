@@ -10,11 +10,16 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Flame, Loader2, Ticket } from "lucide-react"
+import { Flame, Loader2, Ticket, Send } from "lucide-react"
 
 const registerSchema = z.object({
   inviteCode: z.string().min(1, "Введите код приглашения"),
-  name: z.string().min(2, "Имя должно быть минимум 2 символа"),
+  firstName: z.string().min(2, "Имя должно быть минимум 2 символа"),
+  lastName: z.string().min(2, "Фамилия должна быть минимум 2 символа"),
+  telegramUsername: z
+    .string()
+    .min(1, "Введите Telegram-ник")
+    .regex(/^@[a-zA-Z0-9_]{5,32}$/, "Формат: @username (от 5 символов, латиница, цифры, _)"),
   email: z.string().email("Некорректный email"),
   password: z.string().min(6, "Пароль должен быть минимум 6 символов"),
   confirmPassword: z.string(),
@@ -54,7 +59,9 @@ function RegisterFormComponent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           inviteCode: data.inviteCode,
-          name: data.name,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          telegramUsername: data.telegramUsername,
           email: data.email,
           password: data.password,
         }),
@@ -130,18 +137,52 @@ function RegisterFormComponent() {
               )}
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-slate-700">Имя</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Иван"
+                  {...register("firstName")}
+                  disabled={isLoading}
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
+                />
+                {errors.firstName && (
+                  <p className="text-sm text-red-500">{errors.firstName.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-slate-700">Фамилия</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Иванов"
+                  {...register("lastName")}
+                  disabled={isLoading}
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
+                />
+                {errors.lastName && (
+                  <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-slate-700">Имя</Label>
+              <Label htmlFor="telegramUsername" className="text-slate-700 flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Telegram
+              </Label>
               <Input
-                id="name"
+                id="telegramUsername"
                 type="text"
-                placeholder="Ваше имя"
-                {...register("name")}
+                placeholder="@username"
+                {...register("telegramUsername")}
                 disabled={isLoading}
                 className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
               />
-              {errors.name && (
-                <p className="text-sm text-red-500">{errors.name.message}</p>
+              {errors.telegramUsername && (
+                <p className="text-sm text-red-500">{errors.telegramUsername.message}</p>
               )}
             </div>
 

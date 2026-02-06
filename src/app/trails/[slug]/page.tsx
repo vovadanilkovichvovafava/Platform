@@ -28,6 +28,8 @@ import {
 import { ClaimCertificateButton } from "@/components/claim-certificate-button"
 import { TrailEditButton } from "@/components/trail-edit-button"
 import { TrailPasswordForm } from "@/components/trail-password-form"
+import { ModuleLink } from "@/components/module-link"
+import { ModuleButton } from "@/components/module-button"
 import { resolveTrailAccess } from "@/lib/trail-access"
 import { guardTrailPassword } from "@/lib/trail-password"
 
@@ -255,6 +257,16 @@ export default async function TrailPage({ params }: Props) {
       })
       hasCertificate = !!certificate
     }
+  }
+
+  // Get user preference for module warning modal
+  let skipModuleWarning = false
+  if (session) {
+    const userPrefs = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { skipModuleWarning: true },
+    })
+    skipModuleWarning = userPrefs?.skipModuleWarning ?? false
   }
 
   // Separate assessment modules and project modules
@@ -553,7 +565,7 @@ export default async function TrailPage({ params }: Props) {
                       </div>
                     ) : (
                       <div className="flex items-center gap-4 p-4">
-                        <Link href={`/module/${module.slug}`} className="flex items-center gap-4 flex-1 min-w-0">
+                        <ModuleLink href={`/module/${module.slug}`} moduleSlug={module.slug} skipWarning={skipModuleWarning || isCompleted} className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
                             isCompleted ? "bg-green-100" : hasPendingSubmission ? "bg-amber-100" : isInProgress ? "bg-blue-100" : "bg-gray-100"
                           }`}>
@@ -582,7 +594,7 @@ export default async function TrailPage({ params }: Props) {
                             <span className="whitespace-nowrap">{module.duration}</span>
                             <span className="whitespace-nowrap">{module.points} XP</span>
                           </div>
-                        </Link>
+                        </ModuleLink>
                         {/* Admin/Teacher edit button */}
                         {isPrivileged && (
                           <Link
@@ -692,11 +704,15 @@ export default async function TrailPage({ params }: Props) {
                           <span className="font-medium">{project.points} XP</span>
                         </div>
                         {allAssessmentsCompleted ? (
-                          <Button asChild className="w-full" variant={isProjectCompleted ? "outline" : "default"}>
-                            <Link href={`/module/${project.slug}`}>
-                              {isProjectCompleted ? "Просмотреть" : "Начать задание"}
-                            </Link>
-                          </Button>
+                          <ModuleButton
+                            href={`/module/${project.slug}`}
+                            moduleSlug={project.slug}
+                            skipWarning={skipModuleWarning || isProjectCompleted}
+                            variant={isProjectCompleted ? "outline" : "default"}
+                            className="w-full"
+                          >
+                            {isProjectCompleted ? "Просмотреть" : "Начать задание"}
+                          </ModuleButton>
                         ) : (
                           <Button disabled className="w-full" variant="outline">
                             <Lock className="h-4 w-4 mr-2" />
