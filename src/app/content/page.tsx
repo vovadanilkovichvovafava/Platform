@@ -1206,7 +1206,7 @@ export default function UnifiedContentPage() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
-                        {(!trail.isPasswordProtected || trail.createdById === session?.user?.id) && (
+                        {(!trail.isPasswordProtected || trail.createdById === session?.user?.id || (isFullAdmin && !trail.createdById)) && (
                           <Button
                             size="sm"
                             variant="ghost"

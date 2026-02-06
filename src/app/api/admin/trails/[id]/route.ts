@@ -151,6 +151,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     const isCreator = existingTrail.createdById === session.user.id
+    // For legacy trails with no recorded creator, ADMIN can manage password settings
+    const canManagePassword = isCreator || (isAdmin(session.user.role) && !existingTrail.createdById)
 
     // Check access: role + assignment + password (centralized policy)
     const editAccess = await canEditTrail(session.user.id, session.user.role, id)
@@ -204,9 +206,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       )
     }
 
-    // RBAC: Only creator can change password settings
+    // RBAC: Only creator (or ADMIN on legacy trails without creator) can change password settings
     const wantsPasswordChange = password !== undefined || isPasswordProtected !== undefined || removePassword
-    if (wantsPasswordChange && !isCreator) {
+    if (wantsPasswordChange && !canManagePassword) {
       return NextResponse.json(
         { error: "Только создатель трейла может изменять настройки пароля" },
         { status: 403 }
@@ -221,8 +223,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       updateData.teacherVisibility = teacherVisibility
     }
 
-    // Handle password changes (only for creator)
-    if (isCreator) {
+    // Handle password changes (creator or ADMIN on legacy trails without creator)
+    if (canManagePassword) {
       if (removePassword) {
         // Remove password protection
         updateData.isPasswordProtected = false

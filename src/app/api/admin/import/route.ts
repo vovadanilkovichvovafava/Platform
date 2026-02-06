@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       const body = await request.json()
 
       if (body.action === "save" && body.trails) {
-        const result = await importToDatabase(body.trails)
+        const result = await importToDatabase(body.trails, session.user.id)
         return NextResponse.json(result)
       }
 
@@ -369,7 +369,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Импорт в базу данных
-async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
+async function importToDatabase(trails: ParsedTrail[], createdById: string): Promise<ImportResult> {
   const imported = {
     trails: 0,
     modules: 0,
@@ -400,8 +400,18 @@ async function importToDatabase(trails: ParsedTrail[]): Promise<ImportResult> {
         duration: "4 недели",
         isPublished: false, // New trails are HIDDEN by default - admin must explicitly publish
         isRestricted: true, // New trails are restricted by default - students need explicit access
+        createdById, // Set importing user as creator
       },
     })
+
+    // Backfill createdById for existing trails without a creator (legacy import fix)
+    if (!trail.createdById) {
+      await prisma.trail.update({
+        where: { id: trail.id },
+        data: { createdById },
+      })
+    }
+
     imported.trails++
 
     // Создание модулей
