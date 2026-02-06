@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { TrailSearch } from "@/components/trail-search"
 import { resolveTrailAccess } from "@/lib/trail-access"
+import { ROLE_STUDENT } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 
@@ -20,18 +21,35 @@ export default async function TrailsPage() {
   }
 
   const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER" || session?.user.role === "CO_ADMIN"
+  const isStudent = session?.user.role === ROLE_STUDENT
 
-  // Build query to include:
-  // 1. All published trails (for everyone)
-  // 2. Unpublished trails that user has explicit access to (for students with StudentTrailAccess)
-  const whereClause = accessibleTrailIds.length > 0
-    ? {
+  // Build query based on role:
+  // Students: see public published trails + their explicitly assigned trails
+  // Privileged: see all published + explicitly accessible
+  // Unauthenticated: see published only
+  let whereClause
+  if (isStudent) {
+    // Students see public published trails OR their assigned trails
+    if (accessibleTrailIds.length > 0) {
+      whereClause = {
         OR: [
-          { isPublished: true },
-          { id: { in: accessibleTrailIds } }, // Include trails user has access to, even if unpublished
+          { isPublished: true, isRestricted: false },
+          { id: { in: accessibleTrailIds } },
         ],
       }
-    : { isPublished: true }
+    } else {
+      whereClause = { isPublished: true, isRestricted: false }
+    }
+  } else if (accessibleTrailIds.length > 0) {
+    whereClause = {
+      OR: [
+        { isPublished: true },
+        { id: { in: accessibleTrailIds } },
+      ],
+    }
+  } else {
+    whereClause = { isPublished: true }
+  }
 
   const allTrails = await prisma.trail.findMany({
     where: whereClause,

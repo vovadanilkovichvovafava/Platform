@@ -152,6 +152,38 @@ export async function getTeacherAllowedTrailIds(teacherId: string): Promise<stri
 }
 
 /**
+ * Get list of trail IDs that a student has been assigned access to
+ * Students get access via StudentTrailAccess table (explicit grants)
+ *
+ * @returns string[] of trail IDs the student can access
+ */
+export async function getStudentAllowedTrailIds(studentId: string): Promise<string[]> {
+  const accessRecords = await prisma.studentTrailAccess.findMany({
+    where: { studentId },
+    select: { trailId: true },
+  })
+
+  return accessRecords.map((r) => r.trailId)
+}
+
+/**
+ * Check if a student has access to a specific trail
+ * Returns true if student has a StudentTrailAccess record for that trail
+ */
+export async function studentHasTrailAccess(
+  studentId: string,
+  trailId: string
+): Promise<boolean> {
+  const access = await prisma.studentTrailAccess.findUnique({
+    where: {
+      studentId_trailId: { studentId, trailId },
+    },
+  })
+
+  return !!access
+}
+
+/**
  * Get all co-admins with their trail access
  * For ADMIN management UI
  */
