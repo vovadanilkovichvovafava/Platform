@@ -8,6 +8,7 @@ import { ModuleWarningModal } from "@/components/module-warning-modal"
 interface ModuleButtonProps {
   href: string
   moduleSlug: string
+  moduleId: string
   skipWarning: boolean
   variant?: "default" | "outline" | "secondary" | "ghost" | "destructive" | "link"
   className?: string
@@ -17,6 +18,7 @@ interface ModuleButtonProps {
 export function ModuleButton({
   href,
   moduleSlug,
+  moduleId,
   skipWarning,
   variant = "default",
   className,
@@ -46,6 +48,7 @@ export function ModuleButton({
           open={showModal}
           onOpenChange={setShowModal}
           moduleSlug={moduleSlug}
+          moduleId={moduleId}
         />
       )}
     </>

@@ -7,6 +7,7 @@ import { ModuleWarningModal } from "@/components/module-warning-modal"
 interface ModuleLinkProps {
   href: string
   moduleSlug: string
+  moduleId: string
   skipWarning: boolean
   className?: string
   children: ReactNode
@@ -15,6 +16,7 @@ interface ModuleLinkProps {
 export function ModuleLink({
   href,
   moduleSlug,
+  moduleId,
   skipWarning,
   className,
   children,
@@ -38,6 +40,7 @@ export function ModuleLink({
           open={showModal}
           onOpenChange={setShowModal}
           moduleSlug={moduleSlug}
+          moduleId={moduleId}
         />
       )}
     </>

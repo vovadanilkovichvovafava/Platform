@@ -565,7 +565,7 @@ export default async function TrailPage({ params }: Props) {
                       </div>
                     ) : (
                       <div className="flex items-center gap-4 p-4">
-                        <ModuleLink href={`/module/${module.slug}`} moduleSlug={module.slug} skipWarning={skipModuleWarning || isCompleted} className="flex items-center gap-4 flex-1 min-w-0">
+                        <ModuleLink href={`/module/${module.slug}`} moduleSlug={module.slug} moduleId={module.id} skipWarning={skipModuleWarning || isCompleted} className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
                             isCompleted ? "bg-green-100" : hasPendingSubmission ? "bg-amber-100" : isInProgress ? "bg-blue-100" : "bg-gray-100"
                           }`}>
@@ -707,6 +707,7 @@ export default async function TrailPage({ params }: Props) {
                           <ModuleButton
                             href={`/module/${project.slug}`}
                             moduleSlug={project.slug}
+                            moduleId={project.id}
                             skipWarning={skipModuleWarning || isProjectCompleted}
                             variant={isProjectCompleted ? "outline" : "default"}
                             className="w-full"

@@ -18,12 +18,14 @@ interface ModuleWarningModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   moduleSlug: string
+  moduleId: string
 }
 
 export function ModuleWarningModal({
   open,
   onOpenChange,
   moduleSlug,
+  moduleId,
 }: ModuleWarningModalProps) {
   const router = useRouter()
   const [dontShowAgain, setDontShowAgain] = useState(false)
@@ -32,17 +34,19 @@ export function ModuleWarningModal({
   const handleContinue = async () => {
     setIsNavigating(true)
 
-    if (dontShowAgain) {
-      try {
-        await fetch("/api/user/preferences", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ skipModuleWarning: true }),
-          keepalive: true,
-        })
-      } catch {
-        // Silent fail - don't block navigation
-      }
+    try {
+      // Start module on server — creates IN_PROGRESS + startedAt
+      // This ensures the server-side gate won't show when we navigate
+      await fetch("/api/modules/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          moduleId,
+          skipModuleWarning: dontShowAgain || undefined,
+        }),
+      })
+    } catch {
+      // Silent fail — server gate will catch if needed
     }
 
     router.push(`/module/${moduleSlug}`)
