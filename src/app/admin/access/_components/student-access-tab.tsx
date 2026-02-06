@@ -25,7 +25,9 @@ import {
   KeyRound,
   ChevronDown,
   ChevronUp,
+  ShieldCheck,
 } from "lucide-react"
+import { AdminTrailPasswordModal } from "@/components/admin-trail-password-modal"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -333,7 +335,21 @@ export function StudentAccessTab() {
   // Expanded trail sections
   const [expandedTrails, setExpandedTrails] = useState<Set<string>>(new Set())
 
+  // Password verification for expanding locked trails
+  const [verifiedTrails, setVerifiedTrails] = useState<Set<string>>(new Set())
+  const [verifyPasswordTrail, setVerifyPasswordTrail] = useState<Trail | null>(null)
+  const [showVerifyPasswordModal, setShowVerifyPasswordModal] = useState(false)
+  const [verifyPasswordIsExpired, setVerifyPasswordIsExpired] = useState(false)
+
   const currentUserId = session?.user?.id
+
+  // Check if a trail is locked for the current user
+  const isTrailLocked = useCallback((trail: Trail): boolean => {
+    if (!trail.isPasswordProtected) return false
+    if (trail.createdById === currentUserId) return false
+    if (verifiedTrails.has(trail.id)) return false
+    return true
+  }, [currentUserId, verifiedTrails])
 
   // ── Derived data ──────────────────────────────────────────────────────────
 
@@ -529,16 +545,55 @@ export function StudentAccessTab() {
 
   // ── Expand/collapse trail ─────────────────────────────────────────────────
 
-  const toggleExpanded = (trailId: string) => {
+  const toggleExpanded = async (trail: Trail) => {
+    // If already expanded, just collapse
+    if (expandedTrails.has(trail.id)) {
+      setExpandedTrails((prev) => {
+        const next = new Set(prev)
+        next.delete(trail.id)
+        return next
+      })
+      return
+    }
+
+    // If trail is locked, check password before expanding
+    if (isTrailLocked(trail)) {
+      // Check server-side if already unlocked
+      try {
+        const res = await fetch(`/api/admin/trails/${trail.id}/password-status`)
+        if (res.ok) {
+          const data = await res.json()
+          if (!data.needsPassword) {
+            setVerifiedTrails(prev => new Set(prev).add(trail.id))
+            setExpandedTrails(prev => new Set(prev).add(trail.id))
+            return
+          }
+          setVerifyPasswordIsExpired(data.isExpired)
+        }
+      } catch {
+        // Fall through to show modal
+      }
+
+      setVerifyPasswordTrail(trail)
+      setShowVerifyPasswordModal(true)
+      return
+    }
+
+    // Not locked, just expand
     setExpandedTrails((prev) => {
       const next = new Set(prev)
-      if (next.has(trailId)) {
-        next.delete(trailId)
-      } else {
-        next.add(trailId)
-      }
+      next.add(trail.id)
       return next
     })
+  }
+
+  const handleVerifyPasswordSuccess = () => {
+    setShowVerifyPasswordModal(false)
+    if (verifyPasswordTrail) {
+      setVerifiedTrails(prev => new Set(prev).add(verifyPasswordTrail.id))
+      setExpandedTrails(prev => new Set(prev).add(verifyPasswordTrail.id))
+      setVerifyPasswordTrail(null)
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -553,12 +608,27 @@ export function StudentAccessTab() {
 
   return (
     <div>
-      {/* Password Modal */}
+      {/* Password Modal (for setting/updating trail password) */}
       {passwordModalTrail && (
         <TrailPasswordModal
           trail={passwordModalTrail}
           onClose={() => setPasswordModalTrail(null)}
           onSaved={fetchData}
+        />
+      )}
+
+      {/* Password Verification Modal (for unlocking locked trails) */}
+      {verifyPasswordTrail && (
+        <AdminTrailPasswordModal
+          open={showVerifyPasswordModal}
+          trailId={verifyPasswordTrail.id}
+          trailTitle={verifyPasswordTrail.title}
+          isExpired={verifyPasswordIsExpired}
+          onClose={() => {
+            setShowVerifyPasswordModal(false)
+            setVerifyPasswordTrail(null)
+          }}
+          onSuccess={handleVerifyPasswordSuccess}
         />
       )}
 
@@ -600,7 +670,7 @@ export function StudentAccessTab() {
                   {/* Trail header row */}
                   <button
                     type="button"
-                    onClick={() => toggleExpanded(trail.id)}
+                    onClick={() => toggleExpanded(trail)}
                     className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -641,6 +711,8 @@ export function StudentAccessTab() {
                     </div>
                     {isUpdating ? (
                       <RefreshCw className="h-4 w-4 animate-spin text-gray-400 shrink-0 ml-2" />
+                    ) : isTrailLocked(trail) ? (
+                      <Lock className="h-4 w-4 text-amber-500 shrink-0 ml-2" />
                     ) : isExpanded ? (
                       <ChevronUp className="h-4 w-4 text-gray-400 shrink-0 ml-2" />
                     ) : (

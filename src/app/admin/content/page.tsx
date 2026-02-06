@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -117,6 +118,7 @@ interface ModuleAnalytics {
 
 export default function AdminContentPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [trails, setTrails] = useState<Trail[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -134,6 +136,11 @@ export default function AdminContentPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [passwordTrail, setPasswordTrail] = useState<Trail | null>(null)
   const [passwordIsExpired, setPasswordIsExpired] = useState(false)
+
+  // Tracks which password-protected trails have been verified this session
+  const [verifiedTrails, setVerifiedTrails] = useState<Set<string>>(new Set())
+  // Stores the action to execute after successful password verification
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
 
   // Create module modal
   const [showModuleModal, setShowModuleModal] = useState(false)
@@ -231,6 +238,44 @@ export default function AdminContentPage() {
   }>>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
+  // Check if a trail is locked for the current user (requires password)
+  const isTrailLocked = useCallback((trail: Trail): boolean => {
+    if (!trail.isPasswordProtected) return false
+    if (trail.createdById === session?.user?.id) return false
+    if (verifiedTrails.has(trail.id)) return false
+    return true
+  }, [session?.user?.id, verifiedTrails])
+
+  // Guard any trail action behind password verification
+  const guardTrailAction = useCallback(async (trail: Trail, action: () => void) => {
+    if (!isTrailLocked(trail)) {
+      action()
+      return
+    }
+
+    // Check server-side if password is already unlocked (from a previous session)
+    try {
+      const res = await fetch(`/api/admin/trails/${trail.id}/password-status`)
+      if (res.ok) {
+        const data = await res.json()
+        if (!data.needsPassword) {
+          // Already unlocked on server, update local state and proceed
+          setVerifiedTrails(prev => new Set(prev).add(trail.id))
+          action()
+          return
+        }
+        setPasswordIsExpired(data.isExpired)
+      }
+    } catch {
+      // On error, fall through to show password modal
+    }
+
+    // Password required — show modal with pending action
+    setPasswordTrail(trail)
+    setPendingAction(() => action)
+    setShowPasswordModal(true)
+  }, [isTrailLocked])
+
   const fetchTrails = async () => {
     try {
       setLoading(true)
@@ -308,34 +353,20 @@ export default function AdminContentPage() {
 
   // Open edit trail modal with password check
   const openEditTrailModal = async (trail: Trail) => {
-    // If trail is password-protected, check if admin needs to enter password
-    if (trail.isPasswordProtected) {
-      try {
-        const res = await fetch(`/api/admin/trails/${trail.id}/password-status`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.needsPassword) {
-            setPasswordTrail(trail)
-            setPasswordIsExpired(data.isExpired)
-            setShowPasswordModal(true)
-            return
-          }
-        }
-      } catch {
-        // On error, still try to open - server PATCH will enforce
-      }
-    }
-
-    proceedToEditModal(trail)
+    guardTrailAction(trail, () => proceedToEditModal(trail))
   }
 
   // Called when password is successfully entered
   const handlePasswordSuccess = () => {
     setShowPasswordModal(false)
     if (passwordTrail) {
-      proceedToEditModal(passwordTrail)
-      setPasswordTrail(null)
+      setVerifiedTrails(prev => new Set(prev).add(passwordTrail.id))
     }
+    if (pendingAction) {
+      pendingAction()
+      setPendingAction(null)
+    }
+    setPasswordTrail(null)
   }
 
   // Handle trail save
@@ -1054,10 +1085,16 @@ export default function AdminContentPage() {
                         <span className="text-sm text-gray-500">
                           {trail.modules.length} модулей
                         </span>
+                        {isTrailLocked(trail) && (
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-300 border">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Заблокирован
+                          </Badge>
+                        )}
                         <Button
                           size="sm"
                           variant={isAllSelectedInTrail(trail.id) ? "default" : "ghost"}
-                          onClick={() => toggleSelectAllInTrail(trail.id)}
+                          onClick={() => guardTrailAction(trail, () => toggleSelectAllInTrail(trail.id))}
                           title={isAllSelectedInTrail(trail.id) ? "Снять выделение" : "Выбрать все модули"}
                           className={isAllSelectedInTrail(trail.id) ? "bg-blue-600 hover:bg-blue-700" : ""}
                         >
@@ -1075,7 +1112,7 @@ export default function AdminContentPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => exportContent(trail.id)}
+                          onClick={() => guardTrailAction(trail, () => exportContent(trail.id))}
                           title="Экспорт trail"
                         >
                           <Download className="h-4 w-4" />
@@ -1083,7 +1120,7 @@ export default function AdminContentPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => openModuleModal(trail.id)}
+                          onClick={() => guardTrailAction(trail, () => openModuleModal(trail.id))}
                         >
                           <Plus className="h-4 w-4 mr-1" />
                           Модуль
@@ -1091,7 +1128,7 @@ export default function AdminContentPage() {
                         <Button
                           size="sm"
                           variant="ghost-destructive"
-                          onClick={() => deleteTrail(trail.id, trail.title)}
+                          onClick={() => guardTrailAction(trail, () => deleteTrail(trail.id, trail.title))}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -1099,7 +1136,26 @@ export default function AdminContentPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {trail.modules.length === 0 ? (
+                    {isTrailLocked(trail) ? (
+                      /* Locked trail — show password gate instead of modules */
+                      <div
+                        className="flex flex-col items-center justify-center py-8 cursor-pointer rounded-lg hover:bg-amber-50/50 transition-colors"
+                        onClick={() => guardTrailAction(trail, () => {})}
+                      >
+                        <div
+                          className="flex h-14 w-14 items-center justify-center rounded-full mb-3"
+                          style={{ backgroundColor: `${trail.color}15` }}
+                        >
+                          <Lock className="h-7 w-7 text-amber-500" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-700 mb-1">
+                          Требуется пароль
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Нажмите для ввода пароля и просмотра содержимого
+                        </p>
+                      </div>
+                    ) : trail.modules.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         <p className="mb-3">Нет модулей</p>
                         <Button
