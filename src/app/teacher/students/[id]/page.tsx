@@ -361,9 +361,9 @@ export default async function StudentDetailPage({ params }: Props) {
                     </div>
                     <div className="p-3 bg-orange-50 rounded-lg">
                       <p className="text-2xl font-bold text-orange-700">
-                        {student.currentStreak}
+                        {student.submissions.filter(s => s.status === "PENDING").length}
                       </p>
-                      <p className="text-xs text-orange-600">дней стрик</p>
+                      <p className="text-xs text-orange-600">на проверке</p>
                     </div>
                     {/* Recent Activity */}
                     {student.activityDays.length > 0 && (

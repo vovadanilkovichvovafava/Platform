@@ -31,7 +31,6 @@ import {
   Award,
   Star,
   Target,
-  Flame,
   GraduationCap,
   Trophy,
   BookOpen,
@@ -99,7 +98,6 @@ interface TopStudent {
   id: string
   name: string
   totalXP: number
-  currentStreak: number
   modulesCompleted: number
   approvedWorks: number
   certificates: number
@@ -126,7 +124,6 @@ interface TrailStudent {
   id: string
   name: string
   totalXP: number
-  currentStreak: number
   modulesCompleted: number
   totalModules: number
   completionPercent: number
@@ -1858,12 +1855,6 @@ export default function AdvancedAnalyticsPage() {
                         </th>
                         <th className="py-2 font-medium text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <Flame className="h-3 w-3 text-orange-500" />
-                            Streak
-                          </div>
-                        </th>
-                        <th className="py-2 font-medium text-center">
-                          <div className="flex items-center justify-center gap-1">
                             <BookOpen className="h-3 w-3 text-blue-500" />
                             Модули
                           </div>
@@ -1900,15 +1891,6 @@ export default function AdvancedAnalyticsPage() {
                           </td>
                           <td className="py-2 text-center">
                             <span className="font-bold text-amber-600">{student.totalXP.toLocaleString()}</span>
-                          </td>
-                          <td className="py-2 text-center">
-                            {student.currentStreak > 0 ? (
-                              <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
-                                {student.currentStreak} д.
-                              </Badge>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
                           </td>
                           <td className="py-2 text-center">{student.modulesCompleted}</td>
                           <td className="py-2 text-center">
