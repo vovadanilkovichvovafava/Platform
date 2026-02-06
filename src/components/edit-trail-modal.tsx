@@ -22,7 +22,6 @@ import {
   Users,
   ChevronDown,
   Lock,
-  Unlock,
   KeyRound,
 } from "lucide-react"
 
@@ -240,27 +239,28 @@ export function EditTrailModal({
         icon: form.icon,
         color: form.color,
         duration: form.duration.trim(),
-        isPublished: form.isPublished,
-        isRestricted: form.isRestricted,
+      }
+
+      if (mode === "create") {
+        // Include access settings only in create mode
+        // In edit mode, access is managed via admin/access?tab=student-access
+        payload.isPublished = form.isPublished
+        payload.isRestricted = form.isRestricted
+
+        // Include password protection fields for create
+        payload.isPasswordProtected = form.isPasswordProtected
+        if (form.isPasswordProtected) {
+          if (form.password?.trim()) {
+            payload.password = form.password.trim()
+          }
+          payload.passwordHint = form.passwordHint?.trim() || null
+        }
       }
 
       // Only include teacherVisibility for admins in edit mode
       if (mode === "edit" && isAdmin) {
         payload.teacherVisibility = form.teacherVisibility
         payload.assignedTeacherId = form.teacherVisibility === "SPECIFIC" ? form.assignedTeacherId : null
-      }
-
-      // Include password protection fields (only if user is creator)
-      if (isCreator) {
-        payload.isPasswordProtected = form.isPasswordProtected
-
-        if (form.isPasswordProtected) {
-          // Include password only if provided (new or changed)
-          if (form.password?.trim()) {
-            payload.password = form.password.trim()
-          }
-          payload.passwordHint = form.passwordHint?.trim() || null
-        }
       }
 
       let res: Response
@@ -423,181 +423,169 @@ export function EditTrailModal({
             </div>
           </div>
 
-          {/* Published toggle */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-2">
-              {form.isPublished ? (
-                <Eye className="h-4 w-4 text-green-600" />
-              ) : (
-                <EyeOff className="h-4 w-4 text-gray-400" />
-              )}
-              <div>
-                <span className="text-sm font-medium">
-                  {form.isPublished ? "Опубликован" : "Черновик"}
-                </span>
-                <p className="text-xs text-gray-500">
-                  {form.isPublished
-                    ? "Trail доступен на платформе"
-                    : "Trail скрыт от всех (черновик)"}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={form.isPublished}
-              onCheckedChange={(checked) => setForm({ ...form, isPublished: checked })}
-            />
-          </div>
-
-          {/* Student visibility toggle (isRestricted) */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-2">
-              {!form.isRestricted ? (
-                <Unlock className="h-4 w-4 text-green-600" />
-              ) : (
-                <Lock className="h-4 w-4 text-orange-500" />
-              )}
-              <div>
-                <span className="text-sm font-medium">
-                  {!form.isRestricted ? "Виден всем студентам" : "Ограниченный доступ"}
-                </span>
-                <p className="text-xs text-gray-500">
-                  {!form.isRestricted
-                    ? "Все студенты видят этот trail"
-                    : "Только студенты с выданным доступом"}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={!form.isRestricted}
-              onCheckedChange={(checked) => setForm({ ...form, isRestricted: !checked })}
-            />
-          </div>
-
-          {/* Password Protection - Creator only */}
-          {isCreator && (
-            <div className="space-y-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
-              <div className="flex items-center justify-between">
+          {/* Access settings: create mode shows inline, edit mode links to access tab */}
+          {mode === "create" ? (
+            <>
+              {/* Published toggle */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Lock className="h-4 w-4 text-amber-600" />
+                  {form.isPublished ? (
+                    <Eye className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  )}
                   <div>
-                    <span className="text-sm font-medium text-amber-900">
-                      Защита паролем
+                    <span className="text-sm font-medium">
+                      {form.isPublished ? "Опубликован" : "Черновик"}
                     </span>
-                    <p className="text-xs text-amber-700">
-                      {form.isPasswordProtected
-                        ? "Требуется пароль для доступа"
-                        : "Доступ без пароля"}
+                    <p className="text-xs text-gray-500">
+                      {form.isPublished
+                        ? "Trail доступен на платформе"
+                        : "Trail скрыт от всех (черновик)"}
                     </p>
                   </div>
                 </div>
                 <Switch
-                  checked={form.isPasswordProtected}
-                  onCheckedChange={(checked) =>
-                    setForm({
-                      ...form,
-                      isPasswordProtected: checked,
-                      password: checked ? form.password : "",
-                      passwordConfirm: checked ? form.passwordConfirm : "",
-                      passwordHint: checked ? form.passwordHint : null,
-                    })
-                  }
+                  checked={form.isPublished}
+                  onCheckedChange={(checked) => setForm({ ...form, isPublished: checked })}
                 />
               </div>
 
-              {form.isPasswordProtected && (
-                <div className="space-y-3 pt-2 border-t border-amber-200">
-                  {/* Password input */}
-                  <div>
-                    <Label htmlFor="trailPassword" className="text-amber-900">
-                      {mode === "edit" && trail?.isPasswordProtected
-                        ? "Новый пароль (оставьте пустым для сохранения текущего)"
-                        : "Пароль *"}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="trailPassword"
-                        type={showPassword ? "text" : "password"}
-                        value={form.password || ""}
-                        onChange={(e) => setForm({ ...form, password: e.target.value })}
-                        placeholder={
-                          mode === "edit" && trail?.isPasswordProtected
-                            ? "Введите новый пароль..."
-                            : "Введите пароль..."
-                        }
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
+              {/* Password Protection - Create mode */}
+              <div className="space-y-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-amber-600" />
+                    <div>
+                      <span className="text-sm font-medium text-amber-900">
+                        Защита паролем
+                      </span>
+                      <p className="text-xs text-amber-700">
+                        {form.isPasswordProtected
+                          ? "Требуется пароль для доступа"
+                          : "Доступ без пароля"}
+                      </p>
                     </div>
                   </div>
-
-                  {/* Password confirmation input */}
-                  <div>
-                    <Label htmlFor="trailPasswordConfirm" className="text-amber-900">
-                      Подтвердите пароль {mode === "create" || form.password ? "*" : "(если меняете)"}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="trailPasswordConfirm"
-                        type={showPasswordConfirm ? "text" : "password"}
-                        value={form.passwordConfirm || ""}
-                        onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
-                        placeholder="Повторите пароль..."
-                        className={`pr-10 ${
-                          form.password && form.passwordConfirm && form.password !== form.passwordConfirm
-                            ? "border-red-500 focus:ring-red-500"
-                            : ""
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPasswordConfirm ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    {form.password && form.passwordConfirm && form.password !== form.passwordConfirm && (
-                      <p className="text-xs text-red-600 mt-1">Пароли не совпадают</p>
-                    )}
-                  </div>
-
-                  {/* Password hint */}
-                  <div>
-                    <Label htmlFor="trailPasswordHint" className="text-amber-900">
-                      Подсказка (опционально)
-                    </Label>
-                    <div className="relative">
-                      <KeyRound className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-400" />
-                      <Input
-                        id="trailPasswordHint"
-                        value={form.passwordHint || ""}
-                        onChange={(e) => setForm({ ...form, passwordHint: e.target.value })}
-                        placeholder="Подсказка для студентов..."
-                        className="pl-8"
-                      />
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-amber-700">
-                    Доступ получают: создатель, пользователи с паролем, привязанные студенты.
-                    Роль admin/teacher не даёт автоматического доступа.
-                  </p>
+                  <Switch
+                    checked={form.isPasswordProtected}
+                    onCheckedChange={(checked) =>
+                      setForm({
+                        ...form,
+                        isPasswordProtected: checked,
+                        password: checked ? form.password : "",
+                        passwordConfirm: checked ? form.passwordConfirm : "",
+                        passwordHint: checked ? form.passwordHint : null,
+                      })
+                    }
+                  />
                 </div>
-              )}
+
+                {form.isPasswordProtected && (
+                  <div className="space-y-3 pt-2 border-t border-amber-200">
+                    <div>
+                      <Label htmlFor="trailPassword" className="text-amber-900">
+                        Пароль *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="trailPassword"
+                          type={showPassword ? "text" : "password"}
+                          value={form.password || ""}
+                          onChange={(e) => setForm({ ...form, password: e.target.value })}
+                          placeholder="Введите пароль..."
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="trailPasswordConfirm" className="text-amber-900">
+                        Подтвердите пароль *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="trailPasswordConfirm"
+                          type={showPasswordConfirm ? "text" : "password"}
+                          value={form.passwordConfirm || ""}
+                          onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
+                          placeholder="Повторите пароль..."
+                          className={`pr-10 ${
+                            form.password && form.passwordConfirm && form.password !== form.passwordConfirm
+                              ? "border-red-500 focus:ring-red-500"
+                              : ""
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPasswordConfirm ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      {form.password && form.passwordConfirm && form.password !== form.passwordConfirm && (
+                        <p className="text-xs text-red-600 mt-1">Пароли не совпадают</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="trailPasswordHint" className="text-amber-900">
+                        Подсказка (опционально)
+                      </Label>
+                      <div className="relative">
+                        <KeyRound className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-400" />
+                        <Input
+                          id="trailPasswordHint"
+                          value={form.passwordHint || ""}
+                          onChange={(e) => setForm({ ...form, passwordHint: e.target.value })}
+                          placeholder="Подсказка для студентов..."
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-amber-700">
+                      Доступ получают: создатель, пользователи с паролем, привязанные студенты.
+                      Роль admin/teacher не даёт автоматического доступа.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Edit mode: link to Access Management tab */
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="flex items-center gap-2 mb-1">
+                <Lock className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Настройки доступа</span>
+              </div>
+              <p className="text-xs text-blue-700">
+                Публикация, видимость и защита паролем управляются в{" "}
+                <a
+                  href="/admin/access?tab=student-access"
+                  className="underline font-medium hover:text-blue-900"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Управление доступом &rarr; Доступ студентов
+                </a>
+              </p>
             </div>
           )}
 
