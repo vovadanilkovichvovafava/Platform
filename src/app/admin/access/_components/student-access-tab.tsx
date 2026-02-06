@@ -720,8 +720,8 @@ export function StudentAccessTab() {
                     )}
                   </button>
 
-                  {/* Expanded toggles */}
-                  {isExpanded && (
+                  {/* Expanded toggles — never show for locked trails */}
+                  {isExpanded && !isTrailLocked(trail) && (
                     <div className="p-4 space-y-3 border-t bg-white">
                       {/* Published toggle */}
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
