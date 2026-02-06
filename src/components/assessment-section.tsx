@@ -736,12 +736,14 @@ export function AssessmentSection({
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                       <span className="text-green-700">
                         Правильно!
-                        <span className={`ml-2 ${getScoreColor(existingAttempt.attempts)}`}>
-                          +{existingAttempt.earnedScore} XP
-                          {existingAttempt.attempts === 1 && " (100%)"}
-                          {existingAttempt.attempts === 2 && " (65%)"}
-                          {existingAttempt.attempts === 3 && " (35%)"}
-                        </span>
+                        {existingAttempt.earnedScore > 0 && (
+                          <span className={`ml-2 ${getScoreColor(existingAttempt.attempts)}`}>
+                            +{existingAttempt.earnedScore} XP
+                            {existingAttempt.attempts === 1 && " (100%)"}
+                            {existingAttempt.attempts === 2 && " (65%)"}
+                            {existingAttempt.attempts === 3 && " (35%)"}
+                          </span>
+                        )}
                       </span>
                     </>
                   ) : (
