@@ -46,6 +46,9 @@ import {
 import { CreateModuleModal } from "@/components/create-module-modal"
 import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
 import { AdminTrailPasswordModal } from "@/components/admin-trail-password-modal"
+import { InfoHint } from "@/components/ui/info-hint"
+import { HowItWorks } from "@/components/ui/how-it-works"
+import { adminHelpHints, adminPageLegends } from "@/lib/admin-help-texts"
 
 interface Module {
   id: string
@@ -994,6 +997,9 @@ export default function AdminContentPage() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
+        {/* How it works legend */}
+        <HowItWorks legend={adminPageLegends.content} className="mb-6" />
+
         {/* Bulk actions bar */}
         {selectedModules.size > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
@@ -1530,6 +1536,7 @@ export default function AdminContentPage() {
                       <div className="flex items-center gap-2">
                         <Sparkles className={`h-4 w-4 ${useNeuralParser ? "text-purple-500" : "text-gray-400"}`} />
                         <span className="text-sm font-medium text-gray-700">Использовать нейросеть</span>
+                        <InfoHint hint={adminHelpHints.content.neuralParser.shortHint} side="right" />
                       </div>
                       <Switch
                         checked={useNeuralParser}

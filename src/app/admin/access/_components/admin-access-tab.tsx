@@ -15,6 +15,9 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react"
+import { InfoHint } from "@/components/ui/info-hint"
+import { HowItWorks } from "@/components/ui/how-it-works"
+import { adminHelpHints, adminPageLegends } from "@/lib/admin-help-texts"
 
 interface CoAdmin {
   id: string
@@ -179,6 +182,7 @@ export function AdminAccessTab() {
           <ShieldCheck className="h-3 w-3 mr-1" />
           Только для ADMIN
         </Badge>
+        <InfoHint hint={adminHelpHints.adminAccess.adminOnlyTab.shortHint} side="bottom" />
         <Button onClick={fetchData} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
           Обновить
@@ -192,16 +196,8 @@ export function AdminAccessTab() {
         </div>
       )}
 
-      {/* Info box */}
-      <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h3 className="font-medium text-blue-900 mb-2">Как это работает:</h3>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>* <strong>ADMIN</strong> видит все trails без ограничений</li>
-          <li>* <strong>CO_ADMIN</strong> видит только назначенные trails (deny-by-default)</li>
-          <li>* Если у со-админа нет назначенных trails — он не видит ничего</li>
-          <li>* При создании trail со-админом — он автоматически получает к нему доступ</li>
-        </ul>
-      </div>
+      {/* How it works legend */}
+      <HowItWorks legend={adminPageLegends.adminAccess} className="mb-6" />
 
       {coAdmins.length === 0 ? (
         <div className="bg-white rounded-xl border p-12 text-center">
@@ -254,6 +250,7 @@ export function AdminAccessTab() {
                     <span className="text-sm text-gray-500">
                       {coAdminTrailIds.length} из {trails.length} trails
                     </span>
+                    <InfoHint hint={adminHelpHints.adminAccess.coAdminTrails.shortHint} side="left" />
                     <Button
                       variant="outline"
                       size="sm"

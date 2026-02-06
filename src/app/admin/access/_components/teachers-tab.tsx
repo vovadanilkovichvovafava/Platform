@@ -20,6 +20,9 @@ import {
   Check,
   Undo2,
 } from "lucide-react"
+import { InfoHint } from "@/components/ui/info-hint"
+import { HowItWorks } from "@/components/ui/how-it-works"
+import { adminHelpHints, adminPageLegends } from "@/lib/admin-help-texts"
 
 interface Teacher {
   id: string
@@ -311,6 +314,7 @@ export function TeachersTab() {
             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
               {pendingChanges.length} несохранённых изменений
             </Badge>
+            <InfoHint hint={adminHelpHints.teachers.pendingChanges.shortHint} side="bottom" />
             <Button
               onClick={resetChanges}
               variant="outline"
@@ -370,6 +374,7 @@ export function TeachersTab() {
                 <Badge variant="secondary" className="ml-2">
                   {teachers.length}
                 </Badge>
+                <InfoHint hint={adminHelpHints.teachers.dragAssign.shortHint} side="bottom" />
               </CardTitle>
               <div className="mt-3 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -568,21 +573,8 @@ export function TeachersTab() {
         </div>
       </div>
 
-      {/* Info panel */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Как работает назначение:</p>
-            <ul className="list-disc ml-4 space-y-1 text-blue-700">
-              <li>Перетащите учителя из левой колонки на trail справа</li>
-              <li>Учитель будет видеть только работы учеников с назначенных trails</li>
-              <li>Если у учителя нет назначений — он видит все работы</li>
-              <li>Нажмите x рядом с именем учителя, чтобы снять назначение</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+      {/* How it works legend */}
+      <HowItWorks legend={adminPageLegends.teachers} className="mt-6" />
     </div>
   )
 }
