@@ -6,9 +6,14 @@ import { checkRateLimit, getClientIP, rateLimitResponse, RATE_LIMITS } from "@/l
 
 const registerSchema = z.object({
   inviteCode: z.string().min(1, "Код приглашения обязателен"),
+  firstName: z.string().min(2, "Имя должно быть минимум 2 символа"),
+  lastName: z.string().min(2, "Фамилия должна быть минимум 2 символа"),
+  telegramUsername: z
+    .string()
+    .min(1, "Telegram-ник обязателен")
+    .regex(/^@[a-zA-Z0-9_]{5,32}$/, "Некорректный Telegram-ник"),
   email: z.string().email("Некорректный email"),
   password: z.string().min(6, "Пароль должен быть минимум 6 символов"),
-  name: z.string().min(2, "Имя должно быть минимум 2 символа"),
 })
 
 export async function POST(request: Request) {
@@ -22,7 +27,8 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { inviteCode, email, password, name } = registerSchema.parse(body)
+    const { inviteCode, email, password, firstName, lastName, telegramUsername } = registerSchema.parse(body)
+    const name = `${firstName} ${lastName}`
 
     // 1. Validate invite code and get associated trails
     const invite = await prisma.invite.findUnique({
@@ -104,6 +110,9 @@ export async function POST(request: Request) {
           email,
           password: hashedPassword,
           name,
+          firstName,
+          lastName,
+          telegramUsername,
           role: "STUDENT",
           invitedBy: invite.createdById,
         },

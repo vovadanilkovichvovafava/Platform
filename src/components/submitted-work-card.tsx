@@ -196,18 +196,23 @@ export function SubmittedWorkCard({
             </Badge>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {canRenotify && !isEditing && (
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
+                className="h-8 w-8 shrink-0"
                 onClick={handleRenotify}
                 disabled={isRenotifying || renotifyCooldownHours !== null}
-                className="gap-1"
                 title={
                   renotifyCooldownHours !== null
                     ? `Можно отправить через ${renotifyCooldownHours} ч.`
                     : "Напомнить проверяющим о работе"
+                }
+                aria-label={
+                  renotifyCooldownHours !== null
+                    ? `Напомнить (через ${renotifyCooldownHours} ч.)`
+                    : "Напомнить"
                 }
               >
                 {isRenotifying ? (
@@ -215,21 +220,19 @@ export function SubmittedWorkCard({
                 ) : (
                   <Bell className="h-4 w-4" />
                 )}
-                {renotifyCooldownHours !== null
-                  ? `Через ${renotifyCooldownHours} ч.`
-                  : "Напомнить"}
               </Button>
             )}
 
             {canEdit && !isEditing && (
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
+                className="h-8 w-8 shrink-0"
                 onClick={handleEditToggle}
-                className="gap-1"
+                title="Редактировать работу"
+                aria-label="Редактировать"
               >
                 <Pencil className="h-4 w-4" />
-                Редактировать
               </Button>
             )}
           </div>

@@ -24,6 +24,8 @@ import { SubmitPracticeForm } from "@/components/submit-practice-form"
 import { SubmittedWorkCard } from "@/components/submitted-work-card"
 import { AssessmentSection } from "@/components/assessment-section"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { ModuleButton } from "@/components/module-button"
+import { ModuleStartGate } from "@/components/module-start-gate"
 
 const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
@@ -143,7 +145,15 @@ export default async function ModulePage({ params }: Props) {
     },
   })
 
+  // Get user preference for module warning modal
+  const userPrefs = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { skipModuleWarning: true },
+  })
+  const skipModuleWarning = userPrefs?.skipModuleWarning ?? false
+
   const isCompleted = progress?.status === "COMPLETED"
+  const isInProgress = progress?.status === "IN_PROGRESS"
   const isProject = courseModule.type === "PROJECT"
   const isPractice = courseModule.type === "PRACTICE"
   const hasQuestions = courseModule.questions.length > 0
@@ -153,6 +163,44 @@ export default async function ModulePage({ params }: Props) {
   const trailModules = courseModule.trail.modules
   const currentIndex = trailModules.findIndex((m) => m.id === courseModule.id)
   const nextModule = currentIndex < trailModules.length - 1 ? trailModules[currentIndex + 1] : null
+
+  // Server-side gate: block module content for students who haven't confirmed start
+  // This catches direct URL access that client-side modals can't intercept
+  const needsStartConfirmation =
+    !isPrivileged &&
+    !skipModuleWarning &&
+    !isCompleted &&
+    !isInProgress
+
+  if (needsStartConfirmation) {
+    return (
+      <ModuleStartGate
+        moduleId={courseModule.id}
+        moduleTitle={courseModule.title}
+        trailSlug={courseModule.trail.slug}
+      />
+    )
+  }
+
+  // If student is here and module is NOT_STARTED but they skipped the warning,
+  // auto-start the module so startedAt is recorded
+  if (!isPrivileged && !progress) {
+    await prisma.moduleProgress.upsert({
+      where: {
+        userId_moduleId: {
+          userId: session.user.id,
+          moduleId: courseModule.id,
+        },
+      },
+      update: {},
+      create: {
+        userId: session.user.id,
+        moduleId: courseModule.id,
+        status: "IN_PROGRESS",
+        startedAt: new Date(),
+      },
+    })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -257,6 +305,7 @@ export default async function ModulePage({ params }: Props) {
                           comment: submission.comment,
                           status: submission.status,
                           createdAt: submission.createdAt.toISOString(),
+                          lastRenotifiedAt: submission.lastRenotifiedAt?.toISOString() ?? null,
                           review: submission.review ? {
                             id: submission.review.id,
                             score: submission.review.score,
@@ -300,6 +349,7 @@ export default async function ModulePage({ params }: Props) {
                           comment: submission.comment,
                           status: submission.status,
                           createdAt: submission.createdAt.toISOString(),
+                          lastRenotifiedAt: submission.lastRenotifiedAt?.toISOString() ?? null,
                           review: submission.review ? {
                             id: submission.review.id,
                             score: submission.review.score,
@@ -424,12 +474,16 @@ export default async function ModulePage({ params }: Props) {
         {/* Next Module Button - show when completed OR when work is submitted (PENDING) */}
         {isCompleted && nextModule && (
           <div className="mt-8 flex justify-center">
-            <Button asChild size="lg" className="bg-orange-500 hover:bg-orange-600 text-white">
-              <Link href={`/module/${nextModule.slug}`}>
-                Следующий модуль: {nextModule.title}
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
+            <ModuleButton
+              href={`/module/${nextModule.slug}`}
+              moduleSlug={nextModule.slug}
+              moduleId={nextModule.id}
+              skipWarning={skipModuleWarning}
+              className="bg-orange-500 hover:bg-orange-600 text-white h-11 px-6"
+            >
+              Следующий модуль: {nextModule.title}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </ModuleButton>
           </div>
         )}
 
@@ -441,12 +495,16 @@ export default async function ModulePage({ params }: Props) {
                 Ваша работа отправлена на проверку. Вы можете продолжить обучение, не дожидаясь результата.
               </p>
             </div>
-            <Button asChild size="lg" className="bg-blue-500 hover:bg-blue-600 text-white">
-              <Link href={`/module/${nextModule.slug}`}>
-                Перейти к следующей практике
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
+            <ModuleButton
+              href={`/module/${nextModule.slug}`}
+              moduleSlug={nextModule.slug}
+              moduleId={nextModule.id}
+              skipWarning={skipModuleWarning}
+              className="bg-blue-500 hover:bg-blue-600 text-white h-11 px-6"
+            >
+              Перейти к следующей практике
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </ModuleButton>
           </div>
         )}
 

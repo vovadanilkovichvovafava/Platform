@@ -12,11 +12,15 @@ model User {
   email         String    @unique
   password      String
   name          String
+  firstName     String?
+  lastName      String?
+  telegramUsername String? // @username format
   role          String    @default("STUDENT") // STUDENT, TEACHER, CO_ADMIN, ADMIN
   totalXP       Int       @default(0)
   currentStreak Int       @default(0)
   avatarUrl     String?
   invitedBy     String?   // ID of user who invited
+  skipModuleWarning   Boolean   @default(false) // Skip module start warning modal
   telegramChatId      String?   // Telegram chat ID for notifications
   telegramEnabled     Boolean   @default(true) // Allow user to disable TG notifications
   telegramConnectedAt DateTime? // When Telegram was linked

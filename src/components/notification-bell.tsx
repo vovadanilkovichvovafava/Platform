@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Bell, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { enableNotificationSound, playNotificationSound } from "@/lib/notification-sound"
 
 interface Notification {
   id: string
@@ -24,26 +25,55 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const prevUnreadCountRef = useRef<number | null>(null)
+  const isInitialFetchRef = useRef(true)
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch("/api/notifications")
       if (res.ok) {
         const data = await res.json()
         setNotifications(data.notifications)
-        setUnreadCount(data.unreadCount)
+
+        const newCount = data.unreadCount as number
+        // Play sound only when new unread notifications appear (not on initial load)
+        if (
+          !isInitialFetchRef.current &&
+          prevUnreadCountRef.current !== null &&
+          newCount > prevUnreadCountRef.current
+        ) {
+          playNotificationSound()
+        }
+        isInitialFetchRef.current = false
+        prevUnreadCountRef.current = newCount
+        setUnreadCount(newCount)
       }
     } catch (err) {
       console.error("Error fetching notifications:", err)
     }
-  }
+  }, [])
+
+  // Enable audio on first user interaction
+  useEffect(() => {
+    const handleInteraction = () => {
+      enableNotificationSound()
+      document.removeEventListener("click", handleInteraction)
+      document.removeEventListener("keydown", handleInteraction)
+    }
+    document.addEventListener("click", handleInteraction)
+    document.addEventListener("keydown", handleInteraction)
+    return () => {
+      document.removeEventListener("click", handleInteraction)
+      document.removeEventListener("keydown", handleInteraction)
+    }
+  }, [])
 
   useEffect(() => {
     fetchNotifications()
     // Poll for new notifications every 10 seconds for faster updates
     const interval = setInterval(fetchNotifications, 10000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchNotifications])
 
   const markAsRead = async (notificationId: string, optimistic = true) => {
     // Optimistic update - сразу обновляем UI
