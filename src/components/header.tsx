@@ -22,6 +22,7 @@ import type { LucideIcon } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { NotificationBell } from "@/components/notification-bell"
 import { NavbarPresetsEditor } from "@/components/navbar-presets-editor"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
 
 // Icon map for dynamic rendering
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -46,7 +47,7 @@ interface NavbarItemDTO {
 }
 
 // Default navbar items (fallback when no preset is active or API fails)
-const DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = [
+const ALL_DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = [
   { id: "default-1", label: "Dashboard", href: "/dashboard", icon: "Flame", order: 0, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { id: "default-2", label: "Trails", href: "/trails", icon: "BookOpen", order: 1, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { id: "default-3", label: "Мои работы", href: "/my-work", icon: "ClipboardCheck", order: 2, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
@@ -56,6 +57,11 @@ const DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = [
   { id: "default-7", label: "Админ панель", href: "/admin/invites", icon: "Shield", order: 6, visibleTo: ["CO_ADMIN", "ADMIN"] },
   { id: "default-8", label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", order: 7, visibleTo: ["CO_ADMIN", "ADMIN"] },
 ]
+
+// Filter out disabled features
+const DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = ALL_DEFAULT_NAVBAR_ITEMS.filter(
+  (item) => item.href !== "/leaderboard" || FEATURE_FLAGS.LEADERBOARD_ENABLED
+)
 
 // Dropdown menu items (always shown, not from preset)
 const DROPDOWN_STATIC_ITEMS = [
@@ -112,7 +118,7 @@ function useNavbarPreset(isAuthenticated: boolean) {
         if (res.ok) {
           const data = await res.json()
           if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-            setItems(data.items)
+            setItems(filterDisabledItems(data.items))
           }
         }
       } catch {
@@ -126,6 +132,17 @@ function useNavbarPreset(isAuthenticated: boolean) {
   }, [isAuthenticated])
 
   return { items, setItems, isLoaded }
+}
+
+// Paths disabled by feature flags (used to filter both defaults and API presets)
+const DISABLED_PATHS = new Set<string>(
+  [...(!FEATURE_FLAGS.LEADERBOARD_ENABLED ? ["/leaderboard"] : [])],
+)
+
+// Filter out items with disabled paths (for API-fetched presets)
+function filterDisabledItems(items: NavbarItemDTO[]): NavbarItemDTO[] {
+  if (DISABLED_PATHS.size === 0) return items
+  return items.filter((item) => !DISABLED_PATHS.has(item.href))
 }
 
 // Helper to check if item is visible for role

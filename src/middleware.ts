@@ -115,12 +115,26 @@ const authMiddleware = withAuth(
   }
 )
 
+// Feature flag: leaderboard enabled (hardcoded, change in src/lib/feature-flags.ts to re-enable)
+const LEADERBOARD_ENABLED = false
+
 // Combined middleware: rate limit first, then auth
 export default function middleware(request: NextRequest) {
   const requestId = generateRequestId()
   const path = request.nextUrl.pathname
 
   try {
+    // Block /leaderboard and /api/leaderboard when feature is disabled
+    if (!LEADERBOARD_ENABLED && (path === "/leaderboard" || path.startsWith("/leaderboard/") || path === "/api/leaderboard" || path.startsWith("/api/leaderboard/"))) {
+      if (path.startsWith("/api/")) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 })
+      }
+      // Rewrite to a path that doesn't exist, triggering Next.js 404 page
+      const url = request.nextUrl.clone()
+      url.pathname = "/__disabled"
+      return NextResponse.rewrite(url)
+    }
+
     // Check rate limit for auth endpoints
     const rateLimitResponse = checkAuthRateLimit(request)
     if (rateLimitResponse) {

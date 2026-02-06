@@ -3,8 +3,13 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getAdminAllowedTrailIds, getStudentAllowedTrailIds, ROLE_STUDENT, ROLE_CO_ADMIN } from "@/lib/admin-access"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
 
 export async function GET() {
+  if (!FEATURE_FLAGS.LEADERBOARD_ENABLED) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
   try {
     const session = await getServerSession(authOptions)
 

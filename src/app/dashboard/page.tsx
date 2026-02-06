@@ -6,6 +6,7 @@ import { ACHIEVEMENTS } from "@/lib/achievements"
 import { getLevelInfo, getRankInfo, formatXP } from "@/lib/levels"
 import { pluralizeRu } from "@/lib/utils"
 import { ROLE_STUDENT } from "@/lib/admin-access"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -321,18 +322,30 @@ export default async function DashboardPage({
                     </span>
                   </div>
 
-                  <Link
-                    href="/leaderboard"
-                    className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Medal className="h-5 w-5 text-blue-500" />
-                      <span className="text-sm font-medium">Место в рейтинге</span>
+                  {FEATURE_FLAGS.LEADERBOARD_ENABLED ? (
+                    <Link
+                      href="/leaderboard"
+                      className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Medal className="h-5 w-5 text-blue-500" />
+                        <span className="text-sm font-medium">Место в рейтинге</span>
+                      </div>
+                      <span className="font-bold text-lg text-blue-600">
+                        #{leaderboardRank}
+                      </span>
+                    </Link>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Medal className="h-5 w-5 text-blue-500" />
+                        <span className="text-sm font-medium">Место в рейтинге</span>
+                      </div>
+                      <span className="font-bold text-lg text-blue-600">
+                        #{leaderboardRank}
+                      </span>
                     </div>
-                    <span className="font-bold text-lg text-blue-600">
-                      #{leaderboardRank}
-                    </span>
-                  </Link>
+                  )}
                 </div>
 
                 {/* Progress to next level */}
