@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Icon } from "@iconify/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +32,7 @@ interface AchievementsGridProps {
   compact?: boolean
   collapsible?: boolean
   defaultExpanded?: boolean
+  highlightId?: string | null
 }
 
 function getRarityLabel(rarity: string) {
@@ -272,11 +273,41 @@ export function AchievementsGrid({
   compact = false,
   collapsible = false,
   defaultExpanded = true,
+  highlightId,
 }: AchievementsGridProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [page, setPage] = useState(1)
+
+  // Auto-open modal for highlighted achievement (from notification click)
+  useEffect(() => {
+    if (!highlightId || achievements.length === 0) return
+
+    const target = achievements.find((a) => a.id === highlightId)
+    if (!target) return
+
+    // Calculate which page this achievement is on and navigate there
+    const filteredAchievements = compact
+      ? achievements.filter((a) => a.earned)
+      : achievements
+    const targetIndex = filteredAchievements.findIndex((a) => a.id === highlightId)
+    if (targetIndex >= 0) {
+      const targetPage = Math.floor(targetIndex / ITEMS_PER_PAGE) + 1
+      setPage(targetPage)
+    }
+
+    // Ensure section is expanded
+    setIsExpanded(true)
+
+    // Open the modal after a short delay for rendering
+    const timer = setTimeout(() => {
+      setSelectedAchievement(target)
+      setModalOpen(true)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [highlightId, achievements, compact])
 
   const handleAchievementClick = (achievement: Achievement) => {
     setSelectedAchievement(achievement)

@@ -190,7 +190,7 @@ export async function POST() {
           type: "ACHIEVEMENT_EARNED",
           title: `Достижение: ${def?.name || achievementId}`,
           message: def?.description || "Вы получили новое достижение!",
-          link: "/profile",
+          link: `/dashboard?achievement=${achievementId}`,
         }
       })
 
