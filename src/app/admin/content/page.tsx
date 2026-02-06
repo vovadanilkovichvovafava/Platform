@@ -1115,7 +1115,7 @@ export default function AdminContentPage() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        {(!trail.isPasswordProtected || trail.createdById === session?.user?.id) && (
+                        {(!trail.isPasswordProtected || trail.createdById === session?.user?.id || (session?.user?.role === "ADMIN" && !trail.createdById)) && (
                           <Button
                             size="sm"
                             variant="ghost"

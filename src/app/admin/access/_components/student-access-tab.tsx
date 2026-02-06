@@ -345,6 +345,15 @@ export function StudentAccessTab() {
   const [verifyPasswordIsExpired, setVerifyPasswordIsExpired] = useState(false)
 
   const currentUserId = session?.user?.id
+  const currentUserRole = session?.user?.role
+
+  // Check if current user can manage password settings for a trail
+  // Creator always can; ADMIN can on legacy trails with no recorded creator
+  const canManageTrailPassword = useCallback((trail: Trail): boolean => {
+    if (trail.createdById === currentUserId) return true
+    if (currentUserRole === "ADMIN" && !trail.createdById) return true
+    return false
+  }, [currentUserId, currentUserRole])
 
   // Check if a trail is locked for the current user
   const isTrailLocked = useCallback((trail: Trail): boolean => {
@@ -669,7 +678,7 @@ export function StudentAccessTab() {
             {trails.map((trail) => {
               const isExpanded = expandedTrails.has(trail.id)
               const isUpdating = updatingTrail === trail.id
-              const isCreator = trail.createdById === currentUserId
+              const isCreator = canManageTrailPassword(trail)
 
               return (
                 <div key={trail.id} className="border rounded-lg overflow-hidden">
