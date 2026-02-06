@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { FEATURE_FLAGS } from "@/lib/feature-flags"
+import { isAnyAdmin } from "@/lib/admin-access"
 
 // DTO type for navbar items - safe for client serialization
 export interface NavbarItemDTO {
@@ -48,9 +49,19 @@ export async function GET() {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    // Find active preset with items
+    // Only admins have personal presets; non-admins always see defaults
+    if (!isAnyAdmin(session.user.role)) {
+      const defaultPreset: NavbarPresetDTO = {
+        id: "default",
+        name: "Default",
+        items: filterDisabledNavItems(DEFAULT_NAVBAR_ITEMS),
+      }
+      return NextResponse.json(defaultPreset)
+    }
+
+    // Find admin's own active preset
     const activePreset = await prisma.navbarPreset.findFirst({
-      where: { isActive: true },
+      where: { isActive: true, adminId: session.user.id },
       select: {
         id: true,
         name: true,

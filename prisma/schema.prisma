@@ -40,6 +40,7 @@ model User {
   adminTrailAccess     AdminTrailAccess[]    @relation("AdminTrails")
   createdTrails        Trail[]               @relation("CreatedTrails")
   trailPasswordAccess  TrailPasswordAccess[]
+  navbarPresets        NavbarPreset[]
 }
 
 // Track daily user activity (one record per day per user)
@@ -448,17 +449,20 @@ model TelegramLinkToken {
   @@index([expiresAt])
 }
 
-// Navbar presets for customizable navigation
+// Navbar presets for customizable navigation (per-admin)
 model NavbarPreset {
   id        String   @id @default(cuid())
   name      String   // Preset name, e.g., "Default", "Minimal", "Full"
-  isActive  Boolean  @default(false) // Only one preset can be active
+  isActive  Boolean  @default(false) // Only one preset per admin can be active
+  adminId   String   // The admin who owns this preset
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  admin User         @relation(fields: [adminId], references: [id], onDelete: Cascade)
   items NavbarItem[]
 
   @@index([isActive])
+  @@index([adminId])
 }
 
 // Individual navigation items within a preset
