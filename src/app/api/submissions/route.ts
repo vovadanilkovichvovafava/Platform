@@ -251,7 +251,9 @@ export async function POST(request: Request) {
       console.error("Achievement check after submission failed:", err)
     )
 
-    return NextResponse.json(submission)
+    // Strip internal time tracking fields from student-facing response
+    const { editCount: _ec, lastEditedAt: _le, ...safeSubmission } = submission
+    return NextResponse.json(safeSubmission)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

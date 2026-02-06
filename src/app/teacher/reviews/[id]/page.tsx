@@ -17,6 +17,8 @@ import {
   Calendar,
   BookOpen,
   FileText,
+  Timer,
+  Pencil,
 } from "lucide-react"
 import { ReviewForm } from "@/components/review-form"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -71,6 +73,48 @@ export default async function ReviewPage({ params }: Props) {
   )
   if (!hasAccess) {
     notFound()
+  }
+
+  // Fetch time tracking data for this submission
+  const moduleProgress = await prisma.moduleProgress.findUnique({
+    where: {
+      userId_moduleId: {
+        userId: submission.userId,
+        moduleId: submission.moduleId,
+      },
+    },
+    select: { startedAt: true },
+  })
+
+  // Get earliest submission for this user+module (for timeToFirstSubmit)
+  const firstSubmission = await prisma.submission.findFirst({
+    where: { userId: submission.userId, moduleId: submission.moduleId },
+    orderBy: { createdAt: "asc" },
+    select: { createdAt: true },
+  })
+
+  const moduleStartedAt = moduleProgress?.startedAt ?? null
+  const firstSubmittedAt = firstSubmission?.createdAt ?? null
+  const timeToFirstSubmitMs =
+    moduleStartedAt && firstSubmittedAt
+      ? firstSubmittedAt.getTime() - moduleStartedAt.getTime()
+      : null
+  const totalEditTimeMs =
+    submission.editCount > 0 && submission.lastEditedAt
+      ? submission.lastEditedAt.getTime() - submission.createdAt.getTime()
+      : null
+
+  /** Format milliseconds into a compact human-readable duration */
+  function fmtDuration(ms: number | null): string {
+    if (ms == null || ms < 0) return "—"
+    const totalMinutes = Math.floor(ms / 60000)
+    if (totalMinutes < 1) return "< 1мин"
+    const days = Math.floor(totalMinutes / 1440)
+    const hours = Math.floor((totalMinutes % 1440) / 60)
+    const minutes = totalMinutes % 60
+    if (days > 0) return `${days}д ${hours}ч`
+    if (hours > 0) return minutes > 0 ? `${hours}ч ${minutes}мин` : `${hours}ч`
+    return `${minutes}мин`
   }
 
   const getInitials = (name: string) => {
@@ -305,6 +349,61 @@ export default async function ReviewPage({ params }: Props) {
                     minute: "2-digit",
                   })}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Time Tracking Card */}
+          <Card className="mt-4">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Timer className="h-4 w-4" />
+                Время выполнения
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {moduleStartedAt && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Старт модуля</span>
+                  <span className="font-medium">
+                    {moduleStartedAt.toLocaleDateString("ru-RU", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">До первой отправки</span>
+                <span className="font-medium">{fmtDuration(timeToFirstSubmitMs)}</span>
+              </div>
+              {submission.editCount > 0 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 inline-flex items-center gap-1">
+                      <Pencil className="h-3 w-3" />
+                      Правок
+                    </span>
+                    <span className="font-medium">{submission.editCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Время редактирования</span>
+                    <span className="font-medium">{fmtDuration(totalEditTimeMs)}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Последнее обновление</span>
+                <span className="font-medium">
+                  {new Date(submission.lastEditedAt ?? submission.createdAt).toLocaleDateString("ru-RU", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
               </div>
             </CardContent>
           </Card>

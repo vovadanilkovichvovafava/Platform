@@ -80,8 +80,10 @@ export async function GET(
       return NextResponse.json({ error: "Нет доступа" }, { status: 403 })
     }
 
+    // Strip internal time tracking fields from student-facing response
+    const { editCount: _ec, lastEditedAt: _le, ...safeSubmission } = submission
     return NextResponse.json({
-      ...submission,
+      ...safeSubmission,
       canEdit: submission.userId === session.user.id && submission.status === "PENDING",
     })
   } catch (error) {
@@ -154,7 +156,8 @@ export async function PATCH(
       )
     }
 
-    // Update submission
+    // Update submission and track edit event
+    const now = new Date()
     const updatedSubmission = await prisma.submission.update({
       where: { id },
       data: {
@@ -162,12 +165,16 @@ export async function PATCH(
         deployUrl: data.deployUrl || null,
         fileUrl: data.fileUrl || null,
         comment: data.comment || null,
-        updatedAt: new Date(),
+        editCount: { increment: 1 },
+        lastEditedAt: now,
+        updatedAt: now,
       },
     })
 
+    // Strip internal time tracking fields from student-facing response
+    const { editCount: _ec2, lastEditedAt: _le2, ...safeUpdated } = updatedSubmission
     return NextResponse.json({
-      ...updatedSubmission,
+      ...safeUpdated,
       canEdit: true,
       message: "Работа успешно обновлена",
     })
