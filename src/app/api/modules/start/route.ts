@@ -29,8 +29,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    // Upsert module progress — create IN_PROGRESS if doesn't exist,
-    // don't overwrite if already started/completed
+    // Check if progress already exists (may have been auto-started from previous submission)
+    const existingProgress = await prisma.moduleProgress.findUnique({
+      where: { userId_moduleId: { userId: session.user.id, moduleId } },
+      select: { startedAt: true },
+    })
+
+    // Upsert module progress — create IN_PROGRESS if doesn't exist
+    // If exists but startedAt is null (auto-started), set it now
     await prisma.moduleProgress.upsert({
       where: {
         userId_moduleId: {
@@ -38,7 +44,9 @@ export async function POST(request: Request) {
           moduleId,
         },
       },
-      update: {}, // Don't overwrite existing progress
+      update: existingProgress && !existingProgress.startedAt
+        ? { startedAt: new Date() }
+        : {},
       create: {
         userId: session.user.id,
         moduleId,

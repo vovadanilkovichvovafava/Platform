@@ -33,6 +33,7 @@ import {
   RefreshCw,
   Timer,
   Pencil,
+  ArrowUpDown,
 } from "lucide-react"
 
 interface TimeTracking {
@@ -143,6 +144,7 @@ export function SubmissionsFilter({
   const [search, setSearch] = useState("")
   const [trailFilter, setTrailFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [sortBy, setSortBy] = useState<"waiting" | "time_to_submit">("waiting")
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Hover-based activation: button becomes active after 1.5s of hovering
@@ -246,12 +248,22 @@ export function SubmissionsFilter({
     })
   }, [reviewedSubmissions, search, trailFilter, statusFilter])
 
-  // Sort pending by days waiting (oldest first)
+  // Sort pending submissions
   const sortedPending = useMemo(() => {
-    return [...filteredPending].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    )
-  }, [filteredPending])
+    return [...filteredPending].sort((a, b) => {
+      if (sortBy === "time_to_submit") {
+        // Sort by time to first submit (longest first), null values at end
+        const aMs = a.timeTracking?.timeToFirstSubmitMs
+        const bMs = b.timeTracking?.timeToFirstSubmitMs
+        if (aMs == null && bMs == null) return 0
+        if (aMs == null) return 1
+        if (bMs == null) return -1
+        return bMs - aMs
+      }
+      // Default: oldest first (days waiting)
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    })
+  }, [filteredPending, sortBy])
 
   return (
     <>
@@ -268,7 +280,7 @@ export function SubmissionsFilter({
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Select value={trailFilter} onValueChange={setTrailFilter}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
@@ -281,6 +293,16 @@ export function SubmissionsFilter({
                       {trail}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as "waiting" | "time_to_submit")}>
+                <SelectTrigger className="w-[200px]">
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Сортировка" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="waiting">По времени ожидания</SelectItem>
+                  <SelectItem value="time_to_submit">По времени выполнения</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>

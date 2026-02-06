@@ -202,6 +202,20 @@ export default async function ModulePage({ params }: Props) {
     })
   }
 
+  // If module was auto-started (from previous submission's instant unlock) but
+  // startedAt was not set, set it now that the student is actually visiting
+  if (!isPrivileged && progress && !progress.startedAt) {
+    await prisma.moduleProgress.update({
+      where: {
+        userId_moduleId: {
+          userId: session.user.id,
+          moduleId: courseModule.id,
+        },
+      },
+      data: { startedAt: new Date() },
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
