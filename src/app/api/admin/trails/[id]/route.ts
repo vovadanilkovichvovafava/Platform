@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { isAnyAdmin, isAdmin, adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
 import { hashTrailPassword, revokeAllPasswordAccess } from "@/lib/trail-password"
+import { canViewTrail, canEditTrail } from "@/lib/trail-policy"
 
 const trailUpdateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -28,7 +29,7 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
-// GET - Get single trail (with access check)
+// GET - Get single trail (with access check + password enforcement)
 export async function GET(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params
@@ -38,8 +39,39 @@ export async function GET(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
-    // Check trail access (deny-by-default for non-ADMIN)
-    if (!isAdmin(session.user.role)) {
+    // For admin/co-admin: use centralized policy (role + assignment + password)
+    if (isAnyAdmin(session.user.role)) {
+      const accessResult = await canViewTrail(session.user.id, session.user.role, id)
+
+      if (!accessResult.allowed) {
+        // Audit: access attempt to password-protected trail
+        if (accessResult.reason === "password_required" || accessResult.reason === "password_expired") {
+          await prisma.auditLog.create({
+            data: {
+              userId: session.user.id,
+              userName: session.user.name || session.user.email || "Unknown",
+              action: "ACCESS_DENIED",
+              entityType: "TRAIL",
+              entityId: id,
+              entityName: `Password-protected trail access attempt`,
+              details: JSON.stringify({ reason: accessResult.reason }),
+            },
+          }).catch(() => {}) // Non-blocking audit
+
+          const errorMsg = accessResult.reason === "password_expired"
+            ? "Срок верификации истёк, введите пароль снова"
+            : "Для доступа к этому trail необходимо ввести пароль"
+
+          return NextResponse.json(
+            { error: errorMsg, passwordRequired: true },
+            { status: 403 }
+          )
+        }
+
+        return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
+      }
+    } else {
+      // For TEACHER: check trail access (deny-by-default for non-ADMIN)
       const { privilegedHasTrailAccess } = await import("@/lib/admin-access")
       const hasAccess = await privilegedHasTrailAccess(session.user.id, session.user.role, id)
       if (!hasAccess) {
@@ -111,15 +143,35 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     const isCreator = existingTrail.createdById === session.user.id
 
-    // Check access based on role
-    if (session.user.role === "CO_ADMIN") {
-      // CO_ADMIN - check AdminTrailAccess
-      const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, id)
-      if (!hasAccess) {
-        return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
+    // Check access: role + assignment + password (centralized policy)
+    const editAccess = await canEditTrail(session.user.id, session.user.role, id)
+    if (!editAccess.allowed) {
+      // Audit: edit attempt on password-protected trail
+      if (editAccess.reason === "password_required" || editAccess.reason === "password_expired") {
+        await prisma.auditLog.create({
+          data: {
+            userId: session.user.id,
+            userName: session.user.name || session.user.email || "Unknown",
+            action: "EDIT_DENIED",
+            entityType: "TRAIL",
+            entityId: id,
+            entityName: existingTrail.title,
+            details: JSON.stringify({ reason: editAccess.reason }),
+          },
+        }).catch(() => {}) // Non-blocking audit
+
+        const errorMsg = editAccess.reason === "password_expired"
+          ? "Срок верификации истёк, введите пароль снова"
+          : "Для редактирования этого trail необходимо ввести пароль"
+
+        return NextResponse.json(
+          { error: errorMsg, passwordRequired: true },
+          { status: 403 }
+        )
       }
+
+      return NextResponse.json({ error: "Доступ к этому trail запрещён" }, { status: 403 })
     }
-    // ADMIN has access to all
 
     const body = await request.json()
     const data = trailUpdateSchema.parse(body)
@@ -214,6 +266,21 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       where: { id },
       data: updateData,
     })
+
+    // Audit: edit after password verification (non-creator editing password-protected trail)
+    if (existingTrail.isPasswordProtected && !isCreator) {
+      await prisma.auditLog.create({
+        data: {
+          userId: session.user.id,
+          userName: session.user.name || session.user.email || "Unknown",
+          action: "EDIT_AFTER_VERIFY",
+          entityType: "TRAIL",
+          entityId: id,
+          entityName: existingTrail.title,
+          details: JSON.stringify({ editedFields: Object.keys(data) }),
+        },
+      }).catch(() => {}) // Non-blocking audit
+    }
 
     // Audit logging for access-related status changes
     const auditChanges: string[] = []
