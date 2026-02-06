@@ -75,6 +75,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: true,
         name: true,
         isActive: true,
+        adminId: true,
         createdAt: true,
         updatedAt: true,
         items: {
@@ -93,6 +94,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!preset) {
       return NextResponse.json({ error: "Пресет не найден" }, { status: 404 })
+    }
+
+    // Verify ownership - admin can only access their own presets
+    if (preset.adminId !== session.user.id) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     const presetDTO: NavbarPresetDetailDTO = {
@@ -131,14 +137,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const data = updatePresetSchema.parse(body)
 
-    // Check if preset exists
+    // Check if preset exists and belongs to current admin
     const existingPreset = await prisma.navbarPreset.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, adminId: true },
     })
 
     if (!existingPreset) {
       return NextResponse.json({ error: "Пресет не найден" }, { status: 404 })
+    }
+
+    if (existingPreset.adminId !== session.user.id) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     // Validate no duplicate hrefs
@@ -244,14 +254,18 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
-    // Check if preset exists and is not active
+    // Check if preset exists, belongs to admin, and is not active
     const preset = await prisma.navbarPreset.findUnique({
       where: { id },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, adminId: true },
     })
 
     if (!preset) {
       return NextResponse.json({ error: "Пресет не найден" }, { status: 404 })
+    }
+
+    if (preset.adminId !== session.user.id) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     if (preset.isActive) {
@@ -284,20 +298,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
-    // Check if preset exists
+    // Check if preset exists and belongs to current admin
     const preset = await prisma.navbarPreset.findUnique({
       where: { id },
-      select: { id: true, name: true },
+      select: { id: true, name: true, adminId: true },
     })
 
     if (!preset) {
       return NextResponse.json({ error: "Пресет не найден" }, { status: 404 })
     }
 
-    // Deactivate all presets and activate this one
+    if (preset.adminId !== session.user.id) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+
+    // Deactivate only this admin's presets and activate selected one
     await prisma.$transaction([
       prisma.navbarPreset.updateMany({
-        where: { isActive: true },
+        where: { isActive: true, adminId: session.user.id },
         data: { isActive: false },
       }),
       prisma.navbarPreset.update({

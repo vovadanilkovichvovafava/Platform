@@ -76,6 +76,7 @@ export async function GET() {
     }
 
     const presets = await prisma.navbarPreset.findMany({
+      where: { adminId: session.user.id },
       select: {
         id: true,
         name: true,
@@ -135,11 +136,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Duplicate label values are not allowed" }, { status: 400 })
     }
 
-    // Create preset with items
+    // Create preset with items (owned by current admin)
     const preset = await prisma.navbarPreset.create({
       data: {
         name: data.name,
         isActive: false, // New presets are not active by default
+        adminId: session.user.id,
         items: {
           create: data.items.map((item, index) => ({
             label: item.label,
@@ -206,9 +208,9 @@ export async function PATCH() {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
-    // Deactivate all presets
+    // Deactivate all presets belonging to this admin
     await prisma.navbarPreset.updateMany({
-      where: { isActive: true },
+      where: { isActive: true, adminId: session.user.id },
       data: { isActive: false },
     })
 
