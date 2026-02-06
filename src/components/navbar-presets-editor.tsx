@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useToast } from "@/components/ui/toast"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
 
 // Icon map
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -44,7 +45,7 @@ interface PresetListItem {
 }
 
 // Available menu items that can be added - comprehensive list of all useful pages
-const AVAILABLE_ITEMS: Omit<NavbarItemDTO, "id" | "order">[] = [
+const ALL_AVAILABLE_ITEMS: Omit<NavbarItemDTO, "id" | "order">[] = [
   // Student pages
   { label: "Dashboard", href: "/dashboard", icon: "Flame", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Trails", href: "/trails", icon: "BookOpen", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
@@ -72,6 +73,11 @@ const AVAILABLE_ITEMS: Omit<NavbarItemDTO, "id" | "order">[] = [
   { label: "Доступы", href: "/admin/access?tab=student-access", icon: "Lock", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "Админ доступы", href: "/admin/access?tab=admin-access", icon: "Unlock", visibleTo: ["ADMIN"] },
 ]
+
+// Filter out items disabled by feature flags
+const AVAILABLE_ITEMS = ALL_AVAILABLE_ITEMS.filter(
+  (item) => item.href !== "/leaderboard" || FEATURE_FLAGS.LEADERBOARD_ENABLED
+)
 
 // Render icon
 function NavIcon({ name, className = "h-4 w-4" }: { name: string; className?: string }) {

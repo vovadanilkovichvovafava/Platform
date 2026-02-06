@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
 
 // DTO type for navbar items - safe for client serialization
 export interface NavbarItemDTO {
@@ -30,6 +31,13 @@ const DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = [
   { id: "default-7", label: "Админ панель", href: "/admin/invites", icon: "Shield", order: 6, visibleTo: ["CO_ADMIN", "ADMIN"] },
   { id: "default-8", label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", order: 7, visibleTo: ["CO_ADMIN", "ADMIN"] },
 ]
+
+// Filter out items disabled by feature flags
+function filterDisabledNavItems<T extends { href: string }>(items: T[]): T[] {
+  return items.filter(
+    (item) => item.href !== "/leaderboard" || FEATURE_FLAGS.LEADERBOARD_ENABLED
+  )
+}
 
 // GET - Get active navbar preset (for any authenticated user)
 export async function GET() {
@@ -65,7 +73,7 @@ export async function GET() {
       const defaultPreset: NavbarPresetDTO = {
         id: "default",
         name: "Default",
-        items: DEFAULT_NAVBAR_ITEMS,
+        items: filterDisabledNavItems(DEFAULT_NAVBAR_ITEMS),
       }
       return NextResponse.json(defaultPreset)
     }
@@ -74,14 +82,14 @@ export async function GET() {
     const presetDTO: NavbarPresetDTO = {
       id: activePreset.id,
       name: activePreset.name,
-      items: activePreset.items.map((item) => ({
+      items: filterDisabledNavItems(activePreset.items.map((item) => ({
         id: item.id,
         label: item.label,
         href: item.href,
         icon: item.icon,
         order: item.order,
         visibleTo: safeParseVisibleTo(item.visibleTo),
-      })),
+      }))),
     }
 
     return NextResponse.json(presetDTO)

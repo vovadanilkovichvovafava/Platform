@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ACHIEVEMENTS, getAchievement } from "@/lib/achievements"
 import { ROLE_STUDENT, getStudentAllowedTrailIds } from "@/lib/admin-access"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -205,13 +206,23 @@ export default async function PublicDashboardPage({ params }: PageProps) {
 
         <div className="container mx-auto px-4 relative z-10">
           {/* Back link */}
-          <Link
-            href="/leaderboard"
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            К рейтингу
-          </Link>
+          {FEATURE_FLAGS.LEADERBOARD_ENABLED ? (
+            <Link
+              href="/leaderboard"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              К рейтингу
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Назад
+            </Link>
+          )}
 
           <div className="flex flex-col md:flex-row gap-6 items-start">
             {/* Profile Card */}
@@ -255,18 +266,30 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                     </span>
                   </div>
 
-                  <Link
-                    href="/leaderboard"
-                    className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Medal className="h-5 w-5 text-blue-500" />
-                      <span className="text-sm font-medium">Место в рейтинге</span>
+                  {FEATURE_FLAGS.LEADERBOARD_ENABLED ? (
+                    <Link
+                      href="/leaderboard"
+                      className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Medal className="h-5 w-5 text-blue-500" />
+                        <span className="text-sm font-medium">Место в рейтинге</span>
+                      </div>
+                      <span className="font-bold text-lg text-blue-600">
+                        #{leaderboardRank}
+                      </span>
+                    </Link>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Medal className="h-5 w-5 text-blue-500" />
+                        <span className="text-sm font-medium">Место в рейтинге</span>
+                      </div>
+                      <span className="font-bold text-lg text-blue-600">
+                        #{leaderboardRank}
+                      </span>
                     </div>
-                    <span className="font-bold text-lg text-blue-600">
-                      #{leaderboardRank}
-                    </span>
-                  </Link>
+                  )}
 
                   <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                     <div className="flex items-center gap-2">
