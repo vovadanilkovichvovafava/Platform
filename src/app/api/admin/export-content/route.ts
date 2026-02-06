@@ -39,10 +39,25 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // Filter out password-protected trails where user is not the creator.
+    // Export of password-protected content is restricted to the trail creator only.
+    const accessibleTrails = trails.filter(trail => {
+      if (!trail.isPasswordProtected) return true
+      if (trail.createdById === session.user!.id) return true
+      return false
+    })
+
+    if (trailId && accessibleTrails.length === 0) {
+      return NextResponse.json(
+        { error: "Экспорт защищённого trail доступен только создателю", passwordRequired: true },
+        { status: 403 }
+      )
+    }
+
     // Generate text format (same as import format)
     let content = ""
 
-    for (const trail of trails) {
+    for (const trail of accessibleTrails) {
       content += `=== TRAIL ===\n`
       content += `название: ${trail.title}\n`
       content += `slug: ${trail.slug}\n`

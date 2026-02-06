@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { guardTrailPassword } from "@/lib/trail-password"
 
 const questionSchema = z.object({
   moduleId: z.string().min(1),
@@ -57,6 +58,22 @@ export async function POST(request: NextRequest) {
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
       }
+    }
+
+    // Password check — get trailId from module, then guard
+    const targetModule = await prisma.module.findUnique({
+      where: { id: data.moduleId },
+      select: { trailId: true },
+    })
+    if (!targetModule) {
+      return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
+    }
+    const passwordGuard = await guardTrailPassword(targetModule.trailId, session.user.id)
+    if (passwordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для создания вопросов в этом trail необходимо ввести пароль", passwordRequired: true },
+        { status: 403 }
+      )
     }
 
     // Get max order for this module

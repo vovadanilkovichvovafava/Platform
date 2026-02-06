@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { guardTrailPassword } from "@/lib/trail-password"
 
 const questionUpdateSchema = z.object({
   question: z.string().min(1).optional(),
@@ -56,6 +57,21 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       const isAssigned = await isTeacherAssignedToQuestion(session.user.id, id)
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
+    }
+
+    // Password check — get trailId via question→module, then guard
+    const questionForPassword = await prisma.question.findUnique({
+      where: { id },
+      select: { module: { select: { trailId: true } } },
+    })
+    if (questionForPassword) {
+      const passwordGuard = await guardTrailPassword(questionForPassword.module.trailId, session.user.id)
+      if (passwordGuard.denied) {
+        return NextResponse.json(
+          { error: "Для редактирования вопросов этого trail необходимо ввести пароль", passwordRequired: true },
+          { status: 403 }
+        )
       }
     }
 
@@ -116,6 +132,21 @@ export async function DELETE(request: NextRequest, { params }: Props) {
       const isAssigned = await isTeacherAssignedToQuestion(session.user.id, id)
       if (!isAssigned) {
         return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
+      }
+    }
+
+    // Password check — get trailId via question→module, then guard
+    const questionForDeletePassword = await prisma.question.findUnique({
+      where: { id },
+      select: { module: { select: { trailId: true } } },
+    })
+    if (questionForDeletePassword) {
+      const deletePasswordGuard = await guardTrailPassword(questionForDeletePassword.module.trailId, session.user.id)
+      if (deletePasswordGuard.denied) {
+        return NextResponse.json(
+          { error: "Для удаления вопросов этого trail необходимо ввести пароль", passwordRequired: true },
+          { status: 403 }
+        )
       }
     }
 
