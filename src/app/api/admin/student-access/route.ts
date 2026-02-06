@@ -117,6 +117,19 @@ export async function POST(request: NextRequest) {
     },
   })
 
+  // Audit log: student access granted
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Unknown",
+      action: "CREATE",
+      entityType: "STUDENT_ACCESS",
+      entityId: access.id,
+      entityName: `${access.student.name} → ${access.trail.title}`,
+      details: JSON.stringify({ studentId, trailId }),
+    },
+  })
+
   return NextResponse.json(access)
 }
 
@@ -152,11 +165,35 @@ export async function DELETE(request: NextRequest) {
     }
   }
 
+  // Fetch before delete for audit log
+  const accessRecord = await prisma.studentTrailAccess.findUnique({
+    where: { studentId_trailId: { studentId, trailId } },
+    include: {
+      student: { select: { name: true } },
+      trail: { select: { title: true } },
+    },
+  })
+
   await prisma.studentTrailAccess.delete({
     where: {
       studentId_trailId: { studentId, trailId },
     },
   })
+
+  // Audit log: student access revoked
+  if (accessRecord) {
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        userName: session.user.name || session.user.email || "Unknown",
+        action: "DELETE",
+        entityType: "STUDENT_ACCESS",
+        entityId: `${studentId}_${trailId}`,
+        entityName: `${accessRecord.student.name} → ${accessRecord.trail.title}`,
+        details: JSON.stringify({ studentId, trailId }),
+      },
+    })
+  }
 
   return NextResponse.json({ success: true })
 }
@@ -194,6 +231,21 @@ export async function PATCH(request: NextRequest) {
   const trail = await prisma.trail.update({
     where: { id: trailId },
     data: { isRestricted },
+  })
+
+  // Audit log: trail restriction status changed
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Unknown",
+      action: "UPDATE",
+      entityType: "TRAIL",
+      entityId: trailId,
+      entityName: trail.title,
+      details: JSON.stringify({
+        statusChanges: [isRestricted ? "restricted" : "made_public"],
+      }),
+    },
   })
 
   return NextResponse.json(trail)

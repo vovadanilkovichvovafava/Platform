@@ -93,10 +93,16 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
-    // Get trail to check creator
+    // Get trail to check creator and current state for audit logging
     const existingTrail = await prisma.trail.findUnique({
       where: { id },
-      select: { createdById: true, isPasswordProtected: true },
+      select: {
+        title: true,
+        createdById: true,
+        isPublished: true,
+        isRestricted: true,
+        isPasswordProtected: true,
+      },
     })
 
     if (!existingTrail) {
@@ -208,6 +214,36 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       where: { id },
       data: updateData,
     })
+
+    // Audit logging for access-related status changes
+    const auditChanges: string[] = []
+    if (data.isPublished !== undefined && data.isPublished !== existingTrail.isPublished) {
+      auditChanges.push(data.isPublished ? "published" : "unpublished")
+    }
+    if (data.isRestricted !== undefined && data.isRestricted !== existingTrail.isRestricted) {
+      auditChanges.push(data.isRestricted ? "restricted" : "made_public")
+    }
+    if (removePassword) {
+      auditChanges.push("password_removed")
+    } else if (isPasswordProtected !== undefined && isPasswordProtected !== existingTrail.isPasswordProtected) {
+      auditChanges.push(isPasswordProtected ? "password_enabled" : "password_disabled")
+    } else if (password) {
+      auditChanges.push("password_changed")
+    }
+
+    if (auditChanges.length > 0) {
+      await prisma.auditLog.create({
+        data: {
+          userId: session.user.id,
+          userName: session.user.name || session.user.email || "Unknown",
+          action: "UPDATE",
+          entityType: "TRAIL",
+          entityId: id,
+          entityName: existingTrail.title,
+          details: JSON.stringify({ statusChanges: auditChanges }),
+        },
+      })
+    }
 
     // Handle teacher assignment for SPECIFIC visibility (ADMIN only)
     if (isAdmin(session.user.role) && teacherVisibility === "SPECIFIC") {
