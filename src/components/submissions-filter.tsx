@@ -31,7 +31,19 @@ import {
   AlertTriangle,
   Trash2,
   RefreshCw,
+  Timer,
+  Pencil,
+  ArrowUpDown,
 } from "lucide-react"
+
+interface TimeTracking {
+  moduleStartedAt: string | null
+  firstSubmittedAt: string | null
+  timeToFirstSubmitMs: number | null
+  totalEditTimeMs: number | null
+  editCount: number
+  lastActivityAt: string | null
+}
 
 interface Submission {
   id: string
@@ -60,12 +72,49 @@ interface Submission {
       name: string
     }
   } | null
+  timeTracking?: TimeTracking
 }
 
 interface SubmissionsFilterProps {
   pendingSubmissions: Submission[]
   reviewedSubmissions: Submission[]
   trails: string[]
+}
+
+/** Format milliseconds into a compact human-readable duration (e.g. "2ч 15мин", "45мин", "3д 1ч") */
+function formatDuration(ms: number | null | undefined): string | null {
+  if (ms == null || ms < 0) return null
+  const totalMinutes = Math.floor(ms / 60000)
+  if (totalMinutes < 1) return "< 1мин"
+  const days = Math.floor(totalMinutes / 1440)
+  const hours = Math.floor((totalMinutes % 1440) / 60)
+  const minutes = totalMinutes % 60
+  if (days > 0) return `${days}д ${hours}ч`
+  if (hours > 0) return minutes > 0 ? `${hours}ч ${minutes}мин` : `${hours}ч`
+  return `${minutes}мин`
+}
+
+/** Build a detailed tooltip string for time tracking metrics */
+function buildTimeTooltip(tt: TimeTracking): string {
+  const lines: string[] = []
+  if (tt.moduleStartedAt) {
+    lines.push(`Старт модуля: ${new Date(tt.moduleStartedAt).toLocaleString("ru-RU")}`)
+  }
+  if (tt.firstSubmittedAt) {
+    lines.push(`Первая отправка: ${new Date(tt.firstSubmittedAt).toLocaleString("ru-RU")}`)
+  }
+  const ttfs = formatDuration(tt.timeToFirstSubmitMs)
+  if (ttfs) {
+    lines.push(`Время до первой отправки: ${ttfs}`)
+  }
+  if (tt.editCount > 0) {
+    const editDur = formatDuration(tt.totalEditTimeMs)
+    lines.push(`Правок: ${tt.editCount}${editDur ? ` (${editDur})` : ""}`)
+  }
+  if (tt.lastActivityAt) {
+    lines.push(`Последняя активность: ${new Date(tt.lastActivityAt).toLocaleString("ru-RU")}`)
+  }
+  return lines.join("\n")
 }
 
 function getDaysWaiting(createdAt: string): number {
@@ -95,6 +144,7 @@ export function SubmissionsFilter({
   const [search, setSearch] = useState("")
   const [trailFilter, setTrailFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [sortBy, setSortBy] = useState<"waiting" | "time_to_submit">("waiting")
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Hover-based activation: button becomes active after 1.5s of hovering
@@ -198,12 +248,22 @@ export function SubmissionsFilter({
     })
   }, [reviewedSubmissions, search, trailFilter, statusFilter])
 
-  // Sort pending by days waiting (oldest first)
+  // Sort pending submissions
   const sortedPending = useMemo(() => {
-    return [...filteredPending].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    )
-  }, [filteredPending])
+    return [...filteredPending].sort((a, b) => {
+      if (sortBy === "time_to_submit") {
+        // Sort by time to first submit (longest first), null values at end
+        const aMs = a.timeTracking?.timeToFirstSubmitMs
+        const bMs = b.timeTracking?.timeToFirstSubmitMs
+        if (aMs == null && bMs == null) return 0
+        if (aMs == null) return 1
+        if (bMs == null) return -1
+        return bMs - aMs
+      }
+      // Default: oldest first (days waiting)
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    })
+  }, [filteredPending, sortBy])
 
   return (
     <>
@@ -220,7 +280,7 @@ export function SubmissionsFilter({
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Select value={trailFilter} onValueChange={setTrailFilter}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
@@ -233,6 +293,16 @@ export function SubmissionsFilter({
                       {trail}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as "waiting" | "time_to_submit")}>
+                <SelectTrigger className="w-[200px]">
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Сортировка" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="waiting">По времени ожидания</SelectItem>
+                  <SelectItem value="time_to_submit">По времени выполнения</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -318,6 +388,29 @@ export function SubmissionsFilter({
                           minute: "2-digit",
                         })}
                       </p>
+                      {/* Time tracking metrics (teacher only) */}
+                      {submission.timeTracking && (
+                        <div
+                          className="flex items-center gap-3 mt-1.5 text-xs text-gray-400"
+                          title={buildTimeTooltip(submission.timeTracking)}
+                        >
+                          {submission.timeTracking.timeToFirstSubmitMs != null && (
+                            <span className="inline-flex items-center gap-1">
+                              <Timer className="h-3 w-3" />
+                              {formatDuration(submission.timeTracking.timeToFirstSubmitMs)}
+                            </span>
+                          )}
+                          {submission.timeTracking.editCount > 0 && (
+                            <span className="inline-flex items-center gap-1">
+                              <Pencil className="h-3 w-3" />
+                              {submission.timeTracking.editCount}
+                              {submission.timeTracking.totalEditTimeMs != null && (
+                                <span>({formatDuration(submission.timeTracking.totalEditTimeMs)})</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -457,6 +550,26 @@ export function SubmissionsFilter({
                       {submission.module.title}
                     </h3>
                     <p className="text-sm text-gray-500">{submission.user.name}</p>
+                    {/* Time tracking metrics for reviewed submissions */}
+                    {submission.timeTracking && (
+                      <div
+                        className="flex items-center gap-3 mt-1 text-xs text-gray-400"
+                        title={buildTimeTooltip(submission.timeTracking)}
+                      >
+                        {submission.timeTracking.timeToFirstSubmitMs != null && (
+                          <span className="inline-flex items-center gap-1">
+                            <Timer className="h-3 w-3" />
+                            {formatDuration(submission.timeTracking.timeToFirstSubmitMs)}
+                          </span>
+                        )}
+                        {submission.timeTracking.editCount > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            <Pencil className="h-3 w-3" />
+                            {submission.timeTracking.editCount}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-4">

@@ -217,6 +217,8 @@ export async function POST(request: Request) {
 
     // Instant progress unlock: Start next assessment module (non-PROJECT) automatically
     // This allows the student to continue learning while waiting for review
+    // NOTE: startedAt is intentionally NOT set here — it will be set when the student
+    // actually opens the module (via modal, gate, or page auto-start)
     if (courseModule.type !== "PROJECT") {
       const nextModule = await prisma.module.findFirst({
         where: {
@@ -240,7 +242,7 @@ export async function POST(request: Request) {
             userId: session.user.id,
             moduleId: nextModule.id,
             status: "IN_PROGRESS",
-            startedAt: new Date(),
+            // startedAt left null — will be set when student actually opens the module
           },
         })
       }
@@ -251,7 +253,9 @@ export async function POST(request: Request) {
       console.error("Achievement check after submission failed:", err)
     )
 
-    return NextResponse.json(submission)
+    // Strip internal time tracking fields from student-facing response
+    const { editCount: _ec, lastEditedAt: _le, ...safeSubmission } = submission
+    return NextResponse.json(safeSubmission)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

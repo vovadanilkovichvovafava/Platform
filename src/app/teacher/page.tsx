@@ -99,23 +99,83 @@ export default async function TeacherDashboard() {
   reviewedSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
   const trails = Array.from(allTrails).sort()
 
+  // --- Time tracking: fetch ModuleProgress startedAt + first submission dates ---
+  const allSubmissions = [...pendingSubmissions, ...reviewedSubmissions]
+  const userModuleKeys = new Map<string, { userId: string; moduleId: string }>()
+  for (const s of allSubmissions) {
+    userModuleKeys.set(`${s.userId}:${s.moduleId}`, { userId: s.userId, moduleId: s.moduleId })
+  }
+  const pairs = [...userModuleKeys.values()]
+
+  // Batch-fetch module progress (startedAt) for all user+module pairs
+  const progressRecords = pairs.length > 0
+    ? await prisma.moduleProgress.findMany({
+        where: { OR: pairs.map((p) => ({ userId: p.userId, moduleId: p.moduleId })) },
+        select: { userId: true, moduleId: true, startedAt: true },
+      })
+    : []
+  const progressMap = new Map<string, Date | null>()
+  for (const p of progressRecords) {
+    progressMap.set(`${p.userId}:${p.moduleId}`, p.startedAt)
+  }
+
+  // Batch-fetch earliest submission createdAt per user+module (for timeToFirstSubmit)
+  const firstSubmitRecords = pairs.length > 0
+    ? await prisma.submission.groupBy({
+        by: ["userId", "moduleId"],
+        _min: { createdAt: true },
+        where: { OR: pairs.map((p) => ({ userId: p.userId, moduleId: p.moduleId })) },
+      })
+    : []
+  const firstSubmitMap = new Map<string, Date | null>()
+  for (const r of firstSubmitRecords) {
+    firstSubmitMap.set(`${r.userId}:${r.moduleId}`, r._min.createdAt)
+  }
+
+  // Helper: build time tracking object for a submission (all values serialized)
+  function buildTimeTracking(s: { userId: string; moduleId: string; createdAt: Date; editCount: number; lastEditedAt: Date | null }) {
+    const key = `${s.userId}:${s.moduleId}`
+    const moduleStartedAt = progressMap.get(key) ?? null
+    const firstSubmittedAt = firstSubmitMap.get(key) ?? null
+    const timeToFirstSubmitMs =
+      moduleStartedAt && firstSubmittedAt
+        ? firstSubmittedAt.getTime() - moduleStartedAt.getTime()
+        : null
+    const totalEditTimeMs =
+      s.editCount > 0 && s.lastEditedAt
+        ? s.lastEditedAt.getTime() - s.createdAt.getTime()
+        : null
+    return {
+      moduleStartedAt: moduleStartedAt?.toISOString() ?? null,
+      firstSubmittedAt: firstSubmittedAt?.toISOString() ?? null,
+      timeToFirstSubmitMs,
+      totalEditTimeMs,
+      editCount: s.editCount,
+      lastActivityAt: (s.lastEditedAt ?? s.createdAt).toISOString(),
+    }
+  }
+
   // Serialize dates for client component
   const serializedPending = pendingSubmissions.map((s) => ({
     ...s,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
+    lastEditedAt: s.lastEditedAt?.toISOString() ?? null,
+    timeTracking: buildTimeTracking(s),
   }))
 
   const serializedReviewed = reviewedSubmissions.map((s) => ({
     ...s,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
+    lastEditedAt: s.lastEditedAt?.toISOString() ?? null,
     review: s.review
       ? {
           ...s.review,
           createdAt: s.review.createdAt.toISOString(),
         }
       : null,
+    timeTracking: buildTimeTracking(s),
   }))
 
   return (

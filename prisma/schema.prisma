@@ -286,6 +286,8 @@ model Submission {
   moduleId  String
   telegramNotifiedAt DateTime? // When TG notification was sent (idempotency)
   lastRenotifiedAt   DateTime? // When last re-notification was sent (rate limit: once per day)
+  editCount    Int       @default(0)  // Number of student edits after initial submission
+  lastEditedAt DateTime?              // Last time student edited (distinct from system updatedAt)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
