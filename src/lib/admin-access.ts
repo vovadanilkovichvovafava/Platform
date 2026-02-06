@@ -184,6 +184,78 @@ export async function studentHasTrailAccess(
 }
 
 /**
+ * Check if a teacher has access to a specific trail
+ * Returns true if teacher is assigned via TrailTeacher or trail has ALL_TEACHERS visibility
+ */
+export async function teacherHasTrailAccess(
+  teacherId: string,
+  trailId: string
+): Promise<boolean> {
+  // Check 1: Is teacher specifically assigned?
+  const assignment = await prisma.trailTeacher.findUnique({
+    where: {
+      trailId_teacherId: { trailId, teacherId },
+    },
+  })
+  if (assignment) return true
+
+  // Check 2: Is trail visible to all teachers?
+  const trail = await prisma.trail.findUnique({
+    where: { id: trailId },
+    select: { teacherVisibility: true },
+  })
+  return trail?.teacherVisibility === "ALL_TEACHERS"
+}
+
+/**
+ * Unified: Get allowed trail IDs for any privileged role.
+ * - ADMIN: returns null (all trails)
+ * - CO_ADMIN: returns AdminTrailAccess trail IDs
+ * - TEACHER: returns TrailTeacher + ALL_TEACHERS trail IDs
+ * - Other: returns empty array (no access)
+ *
+ * @returns null for ADMIN (unlimited), string[] for others
+ */
+export async function getPrivilegedAllowedTrailIds(
+  userId: string,
+  role: string
+): Promise<string[] | null> {
+  if (isAdmin(role)) {
+    return null
+  }
+  if (role === ROLE_CO_ADMIN) {
+    return getAdminAllowedTrailIds(userId, role)
+  }
+  if (role === ROLE_TEACHER) {
+    return getTeacherAllowedTrailIds(userId)
+  }
+  return []
+}
+
+/**
+ * Unified: Check if a privileged user has access to a specific trail.
+ * - ADMIN: always true
+ * - CO_ADMIN: checks AdminTrailAccess
+ * - TEACHER: checks TrailTeacher / ALL_TEACHERS
+ */
+export async function privilegedHasTrailAccess(
+  userId: string,
+  role: string,
+  trailId: string
+): Promise<boolean> {
+  if (isAdmin(role)) {
+    return true
+  }
+  if (role === ROLE_CO_ADMIN) {
+    return adminHasTrailAccess(userId, role, trailId)
+  }
+  if (role === ROLE_TEACHER) {
+    return teacherHasTrailAccess(userId, trailId)
+  }
+  return false
+}
+
+/**
  * Get all co-admins with their trail access
  * For ADMIN management UI
  */

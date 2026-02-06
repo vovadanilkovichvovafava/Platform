@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -10,24 +11,21 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const userRole = session.user.role
-  if (userRole !== "TEACHER" && userRole !== "ADMIN") {
+  if (!isPrivileged(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   try {
-    // Get teacher's assigned trails
+    // Get assigned trails based on role (null = all for ADMIN)
+    const allowedTrailIds = await getPrivilegedAllowedTrailIds(session.user.id, session.user.role)
+
     let trailIds: string[] = []
 
-    if (userRole === "ADMIN") {
+    if (allowedTrailIds === null) {
       const allTrails = await prisma.trail.findMany({ select: { id: true } })
       trailIds = allTrails.map(t => t.id)
     } else {
-      const assignments = await prisma.trailTeacher.findMany({
-        where: { teacherId: session.user.id },
-        select: { trailId: true },
-      })
-      trailIds = assignments.map(a => a.trailId)
+      trailIds = allowedTrailIds
     }
 
     if (trailIds.length === 0) {

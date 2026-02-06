@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, privilegedHasTrailAccess } from "@/lib/admin-access"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -29,17 +30,29 @@ export default async function ReviewPage({ params }: Props) {
   const session = await getServerSession(authOptions)
 
   // Allow TEACHER, CO_ADMIN, and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "CO_ADMIN" && session.user.role !== "ADMIN")) {
+  if (!session || !isPrivileged(session.user.role)) {
     redirect("/dashboard")
   }
 
   const submission = await prisma.submission.findUnique({
     where: { id },
     include: {
-      user: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          totalXP: true,
+        },
+      },
       module: {
         include: {
-          trail: true,
+          trail: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
         },
       },
       review: true,
@@ -47,6 +60,16 @@ export default async function ReviewPage({ params }: Props) {
   })
 
   if (!submission) {
+    notFound()
+  }
+
+  // Verify trail scope access for this user
+  const hasAccess = await privilegedHasTrailAccess(
+    session.user.id,
+    session.user.role,
+    submission.module.trailId
+  )
+  if (!hasAccess) {
     notFound()
   }
 

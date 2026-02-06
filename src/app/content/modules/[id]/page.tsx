@@ -13,7 +13,9 @@ export default function ModuleEditorPage({ params }: Props) {
   const { data: session } = useSession()
 
   // Determine backUrl based on user role
-  const backUrl = session?.user?.role === "ADMIN" ? "/admin/content" : "/teacher/content"
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "CO_ADMIN"
+  const backUrl = isAdmin ? "/admin/content" : "/content"
+  const readOnly = session?.user?.role === "TEACHER"
 
-  return <ModuleEditor moduleId={id} backUrl={backUrl} />
+  return <ModuleEditor moduleId={id} backUrl={backUrl} readOnly={readOnly} />
 }

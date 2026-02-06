@@ -873,7 +873,7 @@ export default function UnifiedContentPage() {
               <p className="text-gray-600 mt-1">
                 {isAdmin
                   ? "Редактирование теории, вопросов и проектов"
-                  : "Редактирование назначенных trails"}
+                  : "Просмотр назначенных trails (только чтение)"}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -935,11 +935,13 @@ export default function UnifiedContentPage() {
                 </Button>
               )}
 
-              {/* New Trail - both roles */}
-              <Button onClick={() => openCreateTrailModal()} className="bg-green-600 hover:bg-green-700" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Новый Trail
-              </Button>
+              {/* New Trail - admin only (TEACHER cannot create) */}
+              {isAdmin && (
+                <Button onClick={() => openCreateTrailModal()} className="bg-green-600 hover:bg-green-700" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Новый Trail
+                </Button>
+              )}
 
               <Button onClick={fetchData} variant="outline" size="sm">
                 <RefreshCw className="h-4 w-4" />
@@ -1016,10 +1018,12 @@ export default function UnifiedContentPage() {
                 <p className="text-gray-500 mb-4">
                   {isAdmin ? "Нет trails" : "Нет назначенных trails"}
                 </p>
-                <Button onClick={() => openCreateTrailModal()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Создать первый Trail
-                </Button>
+                {isAdmin && (
+                  <Button onClick={() => openCreateTrailModal()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Создать первый Trail
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -1091,24 +1095,28 @@ export default function UnifiedContentPage() {
                         <span className="text-sm text-gray-500">
                           {trail.modules.length} {pluralizeRu(trail.modules.length, ["модуль", "модуля", "модулей"])}
                         </span>
-                        <Button
-                          size="sm"
-                          variant={isAllSelectedInTrail(trail.id) ? "default" : "ghost"}
-                          onClick={() => toggleSelectAllInTrail(trail.id)}
-                          title={isAllSelectedInTrail(trail.id) ? "Снять выделение" : "Выбрать все модули"}
-                          className={isAllSelectedInTrail(trail.id) ? "bg-blue-600 hover:bg-blue-700" : ""}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditTrailModal(trail)}
-                          title="Редактировать trail"
-                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant={isAllSelectedInTrail(trail.id) ? "default" : "ghost"}
+                            onClick={() => toggleSelectAllInTrail(trail.id)}
+                            title={isAllSelectedInTrail(trail.id) ? "Снять выделение" : "Выбрать все модули"}
+                            className={isAllSelectedInTrail(trail.id) ? "bg-blue-600 hover:bg-blue-700" : ""}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditTrailModal(trail)}
+                            title="Редактировать trail"
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1117,21 +1125,25 @@ export default function UnifiedContentPage() {
                         >
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openModuleModal(trail.id)}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Модуль
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost-destructive"
-                          onClick={() => deleteTrail(trail.id, trail.title)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openModuleModal(trail.id)}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Модуль
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost-destructive"
+                            onClick={() => deleteTrail(trail.id, trail.title)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardHeader>
@@ -1139,14 +1151,16 @@ export default function UnifiedContentPage() {
                     {trail.modules.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         <p className="mb-3">Нет модулей</p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openModuleModal(trail.id)}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Добавить модуль
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openModuleModal(trail.id)}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Добавить модуль
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <>
@@ -1162,24 +1176,28 @@ export default function UnifiedContentPage() {
                                 return (
                                   <div
                                     key={module.id}
-                                    draggable
-                                    onDragStart={() => handleDragStart(module.id)}
-                                    onDragOver={(e) => handleDragOver(e, module.id)}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={(e) => handleDrop(e, module.id, trail.id)}
+                                    draggable={isAdmin}
+                                    onDragStart={isAdmin ? () => handleDragStart(module.id) : undefined}
+                                    onDragOver={isAdmin ? (e) => handleDragOver(e, module.id) : undefined}
+                                    onDragLeave={isAdmin ? handleDragLeave : undefined}
+                                    onDrop={isAdmin ? (e) => handleDrop(e, module.id, trail.id) : undefined}
                                     className={`group flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
                                       draggedModule === module.id ? "opacity-50" : ""
                                     } ${
                                       dragOverModule === module.id ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
                                     }`}
                                   >
-                                    <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600">
-                                      <GripVertical className="h-4 w-4" />
-                                    </div>
-                                    <Checkbox
-                                      checked={selectedModules.has(module.id)}
-                                      onCheckedChange={() => toggleModuleSelection(module.id)}
-                                    />
+                                    {isAdmin && (
+                                      <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600">
+                                        <GripVertical className="h-4 w-4" />
+                                      </div>
+                                    )}
+                                    {isAdmin && (
+                                      <Checkbox
+                                        checked={selectedModules.has(module.id)}
+                                        onCheckedChange={() => toggleModuleSelection(module.id)}
+                                      />
+                                    )}
                                     <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 shrink-0">
                                         <TypeIcon className="h-5 w-5 text-gray-600" />
@@ -1206,15 +1224,17 @@ export default function UnifiedContentPage() {
                                         <ChevronRight className="h-4 w-4" />
                                       </div>
                                     </Link>
-                                    <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button
-                                        onClick={() => deleteModule(module.id, module.title)}
-                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-                                        title="Удалить модуль"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
-                                    </div>
+                                    {isAdmin && (
+                                      <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                          onClick={() => deleteModule(module.id, module.title)}
+                                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                          title="Удалить модуль"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 )
                               })}
@@ -1232,24 +1252,28 @@ export default function UnifiedContentPage() {
                               {projectModules.map((module) => (
                                 <div
                                   key={module.id}
-                                  draggable
-                                  onDragStart={() => handleDragStart(module.id)}
-                                  onDragOver={(e) => handleDragOver(e, module.id)}
-                                  onDragLeave={handleDragLeave}
-                                  onDrop={(e) => handleDrop(e, module.id, trail.id)}
+                                  draggable={isAdmin}
+                                  onDragStart={isAdmin ? () => handleDragStart(module.id) : undefined}
+                                  onDragOver={isAdmin ? (e) => handleDragOver(e, module.id) : undefined}
+                                  onDragLeave={isAdmin ? handleDragLeave : undefined}
+                                  onDrop={isAdmin ? (e) => handleDrop(e, module.id, trail.id) : undefined}
                                   className={`group flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
                                     draggedModule === module.id ? "opacity-50" : ""
                                   } ${
                                     dragOverModule === module.id ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
                                   }`}
                                 >
-                                  <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600">
-                                    <GripVertical className="h-4 w-4" />
-                                  </div>
-                                  <Checkbox
-                                    checked={selectedModules.has(module.id)}
-                                    onCheckedChange={() => toggleModuleSelection(module.id)}
-                                  />
+                                  {isAdmin && (
+                                    <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600">
+                                      <GripVertical className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                  {isAdmin && (
+                                    <Checkbox
+                                      checked={selectedModules.has(module.id)}
+                                      onCheckedChange={() => toggleModuleSelection(module.id)}
+                                    />
+                                  )}
                                   <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 shrink-0">
                                       <FolderGit2 className="h-5 w-5 text-blue-600" />
@@ -1273,15 +1297,17 @@ export default function UnifiedContentPage() {
                                       <ChevronRight className="h-4 w-4" />
                                     </div>
                                   </Link>
-                                  <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      onClick={() => deleteModule(module.id, module.title)}
-                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-                                      title="Удалить модуль"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </div>
+                                  {isAdmin && (
+                                    <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => deleteModule(module.id, module.title)}
+                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                        title="Удалить модуль"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>

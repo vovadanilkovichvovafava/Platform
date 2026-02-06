@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { adminHasTrailAccess, isPrivileged } from "@/lib/admin-access"
+import { adminHasTrailAccess, isAnyAdmin } from "@/lib/admin-access"
 
 // Transliterate Cyrillic to Latin for URL-safe slugs
 const translitMap: Record<string, string> = {
@@ -37,22 +37,12 @@ const moduleSchema = z.object({
   duration: z.string().default("15 мин"),
 })
 
-// Helper to check if teacher is assigned to trail
-async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Promise<boolean> {
-  const assignment = await prisma.trailTeacher.findUnique({
-    where: {
-      trailId_teacherId: { trailId, teacherId },
-    },
-  })
-  return !!assignment
-}
-
-// POST - Create new module (with access check to trail)
+// POST - Create new module (ADMIN and CO_ADMIN only, TEACHER cannot create)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isPrivileged(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -60,13 +50,7 @@ export async function POST(request: NextRequest) {
     const data = moduleSchema.parse(body)
 
     // Check access based on role
-    if (session.user.role === "TEACHER") {
-      // Teachers can only create modules in trails they are assigned to
-      const isAssigned = await isTeacherAssignedToTrail(session.user.id, data.trailId)
-      if (!isAssigned) {
-        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
-      }
-    } else if (session.user.role === "CO_ADMIN") {
+    if (session.user.role === "CO_ADMIN") {
       // CO_ADMIN - check AdminTrailAccess
       const hasAccess = await adminHasTrailAccess(session.user.id, session.user.role, data.trailId)
       if (!hasAccess) {

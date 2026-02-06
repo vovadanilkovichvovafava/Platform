@@ -115,7 +115,7 @@ function getDefaultDataForType(type: QuestionType): MatchingData | OrderingData 
   }
 }
 
-export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
+export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEditorProps) {
   const [module, setModule] = useState<Module | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -363,20 +363,28 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
                   {success}
                 </span>
               )}
-              <Button onClick={saveModule} disabled={saving}>
-                {saving ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Сохранить
-              </Button>
+              {!readOnly && (
+                <Button onClick={saveModule} disabled={saving}>
+                  {saving ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Сохранить
+                </Button>
+              )}
+              {readOnly && (
+                <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                  Только просмотр
+                </Badge>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
+        <fieldset disabled={readOnly} className="contents">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
@@ -1084,6 +1092,7 @@ export function ModuleEditor({ moduleId, backUrl }: ModuleEditorProps) {
           </div>
         </div>
 
+        </fieldset>
         {/* Module Navigation Footer */}
         {(module.prevModule || module.nextModule) && (
           <div className="mt-8 border-t pt-6">
