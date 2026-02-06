@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { ROLE_STUDENT, studentHasTrailAccess } from "@/lib/admin-access"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -82,49 +83,33 @@ export default async function TrailPage({ params }: Props) {
     notFound()
   }
 
-  // Check access for restricted or unpublished trails
+  // Check access for trails
   const isPrivilegedUser = session?.user.role === "ADMIN" || session?.user.role === "TEACHER" || session?.user.role === "CO_ADMIN"
 
-  // If trail is unpublished, only privileged users or users with explicit access can view
-  if (!trail.isPublished) {
+  // Students must have explicit StudentTrailAccess for ANY trail
+  if (session?.user.role === ROLE_STUDENT) {
+    const hasAccess = await studentHasTrailAccess(session.user.id, trail.id)
+    if (!hasAccess) {
+      redirect("/trails")
+    }
+  }
+  // For unpublished trails, non-privileged users without session get redirected
+  else if (!trail.isPublished) {
     if (!session) {
       redirect("/login")
     }
-
+    // Non-student, non-privileged (shouldn't happen, but safe fallback)
     if (!isPrivilegedUser) {
-      const hasAccess = await prisma.studentTrailAccess.findUnique({
-        where: {
-          studentId_trailId: {
-            studentId: session.user.id,
-            trailId: trail.id,
-          },
-        },
-      })
-
-      if (!hasAccess) {
-        redirect("/trails") // Redirect to trails list if no access
-      }
+      redirect("/trails")
     }
   }
-  // If trail is restricted (but published), check access
+  // For restricted published trails, unauthenticated users get redirected
   else if (trail.isRestricted) {
     if (!session) {
       redirect("/login")
     }
-
     if (!isPrivilegedUser) {
-      const hasAccess = await prisma.studentTrailAccess.findUnique({
-        where: {
-          studentId_trailId: {
-            studentId: session.user.id,
-            trailId: trail.id,
-          },
-        },
-      })
-
-      if (!hasAccess) {
-        redirect("/trails") // Redirect to trails list if no access
-      }
+      redirect("/trails")
     }
   }
 

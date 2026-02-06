@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ACHIEVEMENTS, getAchievement } from "@/lib/achievements"
+import { ROLE_STUDENT, getStudentAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -90,14 +91,44 @@ export default async function PublicDashboardPage({ params }: PageProps) {
     notFound()
   }
 
+  // Students can only view profiles of students from their assigned trails
+  if (session?.user?.role === ROLE_STUDENT && session.user.id !== userId) {
+    const viewerTrailIds = await getStudentAllowedTrailIds(session.user.id)
+
+    // Check if the target user is enrolled in any of the viewer's assigned trails
+    const sharedEnrollment = await prisma.enrollment.findFirst({
+      where: {
+        userId,
+        trailId: { in: viewerTrailIds },
+      },
+    })
+
+    if (!sharedEnrollment) {
+      notFound()
+    }
+  }
+
   const rank = getRank(user.totalXP)
 
-  // Get leaderboard position
-  const higherRanked = await prisma.user.count({
-    where: {
+  // Get leaderboard position (scoped to viewer's trails for students)
+  let leaderboardWhereClause: { role: string; totalXP: { gt: number }; enrollments?: { some: { trailId: { in: string[] } } } } = {
+    role: "STUDENT",
+    totalXP: { gt: user.totalXP },
+  }
+
+  if (session?.user?.role === ROLE_STUDENT) {
+    const viewerTrailIds = await getStudentAllowedTrailIds(session.user.id)
+    leaderboardWhereClause = {
       role: "STUDENT",
       totalXP: { gt: user.totalXP },
-    },
+      enrollments: {
+        some: { trailId: { in: viewerTrailIds } },
+      },
+    }
+  }
+
+  const higherRanked = await prisma.user.count({
+    where: leaderboardWhereClause,
   })
   const leaderboardRank = higherRanked + 1
 

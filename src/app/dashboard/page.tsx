@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { ACHIEVEMENTS } from "@/lib/achievements"
 import { getLevelInfo, getRankInfo, formatXP } from "@/lib/levels"
 import { pluralizeRu } from "@/lib/utils"
+import { ROLE_STUDENT } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -98,12 +99,31 @@ export default async function DashboardPage() {
   const levelInfo = getLevelInfo(user.totalXP)
   const rankInfo = getRankInfo(user.totalXP)
 
-  // Get leaderboard position
-  const higherRanked = await prisma.user.count({
-    where: {
+  // Get user's trail access (moved up - needed for leaderboard rank scoping)
+  const userAccess = await prisma.studentTrailAccess.findMany({
+    where: { studentId: session.user.id },
+    select: { trailId: true },
+  })
+  const accessibleTrailIds = userAccess.map((a) => a.trailId)
+
+  // Get leaderboard position (scoped to assigned trails for students)
+  let leaderboardRankWhere: { role: string; totalXP: { gt: number }; enrollments?: { some: { trailId: { in: string[] } } } } = {
+    role: "STUDENT",
+    totalXP: { gt: user.totalXP },
+  }
+
+  if (user.role === ROLE_STUDENT) {
+    leaderboardRankWhere = {
       role: "STUDENT",
       totalXP: { gt: user.totalXP },
-    },
+      enrollments: {
+        some: { trailId: { in: accessibleTrailIds } },
+      },
+    }
+  }
+
+  const higherRanked = await prisma.user.count({
+    where: leaderboardRankWhere,
   })
   const leaderboardRank = higherRanked + 1
 
@@ -155,26 +175,25 @@ export default async function DashboardPage() {
     total: approvedCount + pendingCount + actualRevisionCount + failedCount,
   }
 
-  // Get user's trail access
-  const userAccess = await prisma.studentTrailAccess.findMany({
-    where: { studentId: session.user.id },
-    select: { trailId: true },
-  })
-  const accessibleTrailIds = userAccess.map((a) => a.trailId)
-
   const isPrivileged = user.role === "ADMIN" || user.role === "TEACHER" || user.role === "CO_ADMIN"
+  const isStudentUser = user.role === ROLE_STUDENT
 
-  // Build query to include:
-  // 1. All published trails
-  // 2. Unpublished trails that user has explicit access to
-  const whereClause = accessibleTrailIds.length > 0
-    ? {
-        OR: [
-          { isPublished: true },
-          { id: { in: accessibleTrailIds } },
-        ],
-      }
-    : { isPublished: true }
+  // Build query based on role:
+  // Students: ONLY see trails they have explicit StudentTrailAccess to
+  // Privileged: see published + explicitly accessible
+  let whereClause
+  if (isStudentUser) {
+    whereClause = { id: { in: accessibleTrailIds } }
+  } else if (accessibleTrailIds.length > 0) {
+    whereClause = {
+      OR: [
+        { isPublished: true },
+        { id: { in: accessibleTrailIds } },
+      ],
+    }
+  } else {
+    whereClause = { isPublished: true }
+  }
 
   const allPublishedTrails = await prisma.trail.findMany({
     where: whereClause,
@@ -196,8 +215,10 @@ export default async function DashboardPage() {
     },
   })
 
-  // Filter out restricted trails user doesn't have access to
+  // Filter out trails user doesn't have access to
   const allTrails = allPublishedTrails.filter((trail) => {
+    // Students already got only their assigned trails from the query
+    if (isStudentUser) return true
     // If user has explicit access, always show (even if unpublished or restricted)
     if (accessibleTrailIds.includes(trail.id)) return true
     // For unpublished trails without explicit access - hide
