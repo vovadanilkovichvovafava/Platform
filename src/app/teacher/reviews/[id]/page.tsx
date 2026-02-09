@@ -25,10 +25,13 @@ import { MarkdownRenderer } from "@/components/markdown-renderer"
 
 interface Props {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
 }
 
-export default async function ReviewPage({ params }: Props) {
+export default async function ReviewPage({ params, searchParams }: Props) {
   const { id } = await params
+  const { from: returnQuery } = await searchParams
+  const backHref = returnQuery ? `/teacher?${returnQuery}` : "/teacher"
   const session = await getServerSession(authOptions)
 
   // Allow TEACHER, CO_ADMIN, and ADMIN roles
@@ -129,7 +132,7 @@ export default async function ReviewPage({ params }: Props) {
   return (
     <div className="p-8">
       <Link
-        href="/teacher"
+        href={backHref}
         className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
@@ -247,6 +250,7 @@ export default async function ReviewPage({ params }: Props) {
                   moduleId={submission.moduleId}
                   userId={submission.userId}
                   modulePoints={submission.module.points}
+                  returnTo={backHref}
                 />
               </CardContent>
             </Card>

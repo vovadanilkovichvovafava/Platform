@@ -14,7 +14,12 @@ import {
 } from "lucide-react"
 import { SubmissionsFilter } from "@/components/submissions-filter"
 
-export default async function TeacherDashboard() {
+export default async function TeacherDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ trail?: string; status?: string; sort?: string; q?: string }>
+}) {
+  const resolvedSearchParams = await searchParams
   const session = await getServerSession(authOptions)
 
   // Allow TEACHER, CO_ADMIN, and ADMIN roles
@@ -253,6 +258,12 @@ export default async function TeacherDashboard() {
         pendingSubmissions={serializedPending}
         reviewedSubmissions={serializedReviewed}
         trails={trails}
+        initialFilters={{
+          trail: resolvedSearchParams.trail || "all",
+          status: resolvedSearchParams.status || "all",
+          sort: resolvedSearchParams.sort || "waiting",
+          q: resolvedSearchParams.q || "",
+        }}
       />
     </div>
   )

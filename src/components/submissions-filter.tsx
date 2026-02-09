@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -75,10 +75,18 @@ interface Submission {
   timeTracking?: TimeTracking
 }
 
+interface InitialFilters {
+  trail: string
+  status: string
+  sort: string
+  q: string
+}
+
 interface SubmissionsFilterProps {
   pendingSubmissions: Submission[]
   reviewedSubmissions: Submission[]
   trails: string[]
+  initialFilters: InitialFilters
 }
 
 /** Format milliseconds into a compact human-readable duration (e.g. "2ч 15мин", "45мин", "3д 1ч") */
@@ -132,20 +140,86 @@ function getDaysWaitingLabel(days: number): { label: string; color: string } {
   return { label: `${days} дней`, color: "bg-red-100 text-red-700" }
 }
 
+/** Build a URL query string from filter state. Default values are omitted to keep URLs clean. */
+function buildFilterQuery(filters: { trail: string; status: string; sort: string; q: string }): string {
+  const params = new URLSearchParams()
+  if (filters.trail && filters.trail !== "all") params.set("trail", filters.trail)
+  if (filters.status && filters.status !== "all") params.set("status", filters.status)
+  if (filters.sort && filters.sort !== "waiting") params.set("sort", filters.sort)
+  if (filters.q) params.set("q", filters.q)
+  return params.toString()
+}
+
+/** Normalize initial filter values: validate trail against available list, validate sort/status enums */
+function normalizeFilters(initial: InitialFilters, trails: string[]): { trail: string; status: string; sort: "waiting" | "time_to_submit"; q: string } {
+  const validStatuses = ["all", "APPROVED", "REVISION", "FAILED"]
+  const validSorts = ["waiting", "time_to_submit"]
+  return {
+    trail: initial.trail === "all" || trails.includes(initial.trail) ? initial.trail : "all",
+    status: validStatuses.includes(initial.status) ? initial.status : "all",
+    sort: (validSorts.includes(initial.sort) ? initial.sort : "waiting") as "waiting" | "time_to_submit",
+    q: initial.q || "",
+  }
+}
+
 export function SubmissionsFilter({
   pendingSubmissions,
   reviewedSubmissions,
   trails,
+  initialFilters,
 }: SubmissionsFilterProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
-  const [search, setSearch] = useState("")
-  const [trailFilter, setTrailFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [sortBy, setSortBy] = useState<"waiting" | "time_to_submit">("waiting")
+  // Normalize and validate initial filter values from URL
+  const normalized = useMemo(() => normalizeFilters(initialFilters, trails), [initialFilters, trails])
+
+  const [search, setSearch] = useState(normalized.q)
+  const [trailFilter, setTrailFilter] = useState(normalized.trail)
+  const [statusFilter, setStatusFilter] = useState(normalized.status)
+  const [sortBy, setSortBy] = useState<"waiting" | "time_to_submit">(normalized.sort)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Sync filter state to URL (without triggering server re-render)
+  const updateUrl = useCallback((filters: { trail: string; status: string; sort: string; q: string }) => {
+    const qs = buildFilterQuery(filters)
+    const newUrl = qs ? `${pathname}?${qs}` : pathname
+    window.history.replaceState(null, "", newUrl)
+  }, [pathname])
+
+  // Build current query string for use in links
+  const currentQueryString = useMemo(
+    () => buildFilterQuery({ trail: trailFilter, status: statusFilter, sort: sortBy, q: search }),
+    [trailFilter, statusFilter, sortBy, search],
+  )
+
+  // Debounced URL sync for search input
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value)
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => {
+      updateUrl({ trail: trailFilter, status: statusFilter, sort: sortBy, q: value })
+    }, 300)
+  }, [trailFilter, statusFilter, sortBy, updateUrl])
+
+  // Immediate URL sync for select-based filters
+  const handleTrailChange = useCallback((value: string) => {
+    setTrailFilter(value)
+    updateUrl({ trail: value, status: statusFilter, sort: sortBy, q: search })
+  }, [statusFilter, sortBy, search, updateUrl])
+
+  const handleStatusChange = useCallback((value: string) => {
+    setStatusFilter(value)
+    updateUrl({ trail: trailFilter, status: value, sort: sortBy, q: search })
+  }, [trailFilter, sortBy, search, updateUrl])
+
+  const handleSortChange = useCallback((value: string) => {
+    setSortBy(value as "waiting" | "time_to_submit")
+    updateUrl({ trail: trailFilter, status: statusFilter, sort: value, q: search })
+  }, [trailFilter, statusFilter, search, updateUrl])
 
   // Hover-based activation: button becomes active after 1.5s of hovering
   const [readyToDeleteId, setReadyToDeleteId] = useState<string | null>(null)
@@ -178,6 +252,9 @@ export function SubmissionsFilter({
     return () => {
       if (hoverTimerRef.current) {
         clearTimeout(hoverTimerRef.current)
+      }
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current)
       }
     }
   }, [])
@@ -275,13 +352,13 @@ export function SubmissionsFilter({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Поиск по имени, email или модулю..."
                 className="pl-10"
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Select value={trailFilter} onValueChange={setTrailFilter}>
+              <Select value={trailFilter} onValueChange={handleTrailChange}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Trail" />
@@ -295,7 +372,7 @@ export function SubmissionsFilter({
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as "waiting" | "time_to_submit")}>
+              <Select value={sortBy} onValueChange={handleSortChange}>
                 <SelectTrigger className="w-[200px]">
                   <ArrowUpDown className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Сортировка" />
@@ -305,7 +382,7 @@ export function SubmissionsFilter({
                   <SelectItem value="time_to_submit">По времени выполнения</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Статус" />
                 </SelectTrigger>
@@ -438,7 +515,7 @@ export function SubmissionsFilter({
                       </div>
 
                       <Button asChild>
-                        <Link href={`/teacher/reviews/${submission.id}`}>
+                        <Link href={`/teacher/reviews/${submission.id}${currentQueryString ? `?from=${encodeURIComponent(currentQueryString)}` : ""}`}>
                           <Eye className="h-4 w-4 mr-2" />
                           Проверить
                         </Link>
@@ -606,7 +683,7 @@ export function SubmissionsFilter({
                     </div>
 
                     <Button asChild variant="outline" size="sm">
-                      <Link href={`/teacher/reviews/${submission.id}`}>
+                      <Link href={`/teacher/reviews/${submission.id}${currentQueryString ? `?from=${encodeURIComponent(currentQueryString)}` : ""}`}>
                         <Eye className="h-4 w-4 mr-1" />
                         Детали
                       </Link>
