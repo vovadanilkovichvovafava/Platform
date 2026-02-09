@@ -122,6 +122,14 @@ interface StudentSubmissions {
   total: number
 }
 
+interface ModuleCircle {
+  id: string
+  title: string
+  order: number
+  status: string // COMPLETED, IN_PROGRESS, NOT_STARTED
+  submissionId: string | null
+}
+
 interface TrailStudent {
   id: string
   name: string
@@ -133,6 +141,7 @@ interface TrailStudent {
   avgScore: number | null
   dateStart: string | null
   dateEnd: string | null
+  modules?: ModuleCircle[]
 }
 
 interface TrailStudentsGroup {
@@ -729,7 +738,7 @@ export default function AdvancedAnalyticsPage() {
                 </div>
                 <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
                   <p className="font-medium text-cyan-800 text-sm mb-1">Прогресс</p>
-                  <p className="text-xs text-cyan-700">Полоса + число: сколько модулей завершено из общего. 100% = все модули трейла пройдены.</p>
+                  <p className="text-xs text-cyan-700">Кружки: каждый = модуль трейла. Зелёный = завершён, жёлтый = в процессе, пустой = не начат. Клик по кружку открывает проверку работы.</p>
                 </div>
                 <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
                   <p className="font-medium text-cyan-800 text-sm mb-1">Date End</p>
@@ -1893,7 +1902,7 @@ export default function AdvancedAnalyticsPage() {
                                 <tr className="border-b text-left">
                                   <th className="py-2 px-3 font-medium">Имя</th>
                                   <th className="py-2 px-3 font-medium text-center">Date Start</th>
-                                  <th className="py-2 px-3 font-medium text-center">Прогресс</th>
+                                  <th className="py-2 px-3 font-medium">Прогресс</th>
                                   <th className="py-2 px-3 font-medium text-center">Date End</th>
                                   <th className="py-2 px-3 font-medium text-center">Работы</th>
                                   <th className="py-2 px-3 font-medium text-center">Ср. оценка</th>
@@ -1919,17 +1928,65 @@ export default function AdvancedAnalyticsPage() {
                                     <td className="py-2 px-3 text-center">
                                       <span className="text-xs text-gray-600">{formatDate(student.dateStart)}</span>
                                     </td>
-                                    <td className="py-2 px-3 text-center">
-                                      <div className="flex items-center justify-center gap-2">
-                                        <Progress
-                                          value={student.completionPercent}
-                                          className="h-2 w-16"
-                                        />
-                                        <span className="text-xs text-gray-600 whitespace-nowrap">
-                                          {student.modulesCompleted}/{student.totalModules}
-                                        </span>
-                                      </div>
-                                      <span className="text-xs text-gray-400">{student.completionPercent}%</span>
+                                    <td className="py-2 px-3">
+                                      {student.modules && student.modules.length > 0 ? (
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                          {student.modules.map((mod) => {
+                                            const isCompleted = mod.status === "COMPLETED"
+                                            const isInProgress = mod.status === "IN_PROGRESS"
+                                            const hasSubmission = mod.submissionId !== null
+
+                                            const circleEl = (
+                                              <div
+                                                key={mod.id}
+                                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                                  isCompleted
+                                                    ? "bg-green-500 border-green-500"
+                                                    : isInProgress
+                                                    ? "bg-yellow-100 border-yellow-400"
+                                                    : "bg-white border-gray-300"
+                                                } ${hasSubmission ? "cursor-pointer hover:scale-125 hover:shadow-md" : ""}`}
+                                                title={`${mod.title} — ${
+                                                  isCompleted ? "Завершён" : isInProgress ? "В процессе" : "Не начат"
+                                                }`}
+                                              >
+                                                {isCompleted && (
+                                                  <CheckCircle className="h-3 w-3 text-white" />
+                                                )}
+                                                {isInProgress && (
+                                                  <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                                                )}
+                                              </div>
+                                            )
+
+                                            if (hasSubmission) {
+                                              return (
+                                                <Link
+                                                  key={mod.id}
+                                                  href={`/teacher/reviews/${mod.submissionId}`}
+                                                  target="_blank"
+                                                >
+                                                  {circleEl}
+                                                </Link>
+                                              )
+                                            }
+                                            return circleEl
+                                          })}
+                                          <span className="text-xs text-gray-400 ml-1 whitespace-nowrap">
+                                            {student.modulesCompleted}/{student.totalModules}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-2">
+                                          <Progress
+                                            value={student.completionPercent}
+                                            className="h-2 w-16"
+                                          />
+                                          <span className="text-xs text-gray-600 whitespace-nowrap">
+                                            {student.modulesCompleted}/{student.totalModules}
+                                          </span>
+                                        </div>
+                                      )}
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       {student.dateEnd ? (
