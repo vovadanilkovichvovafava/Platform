@@ -13,6 +13,8 @@ import {
   getReviewUrl,
   isTelegramConfigured,
 } from "@/lib/telegram"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
+import { runAiSubmissionReview, isAiReviewAvailable } from "@/lib/ai-submission-review"
 
 const submissionSchema = z.object({
   moduleId: z.string().min(1),
@@ -252,6 +254,13 @@ export async function POST(request: Request) {
     processAchievementEvent("SUBMISSION_CREATED", session.user.id).catch((err) =>
       console.error("Achievement check after submission failed:", err)
     )
+
+    // Trigger AI submission review (non-blocking, isolated)
+    if (FEATURE_FLAGS.AI_SUBMISSION_REVIEW_ENABLED && isAiReviewAvailable()) {
+      runAiSubmissionReview(submission.id).catch((err) =>
+        console.error("[AI-SubmissionReview] Auto-trigger failed:", err instanceof Error ? err.message : err)
+      )
+    }
 
     // Strip internal time tracking fields from student-facing response
     const { editCount: _ec, lastEditedAt: _le, ...safeSubmission } = submission
