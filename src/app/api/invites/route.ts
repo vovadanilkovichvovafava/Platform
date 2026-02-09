@@ -3,7 +3,10 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds, ROLE_STUDENT, ROLE_TEACHER, ROLE_CO_ADMIN, ROLE_ADMIN } from "@/lib/admin-access"
+
+// Allowed roles for invite creation
+const ALLOWED_INVITE_ROLES = [ROLE_STUDENT, ROLE_TEACHER, ROLE_CO_ADMIN, ROLE_ADMIN] as const
 
 const createInviteSchema = z.object({
   code: z.string().min(3, "Код должен быть минимум 3 символа").toUpperCase(),
@@ -11,6 +14,7 @@ const createInviteSchema = z.object({
   maxUses: z.number().min(1).default(1),
   expiresAt: z.string().optional(),
   trailIds: z.array(z.string()).optional().default([]),
+  role: z.string().optional().default(ROLE_STUDENT),
 })
 
 // Cleanup periods in milliseconds
@@ -100,6 +104,20 @@ export async function POST(request: Request) {
     const body = await request.json()
     const data = createInviteSchema.parse(body)
 
+    // Validate role against whitelist
+    const inviteRole = data.role || ROLE_STUDENT
+    if (!ALLOWED_INVITE_ROLES.includes(inviteRole as typeof ALLOWED_INVITE_ROLES[number])) {
+      return NextResponse.json({ error: "Недопустимая роль" }, { status: 400 })
+    }
+
+    // RBAC: Only ADMIN can create invites with ADMIN or CO_ADMIN roles
+    if ((inviteRole === ROLE_ADMIN || inviteRole === ROLE_CO_ADMIN) && !isAdmin(session.user.role)) {
+      return NextResponse.json(
+        { error: "Только главный админ может создавать приглашения с ролью админа" },
+        { status: 403 }
+      )
+    }
+
     // Check if code already exists
     const existingInvite = await prisma.invite.findUnique({
       where: { code: data.code },
@@ -156,6 +174,7 @@ export async function POST(request: Request) {
         data: {
           code: data.code,
           email: data.email || null,
+          role: inviteRole,
           maxUses: data.maxUses,
           expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
           createdById: session.user.id,

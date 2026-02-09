@@ -68,6 +68,7 @@ model Invite {
   id          String    @id @default(cuid())
   code        String    @unique
   email       String?   // Optional: restrict to specific email
+  role        String    @default("STUDENT") // Role assigned on registration: STUDENT, TEACHER, CO_ADMIN, ADMIN
   maxUses     Int       @default(1)
   usedCount   Int       @default(0)
   expiresAt   DateTime?
