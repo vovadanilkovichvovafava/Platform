@@ -46,6 +46,8 @@ import {
   MoreHorizontal,
   Sparkles,
   X,
+  Lock,
+  PlayCircle,
 } from "lucide-react"
 import Link from "next/link"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -129,12 +131,16 @@ interface TrailStudent {
   completionPercent: number
   submissions: StudentSubmissions
   avgScore: number | null
+  dateStart: string | null
+  dateEnd: string | null
 }
 
 interface TrailStudentsGroup {
   trailId: string
   trailTitle: string
   trailSlug: string
+  isPasswordProtected?: boolean
+  isLocked?: boolean
   students: TrailStudent[]
 }
 
@@ -251,6 +257,8 @@ export default function AdvancedAnalyticsPage() {
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
   const [trailFilter, setTrailFilter] = useState("all")
   const [periodFilter, setPeriodFilter] = useState("30")
+  const [completionFilter, setCompletionFilter] = useState<"all" | "in_progress" | "completed">("all")
+  const [showGuide, setShowGuide] = useState(false)
   const [expandedDropoff, setExpandedDropoff] = useState<string | null>(null)
   const [expandedStudentTrail, setExpandedStudentTrail] = useState<string | null>(null)
   const [studentSearch, setStudentSearch] = useState("")
@@ -279,6 +287,8 @@ export default function AdvancedAnalyticsPage() {
       completionPercent: number
       avgScore: number | null
       submissions: StudentSubmissions | null
+      dateStart: string | null
+      dateEnd: string | null
       modules: Array<{
         id: string
         title: string
@@ -306,8 +316,8 @@ export default function AdvancedAnalyticsPage() {
     setSectionsExpanded(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
-  // Get all unique students from studentsByTrail for dropdown
-  const allStudents = data?.studentsByTrail?.flatMap(trail =>
+  // Get all unique students from studentsByTrail for dropdown (exclude locked trails)
+  const allStudents = data?.studentsByTrail?.filter(trail => !trail.isLocked).flatMap(trail =>
     trail.students.map(s => ({ id: s.id, name: s.name, trailTitle: trail.trailTitle }))
   ).reduce<Array<{ id: string; name: string; trails: string[] }>>((acc, curr) => {
     const existing = acc.find(s => s.id === curr.id)
@@ -347,6 +357,8 @@ export default function AdvancedAnalyticsPage() {
       completionPercent: number
       avgScore: number | null
       submissions: StudentSubmissions | null
+      dateStart: string | null
+      dateEnd: string | null
       modules: Array<{
         id: string
         title: string
@@ -358,6 +370,7 @@ export default function AdvancedAnalyticsPage() {
     }
 
     const trailProgress: TrailProgressItem[] = data.studentsByTrail
+      .filter(trail => !trail.isLocked)
       .map((trail): TrailProgressItem | null => {
         const studentInTrail = trail.students.find(s => s.id === studentId)
         if (!studentInTrail) return null
@@ -371,6 +384,8 @@ export default function AdvancedAnalyticsPage() {
           completionPercent: studentInTrail.completionPercent,
           avgScore: studentInTrail.avgScore,
           submissions: studentInTrail.submissions,
+          dateStart: studentInTrail.dateStart,
+          dateEnd: studentInTrail.dateEnd,
           modules: [],
         }
       })
@@ -497,6 +512,27 @@ export default function AdvancedAnalyticsPage() {
     }
   }
 
+  // Format ISO date to readable locale string
+  const formatDate = (dateStr: string | null): string => {
+    if (!dateStr) return "—"
+    try {
+      return new Date(dateStr).toLocaleDateString("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    } catch {
+      return "—"
+    }
+  }
+
+  // Filter students by completion status
+  const filterByCompletion = (students: TrailStudent[]): TrailStudent[] => {
+    if (completionFilter === "all") return students
+    if (completionFilter === "completed") return students.filter(s => s.dateEnd !== null)
+    return students.filter(s => s.dateEnd === null)
+  }
+
   // Открыть mailto с заполненной темой
   const openMailto = (email: string, studentName: string, daysSinceActive: number) => {
     const subject = encodeURIComponent(`Проверка активности - ${studentName}`)
@@ -574,6 +610,15 @@ export default function AdvancedAnalyticsPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button
+              onClick={() => setShowGuide(!showGuide)}
+              variant="outline"
+              size="sm"
+              className={showGuide ? "bg-cyan-50 border-cyan-200" : ""}
+            >
+              <HelpCircle className="h-4 w-4 mr-2" />
+              Гайд
+            </Button>
+            <Button
               onClick={() => setShowMethodology(!showMethodology)}
               variant="outline"
               size="sm"
@@ -630,13 +675,28 @@ export default function AdvancedAnalyticsPage() {
               </select>
             </div>
 
-            {(trailFilter !== "all" || periodFilter !== "30") && (
+            {/* Completion Status Filter */}
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-gray-400" />
+              <select
+                value={completionFilter}
+                onChange={(e) => setCompletionFilter(e.target.value as "all" | "in_progress" | "completed")}
+                className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="all">Все статусы</option>
+                <option value="in_progress">В процессе</option>
+                <option value="completed">Завершено</option>
+              </select>
+            </div>
+
+            {(trailFilter !== "all" || periodFilter !== "30" || completionFilter !== "all") && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setTrailFilter("all")
                   setPeriodFilter("30")
+                  setCompletionFilter("all")
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -646,6 +706,66 @@ export default function AdvancedAnalyticsPage() {
             )}
           </div>
         </div>
+
+        {/* Module C: Guide — Как читать аналитику */}
+        {showGuide && (
+          <Card className="mb-6 border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg text-cyan-900">
+                  <HelpCircle className="h-5 w-5" />
+                  Как читать аналитику
+                </CardTitle>
+                <button onClick={() => setShowGuide(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
+                  <p className="font-medium text-cyan-800 text-sm mb-1">Date Start</p>
+                  <p className="text-xs text-cyan-700">Дата первого начатого модуля в трейле. Автоматически фиксируется при открытии практики.</p>
+                </div>
+                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
+                  <p className="font-medium text-cyan-800 text-sm mb-1">Прогресс</p>
+                  <p className="text-xs text-cyan-700">Полоса + число: сколько модулей завершено из общего. 100% = все модули трейла пройдены.</p>
+                </div>
+                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
+                  <p className="font-medium text-cyan-800 text-sm mb-1">Date End</p>
+                  <p className="text-xs text-cyan-700">Дата завершения последнего модуля. Появляется только когда все модули трейла завершены.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
+                  <p className="font-medium text-cyan-800 text-sm mb-1">Фильтры</p>
+                  <ul className="text-xs text-cyan-700 space-y-0.5">
+                    <li>• <strong>Направление</strong> — выбор конкретного трейла</li>
+                    <li>• <strong>Период</strong> — временное окно анализа</li>
+                    <li>• <strong>Статус</strong> — в процессе / завершено</li>
+                  </ul>
+                </div>
+                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
+                  <p className="font-medium text-cyan-800 text-sm mb-1">Блоки</p>
+                  <ul className="text-xs text-cyan-700 space-y-0.5">
+                    <li>• <strong>Студенты по направлениям</strong> — прогресс всех студентов по каждому трейлу</li>
+                    <li>• <strong>Детальный анализ</strong> — drill-down по конкретному студенту + AI-разбор</li>
+                  </ul>
+                </div>
+              </div>
+              {/* Video guide placeholder */}
+              <div className="p-4 bg-white/50 rounded-lg border border-dashed border-cyan-300 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 shrink-0">
+                  <PlayCircle className="h-5 w-5 text-cyan-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-cyan-800">Видеогайд</p>
+                  <p className="text-xs text-cyan-600">Здесь будет видеоинструкция по работе с аналитикой. Вставьте ссылку на видео или embed-код.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Блок методологии сбора данных */}
         {showMethodology && (
@@ -1692,38 +1812,76 @@ export default function AdvancedAnalyticsPage() {
                 </div>
 
                 {data.studentsByTrail.map((trailGroup) => {
-                  const filteredStudents = studentSearch
+                  // Apply search filter
+                  const searchFiltered = studentSearch
                     ? trailGroup.students.filter((s) =>
                         s.name.toLowerCase().includes(studentSearch.toLowerCase())
                       )
                     : trailGroup.students
+                  // Apply completion filter
+                  const filteredStudents = filterByCompletion(searchFiltered)
 
-                  if (filteredStudents.length === 0 && studentSearch) return null
+                  if (filteredStudents.length === 0 && (studentSearch || completionFilter !== "all")) return null
+
+                  // Password lock check (Module D)
+                  const isLocked = trailGroup.isLocked === true
 
                   return (
                     <div key={trailGroup.trailId} className="border rounded-lg overflow-hidden">
                       <button
                         onClick={() =>
-                          setExpandedStudentTrail(
+                          !isLocked && setExpandedStudentTrail(
                             expandedStudentTrail === trailGroup.trailId ? null : trailGroup.trailId
                           )
                         }
-                        className="w-full flex items-center justify-between p-3 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer"
+                        className={`w-full flex items-center justify-between p-3 transition-colors ${
+                          isLocked
+                            ? "bg-gray-100 cursor-not-allowed"
+                            : "bg-indigo-50 hover:bg-indigo-100 cursor-pointer"
+                        }`}
                       >
                         <div className="flex items-center gap-3">
-                          <span className="font-medium text-indigo-900">{trailGroup.trailTitle}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {filteredStudents.length} студентов
-                          </Badge>
+                          {isLocked && <Lock className="h-4 w-4 text-gray-400" />}
+                          {trailGroup.isPasswordProtected && !isLocked && (
+                            <Lock className="h-3.5 w-3.5 text-indigo-400" />
+                          )}
+                          <span className={`font-medium ${isLocked ? "text-gray-500" : "text-indigo-900"}`}>
+                            {trailGroup.trailTitle}
+                          </span>
+                          {isLocked ? (
+                            <Badge className="text-xs bg-gray-200 text-gray-500 border-0">
+                              Требуется пароль
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">
+                              {filteredStudents.length} студентов
+                            </Badge>
+                          )}
                         </div>
-                        {expandedStudentTrail === trailGroup.trailId ? (
-                          <ChevronUp className="h-5 w-5 text-indigo-500" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5 text-indigo-500" />
+                        {!isLocked && (
+                          expandedStudentTrail === trailGroup.trailId ? (
+                            <ChevronUp className="h-5 w-5 text-indigo-500" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-indigo-500" />
+                          )
                         )}
                       </button>
 
-                      {expandedStudentTrail === trailGroup.trailId && (
+                      {isLocked && expandedStudentTrail === trailGroup.trailId && (
+                        <div className="p-4 text-center text-gray-500 text-sm bg-gray-50">
+                          <Lock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                          <p>Этот трейл защищён паролем. Введите пароль на странице трейла для доступа к данным.</p>
+                          <Link
+                            href={`/trails/${trailGroup.trailSlug}`}
+                            target="_blank"
+                            className="text-indigo-600 hover:underline text-sm mt-1 inline-flex items-center gap-1"
+                          >
+                            Перейти к трейлу <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </div>
+                      )}
+
+                      {!isLocked && expandedStudentTrail === trailGroup.trailId && (
                         <div className="max-h-96 overflow-y-auto">
                           {filteredStudents.length === 0 ? (
                             <div className="p-4 text-center text-gray-500 text-sm">
@@ -1733,11 +1891,12 @@ export default function AdvancedAnalyticsPage() {
                             <table className="w-full text-sm">
                               <thead className="bg-gray-50 sticky top-0">
                                 <tr className="border-b text-left">
-                                  <th className="py-2 px-3 font-medium">Студент</th>
+                                  <th className="py-2 px-3 font-medium">Имя</th>
+                                  <th className="py-2 px-3 font-medium text-center">Date Start</th>
                                   <th className="py-2 px-3 font-medium text-center">Прогресс</th>
+                                  <th className="py-2 px-3 font-medium text-center">Date End</th>
                                   <th className="py-2 px-3 font-medium text-center">Работы</th>
                                   <th className="py-2 px-3 font-medium text-center">Ср. оценка</th>
-                                  <th className="py-2 px-3 font-medium text-center">XP</th>
                                   <th className="py-2 px-3 font-medium w-10"></th>
                                 </tr>
                               </thead>
@@ -1758,15 +1917,28 @@ export default function AdvancedAnalyticsPage() {
                                       </Link>
                                     </td>
                                     <td className="py-2 px-3 text-center">
+                                      <span className="text-xs text-gray-600">{formatDate(student.dateStart)}</span>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
                                       <div className="flex items-center justify-center gap-2">
                                         <Progress
                                           value={student.completionPercent}
                                           className="h-2 w-16"
                                         />
-                                        <span className="text-xs text-gray-600">
+                                        <span className="text-xs text-gray-600 whitespace-nowrap">
                                           {student.modulesCompleted}/{student.totalModules}
                                         </span>
                                       </div>
+                                      <span className="text-xs text-gray-400">{student.completionPercent}%</span>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      {student.dateEnd ? (
+                                        <Badge className="text-xs bg-green-100 text-green-700 border-0">
+                                          {formatDate(student.dateEnd)}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-xs text-gray-400">—</span>
+                                      )}
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       <div className="flex items-center justify-center gap-1">
@@ -1794,11 +1966,6 @@ export default function AdvancedAnalyticsPage() {
                                       ) : (
                                         <span className="text-gray-400">—</span>
                                       )}
-                                    </td>
-                                    <td className="py-2 px-3 text-center">
-                                      <span className="font-medium text-amber-600">
-                                        {student.totalXP}
-                                      </span>
                                     </td>
                                     <td className="py-2 px-3">
                                       <Link
@@ -2072,10 +2239,31 @@ export default function AdvancedAnalyticsPage() {
                                 )}
                               </div>
                             </div>
+                            {/* Date Start / Progress / Date End row */}
+                            <div className="grid grid-cols-3 gap-2 mb-2 text-xs">
+                              <div>
+                                <span className="text-gray-400">Старт: </span>
+                                <span className="text-gray-700 font-medium">{formatDate(trail.dateStart)}</span>
+                              </div>
+                              <div className="text-center">
+                                <span className="text-gray-400">Прогресс: </span>
+                                <span className="text-gray-700 font-medium">
+                                  {trail.modulesCompleted}/{trail.totalModules} ({trail.completionPercent}%)
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-gray-400">Завершение: </span>
+                                {trail.dateEnd ? (
+                                  <span className="text-green-700 font-medium">{formatDate(trail.dateEnd)}</span>
+                                ) : (
+                                  <span className="text-gray-400">—</span>
+                                )}
+                              </div>
+                            </div>
                             <div className="flex items-center gap-3 mb-2">
                               <Progress value={trail.completionPercent} className="h-2 flex-1" />
                               <span className="text-xs text-gray-600 whitespace-nowrap">
-                                {trail.modulesCompleted}/{trail.totalModules} модулей ({trail.completionPercent}%)
+                                {trail.modulesCompleted}/{trail.totalModules} модулей
                               </span>
                             </div>
                             <div className="flex items-center gap-4 text-xs text-gray-500">

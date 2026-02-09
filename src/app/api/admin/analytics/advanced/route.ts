@@ -525,10 +525,13 @@ export async function GET(request: NextRequest) {
         id: true,
         title: true,
         slug: true,
+        isPasswordProtected: true,
+        createdById: true,
         enrollments: {
           take: 50, // Limit to prevent large payloads
           orderBy: { createdAt: "desc" },
           select: {
+            createdAt: true,
             user: {
               select: {
                 id: true,
@@ -539,7 +542,7 @@ export async function GET(request: NextRequest) {
           },
         },
         modules: {
-          select: { id: true },
+          select: { id: true, type: true },
         },
       },
     })
@@ -555,14 +558,43 @@ export async function GET(request: NextRequest) {
           trail.enrollments.map(async (enrollment: EnrollmentData) => {
             const userId = enrollment.user.id
 
-            // Get module progress for this student in this trail
-            const progress = await prisma.moduleProgress.count({
+            // Get module progress for this student in this trail (with dates)
+            const moduleProgressRecords = await prisma.moduleProgress.findMany({
               where: {
                 userId,
                 moduleId: { in: moduleIds },
-                status: "COMPLETED",
+              },
+              select: {
+                moduleId: true,
+                status: true,
+                startedAt: true,
+                completedAt: true,
               },
             })
+
+            const completedCount = moduleProgressRecords.filter(
+              (p: { status: string }) => p.status === "COMPLETED"
+            ).length
+
+            // dateStart: earliest startedAt among all module progress records
+            const startDates = moduleProgressRecords
+              .filter((p: { startedAt: Date | null }) => p.startedAt !== null)
+              .map((p: { startedAt: Date | null }) => new Date(p.startedAt!).getTime())
+            const dateStart = startDates.length > 0
+              ? new Date(Math.min(...startDates)).toISOString()
+              : null
+
+            // dateEnd: if ALL modules are completed, use the latest completedAt
+            const allCompleted = moduleIds.length > 0 && completedCount === moduleIds.length
+            let dateEnd: string | null = null
+            if (allCompleted) {
+              const endDates = moduleProgressRecords
+                .filter((p: { completedAt: Date | null }) => p.completedAt !== null)
+                .map((p: { completedAt: Date | null }) => new Date(p.completedAt!).getTime())
+              dateEnd = endDates.length > 0
+                ? new Date(Math.max(...endDates)).toISOString()
+                : null
+            }
 
             // Get submissions stats
             const submissionsStats = await prisma.submission.groupBy({
@@ -599,9 +631,9 @@ export async function GET(request: NextRequest) {
               id: userId,
               name: enrollment.user.name,
               totalXP: enrollment.user.totalXP,
-              modulesCompleted: progress,
+              modulesCompleted: completedCount,
               totalModules: moduleIds.length,
-              completionPercent: moduleIds.length > 0 ? Math.round((progress / moduleIds.length) * 100) : 0,
+              completionPercent: moduleIds.length > 0 ? Math.round((completedCount / moduleIds.length) * 100) : 0,
               submissions: {
                 approved,
                 pending,
@@ -609,6 +641,8 @@ export async function GET(request: NextRequest) {
                 total: approved + pending + revision,
               },
               avgScore,
+              dateStart,
+              dateEnd,
             }
           })
         )
@@ -617,10 +651,45 @@ export async function GET(request: NextRequest) {
           trailId: trail.id,
           trailTitle: trail.title,
           trailSlug: trail.slug,
+          isPasswordProtected: trail.isPasswordProtected,
+          createdById: trail.createdById,
           students: studentsWithProgress.sort((a, b) => b.completionPercent - a.completionPercent),
         }
       })
     )
+
+    // Module D: Filter password-protected trails in studentsByTrail
+    // Non-creators without password access see trail metadata but no student details
+    const passwordProtectedTrailIds = studentsByTrail
+      .filter(t => t.isPasswordProtected && t.createdById !== session.user.id)
+      .map(t => t.trailId)
+
+    let unlockedTrailIds: string[] = []
+    if (passwordProtectedTrailIds.length > 0) {
+      const passwordAccessRecords = await prisma.trailPasswordAccess.findMany({
+        where: {
+          userId: session.user.id,
+          trailId: { in: passwordProtectedTrailIds },
+        },
+        select: { trailId: true },
+      })
+      unlockedTrailIds = passwordAccessRecords.map(r => r.trailId)
+    }
+
+    const filteredStudentsByTrail = studentsByTrail.map(trail => {
+      const isLocked = trail.isPasswordProtected
+        && trail.createdById !== session.user.id
+        && !unlockedTrailIds.includes(trail.trailId)
+
+      return {
+        trailId: trail.trailId,
+        trailTitle: trail.trailTitle,
+        trailSlug: trail.trailSlug,
+        isPasswordProtected: trail.isPasswordProtected,
+        isLocked,
+        students: isLocked ? [] : trail.students,
+      }
+    })
 
     return NextResponse.json({
       churnRisk: {
@@ -646,8 +715,8 @@ export async function GET(request: NextRequest) {
       scoreDistribution,
       // Module drop-off analysis
       dropoffAnalysis,
-      // Students by trail with detailed progress
-      studentsByTrail,
+      // Students by trail with detailed progress (password-filtered)
+      studentsByTrail: filteredStudentsByTrail,
       // Filters data
       filters: {
         trails: trailsList,
