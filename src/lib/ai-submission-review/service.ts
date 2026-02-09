@@ -20,7 +20,6 @@ const AI_API_ENDPOINT =
 const AI_API_KEY = process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY
 const AI_MODEL = process.env.AI_MODEL || "claude-sonnet-4-5-20241022"
 const ANTHROPIC_VERSION = "2023-06-01"
-const AI_REVIEW_TIMEOUT_MS = 120_000 // 2 minutes max for review
 
 const LOG_PREFIX = "[AI-SubmissionReview]"
 
@@ -145,51 +144,43 @@ export async function runAiSubmissionReview(submissionId: string): Promise<strin
 
 /**
  * Call Claude API with the submission review prompt.
- * Includes 1 retry on parse failure with stricter instructions.
+ * No timeout — we always wait for the full AI response (cluster delivery).
  */
 async function callAiApi(userPrompt: string): Promise<string> {
   if (!AI_API_KEY) {
     throw new Error("AI API key not configured")
   }
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), AI_REVIEW_TIMEOUT_MS)
+  const response = await fetch(AI_API_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": AI_API_KEY,
+      "anthropic-version": ANTHROPIC_VERSION,
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      max_tokens: 4000,
+      system: getSystemPrompt(),
+      messages: [{ role: "user", content: userPrompt }],
+    }),
+  })
 
-  try {
-    const response = await fetch(AI_API_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": AI_API_KEY,
-        "anthropic-version": ANTHROPIC_VERSION,
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        max_tokens: 4000,
-        system: getSystemPrompt(),
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(
-        `AI API error ${response.status}: ${errorText.slice(0, 200)}`
-      )
-    }
-
-    const data = await response.json()
-    const text = data.content?.[0]?.text
-
-    if (!text) {
-      throw new Error("Empty response from AI")
-    }
-
-    return text
-  } finally {
-    clearTimeout(timeoutId)
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `AI API error ${response.status}: ${errorText.slice(0, 200)}`
+    )
   }
+
+  const data = await response.json()
+  const text = data.content?.[0]?.text
+
+  if (!text) {
+    throw new Error("Empty response from AI")
+  }
+
+  return text
 }
 
 /**
