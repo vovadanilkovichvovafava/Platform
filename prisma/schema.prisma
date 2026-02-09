@@ -291,12 +291,33 @@ model Submission {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  module Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  review Review?
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module   Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  review   Review?
+  aiReview AiSubmissionReview?
 
   @@index([userId])
   @@index([moduleId])
+  @@index([status])
+}
+
+// AI-powered analysis of a submission (isolated feature)
+model AiSubmissionReview {
+  id              String   @id @default(cuid())
+  submissionId    String   @unique
+  status          String   @default("pending") // pending, processing, completed, failed
+  analysisSummary String?  @db.Text            // JSON: analysis object
+  questions       String?  @db.Text            // JSON: array of questions
+  sourceCoverage  String?  @db.Text            // JSON: what sources were used
+  errorMessage    String?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
   @@index([status])
 }
 

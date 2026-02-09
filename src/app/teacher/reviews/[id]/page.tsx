@@ -22,6 +22,9 @@ import {
 } from "lucide-react"
 import { ReviewForm } from "@/components/review-form"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
+import { getAiReviewDTO } from "@/lib/ai-submission-review"
+import { AiSubmissionReview } from "@/components/ai-submission-review"
 
 interface Props {
   params: Promise<{ id: string }>
@@ -95,6 +98,11 @@ export default async function ReviewPage({ params, searchParams }: Props) {
     orderBy: { createdAt: "asc" },
     select: { createdAt: true },
   })
+
+  // Fetch AI review data if feature is enabled
+  const aiReviewData = FEATURE_FLAGS.AI_SUBMISSION_REVIEW_ENABLED
+    ? await getAiReviewDTO(submission.id).catch(() => null)
+    : null
 
   const moduleStartedAt = moduleProgress?.startedAt ?? null
   const firstSubmittedAt = firstSubmission?.createdAt ?? null
@@ -300,6 +308,14 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* AI Submission Review Section */}
+          {FEATURE_FLAGS.AI_SUBMISSION_REVIEW_ENABLED && (
+            <AiSubmissionReview
+              submissionId={submission.id}
+              initialData={aiReviewData}
+            />
           )}
         </div>
 
