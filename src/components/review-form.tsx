@@ -20,6 +20,7 @@ interface ReviewFormProps {
   moduleId: string
   userId: string
   modulePoints: number
+  returnTo?: string
 }
 
 type ReviewStatus = "APPROVED" | "REVISION" | "FAILED"
@@ -29,6 +30,7 @@ export function ReviewForm({
   moduleId,
   userId,
   modulePoints,
+  returnTo,
 }: ReviewFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -65,7 +67,7 @@ export function ReviewForm({
         throw new Error(result.error || "Ошибка при сохранении")
       }
 
-      router.push("/teacher")
+      router.push(returnTo || "/teacher")
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при сохранении")
