@@ -288,6 +288,7 @@ export default function AdvancedAnalyticsPage() {
     studentsByTrail: true,
     topStudents: true,
     studentAnalytics: true,
+    dropoffSection: true,
   })
   // Student drill-down analytics
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
@@ -911,783 +912,8 @@ export default function AdvancedAnalyticsPage() {
           </Card>
         )}
 
-        {/* Summary Cards with explanations */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-sm font-medium text-gray-700">{ANALYTICS_INFO.summary.title}</h2>
-            <span className="text-xs text-gray-500">— {ANALYTICS_INFO.summary.description}</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="group relative">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Users className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-2xl font-bold">{data.summary.totalStudents}</p>
-                    <p className="text-xs text-gray-500">Всего студентов</p>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-                <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
-                  {ANALYTICS_INFO.summary.metrics.totalStudents}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="group relative">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-2xl font-bold text-red-600">{data.summary.atRiskStudents}</p>
-                    <p className="text-xs text-gray-500">Риск отсева</p>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-                <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
-                  {ANALYTICS_INFO.summary.metrics.atRiskStudents}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="group relative">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-2xl font-bold text-green-600">{data.summary.conversionRate}%</p>
-                    <p className="text-xs text-gray-500">Конверсия</p>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-                <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
-                  {ANALYTICS_INFO.summary.metrics.conversionRate}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="group relative">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Activity className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-2xl font-bold">{data.summary.avgDailyActiveUsers}</p>
-                    <p className="text-xs text-gray-500">Сред. DAU</p>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-                <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
-                  {ANALYTICS_INFO.summary.metrics.avgDailyActiveUsers}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Churn Risk */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <TrendingDown className="h-5 w-5 text-red-500" />
-                {ANALYTICS_INFO.churnRisk.title}
-              </CardTitle>
-              <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.churnRisk.description}</p>
-            </CardHeader>
-            <CardContent>
-              {/* Краткое пояснение методологии */}
-              <div className="mb-4 p-2 bg-gray-50 rounded-lg text-xs text-gray-600 flex items-start gap-2">
-                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
-                <span>{ANALYTICS_INFO.churnRisk.methodology}</span>
-              </div>
-              {/* High Risk */}
-              <div className="mb-4">
-                <button
-                  onClick={() => setExpandedRisk(expandedRisk === "high" ? null : "high")}
-                  className="w-full flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-red-500">Высокий</Badge>
-                    <span className="text-red-700 font-medium">{data.churnRisk.highCount} студентов</span>
-                    <span className="text-red-600 text-sm">(14+ дней без активности)</span>
-                  </div>
-                  {expandedRisk === "high" ? (
-                    <ChevronUp className="h-5 w-5 text-red-500" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-red-500" />
-                  )}
-                </button>
-                {expandedRisk === "high" && data.churnRisk.high.length > 0 && (
-                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
-                    {data.churnRisk.high.map((student) => (
-                      <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-red-200 transition-colors">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900">{student.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{student.email}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge className="text-xs bg-red-100 text-red-700 border-0">
-                              {student.daysSinceActive} дней
-                            </Badge>
-                            {student.modulesCompleted !== undefined && (
-                              <span className="text-xs text-gray-400">
-                                {student.modulesCompleted} модулей
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 ml-2">
-                          {/* Кнопка копирования email */}
-                          <button
-                            onClick={() => copyEmail(student.email, student.name)}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="Копировать email"
-                          >
-                            {copiedEmail === student.email ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </button>
-                          {/* Кнопка mailto */}
-                          <button
-                            onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Написать письмо"
-                          >
-                            <Mail className="h-4 w-4" />
-                          </button>
-                          {/* Кнопка исключения (заглушка) */}
-                          <button
-                            onClick={() => handleExcludeStudent(student)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Исключить студента"
-                          >
-                            <UserX className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Medium Risk */}
-              <div className="mb-4">
-                <button
-                  onClick={() => setExpandedRisk(expandedRisk === "medium" ? null : "medium")}
-                  className="w-full flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-yellow-500">Средний</Badge>
-                    <span className="text-yellow-700 font-medium">{data.churnRisk.mediumCount} студентов</span>
-                    <span className="text-yellow-600 text-sm">(7-14 дней)</span>
-                  </div>
-                  {expandedRisk === "medium" ? (
-                    <ChevronUp className="h-5 w-5 text-yellow-500" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-yellow-500" />
-                  )}
-                </button>
-                {expandedRisk === "medium" && data.churnRisk.medium.length > 0 && (
-                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
-                    {data.churnRisk.medium.map((student) => (
-                      <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-yellow-200 transition-colors">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900">{student.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{student.email}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge className="text-xs bg-yellow-100 text-yellow-700 border-0">
-                              {student.daysSinceActive} дней
-                            </Badge>
-                            {student.modulesCompleted !== undefined && (
-                              <span className="text-xs text-gray-400">
-                                {student.modulesCompleted} модулей
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 ml-2">
-                          {/* Кнопка копирования email */}
-                          <button
-                            onClick={() => copyEmail(student.email, student.name)}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="Копировать email"
-                          >
-                            {copiedEmail === student.email ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </button>
-                          {/* Кнопка mailto */}
-                          <button
-                            onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Написать письмо"
-                          >
-                            <Mail className="h-4 w-4" />
-                          </button>
-                          {/* Кнопка исключения (заглушка) */}
-                          <button
-                            onClick={() => handleExcludeStudent(student)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Исключить студента"
-                          >
-                            <UserX className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Low Risk */}
-              <div className="mb-4">
-                <button
-                  onClick={() => setExpandedRisk(expandedRisk === "low" ? null : "low")}
-                  className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-green-500">Низкий</Badge>
-                    <span className="text-green-700 font-medium">{data.churnRisk.lowCount} студентов</span>
-                    <span className="text-green-600 text-sm">(активны)</span>
-                  </div>
-                  {expandedRisk === "low" ? (
-                    <ChevronUp className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-green-500" />
-                  )}
-                </button>
-                {expandedRisk === "low" && (
-                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
-                    {data.churnRisk.low.length === 0 ? (
-                      <p className="text-gray-500 text-sm text-center py-4">Нет активных студентов</p>
-                    ) : (
-                      data.churnRisk.low.map((student) => (
-                        <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-green-200 transition-colors">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-gray-900">{student.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{student.email}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge className="text-xs bg-green-100 text-green-700 border-0">
-                                {student.daysSinceActive === 0 ? "Сегодня" : `${student.daysSinceActive} д. назад`}
-                              </Badge>
-                              {student.modulesCompleted !== undefined && (
-                                <span className="text-xs text-gray-400">
-                                  {student.modulesCompleted} модулей
-                                </span>
-                              )}
-                              {student.xp !== undefined && student.xp > 0 && (
-                                <span className="text-xs text-amber-600">
-                                  {student.xp} XP
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 ml-2">
-                            {/* Кнопка копирования email */}
-                            <button
-                              onClick={() => copyEmail(student.email, student.name)}
-                              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Копировать email"
-                            >
-                              {copiedEmail === student.email ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Copy className="h-4 w-4" />
-                              )}
-                            </button>
-                            {/* Кнопка mailto */}
-                            <button
-                              onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Написать письмо"
-                            >
-                              <Mail className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                    {data.churnRisk.lowCount > 30 && (
-                      <p className="text-xs text-gray-500 text-center py-2">
-                        Показаны 30 из {data.churnRisk.lowCount} активных студентов
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Funnel */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <TrendingUp className="h-5 w-5 text-blue-500" />
-                {ANALYTICS_INFO.funnel.title}
-              </CardTitle>
-              <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.funnel.description}</p>
-            </CardHeader>
-            <CardContent>
-              {/* Краткое пояснение */}
-              <div className="mb-4 p-2 bg-gray-50 rounded-lg text-xs text-gray-600 flex items-start gap-2">
-                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
-                <span>{ANALYTICS_INFO.funnel.methodology}</span>
-              </div>
-              <div className="space-y-3">
-                {data.funnel.map((stage, index) => {
-                  // Определяем ключ для подсказки
-                  const stageKeys = ["registered", "enrolled", "started", "submitted", "completed", "certified"]
-                  const stageKey = stageKeys[index] as keyof typeof ANALYTICS_INFO.funnel.stages
-                  const stageHint = ANALYTICS_INFO.funnel.stages[stageKey]
-
-                  return (
-                    <div key={stage.stage} className="relative group">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium">{stage.stage}</span>
-                          {stageHint && (
-                            <div className="relative">
-                              <HelpCircle className="h-3 w-3 text-gray-400 cursor-help" />
-                              <div className="hidden group-hover:block absolute z-10 left-0 top-full mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
-                                {stageHint}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {stage.count} ({stage.percent}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-6 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            index === 0
-                              ? "bg-blue-500"
-                              : index === data.funnel.length - 1
-                              ? "bg-green-500"
-                              : "bg-blue-400"
-                          }`}
-                          style={{ width: `${stage.count > 0 ? Math.max(stage.percent, 2) : 0}%` }}
-                        />
-                      </div>
-                      {index < data.funnel.length - 1 && (
-                        <div className="text-center my-1">
-                          {(() => {
-                            const nextStage = data.funnel[index + 1]
-                            if (stage.count === 0 || nextStage.count === 0) {
-                              return <span className="text-xs text-gray-400">—</span>
-                            }
-                            const conversionRate = Math.round((nextStage.count / stage.count) * 100)
-                            const isAnomalous = conversionRate > 100
-
-                            return (
-                              <span className={`text-xs ${isAnomalous ? "text-orange-500" : "text-gray-400"}`}>
-                                {isAnomalous ? (
-                                  <span className="flex items-center justify-center gap-1 relative">
-                                    <AlertTriangle className="h-3 w-3" />
-                                    {nextStage.count} из {stage.count} ({conversionRate}%)
-                                    <span className="relative cursor-help">
-                                      <HelpCircle className="h-3 w-3 hover:text-orange-600" />
-                                      <span className="hidden group-hover:block absolute z-20 left-1/2 transform -translate-x-1/2 bottom-full mb-1 p-2 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
-                                        &gt;100% означает, что студенты пропустили предыдущие шаги
-                                      </span>
-                                    </span>
-                                  </span>
-                                ) : (
-                                  `${nextStage.count} из ${stage.count} (${conversionRate}%) переходят`
-                                )}
-                              </span>
-                            )
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Module Difficulty */}
-        <Card>
-          <CardHeader className="cursor-pointer" onClick={() => toggleSection("difficulty")}>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BarChart3 className="h-5 w-5 text-purple-500" />
-                {ANALYTICS_INFO.difficulty.title}
-              </CardTitle>
-              {sectionsExpanded.difficulty ? (
-                <ChevronUp className="h-5 w-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-gray-400" />
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.difficulty.description}</p>
-          </CardHeader>
-          {sectionsExpanded.difficulty && <CardContent>
-            {/* Методология */}
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-start gap-2 text-xs text-gray-600 mb-2">
-                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
-                <span>{ANALYTICS_INFO.difficulty.methodology}</span>
-              </div>
-              <div className="flex flex-wrap gap-3 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-green-500"></div>
-                  <span className="text-gray-600">Лёгкий (8+)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-yellow-500"></div>
-                  <span className="text-gray-600">Средний (6-8)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-red-500"></div>
-                  <span className="text-gray-600">Сложный (&lt;6)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-gray-300"></div>
-                  <span className="text-gray-600">Нет данных</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="py-2 font-medium">Модуль</th>
-                    <th className="py-2 font-medium text-center">Тип</th>
-                    <th className="py-2 font-medium text-center">
-                      <div className="flex items-center justify-center gap-1 group relative">
-                        Завершили
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
-                        <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
-                          Количество студентов, завершивших модуль
-                        </span>
-                      </div>
-                    </th>
-                    <th className="py-2 font-medium text-center">
-                      <div className="flex items-center justify-center gap-1 group relative">
-                        Работ
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
-                        <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
-                          Общее количество отправленных работ
-                        </span>
-                      </div>
-                    </th>
-                    <th className="py-2 font-medium text-center">
-                      <div className="flex items-center justify-center gap-1 group relative">
-                        Ср. оценка
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
-                        <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
-                          Средний балл проверенных работ
-                        </span>
-                      </div>
-                    </th>
-                    <th className="py-2 font-medium text-center">Сложность</th>
-                    <th className="py-2 font-medium w-10"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.difficultyAnalysis.slice(0, 15).map((module) => (
-                    <tr key={module.id} className="border-b hover:bg-gray-50 transition-colors group">
-                      <td className="py-2">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">{module.title}</span>
-                          {module.trailTitle && (
-                            <Link
-                              href={`/trails/${module.trailSlug}`}
-                              target="_blank"
-                              className="text-xs text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-1"
-                            >
-                              <Layers className="h-3 w-3" />
-                              {module.trailTitle}
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2 text-center">
-                        <Badge variant="outline" className="text-xs">
-                          {module.type === "THEORY" ? "Теория" : module.type === "PRACTICE" ? "Практика" : "Проект"}
-                        </Badge>
-                      </td>
-                      <td className="py-2 text-center">{module.completedCount}</td>
-                      <td className="py-2 text-center">{module.submissionCount}</td>
-                      <td className="py-2 text-center">
-                        {module.avgScore !== null ? (
-                          <span className={`font-medium ${
-                            module.avgScore >= 8 ? "text-green-600" :
-                            module.avgScore >= 6 ? "text-yellow-600" :
-                            "text-red-600"
-                          }`}>
-                            {module.avgScore}/10
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="py-2 text-center">
-                        <Badge className={`text-xs border-0 ${
-                          module.difficulty === "hard" ? "bg-red-100 text-red-700" :
-                          module.difficulty === "medium" ? "bg-yellow-100 text-yellow-700" :
-                          module.difficulty === "easy" ? "bg-green-100 text-green-700" :
-                          "bg-gray-100 text-gray-500"
-                        }`}>
-                          {module.difficulty === "hard" ? "Сложный" :
-                           module.difficulty === "medium" ? "Средний" :
-                           module.difficulty === "easy" ? "Лёгкий" : "Н/Д"}
-                        </Badge>
-                      </td>
-                      <td className="py-2">
-                        <Link
-                          href={`/module/${module.slug}`}
-                          target="_blank"
-                          className="p-1 text-gray-400 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {data.difficultyAnalysis.length > 15 && (
-                <p className="text-xs text-gray-500 mt-3 text-center">
-                  Показаны первые 15 модулей (всего: {data.difficultyAnalysis.length})
-                </p>
-              )}
-            </div>
-          </CardContent>}
-        </Card>
-
-        {/* Module Drop-off Analysis - Bottlenecks */}
-        {data.dropoffAnalysis && data.dropoffAnalysis.length > 0 && (
-          <div className="mt-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="h-5 w-5 text-orange-500" />
-              <h2 className="text-lg font-semibold text-gray-900">Анализ Drop-off по модулям</h2>
-              <span className="text-xs text-gray-500">— Где студенты останавливаются</span>
-            </div>
-
-            <div className="space-y-4">
-              {data.dropoffAnalysis.map((trail) => (
-                <Card key={trail.trailId}>
-                  <CardHeader className="pb-2">
-                    <div className="w-full flex items-center justify-between">
-                      <button
-                        onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)}
-                        className="flex items-center gap-3 flex-1 cursor-pointer"
-                      >
-                        <CardTitle className="text-base">{trail.trailTitle}</CardTitle>
-                        <Badge variant="outline" className="text-xs">
-                          <Users className="h-3 w-3 mr-1" />
-                          {trail.totalEnrolled} записались
-                        </Badge>
-                        {trail.modules.some(m => m.isBottleneck) && (
-                          <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            {trail.modules.filter(m => m.isBottleneck).length} узких мест
-                          </Badge>
-                        )}
-                      </button>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/trails/${trail.trailSlug}`}
-                          target="_blank"
-                          className="p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 rounded transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Link>
-                        <button onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)} className="cursor-pointer">
-                          {expandedDropoff === trail.trailId ? (
-                            <ChevronUp className="h-5 w-5 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="h-5 w-5 text-gray-400" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  {expandedDropoff === trail.trailId && (
-                    <CardContent className="pt-0">
-                      {/* Visual funnel */}
-                      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                          <Info className="h-3.5 w-3.5" />
-                          <span>Визуализация: ширина блока = % завершивших</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {trail.modules.map((module, index) => (
-                            <div key={module.id} className="flex items-center">
-                              <div
-                                className={`h-8 rounded transition-all ${
-                                  module.isBottleneck
-                                    ? "bg-orange-400"
-                                    : module.completionRate >= 70
-                                    ? "bg-green-400"
-                                    : module.completionRate >= 40
-                                    ? "bg-yellow-400"
-                                    : "bg-red-400"
-                                }`}
-                                style={{
-                                  width: `${Math.max(module.completionRate, 5)}px`,
-                                  minWidth: "20px",
-                                  maxWidth: "100px",
-                                }}
-                                title={`${module.title}: ${module.completionRate}%`}
-                              />
-                              {index < trail.modules.length - 1 && (
-                                <ArrowRight className="h-4 w-4 text-gray-300 mx-0.5" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Table */}
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b text-left">
-                              <th className="py-2 font-medium w-8">#</th>
-                              <th className="py-2 font-medium">Модуль</th>
-                              <th className="py-2 font-medium text-center">Тип</th>
-                              <th className="py-2 font-medium text-center">Начали</th>
-                              <th className="py-2 font-medium text-center">Завершили</th>
-                              <th className="py-2 font-medium text-center">% завершения</th>
-                              <th className="py-2 font-medium text-center">Drop-off</th>
-                              <th className="py-2 font-medium text-center">Ср. время</th>
-                              <th className="py-2 font-medium w-8"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {trail.modules.map((module, index) => (
-                              <tr
-                                key={module.id}
-                                className={`border-b hover:bg-gray-50 transition-colors group ${
-                                  module.isBottleneck ? "bg-orange-50" : ""
-                                }`}
-                              >
-                                <td className="py-2 text-gray-500">{index + 1}</td>
-                                <td className="py-2">
-                                  <div className="flex items-center gap-2">
-                                    <Link
-                                      href={`/module/${module.slug}`}
-                                      target="_blank"
-                                      className="font-medium text-gray-900 hover:text-purple-700 hover:underline"
-                                    >
-                                      {module.title}
-                                    </Link>
-                                    {module.isBottleneck && (
-                                      <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
-                                        Узкое место
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-2 text-center">
-                                  <Badge variant="outline" className="text-xs">
-                                    {module.type === "THEORY" ? "Теория" : module.type === "PRACTICE" ? "Практика" : "Проект"}
-                                  </Badge>
-                                </td>
-                                <td className="py-2 text-center">{module.startedCount}</td>
-                                <td className="py-2 text-center font-medium">{module.completedCount}</td>
-                                <td className="py-2 text-center">
-                                  <div className="flex items-center justify-center gap-2">
-                                    <Progress
-                                      value={module.completionRate}
-                                      className="h-2 w-16"
-                                    />
-                                    <span className={`text-xs font-medium ${
-                                      module.completionRate >= 70 ? "text-green-600" :
-                                      module.completionRate >= 40 ? "text-yellow-600" :
-                                      "text-red-600"
-                                    }`}>
-                                      {module.completionRate}%
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-2 text-center">
-                                  {module.dropRate > 0 ? (
-                                    <span className={`text-xs font-medium ${
-                                      module.dropRate > 30 ? "text-red-600" :
-                                      module.dropRate > 15 ? "text-yellow-600" :
-                                      "text-gray-500"
-                                    }`}>
-                                      -{module.dropRate}%
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-400">—</span>
-                                  )}
-                                </td>
-                                <td className="py-2 text-center text-gray-500">
-                                  {module.avgTimeDays > 0 ? `${module.avgTimeDays} д.` : "—"}
-                                </td>
-                                <td className="py-2">
-                                  <Link
-                                    href={`/module/${module.slug}`}
-                                    target="_blank"
-                                    className="p-1 text-gray-400 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                  </Link>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Summary insights */}
-                      {trail.modules.some(m => m.isBottleneck) && (
-                        <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                          <div className="flex items-center gap-2 text-orange-700 font-medium mb-2">
-                            <AlertTriangle className="h-4 w-4" />
-                            Обнаружены узкие места
-                          </div>
-                          <ul className="text-sm text-orange-600 space-y-1">
-                            {trail.modules
-                              .filter(m => m.isBottleneck)
-                              .map(m => (
-                                <li key={m.id}>
-                                  • <strong>{m.title}</strong>: {m.dropRate}% студентов не продолжают после этого модуля
-                                </li>
-                              ))}
-                          </ul>
-                          <p className="text-xs text-orange-500 mt-2">
-                            Рекомендация: проверьте сложность контента или добавьте дополнительные материалы
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  )}
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Student Progress Section - Графики развития */}
-        <div className="mt-8">
+        <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Trophy className="h-5 w-5 text-amber-500" />
             <h2 className="text-lg font-semibold text-gray-900">Развитие студентов</h2>
@@ -2582,6 +1808,792 @@ export default function AdvancedAnalyticsPage() {
             </Card>
           )}
         </div>
+
+        {/* Summary Cards with explanations */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-sm font-medium text-gray-700">{ANALYTICS_INFO.summary.title}</h2>
+            <span className="text-xs text-gray-500">— {ANALYTICS_INFO.summary.description}</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="group relative">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-2xl font-bold">{data.summary.totalStudents}</p>
+                    <p className="text-xs text-gray-500">Всего студентов</p>
+                  </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+                  {ANALYTICS_INFO.summary.metrics.totalStudents}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="group relative">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-2xl font-bold text-red-600">{data.summary.atRiskStudents}</p>
+                    <p className="text-xs text-gray-500">Риск отсева</p>
+                  </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+                  {ANALYTICS_INFO.summary.metrics.atRiskStudents}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="group relative">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-2xl font-bold text-green-600">{data.summary.conversionRate}%</p>
+                    <p className="text-xs text-gray-500">Конверсия</p>
+                  </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+                  {ANALYTICS_INFO.summary.metrics.conversionRate}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="group relative">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Activity className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-2xl font-bold">{data.summary.avgDailyActiveUsers}</p>
+                    <p className="text-xs text-gray-500">Сред. DAU</p>
+                  </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+                  {ANALYTICS_INFO.summary.metrics.avgDailyActiveUsers}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Churn Risk */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <TrendingDown className="h-5 w-5 text-red-500" />
+                {ANALYTICS_INFO.churnRisk.title}
+              </CardTitle>
+              <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.churnRisk.description}</p>
+            </CardHeader>
+            <CardContent>
+              {/* Краткое пояснение методологии */}
+              <div className="mb-4 p-2 bg-gray-50 rounded-lg text-xs text-gray-600 flex items-start gap-2">
+                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
+                <span>{ANALYTICS_INFO.churnRisk.methodology}</span>
+              </div>
+              {/* High Risk */}
+              <div className="mb-4">
+                <button
+                  onClick={() => setExpandedRisk(expandedRisk === "high" ? null : "high")}
+                  className="w-full flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-red-500">Высокий</Badge>
+                    <span className="text-red-700 font-medium">{data.churnRisk.highCount} студентов</span>
+                    <span className="text-red-600 text-sm">(14+ дней без активности)</span>
+                  </div>
+                  {expandedRisk === "high" ? (
+                    <ChevronUp className="h-5 w-5 text-red-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-red-500" />
+                  )}
+                </button>
+                {expandedRisk === "high" && data.churnRisk.high.length > 0 && (
+                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                    {data.churnRisk.high.map((student) => (
+                      <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-red-200 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-gray-900">{student.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className="text-xs bg-red-100 text-red-700 border-0">
+                              {student.daysSinceActive} дней
+                            </Badge>
+                            {student.modulesCompleted !== undefined && (
+                              <span className="text-xs text-gray-400">
+                                {student.modulesCompleted} модулей
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          {/* Кнопка копирования email */}
+                          <button
+                            onClick={() => copyEmail(student.email, student.name)}
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Копировать email"
+                          >
+                            {copiedEmail === student.email ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </button>
+                          {/* Кнопка mailto */}
+                          <button
+                            onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Написать письмо"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </button>
+                          {/* Кнопка исключения (заглушка) */}
+                          <button
+                            onClick={() => handleExcludeStudent(student)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Исключить студента"
+                          >
+                            <UserX className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Medium Risk */}
+              <div className="mb-4">
+                <button
+                  onClick={() => setExpandedRisk(expandedRisk === "medium" ? null : "medium")}
+                  className="w-full flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-yellow-500">Средний</Badge>
+                    <span className="text-yellow-700 font-medium">{data.churnRisk.mediumCount} студентов</span>
+                    <span className="text-yellow-600 text-sm">(7-14 дней)</span>
+                  </div>
+                  {expandedRisk === "medium" ? (
+                    <ChevronUp className="h-5 w-5 text-yellow-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-yellow-500" />
+                  )}
+                </button>
+                {expandedRisk === "medium" && data.churnRisk.medium.length > 0 && (
+                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                    {data.churnRisk.medium.map((student) => (
+                      <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-yellow-200 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-gray-900">{student.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className="text-xs bg-yellow-100 text-yellow-700 border-0">
+                              {student.daysSinceActive} дней
+                            </Badge>
+                            {student.modulesCompleted !== undefined && (
+                              <span className="text-xs text-gray-400">
+                                {student.modulesCompleted} модулей
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          {/* Кнопка копирования email */}
+                          <button
+                            onClick={() => copyEmail(student.email, student.name)}
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Копировать email"
+                          >
+                            {copiedEmail === student.email ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </button>
+                          {/* Кнопка mailto */}
+                          <button
+                            onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Написать письмо"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </button>
+                          {/* Кнопка исключения (заглушка) */}
+                          <button
+                            onClick={() => handleExcludeStudent(student)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Исключить студента"
+                          >
+                            <UserX className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Low Risk */}
+              <div className="mb-4">
+                <button
+                  onClick={() => setExpandedRisk(expandedRisk === "low" ? null : "low")}
+                  className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-500">Низкий</Badge>
+                    <span className="text-green-700 font-medium">{data.churnRisk.lowCount} студентов</span>
+                    <span className="text-green-600 text-sm">(активны)</span>
+                  </div>
+                  {expandedRisk === "low" ? (
+                    <ChevronUp className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-green-500" />
+                  )}
+                </button>
+                {expandedRisk === "low" && (
+                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                    {data.churnRisk.low.length === 0 ? (
+                      <p className="text-gray-500 text-sm text-center py-4">Нет активных студентов</p>
+                    ) : (
+                      data.churnRisk.low.map((student) => (
+                        <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-green-200 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-gray-900">{student.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className="text-xs bg-green-100 text-green-700 border-0">
+                                {student.daysSinceActive === 0 ? "Сегодня" : `${student.daysSinceActive} д. назад`}
+                              </Badge>
+                              {student.modulesCompleted !== undefined && (
+                                <span className="text-xs text-gray-400">
+                                  {student.modulesCompleted} модулей
+                                </span>
+                              )}
+                              {student.xp !== undefined && student.xp > 0 && (
+                                <span className="text-xs text-amber-600">
+                                  {student.xp} XP
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 ml-2">
+                            {/* Кнопка копирования email */}
+                            <button
+                              onClick={() => copyEmail(student.email, student.name)}
+                              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Копировать email"
+                            >
+                              {copiedEmail === student.email ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </button>
+                            {/* Кнопка mailto */}
+                            <button
+                              onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Написать письмо"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {data.churnRisk.lowCount > 30 && (
+                      <p className="text-xs text-gray-500 text-center py-2">
+                        Показаны 30 из {data.churnRisk.lowCount} активных студентов
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Funnel */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+                {ANALYTICS_INFO.funnel.title}
+              </CardTitle>
+              <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.funnel.description}</p>
+            </CardHeader>
+            <CardContent>
+              {/* Краткое пояснение */}
+              <div className="mb-4 p-2 bg-gray-50 rounded-lg text-xs text-gray-600 flex items-start gap-2">
+                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
+                <span>{ANALYTICS_INFO.funnel.methodology}</span>
+              </div>
+              <div className="space-y-3">
+                {data.funnel.map((stage, index) => {
+                  // Определяем ключ для подсказки
+                  const stageKeys = ["registered", "enrolled", "started", "submitted", "completed", "certified"]
+                  const stageKey = stageKeys[index] as keyof typeof ANALYTICS_INFO.funnel.stages
+                  const stageHint = ANALYTICS_INFO.funnel.stages[stageKey]
+
+                  return (
+                    <div key={stage.stage} className="relative group">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-medium">{stage.stage}</span>
+                          {stageHint && (
+                            <div className="relative">
+                              <HelpCircle className="h-3 w-3 text-gray-400 cursor-help" />
+                              <div className="hidden group-hover:block absolute z-10 left-0 top-full mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+                                {stageHint}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          {stage.count} ({stage.percent}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-6 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            index === 0
+                              ? "bg-blue-500"
+                              : index === data.funnel.length - 1
+                              ? "bg-green-500"
+                              : "bg-blue-400"
+                          }`}
+                          style={{ width: `${stage.count > 0 ? Math.max(stage.percent, 2) : 0}%` }}
+                        />
+                      </div>
+                      {index < data.funnel.length - 1 && (
+                        <div className="text-center my-1">
+                          {(() => {
+                            const nextStage = data.funnel[index + 1]
+                            if (stage.count === 0 || nextStage.count === 0) {
+                              return <span className="text-xs text-gray-400">—</span>
+                            }
+                            const conversionRate = Math.round((nextStage.count / stage.count) * 100)
+                            const isAnomalous = conversionRate > 100
+
+                            return (
+                              <span className={`text-xs ${isAnomalous ? "text-orange-500" : "text-gray-400"}`}>
+                                {isAnomalous ? (
+                                  <span className="flex items-center justify-center gap-1 relative">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {nextStage.count} из {stage.count} ({conversionRate}%)
+                                    <span className="relative cursor-help">
+                                      <HelpCircle className="h-3 w-3 hover:text-orange-600" />
+                                      <span className="hidden group-hover:block absolute z-20 left-1/2 transform -translate-x-1/2 bottom-full mb-1 p-2 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
+                                        &gt;100% означает, что студенты пропустили предыдущие шаги
+                                      </span>
+                                    </span>
+                                  </span>
+                                ) : (
+                                  `${nextStage.count} из ${stage.count} (${conversionRate}%) переходят`
+                                )}
+                              </span>
+                            )
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Module Difficulty */}
+        <Card>
+          <CardHeader className="cursor-pointer" onClick={() => toggleSection("difficulty")}>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BarChart3 className="h-5 w-5 text-purple-500" />
+                {ANALYTICS_INFO.difficulty.title}
+              </CardTitle>
+              {sectionsExpanded.difficulty ? (
+                <ChevronUp className="h-5 w-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-400" />
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.difficulty.description}</p>
+          </CardHeader>
+          {sectionsExpanded.difficulty && <CardContent>
+            {/* Методология */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-start gap-2 text-xs text-gray-600 mb-2">
+                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
+                <span>{ANALYTICS_INFO.difficulty.methodology}</span>
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-green-500"></div>
+                  <span className="text-gray-600">Лёгкий (8+)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-yellow-500"></div>
+                  <span className="text-gray-600">Средний (6-8)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-red-500"></div>
+                  <span className="text-gray-600">Сложный (&lt;6)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-gray-300"></div>
+                  <span className="text-gray-600">Нет данных</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 font-medium">Модуль</th>
+                    <th className="py-2 font-medium text-center">Тип</th>
+                    <th className="py-2 font-medium text-center">
+                      <div className="flex items-center justify-center gap-1 group relative">
+                        Завершили
+                        <HelpCircle className="h-3 w-3 text-gray-400" />
+                        <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
+                          Количество студентов, завершивших модуль
+                        </span>
+                      </div>
+                    </th>
+                    <th className="py-2 font-medium text-center">
+                      <div className="flex items-center justify-center gap-1 group relative">
+                        Работ
+                        <HelpCircle className="h-3 w-3 text-gray-400" />
+                        <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
+                          Общее количество отправленных работ
+                        </span>
+                      </div>
+                    </th>
+                    <th className="py-2 font-medium text-center">
+                      <div className="flex items-center justify-center gap-1 group relative">
+                        Ср. оценка
+                        <HelpCircle className="h-3 w-3 text-gray-400" />
+                        <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
+                          Средний балл проверенных работ
+                        </span>
+                      </div>
+                    </th>
+                    <th className="py-2 font-medium text-center">Сложность</th>
+                    <th className="py-2 font-medium w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.difficultyAnalysis.slice(0, 15).map((module) => (
+                    <tr key={module.id} className="border-b hover:bg-gray-50 transition-colors group">
+                      <td className="py-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">{module.title}</span>
+                          {module.trailTitle && (
+                            <Link
+                              href={`/trails/${module.trailSlug}`}
+                              target="_blank"
+                              className="text-xs text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-1"
+                            >
+                              <Layers className="h-3 w-3" />
+                              {module.trailTitle}
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 text-center">
+                        <Badge variant="outline" className="text-xs">
+                          {module.type === "THEORY" ? "Теория" : module.type === "PRACTICE" ? "Практика" : "Проект"}
+                        </Badge>
+                      </td>
+                      <td className="py-2 text-center">{module.completedCount}</td>
+                      <td className="py-2 text-center">{module.submissionCount}</td>
+                      <td className="py-2 text-center">
+                        {module.avgScore !== null ? (
+                          <span className={`font-medium ${
+                            module.avgScore >= 8 ? "text-green-600" :
+                            module.avgScore >= 6 ? "text-yellow-600" :
+                            "text-red-600"
+                          }`}>
+                            {module.avgScore}/10
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-center">
+                        <Badge className={`text-xs border-0 ${
+                          module.difficulty === "hard" ? "bg-red-100 text-red-700" :
+                          module.difficulty === "medium" ? "bg-yellow-100 text-yellow-700" :
+                          module.difficulty === "easy" ? "bg-green-100 text-green-700" :
+                          "bg-gray-100 text-gray-500"
+                        }`}>
+                          {module.difficulty === "hard" ? "Сложный" :
+                           module.difficulty === "medium" ? "Средний" :
+                           module.difficulty === "easy" ? "Лёгкий" : "Н/Д"}
+                        </Badge>
+                      </td>
+                      <td className="py-2">
+                        <Link
+                          href={`/module/${module.slug}`}
+                          target="_blank"
+                          className="p-1 text-gray-400 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {data.difficultyAnalysis.length > 15 && (
+                <p className="text-xs text-gray-500 mt-3 text-center">
+                  Показаны первые 15 модулей (всего: {data.difficultyAnalysis.length})
+                </p>
+              )}
+            </div>
+          </CardContent>}
+        </Card>
+
+        {/* Module Drop-off Analysis - Bottlenecks */}
+        {data.dropoffAnalysis && data.dropoffAnalysis.length > 0 && (
+          <div className="mt-8">
+            <button
+              onClick={() => toggleSection("dropoffSection")}
+              className="flex items-center gap-2 mb-4 cursor-pointer w-full"
+            >
+              <Zap className="h-5 w-5 text-orange-500" />
+              <h2 className="text-lg font-semibold text-gray-900">Анализ Drop-off по модулям</h2>
+              <span className="text-xs text-gray-500">— Где студенты останавливаются</span>
+              <div className="ml-auto">
+                {sectionsExpanded.dropoffSection ? (
+                  <ChevronUp className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                )}
+              </div>
+            </button>
+
+            {sectionsExpanded.dropoffSection && <div className="space-y-4">
+              {data.dropoffAnalysis.map((trail) => (
+                <Card key={trail.trailId}>
+                  <CardHeader className="pb-2">
+                    <div className="w-full flex items-center justify-between">
+                      <button
+                        onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)}
+                        className="flex items-center gap-3 flex-1 cursor-pointer"
+                      >
+                        <CardTitle className="text-base">{trail.trailTitle}</CardTitle>
+                        <Badge variant="outline" className="text-xs">
+                          <Users className="h-3 w-3 mr-1" />
+                          {trail.totalEnrolled} записались
+                        </Badge>
+                        {trail.modules.some(m => m.isBottleneck) && (
+                          <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {trail.modules.filter(m => m.isBottleneck).length} узких мест
+                          </Badge>
+                        )}
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/trails/${trail.trailSlug}`}
+                          target="_blank"
+                          className="p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 rounded transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                        <button onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)} className="cursor-pointer">
+                          {expandedDropoff === trail.trailId ? (
+                            <ChevronUp className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  {expandedDropoff === trail.trailId && (
+                    <CardContent className="pt-0">
+                      {/* Visual funnel */}
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                          <Info className="h-3.5 w-3.5" />
+                          <span>Визуализация: ширина блока = % завершивших</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {trail.modules.map((module, index) => (
+                            <div key={module.id} className="flex items-center">
+                              <div
+                                className={`h-8 rounded transition-all ${
+                                  module.isBottleneck
+                                    ? "bg-orange-400"
+                                    : module.completionRate >= 70
+                                    ? "bg-green-400"
+                                    : module.completionRate >= 40
+                                    ? "bg-yellow-400"
+                                    : "bg-red-400"
+                                }`}
+                                style={{
+                                  width: `${Math.max(module.completionRate, 5)}px`,
+                                  minWidth: "20px",
+                                  maxWidth: "100px",
+                                }}
+                                title={`${module.title}: ${module.completionRate}%`}
+                              />
+                              {index < trail.modules.length - 1 && (
+                                <ArrowRight className="h-4 w-4 text-gray-300 mx-0.5" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left">
+                              <th className="py-2 font-medium w-8">#</th>
+                              <th className="py-2 font-medium">Модуль</th>
+                              <th className="py-2 font-medium text-center">Тип</th>
+                              <th className="py-2 font-medium text-center">Начали</th>
+                              <th className="py-2 font-medium text-center">Завершили</th>
+                              <th className="py-2 font-medium text-center">% завершения</th>
+                              <th className="py-2 font-medium text-center">Drop-off</th>
+                              <th className="py-2 font-medium text-center">Ср. время</th>
+                              <th className="py-2 font-medium w-8"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {trail.modules.map((module, index) => (
+                              <tr
+                                key={module.id}
+                                className={`border-b hover:bg-gray-50 transition-colors group ${
+                                  module.isBottleneck ? "bg-orange-50" : ""
+                                }`}
+                              >
+                                <td className="py-2 text-gray-500">{index + 1}</td>
+                                <td className="py-2">
+                                  <div className="flex items-center gap-2">
+                                    <Link
+                                      href={`/module/${module.slug}`}
+                                      target="_blank"
+                                      className="font-medium text-gray-900 hover:text-purple-700 hover:underline"
+                                    >
+                                      {module.title}
+                                    </Link>
+                                    {module.isBottleneck && (
+                                      <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
+                                        Узкое место
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-2 text-center">
+                                  <Badge variant="outline" className="text-xs">
+                                    {module.type === "THEORY" ? "Теория" : module.type === "PRACTICE" ? "Практика" : "Проект"}
+                                  </Badge>
+                                </td>
+                                <td className="py-2 text-center">{module.startedCount}</td>
+                                <td className="py-2 text-center font-medium">{module.completedCount}</td>
+                                <td className="py-2 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Progress
+                                      value={module.completionRate}
+                                      className="h-2 w-16"
+                                    />
+                                    <span className={`text-xs font-medium ${
+                                      module.completionRate >= 70 ? "text-green-600" :
+                                      module.completionRate >= 40 ? "text-yellow-600" :
+                                      "text-red-600"
+                                    }`}>
+                                      {module.completionRate}%
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-2 text-center">
+                                  {module.dropRate > 0 ? (
+                                    <span className={`text-xs font-medium ${
+                                      module.dropRate > 30 ? "text-red-600" :
+                                      module.dropRate > 15 ? "text-yellow-600" :
+                                      "text-gray-500"
+                                    }`}>
+                                      -{module.dropRate}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">—</span>
+                                  )}
+                                </td>
+                                <td className="py-2 text-center text-gray-500">
+                                  {module.avgTimeDays > 0 ? `${module.avgTimeDays} д.` : "—"}
+                                </td>
+                                <td className="py-2">
+                                  <Link
+                                    href={`/module/${module.slug}`}
+                                    target="_blank"
+                                    className="p-1 text-gray-400 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Link>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Summary insights */}
+                      {trail.modules.some(m => m.isBottleneck) && (
+                        <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-orange-700 font-medium mb-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            Обнаружены узкие места
+                          </div>
+                          <ul className="text-sm text-orange-600 space-y-1">
+                            {trail.modules
+                              .filter(m => m.isBottleneck)
+                              .map(m => (
+                                <li key={m.id}>
+                                  • <strong>{m.title}</strong>: {m.dropRate}% студентов не продолжают после этого модуля
+                                </li>
+                              ))}
+                          </ul>
+                          <p className="text-xs text-orange-500 mt-2">
+                            Рекомендация: проверьте сложность контента или добавьте дополнительные материалы
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+            </div>}
+          </div>
+        )}
+
       </div>
     </div>
   )
