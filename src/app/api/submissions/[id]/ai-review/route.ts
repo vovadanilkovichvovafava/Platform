@@ -124,8 +124,17 @@ export async function POST(request: Request, ctx: RouteContext) {
       return NextResponse.json({ error: "Нет доступа" }, { status: 403 })
     }
 
+    // Check if force re-run is requested
+    let force = false
+    try {
+      const body = await request.json()
+      force = body.force === true
+    } catch {
+      // No body or invalid JSON — default to non-force
+    }
+
     // Run AI review asynchronously — respond immediately
-    runAiSubmissionReview(submissionId).catch((err) => {
+    runAiSubmissionReview(submissionId, { force }).catch((err) => {
       console.error(
         "[AI-Review API] Background review failed:",
         err instanceof Error ? err.message : err

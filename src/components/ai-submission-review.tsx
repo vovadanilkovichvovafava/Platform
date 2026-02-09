@@ -27,11 +27,13 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
   const [isRetrying, setIsRetrying] = useState(false)
   const [pollError, setPollError] = useState<string | null>(null)
 
-  const isPending = !review || review.status === "pending" || review.status === "processing"
+  const hasNoReview = !review
+  const isProcessing = review?.status === "pending" || review?.status === "processing"
+  const isPending = hasNoReview || isProcessing
 
-  // Poll for updates while status is pending/processing
+  // Poll for updates while status is pending/processing (only if a review record exists)
   useEffect(() => {
-    if (!isPending) return
+    if (!isProcessing) return
 
     const poll = async () => {
       try {
@@ -52,22 +54,36 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
     poll()
 
     return () => clearInterval(interval)
-  }, [submissionId, isPending])
+  }, [submissionId, isProcessing])
 
-  const handleRetry = useCallback(async () => {
+  const triggerAnalysis = useCallback(async (force?: boolean) => {
     setIsRetrying(true)
     setPollError(null)
     try {
       const res = await fetch(`/api/submissions/${submissionId}/ai-review`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: force ?? false }),
       })
       if (res.ok) {
         setReview((prev) =>
-          prev ? { ...prev, status: "processing", errorMessage: null } : null
+          prev
+            ? { ...prev, status: "processing", errorMessage: null, analysis: null, questions: null }
+            : {
+                id: "",
+                submissionId,
+                status: "processing",
+                analysis: null,
+                questions: null,
+                coverage: null,
+                errorMessage: null,
+                startedAt: new Date().toISOString(),
+                finishedAt: null,
+              }
         )
       }
     } catch {
-      setPollError("Не удалось запустить повторный анализ")
+      setPollError("Не удалось запустить анализ")
     } finally {
       setIsRetrying(false)
     }
@@ -78,15 +94,47 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <span className="text-lg">🤖</span>
-          Анали и вопросы от AI
+          Анализ и вопросы от AI
           {review && (
             <StatusBadge status={review.status} />
           )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Pending / Processing */}
-        {isPending && !review?.errorMessage && (
+        {/* No review exists — show trigger button */}
+        {hasNoReview && !isRetrying && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">
+              AI-анализ ещё не проводился для этой работы.
+            </p>
+            <button
+              onClick={() => triggerAnalysis()}
+              disabled={isRetrying}
+              className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+            >
+              Запустить AI-анализ
+            </button>
+          </div>
+        )}
+
+        {/* Processing */}
+        {isProcessing && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">AI анализирует работу…</p>
+            <div className="flex gap-2">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-3 rounded bg-gray-200 animate-pulse"
+                  style={{ width: `${60 + i * 20}px` }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Triggered from no-review state — show processing */}
+        {hasNoReview && isRetrying && (
           <div className="space-y-3">
             <p className="text-sm text-gray-500">AI анализирует работу…</p>
             <div className="flex gap-2">
@@ -108,7 +156,7 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
               {review.errorMessage || "AI-анализ завершился с ошибкой."}
             </p>
             <button
-              onClick={handleRetry}
+              onClick={() => triggerAnalysis()}
               disabled={isRetrying}
               className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
             >
@@ -128,24 +176,33 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
               <QuestionsSection questions={review.questions} />
             )}
 
-            {/* Coverage info */}
-            {review.coverage && (
-              <div className="text-xs text-gray-400 pt-2 border-t">
-                Источники: {[
-                  review.coverage.submissionTextUsed && "текст ответа",
-                  review.coverage.fileUsed && "файл работы",
-                  review.coverage.moduleUsed && "модуль",
-                  review.coverage.trailUsed && "трейл",
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "—"}
-                {review.analysis.confidence != null && (
-                  <span className="ml-2">
-                    · Уверенность AI: {review.analysis.confidence}%
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Coverage info + re-run button */}
+            <div className="flex items-center justify-between pt-2 border-t">
+              {review.coverage && (
+                <div className="text-xs text-gray-400">
+                  Источники: {[
+                    review.coverage.submissionTextUsed && "текст ответа",
+                    review.coverage.fileUsed && "файл работы",
+                    review.coverage.moduleUsed && "модуль",
+                    review.coverage.trailUsed && "трейл",
+                  ]
+                    .filter(Boolean)
+                    .join(", ") || "—"}
+                  {review.analysis.confidence != null && (
+                    <span className="ml-2">
+                      · Уверенность AI: {review.analysis.confidence}%
+                    </span>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={() => triggerAnalysis(true)}
+                disabled={isRetrying}
+                className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 disabled:opacity-50"
+              >
+                {isRetrying ? "Запускаю…" : "Перезапустить анализ"}
+              </button>
+            </div>
           </div>
         )}
 

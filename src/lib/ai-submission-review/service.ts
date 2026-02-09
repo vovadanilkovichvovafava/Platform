@@ -36,15 +36,19 @@ export function isAiReviewAvailable(): boolean {
  *
  * This is the main entry point, called asynchronously after submission creation.
  */
-export async function runAiSubmissionReview(submissionId: string): Promise<string> {
+export async function runAiSubmissionReview(
+  submissionId: string,
+  options?: { force?: boolean }
+): Promise<string> {
   const startTime = Date.now()
+  const force = options?.force ?? false
 
   // Step 1: Idempotent upsert — create or find existing record
   let review = await prisma.aiSubmissionReview.findUnique({
     where: { submissionId },
   })
 
-  if (review && review.status === "completed") {
+  if (review && review.status === "completed" && !force) {
     console.log(`${LOG_PREFIX} Review already completed for ${submissionId}`)
     return review.id
   }
@@ -64,13 +68,17 @@ export async function runAiSubmissionReview(submissionId: string): Promise<strin
       },
     })
   } else {
-    // Reset failed review for retry
+    // Reset completed (force) or failed review for retry
     review = await prisma.aiSubmissionReview.update({
       where: { id: review.id },
       data: {
         status: "processing",
         startedAt: new Date(),
         errorMessage: null,
+        analysisSummary: null,
+        questions: null,
+        sourceCoverage: null,
+        finishedAt: null,
       },
     })
   }
