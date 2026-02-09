@@ -53,18 +53,28 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    // Build student filter based on allowed trails
+    // Build student filter based on allowed trails AND trail filter
     // CO_ADMIN can only see students enrolled in their allowed trails
-    const studentWhereClause = allowedTrailIds === null
-      ? { role: "STUDENT" as const }
-      : {
-          role: "STUDENT" as const,
-          enrollments: {
-            some: {
-              trailId: { in: allowedTrailIds },
-            },
-          },
+    // When a specific trail is selected, filter students to that trail
+    const buildStudentWhereClause = () => {
+      if (allowedTrailIds === null) {
+        // ADMIN
+        if (trailFilter !== "all") {
+          return {
+            role: "STUDENT" as const,
+            enrollments: { some: { trailId: trailFilter } },
+          }
         }
+        return { role: "STUDENT" as const }
+      }
+      // CO_ADMIN - always filter by allowed trails
+      const trailIds = trailFilter !== "all" ? [trailFilter] : allowedTrailIds
+      return {
+        role: "STUDENT" as const,
+        enrollments: { some: { trailId: { in: trailIds } } },
+      }
+    }
+    const studentWhereClause = buildStudentWhereClause()
 
     // Get all students with their latest activity (filtered by allowed trails for CO_ADMIN)
     const students = await prisma.user.findMany({
@@ -82,11 +92,21 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: {
-            moduleProgress: { where: { status: "COMPLETED" } },
-            submissions: true,
-            enrollments: allowedTrailIds === null
-              ? true
-              : { where: { trailId: { in: allowedTrailIds } } },
+            moduleProgress: trailFilter !== "all"
+              ? { where: { status: "COMPLETED", module: { trailId: trailFilter } } }
+              : allowedTrailIds === null
+                ? { where: { status: "COMPLETED" } }
+                : { where: { status: "COMPLETED", module: { trailId: { in: allowedTrailIds } } } },
+            submissions: trailFilter !== "all"
+              ? { where: { module: { trailId: trailFilter } } }
+              : allowedTrailIds === null
+                ? true
+                : { where: { module: { trailId: { in: allowedTrailIds } } } },
+            enrollments: trailFilter !== "all"
+              ? { where: { trailId: trailFilter } }
+              : allowedTrailIds === null
+                ? true
+                : { where: { trailId: { in: allowedTrailIds } } },
           },
         },
       },
@@ -134,13 +154,17 @@ export async function GET(request: NextRequest) {
 
     // Get students who STARTED at least one module (IN_PROGRESS or COMPLETED)
     // This requires a separate query since _count can only have one filter per relation
-    // For CO_ADMIN: only count modules from allowed trails
-    const moduleProgressFilter = allowedTrailIds === null
-      ? { status: { in: ["IN_PROGRESS", "COMPLETED"] } }
-      : {
-          status: { in: ["IN_PROGRESS", "COMPLETED"] },
-          module: { trailId: { in: allowedTrailIds } },
-        }
+    // Filtered by trail filter and allowed trails
+    const buildModuleProgressFilter = () => {
+      if (trailFilter !== "all") {
+        return { status: { in: ["IN_PROGRESS", "COMPLETED"] }, module: { trailId: trailFilter } }
+      }
+      if (allowedTrailIds === null) {
+        return { status: { in: ["IN_PROGRESS", "COMPLETED"] } }
+      }
+      return { status: { in: ["IN_PROGRESS", "COMPLETED"] }, module: { trailId: { in: allowedTrailIds } } }
+    }
+    const moduleProgressFilter = buildModuleProgressFilter()
 
     const studentsWithStartedModules = await prisma.user.findMany({
       where: {
@@ -153,10 +177,15 @@ export async function GET(request: NextRequest) {
     })
     const startedModules = studentsWithStartedModules.length
 
-    // Get certificates count (filtered by allowed trails for CO_ADMIN)
+    // Get certificates count (filtered by trail filter and allowed trails)
+    const buildCertificateFilter = () => {
+      if (trailFilter !== "all") return { trailId: trailFilter }
+      if (allowedTrailIds === null) return {}
+      return { trailId: { in: allowedTrailIds } }
+    }
     const certificateHolders = await prisma.certificate.groupBy({
       by: ["userId"],
-      where: allowedTrailIds === null ? {} : { trailId: { in: allowedTrailIds } },
+      where: buildCertificateFilter(),
       _count: true,
     })
 
@@ -203,9 +232,19 @@ export async function GET(request: NextRequest) {
       totalActions: day._sum.actions || 0,
     }))
 
-    // 4. Module difficulty analysis (filtered by allowed trails for CO_ADMIN)
+    // 4. Module difficulty analysis (filtered by trail filter and allowed trails)
+    const buildModuleTrailFilter = () => {
+      if (allowedTrailIds === null) {
+        return trailFilter !== "all" ? { trailId: trailFilter } : {}
+      }
+      if (trailFilter !== "all") {
+        return { trailId: trailFilter }
+      }
+      return { trailId: { in: allowedTrailIds } }
+    }
+    const moduleTrailFilter = buildModuleTrailFilter()
     const moduleStats = await prisma.module.findMany({
-      where: allowedTrailIds === null ? {} : { trailId: { in: allowedTrailIds } },
+      where: moduleTrailFilter,
       select: {
         id: true,
         title: true,
@@ -229,11 +268,11 @@ export async function GET(request: NextRequest) {
 
     // Get submissions with reviews for each module (removed invalid groupBy)
 
-    // Calculate avg scores per module manually (filtered by allowed trails for CO_ADMIN)
+    // Calculate avg scores per module manually (filtered by trail filter)
     const submissions = await prisma.submission.findMany({
       where: {
         review: { isNot: null },
-        ...(allowedTrailIds === null ? {} : { module: { trailId: { in: allowedTrailIds } } }),
+        module: moduleTrailFilter,
       },
       select: {
         moduleId: true,
@@ -542,7 +581,8 @@ export async function GET(request: NextRequest) {
           },
         },
         modules: {
-          select: { id: true, type: true },
+          orderBy: { order: "asc" },
+          select: { id: true, title: true, order: true, type: true },
         },
       },
     })
@@ -553,6 +593,7 @@ export async function GET(request: NextRequest) {
     const studentsByTrail = await Promise.all(
       trailStudentsData.map(async (trail: TrailStudentData) => {
         const moduleIds = trail.modules.map((m: { id: string }) => m.id)
+        const trailModules = trail.modules as Array<{ id: string; title: string; order: number; type: string }>
 
         const studentsWithProgress = await Promise.all(
           trail.enrollments.map(async (enrollment: EnrollmentData) => {
@@ -570,6 +611,45 @@ export async function GET(request: NextRequest) {
                 startedAt: true,
                 completedAt: true,
               },
+            })
+
+            // Get submissions with reviews for per-module circle data
+            const studentSubmissions = await prisma.submission.findMany({
+              where: {
+                userId,
+                moduleId: { in: moduleIds },
+              },
+              select: {
+                id: true,
+                moduleId: true,
+                status: true,
+                review: {
+                  select: { id: true },
+                },
+              },
+              orderBy: { createdAt: "desc" },
+            })
+
+            // Build per-module details for progress circles
+            const moduleDetails = trailModules.map(mod => {
+              const progress = moduleProgressRecords.find(
+                (p: { moduleId: string }) => p.moduleId === mod.id
+              )
+              // Find the latest submission for this module (preferring APPROVED)
+              const approvedSub = studentSubmissions.find(
+                s => s.moduleId === mod.id && s.status === "APPROVED"
+              )
+              const latestSub = approvedSub || studentSubmissions.find(
+                s => s.moduleId === mod.id
+              )
+
+              return {
+                id: mod.id,
+                title: mod.title,
+                order: mod.order,
+                status: progress?.status || "NOT_STARTED",
+                submissionId: latestSub?.id || null,
+              }
             })
 
             const completedCount = moduleProgressRecords.filter(
@@ -643,6 +723,7 @@ export async function GET(request: NextRequest) {
               avgScore,
               dateStart,
               dateEnd,
+              modules: moduleDetails,
             }
           })
         )
