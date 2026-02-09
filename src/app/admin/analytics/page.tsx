@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,6 +48,10 @@ import {
   X,
   Lock,
   PlayCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ListFilter,
 } from "lucide-react"
 import Link from "next/link"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -271,6 +275,11 @@ export default function AdvancedAnalyticsPage() {
   const [expandedDropoff, setExpandedDropoff] = useState<string | null>(null)
   const [expandedStudentTrail, setExpandedStudentTrail] = useState<string | null>(null)
   const [studentSearch, setStudentSearch] = useState("")
+  // Sortable columns state: column key + direction (asc/desc/null for default)
+  const [studentSortColumn, setStudentSortColumn] = useState<string | null>(null)
+  const [studentSortDirection, setStudentSortDirection] = useState<"asc" | "desc" | null>(null)
+  // Submission filter within the "Students by directions" block
+  const [submissionFilter, setSubmissionFilter] = useState<"all" | "no_submissions" | "has_submissions" | "has_pending" | "has_revision" | "all_approved">("all")
   // Collapsible section states - all open by default
   const [sectionsExpanded, setSectionsExpanded] = useState({
     difficulty: true,
@@ -540,6 +549,79 @@ export default function AdvancedAnalyticsPage() {
     if (completionFilter === "all") return students
     if (completionFilter === "completed") return students.filter(s => s.dateEnd !== null)
     return students.filter(s => s.dateEnd === null)
+  }
+
+  // Filter students by submission status
+  const filterBySubmissions = (students: TrailStudent[]): TrailStudent[] => {
+    switch (submissionFilter) {
+      case "no_submissions":
+        return students.filter(s => s.submissions.total === 0)
+      case "has_submissions":
+        return students.filter(s => s.submissions.total > 0)
+      case "has_pending":
+        return students.filter(s => s.submissions.pending > 0)
+      case "has_revision":
+        return students.filter(s => s.submissions.revision > 0)
+      case "all_approved":
+        return students.filter(s => s.submissions.total > 0 && s.submissions.pending === 0 && s.submissions.revision === 0)
+      default:
+        return students
+    }
+  }
+
+  // Three-state sort toggle: null -> asc -> desc -> null
+  const toggleSort = useCallback((column: string) => {
+    if (studentSortColumn !== column) {
+      setStudentSortColumn(column)
+      setStudentSortDirection("asc")
+    } else if (studentSortDirection === "asc") {
+      setStudentSortDirection("desc")
+    } else {
+      setStudentSortColumn(null)
+      setStudentSortDirection(null)
+    }
+  }, [studentSortColumn, studentSortDirection])
+
+  // Sort students by current column and direction
+  const sortStudents = useCallback((students: TrailStudent[]): TrailStudent[] => {
+    if (!studentSortColumn || !studentSortDirection) return students
+    const sorted = [...students]
+    const dir = studentSortDirection === "asc" ? 1 : -1
+    sorted.sort((a, b) => {
+      switch (studentSortColumn) {
+        case "name":
+          return dir * a.name.localeCompare(b.name, "ru")
+        case "dateStart": {
+          const da = a.dateStart ? new Date(a.dateStart).getTime() : 0
+          const db = b.dateStart ? new Date(b.dateStart).getTime() : 0
+          return dir * (da - db)
+        }
+        case "progress":
+          return dir * (a.completionPercent - b.completionPercent)
+        case "dateEnd": {
+          const ea = a.dateEnd ? new Date(a.dateEnd).getTime() : 0
+          const eb = b.dateEnd ? new Date(b.dateEnd).getTime() : 0
+          return dir * (ea - eb)
+        }
+        case "submissions":
+          return dir * (a.submissions.total - b.submissions.total)
+        case "avgScore": {
+          const sa = a.avgScore ?? -1
+          const sb = b.avgScore ?? -1
+          return dir * (sa - sb)
+        }
+        default:
+          return 0
+      }
+    })
+    return sorted
+  }, [studentSortColumn, studentSortDirection])
+
+  // Get sort icon for column header
+  const getSortIcon = (column: string) => {
+    if (studentSortColumn !== column) return <ArrowUpDown className="h-3 w-3 text-gray-300" />
+    if (studentSortDirection === "asc") return <ArrowUp className="h-3 w-3 text-indigo-600" />
+    return <ArrowDown className="h-3 w-3 text-indigo-600" />
   }
 
   // Открыть mailto с заполненной темой
@@ -1612,182 +1694,6 @@ export default function AdvancedAnalyticsPage() {
             <span className="text-xs text-gray-500">— Статистика прогресса и достижений</span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Trail Progress */}
-            {data.trailProgress && data.trailProgress.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("trailProgress")}>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Target className="h-4 w-4 text-blue-500" />
-                      Прогресс по направлениям
-                    </CardTitle>
-                    {sectionsExpanded.trailProgress ? (
-                      <ChevronUp className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500">Завершённость и качество работ по каждому trail</p>
-                </CardHeader>
-                {sectionsExpanded.trailProgress && <CardContent className="space-y-4">
-                  {data.trailProgress.map((trail) => (
-                    <div key={trail.id} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-sm text-gray-900">{trail.title}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            <Users className="h-3 w-3 mr-1" />
-                            {trail.enrollments}
-                          </Badge>
-                          {trail.certificates > 0 && (
-                            <Badge className="text-xs bg-amber-100 text-amber-700 border-0">
-                              <Award className="h-3 w-3 mr-1" />
-                              {trail.certificates}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Completion Progress */}
-                      <div className="mb-2">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span>Завершённость модулей</span>
-                          <span>{trail.completionRate}%</span>
-                        </div>
-                        <Progress value={trail.completionRate} className="h-2" />
-                      </div>
-
-                      {/* Approval Rate */}
-                      <div>
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span>Принято работ</span>
-                          <span>{trail.approvalRate}% ({trail.approvedSubmissions}/{trail.submissionsCount})</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-green-500 h-2 rounded-full transition-all"
-                            style={{ width: `${trail.approvalRate}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>}
-              </Card>
-            )}
-
-            {/* Score Distribution */}
-            {data.scoreDistribution && data.scoreDistribution.total > 0 && (
-              <Card>
-                <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("scoreDistribution")}>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      Распределение оценок
-                    </CardTitle>
-                    {sectionsExpanded.scoreDistribution ? (
-                      <ChevronUp className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Всего оценено работ: {data.scoreDistribution.total}
-                    {data.scoreDistribution.avgScore && (
-                      <> • Средняя: <span className="font-medium text-blue-600">{data.scoreDistribution.avgScore}/10</span></>
-                    )}
-                  </p>
-                  {data.scoreDistribution.filteredByTrail && (
-                    <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
-                      <Filter className="h-3 w-3" />
-                      Данные отфильтрованы по выбранному направлению
-                    </p>
-                  )}
-                </CardHeader>
-                {sectionsExpanded.scoreDistribution && <CardContent>
-                  <div className="space-y-3">
-                    {/* Excellent 9-10 */}
-                    <div>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded bg-green-500"></div>
-                          Отлично (9-10)
-                        </span>
-                        <span className="font-medium">
-                          {data.scoreDistribution.excellent} ({Math.round((data.scoreDistribution.excellent / data.scoreDistribution.total) * 100)}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-4">
-                        <div
-                          className="bg-green-500 h-4 rounded-full transition-all"
-                          style={{ width: `${(data.scoreDistribution.excellent / data.scoreDistribution.total) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Good 7-8 */}
-                    <div>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded bg-blue-500"></div>
-                          Хорошо (7-8)
-                        </span>
-                        <span className="font-medium">
-                          {data.scoreDistribution.good} ({Math.round((data.scoreDistribution.good / data.scoreDistribution.total) * 100)}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-4">
-                        <div
-                          className="bg-blue-500 h-4 rounded-full transition-all"
-                          style={{ width: `${(data.scoreDistribution.good / data.scoreDistribution.total) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Average 5-6 */}
-                    <div>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded bg-yellow-500"></div>
-                          Удовл. (5-6)
-                        </span>
-                        <span className="font-medium">
-                          {data.scoreDistribution.average} ({Math.round((data.scoreDistribution.average / data.scoreDistribution.total) * 100)}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-4">
-                        <div
-                          className="bg-yellow-500 h-4 rounded-full transition-all"
-                          style={{ width: `${(data.scoreDistribution.average / data.scoreDistribution.total) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Poor <5 */}
-                    <div>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded bg-red-500"></div>
-                          Неудовл. (&lt;5)
-                        </span>
-                        <span className="font-medium">
-                          {data.scoreDistribution.poor} ({Math.round((data.scoreDistribution.poor / data.scoreDistribution.total) * 100)}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-4">
-                        <div
-                          className="bg-red-500 h-4 rounded-full transition-all"
-                          style={{ width: `${(data.scoreDistribution.poor / data.scoreDistribution.total) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>}
-              </Card>
-            )}
-          </div>
-
           {/* Students by Trail - Collapsible Sections */}
           {data.studentsByTrail && data.studentsByTrail.length > 0 && (
             <Card className="mt-6">
@@ -1808,16 +1714,48 @@ export default function AdvancedAnalyticsPage() {
                 </p>
               </CardHeader>
               {sectionsExpanded.studentsByTrail && <CardContent className="space-y-4">
-                {/* Search input */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={studentSearch}
-                    onChange={(e) => setStudentSearch(e.target.value)}
-                    placeholder="Поиск студента по имени..."
-                    className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
+                {/* Search and Filters */}
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={studentSearch}
+                      onChange={(e) => setStudentSearch(e.target.value)}
+                      placeholder="Поиск студента по имени..."
+                      className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ListFilter className="h-4 w-4 text-gray-400" />
+                    <select
+                      value={submissionFilter}
+                      onChange={(e) => setSubmissionFilter(e.target.value as typeof submissionFilter)}
+                      className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      <option value="all">Все работы</option>
+                      <option value="no_submissions">Не сдали ни одной работы</option>
+                      <option value="has_submissions">Сдали хотя бы одну работу</option>
+                      <option value="has_pending">Есть работы на проверке</option>
+                      <option value="has_revision">Есть работы на доработке</option>
+                      <option value="all_approved">Все работы приняты</option>
+                    </select>
+                    {(submissionFilter !== "all" || studentSortColumn) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSubmissionFilter("all")
+                          setStudentSortColumn(null)
+                          setStudentSortDirection(null)
+                        }}
+                        className="text-gray-500 hover:text-gray-700 text-xs"
+                      >
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Сбросить фильтры и сортировку
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {data.studentsByTrail.map((trailGroup) => {
@@ -1827,10 +1765,12 @@ export default function AdvancedAnalyticsPage() {
                         s.name.toLowerCase().includes(studentSearch.toLowerCase())
                       )
                     : trailGroup.students
-                  // Apply completion filter
-                  const filteredStudents = filterByCompletion(searchFiltered)
+                  // Apply completion filter, then submission filter, then sort
+                  const completionFiltered = filterByCompletion(searchFiltered)
+                  const submissionFiltered = filterBySubmissions(completionFiltered)
+                  const filteredStudents = sortStudents(submissionFiltered)
 
-                  if (filteredStudents.length === 0 && (studentSearch || completionFilter !== "all")) return null
+                  if (filteredStudents.length === 0 && (studentSearch || completionFilter !== "all" || submissionFilter !== "all")) return null
 
                   // Password lock check (Module D)
                   const isLocked = trailGroup.isLocked === true
@@ -1900,12 +1840,36 @@ export default function AdvancedAnalyticsPage() {
                             <table className="w-full text-sm">
                               <thead className="bg-gray-50 sticky top-0">
                                 <tr className="border-b text-left">
-                                  <th className="py-2 px-3 font-medium">Имя</th>
-                                  <th className="py-2 px-3 font-medium text-center">Date Start</th>
-                                  <th className="py-2 px-3 font-medium">Прогресс</th>
-                                  <th className="py-2 px-3 font-medium text-center">Date End</th>
-                                  <th className="py-2 px-3 font-medium text-center">Работы</th>
-                                  <th className="py-2 px-3 font-medium text-center">Ср. оценка</th>
+                                  <th className="py-2 px-3 font-medium">
+                                    <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
+                                      Имя {getSortIcon("name")}
+                                    </button>
+                                  </th>
+                                  <th className="py-2 px-3 font-medium text-center">
+                                    <button onClick={() => toggleSort("dateStart")} className="flex items-center gap-1 mx-auto hover:text-indigo-600 transition-colors">
+                                      Дата начала {getSortIcon("dateStart")}
+                                    </button>
+                                  </th>
+                                  <th className="py-2 px-3 font-medium">
+                                    <button onClick={() => toggleSort("progress")} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
+                                      Прогресс {getSortIcon("progress")}
+                                    </button>
+                                  </th>
+                                  <th className="py-2 px-3 font-medium text-center">
+                                    <button onClick={() => toggleSort("dateEnd")} className="flex items-center gap-1 mx-auto hover:text-indigo-600 transition-colors">
+                                      Дата окончания {getSortIcon("dateEnd")}
+                                    </button>
+                                  </th>
+                                  <th className="py-2 px-3 font-medium text-center">
+                                    <button onClick={() => toggleSort("submissions")} className="flex items-center gap-1 mx-auto hover:text-indigo-600 transition-colors">
+                                      Работы {getSortIcon("submissions")}
+                                    </button>
+                                  </th>
+                                  <th className="py-2 px-3 font-medium text-center">
+                                    <button onClick={() => toggleSort("avgScore")} className="flex items-center gap-1 mx-auto hover:text-indigo-600 transition-colors">
+                                      Ср. оценка {getSortIcon("avgScore")}
+                                    </button>
+                                  </th>
                                   <th className="py-2 px-3 font-medium w-10"></th>
                                 </tr>
                               </thead>
@@ -2043,97 +2007,6 @@ export default function AdvancedAnalyticsPage() {
                     </div>
                   )
                 })}
-              </CardContent>}
-            </Card>
-          )}
-
-          {/* Top Students */}
-          {data.topStudents && data.topStudents.length > 0 && (
-            <Card className="mt-6">
-              <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("topStudents")}>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <GraduationCap className="h-4 w-4 text-purple-500" />
-                    Лидеры платформы
-                  </CardTitle>
-                  {sectionsExpanded.topStudents ? (
-                    <ChevronUp className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  )}
-                </div>
-                <p className="text-xs text-gray-500">Топ-10 студентов по XP и достижениям</p>
-              </CardHeader>
-              {sectionsExpanded.topStudents && <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="py-2 font-medium w-8">#</th>
-                        <th className="py-2 font-medium">Студент</th>
-                        <th className="py-2 font-medium text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Star className="h-3 w-3 text-amber-500" />
-                            XP
-                          </div>
-                        </th>
-                        <th className="py-2 font-medium text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <BookOpen className="h-3 w-3 text-blue-500" />
-                            Модули
-                          </div>
-                        </th>
-                        <th className="py-2 font-medium text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                            Работы
-                          </div>
-                        </th>
-                        <th className="py-2 font-medium text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Award className="h-3 w-3 text-amber-500" />
-                            Серт.
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.topStudents.map((student, index) => (
-                        <tr key={student.id} className="border-b hover:bg-purple-50 transition-colors group">
-                          <td className="py-2 text-gray-500">
-                            {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
-                          </td>
-                          <td className="py-2">
-                            <Link
-                              href={`/dashboard/${student.id}`}
-                              target="_blank"
-                              className="flex items-center gap-2 font-medium text-gray-900 hover:text-purple-700 transition-colors"
-                            >
-                              <span className="group-hover:underline">{student.name}</span>
-                              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500" />
-                            </Link>
-                          </td>
-                          <td className="py-2 text-center">
-                            <span className="font-bold text-amber-600">{student.totalXP.toLocaleString()}</span>
-                          </td>
-                          <td className="py-2 text-center">{student.modulesCompleted}</td>
-                          <td className="py-2 text-center">
-                            <span className="text-green-600">{student.approvedWorks}</span>
-                          </td>
-                          <td className="py-2 text-center">
-                            {student.certificates > 0 ? (
-                              <Badge className="text-xs bg-amber-100 text-amber-700 border-0">
-                                {student.certificates}
-                              </Badge>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               </CardContent>}
             </Card>
           )}
@@ -2439,6 +2312,273 @@ export default function AdvancedAnalyticsPage() {
                   )}
                 </CardContent>
               )}
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {/* Trail Progress */}
+            {data.trailProgress && data.trailProgress.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("trailProgress")}>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Target className="h-4 w-4 text-blue-500" />
+                      Прогресс по направлениям
+                    </CardTitle>
+                    {sectionsExpanded.trailProgress ? (
+                      <ChevronUp className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">Завершённость и качество работ по каждому trail</p>
+                </CardHeader>
+                {sectionsExpanded.trailProgress && <CardContent className="space-y-4">
+                  {data.trailProgress.map((trail) => (
+                    <div key={trail.id} className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-sm text-gray-900">{trail.title}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            <Users className="h-3 w-3 mr-1" />
+                            {trail.enrollments}
+                          </Badge>
+                          {trail.certificates > 0 && (
+                            <Badge className="text-xs bg-amber-100 text-amber-700 border-0">
+                              <Award className="h-3 w-3 mr-1" />
+                              {trail.certificates}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Completion Progress */}
+                      <div className="mb-2">
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                          <span>Завершённость модулей</span>
+                          <span>{trail.completionRate}%</span>
+                        </div>
+                        <Progress value={trail.completionRate} className="h-2" />
+                      </div>
+
+                      {/* Approval Rate */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                          <span>Принято работ</span>
+                          <span>{trail.approvalRate}% ({trail.approvedSubmissions}/{trail.submissionsCount})</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-green-500 h-2 rounded-full transition-all"
+                            style={{ width: `${trail.approvalRate}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>}
+              </Card>
+            )}
+
+            {/* Score Distribution */}
+            {data.scoreDistribution && data.scoreDistribution.total > 0 && (
+              <Card>
+                <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("scoreDistribution")}>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      Распределение оценок
+                    </CardTitle>
+                    {sectionsExpanded.scoreDistribution ? (
+                      <ChevronUp className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Всего оценено работ: {data.scoreDistribution.total}
+                    {data.scoreDistribution.avgScore && (
+                      <> • Средняя: <span className="font-medium text-blue-600">{data.scoreDistribution.avgScore}/10</span></>
+                    )}
+                  </p>
+                  {data.scoreDistribution.filteredByTrail && (
+                    <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                      <Filter className="h-3 w-3" />
+                      Данные отфильтрованы по выбранному направлению
+                    </p>
+                  )}
+                </CardHeader>
+                {sectionsExpanded.scoreDistribution && <CardContent>
+                  <div className="space-y-3">
+                    {/* Excellent 9-10 */}
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded bg-green-500"></div>
+                          Отлично (9-10)
+                        </span>
+                        <span className="font-medium">
+                          {data.scoreDistribution.excellent} ({Math.round((data.scoreDistribution.excellent / data.scoreDistribution.total) * 100)}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-4">
+                        <div
+                          className="bg-green-500 h-4 rounded-full transition-all"
+                          style={{ width: `${(data.scoreDistribution.excellent / data.scoreDistribution.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Good 7-8 */}
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded bg-blue-500"></div>
+                          Хорошо (7-8)
+                        </span>
+                        <span className="font-medium">
+                          {data.scoreDistribution.good} ({Math.round((data.scoreDistribution.good / data.scoreDistribution.total) * 100)}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-4">
+                        <div
+                          className="bg-blue-500 h-4 rounded-full transition-all"
+                          style={{ width: `${(data.scoreDistribution.good / data.scoreDistribution.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Average 5-6 */}
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded bg-yellow-500"></div>
+                          Удовл. (5-6)
+                        </span>
+                        <span className="font-medium">
+                          {data.scoreDistribution.average} ({Math.round((data.scoreDistribution.average / data.scoreDistribution.total) * 100)}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-4">
+                        <div
+                          className="bg-yellow-500 h-4 rounded-full transition-all"
+                          style={{ width: `${(data.scoreDistribution.average / data.scoreDistribution.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Poor <5 */}
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded bg-red-500"></div>
+                          Неудовл. (&lt;5)
+                        </span>
+                        <span className="font-medium">
+                          {data.scoreDistribution.poor} ({Math.round((data.scoreDistribution.poor / data.scoreDistribution.total) * 100)}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-4">
+                        <div
+                          className="bg-red-500 h-4 rounded-full transition-all"
+                          style={{ width: `${(data.scoreDistribution.poor / data.scoreDistribution.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>}
+              </Card>
+            )}
+          </div>
+
+          {/* Top Students */}
+          {data.topStudents && data.topStudents.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("topStudents")}>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <GraduationCap className="h-4 w-4 text-purple-500" />
+                    Лидеры платформы
+                  </CardTitle>
+                  {sectionsExpanded.topStudents ? (
+                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">Топ-10 студентов по XP и достижениям</p>
+              </CardHeader>
+              {sectionsExpanded.topStudents && <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="py-2 font-medium w-8">#</th>
+                        <th className="py-2 font-medium">Студент</th>
+                        <th className="py-2 font-medium text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Star className="h-3 w-3 text-amber-500" />
+                            XP
+                          </div>
+                        </th>
+                        <th className="py-2 font-medium text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <BookOpen className="h-3 w-3 text-blue-500" />
+                            Модули
+                          </div>
+                        </th>
+                        <th className="py-2 font-medium text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-500" />
+                            Работы
+                          </div>
+                        </th>
+                        <th className="py-2 font-medium text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Award className="h-3 w-3 text-amber-500" />
+                            Серт.
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.topStudents.map((student, index) => (
+                        <tr key={student.id} className="border-b hover:bg-purple-50 transition-colors group">
+                          <td className="py-2 text-gray-500">
+                            {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
+                          </td>
+                          <td className="py-2">
+                            <Link
+                              href={`/dashboard/${student.id}`}
+                              target="_blank"
+                              className="flex items-center gap-2 font-medium text-gray-900 hover:text-purple-700 transition-colors"
+                            >
+                              <span className="group-hover:underline">{student.name}</span>
+                              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500" />
+                            </Link>
+                          </td>
+                          <td className="py-2 text-center">
+                            <span className="font-bold text-amber-600">{student.totalXP.toLocaleString()}</span>
+                          </td>
+                          <td className="py-2 text-center">{student.modulesCompleted}</td>
+                          <td className="py-2 text-center">
+                            <span className="text-green-600">{student.approvedWorks}</span>
+                          </td>
+                          <td className="py-2 text-center">
+                            {student.certificates > 0 ? (
+                              <Badge className="text-xs bg-amber-100 text-amber-700 border-0">
+                                {student.certificates}
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>}
             </Card>
           )}
         </div>
