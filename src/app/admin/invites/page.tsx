@@ -22,12 +22,36 @@ interface Invite {
   id: string
   code: string
   email: string | null
+  role: string
   maxUses: number
   usedCount: number
   expiresAt: string | null
   createdAt: string
   createdBy: { name: string; email: string }
   selectedTrails?: Trail[]
+}
+
+// Role options for invite creation
+const ROLE_OPTIONS = [
+  { value: "STUDENT", label: "Студент" },
+  { value: "TEACHER", label: "Преподаватель" },
+  { value: "CO_ADMIN", label: "Со-админ" },
+  { value: "ADMIN", label: "Админ" },
+] as const
+
+// Role badge styles
+const ROLE_BADGE_STYLES: Record<string, string> = {
+  STUDENT: "bg-slate-100 text-slate-700",
+  TEACHER: "bg-blue-100 text-blue-700",
+  CO_ADMIN: "bg-purple-100 text-purple-700",
+  ADMIN: "bg-red-100 text-red-700",
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  STUDENT: "Студент",
+  TEACHER: "Преподаватель",
+  CO_ADMIN: "Со-админ",
+  ADMIN: "Админ",
 }
 
 // Cleanup period options for auto-deletion of exhausted invites
@@ -54,6 +78,9 @@ export default function AdminInvitesPage() {
   const [selectedTrailIds, setSelectedTrailIds] = useState<string[]>([])
   const [isTrailDropdownOpen, setIsTrailDropdownOpen] = useState(false)
   const trailDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Role selection
+  const [selectedRole, setSelectedRole] = useState("STUDENT")
 
   const [newInvite, setNewInvite] = useState({
     code: "",
@@ -231,12 +258,14 @@ export default function AdminInvitesPage() {
           ...newInvite,
           code: newInvite.code.toUpperCase(),
           trailIds: selectedTrailIds,
+          role: selectedRole,
         }),
       })
 
       if (res.ok) {
         setNewInvite({ code: "", email: "", maxUses: 1, expiresAt: "" })
         setSelectedTrailIds([]) // Clear selected trails
+        setSelectedRole("STUDENT") // Reset role
         setErrors({}) // Clear validation errors
         fetchInvites()
         showToast("Приглашение создано", "success")
@@ -486,6 +515,35 @@ export default function AdminInvitesPage() {
               </div>
             </div>
 
+            {/* Role Select */}
+            <div className="space-y-2">
+              <Label htmlFor="role">Роль при регистрации</Label>
+              <div className="relative">
+                <select
+                  id="role"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-2 pr-8 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
+                  {ROLE_OPTIONS.filter((opt) => {
+                    // CO_ADMIN can only create STUDENT and TEACHER invites
+                    if (session?.user?.role !== "ADMIN" && (opt.value === "CO_ADMIN" || opt.value === "ADMIN")) {
+                      return false
+                    }
+                    return true
+                  }).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              </div>
+              <p className="text-xs text-slate-500">
+                Роль, которая будет назначена пользователю при регистрации
+              </p>
+            </div>
+
             {/* Trail Multi-Select */}
             {availableTrails.length > 0 && (
               <div className="space-y-2">
@@ -657,6 +715,13 @@ export default function AdminInvitesPage() {
                               {invite.usedCount}/{invite.maxUses}
                             </span>
                           </div>
+
+                          {/* Role Badge */}
+                          {invite.role && invite.role !== "STUDENT" && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE_STYLES[invite.role] || ROLE_BADGE_STYLES.STUDENT}`}>
+                              {ROLE_LABELS[invite.role] || invite.role}
+                            </span>
+                          )}
 
                           {invite.email && (
                             <span className="text-xs text-slate-500 bg-blue-50 px-2 py-0.5 rounded-full">

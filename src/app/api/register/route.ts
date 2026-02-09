@@ -89,6 +89,15 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
+    // Determine role from invite with safe fallback
+    const VALID_ROLES = ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
+    let assignedRole = "STUDENT"
+    if (invite.role && VALID_ROLES.includes(invite.role)) {
+      assignedRole = invite.role
+    } else if (invite.role) {
+      console.warn(`Invalid role "${invite.role}" in invite ${invite.id}, falling back to STUDENT`)
+    }
+
     // Get trail IDs from invite
     // Note: If admin attached a trail to invite, student should get access regardless of isPublished status
     const validTrailIds = invite.trails
@@ -104,7 +113,7 @@ export async function POST(request: Request) {
         data: { usedCount: { increment: 1 } },
       })
 
-      // Create user
+      // Create user with role from invite
       const newUser = await tx.user.create({
         data: {
           email,
@@ -113,7 +122,7 @@ export async function POST(request: Request) {
           firstName,
           lastName,
           telegramUsername,
-          role: "STUDENT",
+          role: assignedRole,
           invitedBy: invite.createdById,
         },
       })
