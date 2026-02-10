@@ -45,7 +45,7 @@ export default async function TeacherDashboard({
     orderBy: { createdAt: "asc" },
     include: {
       user: {
-        select: { name: true, email: true },
+        select: { name: true, email: true, telegramUsername: true },
       },
       module: {
         include: {
@@ -66,7 +66,7 @@ export default async function TeacherDashboard({
     take: 50, // Limit history to last 50
     include: {
       user: {
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, telegramUsername: true },
       },
       module: {
         include: {

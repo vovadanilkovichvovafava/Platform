@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         email: true,
+        telegramUsername: true,
         createdAt: true,
         totalXP: true,
         activityDays: {
@@ -113,9 +114,9 @@ export async function GET(request: NextRequest) {
     })
 
     const churnRisk = {
-      high: [] as Array<{ id: string; name: string; email: string; lastActive: string | null; daysSinceActive: number }>,
-      medium: [] as Array<{ id: string; name: string; email: string; lastActive: string | null; daysSinceActive: number }>,
-      low: [] as Array<{ id: string; name: string; email: string; lastActive: string | null; daysSinceActive: number }>,
+      high: [] as Array<{ id: string; name: string; email: string; telegramUsername: string | null; lastActive: string | null; daysSinceActive: number }>,
+      medium: [] as Array<{ id: string; name: string; email: string; telegramUsername: string | null; lastActive: string | null; daysSinceActive: number }>,
+      low: [] as Array<{ id: string; name: string; email: string; telegramUsername: string | null; lastActive: string | null; daysSinceActive: number }>,
     }
 
     const now = new Date()
@@ -129,6 +130,7 @@ export async function GET(request: NextRequest) {
         id: student.id,
         name: student.name,
         email: student.email,
+        telegramUsername: student.telegramUsername,
         lastActive: lastActivityDate?.toISOString() || null,
         daysSinceActive,
         modulesCompleted: student._count.moduleProgress,
@@ -576,6 +578,7 @@ export async function GET(request: NextRequest) {
                 id: true,
                 name: true,
                 totalXP: true,
+                telegramUsername: true,
               },
             },
           },
@@ -710,6 +713,7 @@ export async function GET(request: NextRequest) {
             return {
               id: userId,
               name: enrollment.user.name,
+              telegramUsername: enrollment.user.telegramUsername,
               totalXP: enrollment.user.totalXP,
               modulesCompleted: completedCount,
               totalModules: moduleIds.length,

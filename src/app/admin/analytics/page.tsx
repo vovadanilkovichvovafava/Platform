@@ -60,6 +60,7 @@ interface ChurnRiskStudent {
   id: string
   name: string
   email: string
+  telegramUsername?: string | null
   lastActive: string | null
   daysSinceActive: number
   modulesCompleted?: number
@@ -137,6 +138,7 @@ interface ModuleCircle {
 interface TrailStudent {
   id: string
   name: string
+  telegramUsername?: string | null
   totalXP: number
   modulesCompleted: number
   totalModules: number
@@ -268,6 +270,7 @@ export default function AdvancedAnalyticsPage() {
   const [expandedRisk, setExpandedRisk] = useState<"high" | "medium" | "low" | null>("high")
   const [showMethodology, setShowMethodology] = useState(false)
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
+  const [copiedTg, setCopiedTg] = useState<string | null>(null)
   const [trailFilter, setTrailFilter] = useState("all")
   const [periodFilter, setPeriodFilter] = useState("30")
   const [completionFilter, setCompletionFilter] = useState<"all" | "in_progress" | "completed">("all")
@@ -337,21 +340,24 @@ export default function AdvancedAnalyticsPage() {
 
   // Get all unique students from studentsByTrail for dropdown (exclude locked trails)
   const allStudents = data?.studentsByTrail?.filter(trail => !trail.isLocked).flatMap(trail =>
-    trail.students.map(s => ({ id: s.id, name: s.name, trailTitle: trail.trailTitle }))
-  ).reduce<Array<{ id: string; name: string; trails: string[] }>>((acc, curr) => {
+    trail.students.map(s => ({ id: s.id, name: s.name, telegramUsername: s.telegramUsername, trailTitle: trail.trailTitle }))
+  ).reduce<Array<{ id: string; name: string; telegramUsername?: string | null; trails: string[] }>>((acc, curr) => {
     const existing = acc.find(s => s.id === curr.id)
     if (existing) {
       if (!existing.trails.includes(curr.trailTitle)) {
         existing.trails.push(curr.trailTitle)
       }
     } else {
-      acc.push({ id: curr.id, name: curr.name, trails: [curr.trailTitle] })
+      acc.push({ id: curr.id, name: curr.name, telegramUsername: curr.telegramUsername, trails: [curr.trailTitle] })
     }
     return acc
   }, []) || []
 
   const filteredStudentsForDropdown = studentDetailSearch
-    ? allStudents.filter(s => s.name.toLowerCase().includes(studentDetailSearch.toLowerCase()))
+    ? allStudents.filter(s =>
+        s.name.toLowerCase().includes(studentDetailSearch.toLowerCase()) ||
+        (s.telegramUsername && s.telegramUsername.toLowerCase().includes(studentDetailSearch.toLowerCase()))
+      )
     : allStudents
 
   // Select student and build analytics
@@ -528,6 +534,18 @@ export default function AdvancedAnalyticsPage() {
       setTimeout(() => setCopiedEmail(null), 2000)
     } catch {
       showToast("Не удалось скопировать email", "error")
+    }
+  }
+
+  // Копирование TG-ника в буфер
+  const copyTg = async (tg: string, studentName: string) => {
+    try {
+      await navigator.clipboard.writeText(tg)
+      setCopiedTg(tg)
+      showToast(`TG ${studentName} скопирован`, "success")
+      setTimeout(() => setCopiedTg(null), 2000)
+    } catch {
+      showToast("Не удалось скопировать TG-ник", "error")
     }
   }
 
@@ -948,7 +966,7 @@ export default function AdvancedAnalyticsPage() {
                       type="text"
                       value={studentSearch}
                       onChange={(e) => setStudentSearch(e.target.value)}
-                      placeholder="Поиск студента по имени..."
+                      placeholder="Поиск студента по имени или TG-нику..."
                       className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
@@ -988,7 +1006,8 @@ export default function AdvancedAnalyticsPage() {
                   // Apply search filter
                   const searchFiltered = studentSearch
                     ? trailGroup.students.filter((s) =>
-                        s.name.toLowerCase().includes(studentSearch.toLowerCase())
+                        s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        (s.telegramUsername && s.telegramUsername.toLowerCase().includes(studentSearch.toLowerCase()))
                       )
                     : trailGroup.students
                   // Apply completion filter, then submission filter, then sort
@@ -1280,7 +1299,7 @@ export default function AdvancedAnalyticsPage() {
                             type="text"
                             value={studentDetailSearch}
                             onChange={(e) => setStudentDetailSearch(e.target.value)}
-                            placeholder="Поиск по имени..."
+                            placeholder="Поиск по имени или TG-нику..."
                             className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
                             onClick={(e) => e.stopPropagation()}
                           />
@@ -1297,7 +1316,12 @@ export default function AdvancedAnalyticsPage() {
                                 onClick={() => selectStudentForAnalytics(student.id)}
                                 className="w-full flex items-center justify-between px-4 py-2 hover:bg-cyan-50 transition-colors text-left"
                               >
-                                <span className="font-medium text-gray-900">{student.name}</span>
+                                <div>
+                                  <span className="font-medium text-gray-900">{student.name}</span>
+                                  {student.telegramUsername && (
+                                    <p className="text-xs text-gray-400">{student.telegramUsername}</p>
+                                  )}
+                                </div>
                                 <span className="text-xs text-gray-500">{student.trails.length} направлений</span>
                               </button>
                             ))
@@ -1934,7 +1958,18 @@ export default function AdvancedAnalyticsPage() {
                       <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-red-200 transition-colors">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-gray-900">{student.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span className="truncate">{student.email}</span>
+                            {student.telegramUsername && (
+                              <button
+                                onClick={() => copyTg(student.telegramUsername!, student.name)}
+                                className="text-blue-500 hover:text-blue-700 hover:underline transition-colors shrink-0"
+                                title="Копировать TG-ник"
+                              >
+                                {copiedTg === student.telegramUsername ? "Скопировано" : student.telegramUsername}
+                              </button>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge className="text-xs bg-red-100 text-red-700 border-0">
                               {student.daysSinceActive} дней
@@ -2005,7 +2040,18 @@ export default function AdvancedAnalyticsPage() {
                       <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-yellow-200 transition-colors">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-gray-900">{student.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span className="truncate">{student.email}</span>
+                            {student.telegramUsername && (
+                              <button
+                                onClick={() => copyTg(student.telegramUsername!, student.name)}
+                                className="text-blue-500 hover:text-blue-700 hover:underline transition-colors shrink-0"
+                                title="Копировать TG-ник"
+                              >
+                                {copiedTg === student.telegramUsername ? "Скопировано" : student.telegramUsername}
+                              </button>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge className="text-xs bg-yellow-100 text-yellow-700 border-0">
                               {student.daysSinceActive} дней
@@ -2079,7 +2125,18 @@ export default function AdvancedAnalyticsPage() {
                         <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-green-200 transition-colors">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm text-gray-900">{student.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span className="truncate">{student.email}</span>
+                              {student.telegramUsername && (
+                                <button
+                                  onClick={() => copyTg(student.telegramUsername!, student.name)}
+                                  className="text-blue-500 hover:text-blue-700 hover:underline transition-colors shrink-0"
+                                  title="Копировать TG-ник"
+                                >
+                                  {copiedTg === student.telegramUsername ? "Скопировано" : student.telegramUsername}
+                                </button>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge className="text-xs bg-green-100 text-green-700 border-0">
                                 {student.daysSinceActive === 0 ? "Сегодня" : `${student.daysSinceActive} д. назад`}

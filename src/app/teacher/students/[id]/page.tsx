@@ -247,6 +247,9 @@ export default async function StudentDetailPage({ params }: Props) {
                 <div className="flex items-center gap-2 text-gray-500 mt-1">
                   <Mail className="h-4 w-4" />
                   <span>{student.email}</span>
+                  {student.telegramUsername && (
+                    <span className="text-blue-500">{student.telegramUsername}</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-gray-500 mt-1">
                   <Calendar className="h-4 w-4" />

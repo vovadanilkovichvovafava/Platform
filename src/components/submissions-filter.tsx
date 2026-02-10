@@ -57,6 +57,7 @@ interface Submission {
     id?: string
     name: string
     email: string
+    telegramUsername?: string | null
   }
   module: {
     title: string
@@ -303,6 +304,7 @@ export function SubmissionsFilter({
         !search ||
         sub.user.name.toLowerCase().includes(search.toLowerCase()) ||
         sub.user.email.toLowerCase().includes(search.toLowerCase()) ||
+        (sub.user.telegramUsername && sub.user.telegramUsername.toLowerCase().includes(search.toLowerCase())) ||
         sub.module.title.toLowerCase().includes(search.toLowerCase())
       const matchesTrail =
         trailFilter === "all" || sub.module.trail.title === trailFilter
@@ -316,6 +318,7 @@ export function SubmissionsFilter({
         !search ||
         sub.user.name.toLowerCase().includes(search.toLowerCase()) ||
         sub.user.email.toLowerCase().includes(search.toLowerCase()) ||
+        (sub.user.telegramUsername && sub.user.telegramUsername.toLowerCase().includes(search.toLowerCase())) ||
         sub.module.title.toLowerCase().includes(search.toLowerCase())
       const matchesTrail =
         trailFilter === "all" || sub.module.trail.title === trailFilter
@@ -454,7 +457,7 @@ export function SubmissionsFilter({
                         {submission.module.title}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {submission.user.name} ({submission.user.email})
+                        {submission.user.name} ({submission.user.email}){submission.user.telegramUsername && <span className="ml-1 text-blue-500">{submission.user.telegramUsername}</span>}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         Отправлено{" "}
@@ -626,7 +629,9 @@ export function SubmissionsFilter({
                     <h3 className="font-medium text-gray-900">
                       {submission.module.title}
                     </h3>
-                    <p className="text-sm text-gray-500">{submission.user.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {submission.user.name}{submission.user.telegramUsername && <span className="ml-1 text-blue-500">{submission.user.telegramUsername}</span>}
+                    </p>
                     {/* Time tracking metrics for reviewed submissions */}
                     {submission.timeTracking && (
                       <div
