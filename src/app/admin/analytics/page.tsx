@@ -300,6 +300,7 @@ export default function AdvancedAnalyticsPage() {
   const [selectedStudentData, setSelectedStudentData] = useState<{
     id: string
     name: string
+    telegramUsername?: string | null
     trailProgress: Array<{
       trailId: string
       trailTitle: string
@@ -447,6 +448,7 @@ export default function AdvancedAnalyticsPage() {
     setSelectedStudentData({
       id: studentId,
       name: student.name,
+      telegramUsername: student.telegramUsername,
       trailProgress,
       totalXP,
       avgScore,
@@ -1288,7 +1290,12 @@ export default function AdvancedAnalyticsPage() {
                     >
                       <Search className="h-4 w-4 text-gray-400" />
                       {selectedStudentData ? (
-                        <span className="font-medium text-gray-900">{selectedStudentData.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{selectedStudentData.name}</span>
+                          {selectedStudentData.telegramUsername && (
+                            <span className="text-xs text-gray-400">{selectedStudentData.telegramUsername}</span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-500">Выберите студента...</span>
                       )}
