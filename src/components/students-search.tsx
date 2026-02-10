@@ -215,7 +215,7 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {paginatedStudents.map((student) => {
             const lastSubmission = student.submissions[0]
             const progressPercent =
