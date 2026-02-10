@@ -88,11 +88,6 @@ export default async function TeacherStudentsPage() {
         orderBy: { createdAt: "desc" },
         take: 1,
       },
-      activityDays: {
-        orderBy: { date: "desc" as const },
-        take: 1,
-        select: { date: true },
-      },
       _count: {
         select: {
           submissions: true,
@@ -100,21 +95,6 @@ export default async function TeacherStudentsPage() {
         },
       },
     },
-  })
-
-  // Filter out at-risk (7+ days inactive) and inactive (0 activity) students
-  const now = new Date()
-  const activeStudents = students.filter((student) => {
-    // No activity at all — inactive
-    if (student._count.activityDays === 0) return false
-    // Check last activity date
-    const lastActivity = student.activityDays[0]?.date
-    if (!lastActivity) return false
-    const daysSinceActive = Math.floor(
-      (now.getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24)
-    )
-    // 7+ days without activity — at risk
-    return daysSinceActive < 7
   })
 
   // Get trails with their modules to calculate max XP (filtered for non-admin)
@@ -154,8 +134,8 @@ export default async function TeacherStudentsPage() {
   // Get unique trail names for filter
   const trailNames = [...new Set(allTrails.map((t) => t.title))].sort()
 
-  // Serialize students data for client component (using activeStudents — risk/inactive filtered out)
-  const serializedStudents = activeStudents.map((student) => {
+  // Serialize students data for client component
+  const serializedStudents = students.map((student) => {
     // Get enrolled trail IDs for this student
     const enrolledTrailIds = new Set(student.enrollments.map((e) => e.trail.id))
 
@@ -202,8 +182,8 @@ export default async function TeacherStudentsPage() {
           {hasNoAccess
             ? "У вас пока нет назначенных направлений"
             : isAdmin
-              ? `${activeStudents.length} активных студентов на платформе`
-              : `${activeStudents.length} активных студентов в ваших направлениях`}
+              ? `${students.length} студентов на платформе`
+              : `${students.length} студентов в ваших направлениях`}
         </p>
       </div>
 
