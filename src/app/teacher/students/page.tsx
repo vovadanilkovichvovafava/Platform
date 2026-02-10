@@ -102,19 +102,29 @@ export default async function TeacherStudentsPage() {
     },
   })
 
-  // Filter out at-risk (7+ days inactive) and inactive (0 activity) students
+  // Filter out inactive students, but keep newcomers (registered < 14 days ago)
   const now = new Date()
+  const NEWCOMER_DAYS = 14
+  const INACTIVE_DAYS = 7
+
   const activeStudents = students.filter((student) => {
-    // No activity at all — inactive
+    // Newcomers always visible regardless of activity
+    const daysSinceRegistered = Math.floor(
+      (now.getTime() - new Date(student.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    if (daysSinceRegistered < NEWCOMER_DAYS) return true
+
+    // Non-newcomer with zero activity — inactive, hide
     if (student._count.activityDays === 0) return false
+
     // Check last activity date
     const lastActivity = student.activityDays[0]?.date
     if (!lastActivity) return false
     const daysSinceActive = Math.floor(
       (now.getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24)
     )
-    // 7+ days without activity — at risk
-    return daysSinceActive < 7
+    // 7+ days without activity — at risk, hide
+    return daysSinceActive < INACTIVE_DAYS
   })
 
   // Get trails with their modules to calculate max XP (filtered for non-admin)
@@ -154,7 +164,7 @@ export default async function TeacherStudentsPage() {
   // Get unique trail names for filter
   const trailNames = [...new Set(allTrails.map((t) => t.title))].sort()
 
-  // Serialize students data for client component (using activeStudents — risk/inactive filtered out)
+  // Serialize students data for client component (inactive/at-risk filtered out, newcomers kept)
   const serializedStudents = activeStudents.map((student) => {
     // Get enrolled trail IDs for this student
     const enrolledTrailIds = new Set(student.enrollments.map((e) => e.trail.id))
