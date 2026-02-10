@@ -116,6 +116,7 @@ model Trail {
   passwordHash        String?  // bcrypt hash of trail password
   passwordHint        String?  // Optional hint for password
   createdById         String?  // Creator/owner of the trail (always has access)
+  allowSkipReview     Boolean  @default(true) // If true, students can proceed to next module after submission without waiting for review
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

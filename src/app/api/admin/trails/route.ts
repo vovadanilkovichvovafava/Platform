@@ -34,6 +34,7 @@ const trailSchema = z.object({
   color: z.string().default("#6366f1"),
   duration: z.string().default(""),
   isPublished: z.boolean().default(true),
+  allowSkipReview: z.boolean().default(true), // true = students can proceed without waiting for review
   // Password protection fields
   isPasswordProtected: z.boolean().default(false),
   password: z.string().optional(), // Plaintext password, will be hashed

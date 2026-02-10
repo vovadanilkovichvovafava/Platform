@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Lock,
   KeyRound,
+  BookOpen,
 } from "lucide-react"
 
 const iconOptions = [
@@ -55,6 +56,7 @@ export interface TrailFormData {
   duration: string
   isPublished: boolean
   isRestricted?: boolean // true = hidden/assigned only, false = public to all students
+  allowSkipReview?: boolean // true = students can proceed without waiting for review
   teacherVisibility?: string
   assignedTeacherId?: string | null
   // Password protection
@@ -108,6 +110,7 @@ export function EditTrailModal({
     duration: "",
     isPublished: false,
     isRestricted: true, // Restricted by default (secure)
+    allowSkipReview: true, // Default: students can proceed without waiting for review
     teacherVisibility: "ADMIN_ONLY",
     assignedTeacherId: null,
     isPasswordProtected: false,
@@ -168,6 +171,7 @@ export function EditTrailModal({
         duration: "",
         isPublished: false,
         isRestricted: true, // Restricted by default (secure)
+        allowSkipReview: true, // Default: students can proceed without waiting for review
         teacherVisibility: "ADMIN_ONLY",
         assignedTeacherId: null,
         isPasswordProtected: false,
@@ -189,6 +193,7 @@ export function EditTrailModal({
         duration: trail.duration || "",
         isPublished: trail.isPublished,
         isRestricted: trail.isRestricted ?? true,
+        allowSkipReview: trail.allowSkipReview ?? true,
         teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
         assignedTeacherId: trail.assignedTeacherId || null,
         isPasswordProtected: trail.isPasswordProtected || false,
@@ -240,6 +245,9 @@ export function EditTrailModal({
         color: form.color,
         duration: form.duration.trim(),
       }
+
+      // Include progression mode in both create and edit
+      payload.allowSkipReview = form.allowSkipReview
 
       if (mode === "create") {
         // Include access settings only in create mode
@@ -370,6 +378,27 @@ export function EditTrailModal({
               value={form.duration}
               onChange={(e) => setForm({ ...form, duration: e.target.value })}
               placeholder="4-6 недель"
+            />
+          </div>
+
+          {/* Progression mode */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-blue-600" />
+              <div>
+                <span className="text-sm font-medium">
+                  {form.allowSkipReview ? "Свободный режим" : "Строгий режим"}
+                </span>
+                <p className="text-xs text-gray-500">
+                  {form.allowSkipReview
+                    ? "Ученик может идти дальше после сдачи работы, не дожидаясь проверки"
+                    : "Переход к следующему модулю только после проверки предыдущего"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={form.allowSkipReview ?? true}
+              onCheckedChange={(checked) => setForm({ ...form, allowSkipReview: checked })}
             />
           </div>
 

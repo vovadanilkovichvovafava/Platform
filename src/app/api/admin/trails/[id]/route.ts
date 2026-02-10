@@ -16,6 +16,7 @@ const trailUpdateSchema = z.object({
   duration: z.string().optional(),
   isPublished: z.boolean().optional(),
   isRestricted: z.boolean().optional(), // true = hidden/assigned, false = public to all students
+  allowSkipReview: z.boolean().optional(), // true = students can proceed without review
   teacherVisibility: z.enum(["ADMIN_ONLY", "ALL_TEACHERS", "SPECIFIC"]).optional(),
   assignedTeacherId: z.string().nullable().optional(), // For SPECIFIC visibility
   // Password protection fields

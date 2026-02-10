@@ -84,6 +84,7 @@ interface Trail {
   duration: string
   isPublished: boolean
   isRestricted: boolean
+  allowSkipReview: boolean
   teacherVisibility: string
   teachers: TrailTeacherAssignment[]
   modules: Module[]
@@ -345,6 +346,7 @@ export default function AdminContentPage() {
       duration: trail.duration,
       isPublished: trail.isPublished,
       isRestricted: trail.isRestricted,
+      allowSkipReview: trail.allowSkipReview,
       teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
       assignedTeacherId,
       isPasswordProtected: trail.isPasswordProtected,
