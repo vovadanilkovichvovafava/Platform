@@ -6,6 +6,7 @@
  * Isolated feature — does not affect existing components.
  */
 import { useState, useEffect, useCallback } from "react"
+import { Copy, Check } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type {
@@ -307,6 +308,8 @@ function AnalysisSection({ analysis }: { analysis: AiReviewAnalysis }) {
 }
 
 function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+
   const typeLabels: Record<string, string> = {
     knowledge: "Знание",
     application: "Применение",
@@ -325,6 +328,16 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
     trail: "трейл",
   }
 
+  const handleCopy = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+    } catch {
+      // Clipboard API may fail in insecure contexts — silent fallback
+    }
+  }
+
   return (
     <div>
       <h4 className="text-sm font-medium text-gray-900 mb-3">
@@ -341,6 +354,18 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
                 {i + 1}.
               </span>
               <p className="text-sm text-gray-900 flex-1">{q.question}</p>
+              <button
+                onClick={() => handleCopy(q.question, i)}
+                className="shrink-0 p-1 rounded hover:bg-gray-200 transition-colors text-gray-400 hover:text-gray-600"
+                aria-label={copiedIndex === i ? "Скопировано" : "Копировать вопрос"}
+                title={copiedIndex === i ? "Скопировано!" : "Копировать вопрос"}
+              >
+                {copiedIndex === i ? (
+                  <Check className="h-3.5 w-3.5 text-green-600" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </button>
             </div>
             <div className="flex flex-wrap gap-1.5 ml-5">
               <Badge className="text-xs bg-blue-100 text-blue-700 border-0">
