@@ -88,6 +88,11 @@ export default async function TeacherStudentsPage() {
         orderBy: { createdAt: "desc" },
         take: 1,
       },
+      activityDays: {
+        orderBy: { date: "desc" as const },
+        take: 1,
+        select: { date: true },
+      },
       _count: {
         select: {
           submissions: true,
@@ -95,6 +100,31 @@ export default async function TeacherStudentsPage() {
         },
       },
     },
+  })
+
+  // Filter out inactive students, but keep newcomers (registered < 14 days ago)
+  const now = new Date()
+  const NEWCOMER_DAYS = 14
+  const INACTIVE_DAYS = 7
+
+  const activeStudents = students.filter((student) => {
+    // Newcomers always visible regardless of activity
+    const daysSinceRegistered = Math.floor(
+      (now.getTime() - new Date(student.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    if (daysSinceRegistered < NEWCOMER_DAYS) return true
+
+    // Non-newcomer with zero activity — inactive, hide
+    if (student._count.activityDays === 0) return false
+
+    // Check last activity date
+    const lastActivity = student.activityDays[0]?.date
+    if (!lastActivity) return false
+    const daysSinceActive = Math.floor(
+      (now.getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    // 7+ days without activity — at risk, hide
+    return daysSinceActive < INACTIVE_DAYS
   })
 
   // Get trails with their modules to calculate max XP (filtered for non-admin)
@@ -134,8 +164,8 @@ export default async function TeacherStudentsPage() {
   // Get unique trail names for filter
   const trailNames = [...new Set(allTrails.map((t) => t.title))].sort()
 
-  // Serialize students data for client component
-  const serializedStudents = students.map((student) => {
+  // Serialize students data for client component (inactive/at-risk filtered out, newcomers kept)
+  const serializedStudents = activeStudents.map((student) => {
     // Get enrolled trail IDs for this student
     const enrolledTrailIds = new Set(student.enrollments.map((e) => e.trail.id))
 
@@ -182,8 +212,8 @@ export default async function TeacherStudentsPage() {
           {hasNoAccess
             ? "У вас пока нет назначенных направлений"
             : isAdmin
-              ? `${students.length} студентов на платформе`
-              : `${students.length} студентов в ваших направлениях`}
+              ? `${activeStudents.length} активных студентов на платформе`
+              : `${activeStudents.length} активных студентов в ваших направлениях`}
         </p>
       </div>
 
