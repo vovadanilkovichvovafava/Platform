@@ -1133,6 +1133,9 @@ export default function AdvancedAnalyticsPage() {
                                         <User className="h-3 w-3" />
                                         {student.name}
                                       </Link>
+                                      {student.telegramUsername && (
+                                        <p className="text-xs text-gray-400">{student.telegramUsername}</p>
+                                      )}
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       <span className="text-xs text-gray-600">{formatDate(student.dateStart)}</span>
