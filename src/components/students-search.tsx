@@ -225,7 +225,7 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
 
             return (
               <Link key={student.id} href={`/teacher/students/${student.id}`}>
-                <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer">
+                <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer pt-2">
                   <CardContent className="p-4">
                     <div className="flex flex-col md:flex-row md:items-center gap-3">
                       {/* Avatar & Info */}

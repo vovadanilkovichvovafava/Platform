@@ -71,6 +71,7 @@ export default async function TrailPage({ params }: Props) {
       isPasswordProtected: true,
       passwordHint: true,
       createdById: true,
+      allowSkipReview: true,
     },
   })
 
@@ -432,6 +433,7 @@ export default async function TrailPage({ params }: Props) {
                       duration: trail.duration,
                       isPublished: trail.isPublished,
                       isRestricted: trail.isRestricted,
+                      allowSkipReview: trail.allowSkipReview,
                       isPasswordProtected: trail.isPasswordProtected,
                       passwordHint: trail.passwordHint,
                       createdById: trail.createdById,
@@ -523,9 +525,9 @@ export default async function TrailPage({ params }: Props) {
 
                 // Unlock next module if:
                 // 1. Previous is COMPLETED, OR
-                // 2. Previous is IN_PROGRESS AND has a PENDING submission (work submitted, awaiting review)
+                // 2. (Only if allowSkipReview) Previous is IN_PROGRESS AND has a PENDING submission
                 const prevAllowsProgress = prevStatus === "COMPLETED" ||
-                  (prevStatus === "IN_PROGRESS" && prevHasPendingSubmission)
+                  (trail.allowSkipReview && prevStatus === "IN_PROGRESS" && prevHasPendingSubmission)
 
                 if (!prevAllowsProgress && status === "NOT_STARTED") {
                   isLocked = true

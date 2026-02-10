@@ -52,6 +52,7 @@ import {
   ArrowUp,
   ArrowDown,
   ListFilter,
+  List,
 } from "lucide-react"
 import Link from "next/link"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -819,6 +820,26 @@ export default function AdvancedAnalyticsPage() {
           </div>
         </div>
 
+        {/* Table of Contents */}
+        <div className="bg-white rounded-lg border p-3 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <List className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Оглавление</span>
+          </div>
+          <nav className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-1 text-xs">
+            <a href="#section-students" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Развитие студентов</a>
+            <a href="#section-summary" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Сводные метрики</a>
+            <a href="#section-churn" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Риск отсева</a>
+            <a href="#section-funnel" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Воронка конверсии</a>
+            <a href="#section-difficulty" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Сложность модулей</a>
+            <a href="#section-students-by-trail" className="text-gray-500 hover:text-indigo-600 hover:underline truncate pl-2">↳ По направлениям</a>
+            <a href="#section-student-detail" className="text-gray-500 hover:text-indigo-600 hover:underline truncate pl-2">↳ Анализ студента</a>
+            <a href="#section-trail-progress" className="text-gray-500 hover:text-indigo-600 hover:underline truncate pl-2">↳ Прогресс трейлов</a>
+            <a href="#section-top-students" className="text-gray-500 hover:text-indigo-600 hover:underline truncate pl-2">↳ Лидеры</a>
+            <a href="#section-dropoff" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Drop-off анализ</a>
+          </nav>
+        </div>
+
         {/* Module C: Guide — Как читать аналитику */}
         {showGuide && (
           <Card className="mb-6 border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50">
@@ -933,7 +954,7 @@ export default function AdvancedAnalyticsPage() {
         )}
 
         {/* Student Progress Section - Графики развития */}
-        <div className="mb-8">
+        <div id="section-students" className="mb-8 scroll-mt-4">
           <div className="flex items-center gap-2 mb-4">
             <Trophy className="h-5 w-5 text-amber-500" />
             <h2 className="text-lg font-semibold text-gray-900">Развитие студентов</h2>
@@ -942,7 +963,7 @@ export default function AdvancedAnalyticsPage() {
 
           {/* Students by Trail - Collapsible Sections */}
           {data.studentsByTrail && data.studentsByTrail.length > 0 && (
-            <Card className="mt-6">
+            <Card id="section-students-by-trail" className="mt-6 scroll-mt-4">
               <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("studentsByTrail")}>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -1263,7 +1284,7 @@ export default function AdvancedAnalyticsPage() {
 
           {/* Student Analytics Drill-down */}
           {allStudents.length > 0 && (
-            <Card className="mt-6">
+            <Card id="section-student-detail" className="mt-6 scroll-mt-4">
               <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("studentAnalytics")}>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -1575,7 +1596,7 @@ export default function AdvancedAnalyticsPage() {
             </Card>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <div id="section-trail-progress" className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 scroll-mt-4">
             {/* Trail Progress */}
             {data.trailProgress && data.trailProgress.length > 0 && (
               <Card>
@@ -1753,7 +1774,7 @@ export default function AdvancedAnalyticsPage() {
 
           {/* Top Students */}
           {data.topStudents && data.topStudents.length > 0 && (
-            <Card className="mt-6">
+            <Card id="section-top-students" className="mt-6 scroll-mt-4">
               <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleSection("topStudents")}>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -1844,7 +1865,7 @@ export default function AdvancedAnalyticsPage() {
         </div>
 
         {/* Summary Cards with explanations */}
-        <div className="mb-8">
+        <div id="section-summary" className="mb-8 scroll-mt-4">
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-sm font-medium text-gray-700">{ANALYTICS_INFO.summary.title}</h2>
             <span className="text-xs text-gray-500">— {ANALYTICS_INFO.summary.description}</span>
@@ -1931,7 +1952,7 @@ export default function AdvancedAnalyticsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Churn Risk */}
-          <Card>
+          <Card id="section-churn" className="scroll-mt-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <TrendingDown className="h-5 w-5 text-red-500" />
@@ -2200,7 +2221,7 @@ export default function AdvancedAnalyticsPage() {
           </Card>
 
           {/* Funnel */}
-          <Card>
+          <Card id="section-funnel" className="scroll-mt-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <TrendingUp className="h-5 w-5 text-blue-500" />
@@ -2291,7 +2312,7 @@ export default function AdvancedAnalyticsPage() {
         </div>
 
         {/* Module Difficulty */}
-        <Card>
+        <Card id="section-difficulty" className="scroll-mt-4">
           <CardHeader className="cursor-pointer" onClick={() => toggleSection("difficulty")}>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -2444,7 +2465,7 @@ export default function AdvancedAnalyticsPage() {
 
         {/* Module Drop-off Analysis - Bottlenecks */}
         {data.dropoffAnalysis && data.dropoffAnalysis.length > 0 && (
-          <div className="mt-8">
+          <div id="section-dropoff" className="mt-8 scroll-mt-4">
             <button
               onClick={() => toggleSection("dropoffSection")}
               className="flex items-center gap-2 mb-4 cursor-pointer w-full"
