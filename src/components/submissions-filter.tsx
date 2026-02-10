@@ -222,39 +222,11 @@ export function SubmissionsFilter({
     updateUrl({ trail: trailFilter, status: statusFilter, sort: value, q: search })
   }, [trailFilter, statusFilter, search, updateUrl])
 
-  // Hover-based activation: button becomes active after 1.5s of hovering
-  const [readyToDeleteId, setReadyToDeleteId] = useState<string | null>(null)
   const [copiedTg, setCopiedTg] = useState<string | null>(null)
-  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const HOVER_DELAY_MS = 1500
-
-  // Handle mouse enter - start 1.5s timer
-  const handleDeleteMouseEnter = (id: string) => {
-    // Clear any existing timer
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current)
-    }
-    // Start new timer - after 1.5s button becomes active
-    hoverTimerRef.current = setTimeout(() => {
-      setReadyToDeleteId(id)
-    }, HOVER_DELAY_MS)
-  }
-
-  // Handle mouse leave - cancel timer and reset ready state
-  const handleDeleteMouseLeave = () => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current)
-      hoverTimerRef.current = null
-    }
-    setReadyToDeleteId(null)
-  }
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (hoverTimerRef.current) {
-        clearTimeout(hoverTimerRef.current)
-      }
       if (searchTimerRef.current) {
         clearTimeout(searchTimerRef.current)
       }
@@ -262,10 +234,7 @@ export function SubmissionsFilter({
   }, [])
 
   const handleDeleteSubmission = async (id: string, userName: string, moduleTitle: string) => {
-    // Only allow if button is ready (hovered for 1.5s) and not already deleting
-    if (readyToDeleteId !== id || deletingId) {
-      return
-    }
+    if (deletingId) return
 
     const confirmed = await confirm({
       title: "Удалить работу?",
@@ -275,9 +244,6 @@ export function SubmissionsFilter({
     })
 
     if (!confirmed) return
-
-    // Reset ready state after action
-    setReadyToDeleteId(null)
 
     try {
       setDeletingId(id)
@@ -540,28 +506,14 @@ export function SubmissionsFilter({
                       <Button
                         variant="ghost-destructive"
                         size="sm"
-                        className={
-                          deletingId === submission.id
-                            ? "text-red-500"
-                            : readyToDeleteId !== submission.id
-                              ? "opacity-50"
-                              : ""
-                        }
+                        className={deletingId === submission.id ? "text-red-500" : ""}
                         onClick={() => handleDeleteSubmission(
                           submission.id,
                           submission.user.name,
                           submission.module.title
                         )}
-                        onMouseEnter={() => handleDeleteMouseEnter(submission.id)}
-                        onMouseLeave={handleDeleteMouseLeave}
                         disabled={deletingId === submission.id}
-                        title={
-                          deletingId === submission.id
-                            ? "Удаляем…"
-                            : readyToDeleteId !== submission.id
-                              ? "Наведите и подождите 1.5с"
-                              : "Удалить работу"
-                        }
+                        title={deletingId === submission.id ? "Удаляем…" : "Удалить работу"}
                       >
                         {deletingId === submission.id ? (
                           <>
