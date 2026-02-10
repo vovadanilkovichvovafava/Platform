@@ -224,6 +224,7 @@ export function SubmissionsFilter({
 
   // Hover-based activation: button becomes active after 1.5s of hovering
   const [readyToDeleteId, setReadyToDeleteId] = useState<string | null>(null)
+  const [copiedTg, setCopiedTg] = useState<string | null>(null)
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
   const HOVER_DELAY_MS = 1500
 
@@ -356,7 +357,7 @@ export function SubmissionsFilter({
               <Input
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Поиск по имени, email или модулю..."
+                placeholder="Поиск по имени, TG-нику или модулю..."
                 className="pl-10"
               />
             </div>
@@ -457,7 +458,20 @@ export function SubmissionsFilter({
                         {submission.module.title}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {submission.user.name} ({submission.user.email}){submission.user.telegramUsername && <span className="ml-1 text-blue-500">{submission.user.telegramUsername}</span>}
+                        {submission.user.name} ({submission.user.email}){submission.user.telegramUsername && <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            navigator.clipboard.writeText(submission.user.telegramUsername!).then(() => {
+                              setCopiedTg(submission.user.telegramUsername!)
+                              setTimeout(() => setCopiedTg(null), 2000)
+                            })
+                          }}
+                          className="ml-1 text-blue-500 hover:text-blue-700 hover:underline transition-colors"
+                          title="Копировать TG-ник"
+                        >
+                          {copiedTg === submission.user.telegramUsername ? "Скопировано" : submission.user.telegramUsername}
+                        </button>}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         Отправлено{" "}
@@ -630,7 +644,20 @@ export function SubmissionsFilter({
                       {submission.module.title}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {submission.user.name}{submission.user.telegramUsername && <span className="ml-1 text-blue-500">{submission.user.telegramUsername}</span>}
+                      {submission.user.name}{submission.user.telegramUsername && <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          navigator.clipboard.writeText(submission.user.telegramUsername!).then(() => {
+                            setCopiedTg(submission.user.telegramUsername!)
+                            setTimeout(() => setCopiedTg(null), 2000)
+                          })
+                        }}
+                        className="ml-1 text-blue-500 hover:text-blue-700 hover:underline transition-colors"
+                        title="Копировать TG-ник"
+                      >
+                        {copiedTg === submission.user.telegramUsername ? "Скопировано" : submission.user.telegramUsername}
+                      </button>}
                     </p>
                     {/* Time tracking metrics for reviewed submissions */}
                     {submission.timeTracking && (

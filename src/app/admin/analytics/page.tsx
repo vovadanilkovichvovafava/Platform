@@ -279,8 +279,8 @@ export default function AdvancedAnalyticsPage() {
   const [expandedStudentTrail, setExpandedStudentTrail] = useState<string | null>(null)
   const [studentSearch, setStudentSearch] = useState("")
   // Sortable columns state: column key + direction (asc/desc/null for default)
-  const [studentSortColumn, setStudentSortColumn] = useState<string | null>(null)
-  const [studentSortDirection, setStudentSortDirection] = useState<"asc" | "desc" | null>(null)
+  const [studentSortColumn, setStudentSortColumn] = useState<string | null>("dateStart")
+  const [studentSortDirection, setStudentSortDirection] = useState<"asc" | "desc" | null>("desc")
   // Submission filter within the "Students by directions" block
   const [submissionFilter, setSubmissionFilter] = useState<"all" | "no_submissions" | "has_submissions" | "has_pending" | "has_revision" | "all_approved">("all")
   // Collapsible section states - all open by default
@@ -300,6 +300,7 @@ export default function AdvancedAnalyticsPage() {
   const [selectedStudentData, setSelectedStudentData] = useState<{
     id: string
     name: string
+    telegramUsername?: string | null
     trailProgress: Array<{
       trailId: string
       trailTitle: string
@@ -447,6 +448,7 @@ export default function AdvancedAnalyticsPage() {
     setSelectedStudentData({
       id: studentId,
       name: student.name,
+      telegramUsername: student.telegramUsername,
       trailProgress,
       totalXP,
       avgScore,
@@ -984,14 +986,14 @@ export default function AdvancedAnalyticsPage() {
                       <option value="has_revision">Есть работы на доработке</option>
                       <option value="all_approved">Все работы приняты</option>
                     </select>
-                    {(submissionFilter !== "all" || studentSortColumn) && (
+                    {(submissionFilter !== "all" || studentSortColumn !== "dateStart" || studentSortDirection !== "desc") && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
                           setSubmissionFilter("all")
-                          setStudentSortColumn(null)
-                          setStudentSortDirection(null)
+                          setStudentSortColumn("dateStart")
+                          setStudentSortDirection("desc")
                         }}
                         className="text-gray-500 hover:text-gray-700 text-xs"
                       >
@@ -1133,6 +1135,9 @@ export default function AdvancedAnalyticsPage() {
                                         <User className="h-3 w-3" />
                                         {student.name}
                                       </Link>
+                                      {student.telegramUsername && (
+                                        <p className="text-xs text-gray-400">{student.telegramUsername}</p>
+                                      )}
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       <span className="text-xs text-gray-600">{formatDate(student.dateStart)}</span>
@@ -1285,7 +1290,12 @@ export default function AdvancedAnalyticsPage() {
                     >
                       <Search className="h-4 w-4 text-gray-400" />
                       {selectedStudentData ? (
-                        <span className="font-medium text-gray-900">{selectedStudentData.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{selectedStudentData.name}</span>
+                          {selectedStudentData.telegramUsername && (
+                            <span className="text-xs text-gray-400">{selectedStudentData.telegramUsername}</span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-500">Выберите студента...</span>
                       )}
