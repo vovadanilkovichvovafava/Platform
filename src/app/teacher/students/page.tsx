@@ -154,6 +154,7 @@ export default async function TeacherStudentsPage() {
       id: student.id,
       name: student.name,
       email: student.email,
+      telegramUsername: student.telegramUsername,
       totalXP: calculatedXP,
       enrollments: student.enrollments,
       moduleProgress: student.moduleProgress,

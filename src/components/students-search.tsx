@@ -53,6 +53,7 @@ interface Student {
   id: string
   name: string
   email: string
+  telegramUsername?: string | null
   totalXP: number
   enrollments: StudentEnrollment[]
   moduleProgress: { id: string }[]
@@ -88,6 +89,7 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
   const [trailFilter, setTrailFilter] = useState("all")
   const [sortBy, setSortBy] = useState("xp")
   const [currentPage, setCurrentPage] = useState(1)
+  const [copiedTg, setCopiedTg] = useState<string | null>(null)
 
   // Filter and sort students
   const filteredStudents = useMemo(() => {
@@ -95,7 +97,8 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
       const matchesSearch =
         !search ||
         student.name.toLowerCase().includes(search.toLowerCase()) ||
-        student.email.toLowerCase().includes(search.toLowerCase())
+        student.email.toLowerCase().includes(search.toLowerCase()) ||
+        (student.telegramUsername && student.telegramUsername.toLowerCase().includes(search.toLowerCase()))
       const matchesTrail =
         trailFilter === "all" ||
         student.enrollments.some((e) => e.trail.title === trailFilter)
@@ -155,7 +158,7 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
               <Input
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Поиск по имени или email..."
+                placeholder="Поиск по имени, email или TG-нику..."
                 className="pl-10"
               />
             </div>
@@ -236,7 +239,25 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
                           <h3 className="font-semibold text-gray-900 text-sm">
                             {student.name}
                           </h3>
-                          <p className="text-xs text-gray-500">{student.email}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{student.email}</span>
+                            {student.telegramUsername && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  navigator.clipboard.writeText(student.telegramUsername!).then(() => {
+                                    setCopiedTg(student.telegramUsername!)
+                                    setTimeout(() => setCopiedTg(null), 2000)
+                                  })
+                                }}
+                                className="text-blue-500 hover:text-blue-700 hover:underline transition-colors shrink-0"
+                                title="Копировать TG-ник"
+                              >
+                                {copiedTg === student.telegramUsername ? "Скопировано" : student.telegramUsername}
+                              </button>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                             {student.enrollments.map((e) => (
                               <Badge
