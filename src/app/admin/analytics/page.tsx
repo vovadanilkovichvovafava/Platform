@@ -279,8 +279,8 @@ export default function AdvancedAnalyticsPage() {
   const [expandedStudentTrail, setExpandedStudentTrail] = useState<string | null>(null)
   const [studentSearch, setStudentSearch] = useState("")
   // Sortable columns state: column key + direction (asc/desc/null for default)
-  const [studentSortColumn, setStudentSortColumn] = useState<string | null>(null)
-  const [studentSortDirection, setStudentSortDirection] = useState<"asc" | "desc" | null>(null)
+  const [studentSortColumn, setStudentSortColumn] = useState<string | null>("dateStart")
+  const [studentSortDirection, setStudentSortDirection] = useState<"asc" | "desc" | null>("desc")
   // Submission filter within the "Students by directions" block
   const [submissionFilter, setSubmissionFilter] = useState<"all" | "no_submissions" | "has_submissions" | "has_pending" | "has_revision" | "all_approved">("all")
   // Collapsible section states - all open by default
@@ -986,14 +986,14 @@ export default function AdvancedAnalyticsPage() {
                       <option value="has_revision">Есть работы на доработке</option>
                       <option value="all_approved">Все работы приняты</option>
                     </select>
-                    {(submissionFilter !== "all" || studentSortColumn) && (
+                    {(submissionFilter !== "all" || studentSortColumn !== "dateStart" || studentSortDirection !== "desc") && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
                           setSubmissionFilter("all")
-                          setStudentSortColumn(null)
-                          setStudentSortDirection(null)
+                          setStudentSortColumn("dateStart")
+                          setStudentSortDirection("desc")
                         }}
                         className="text-gray-500 hover:text-gray-700 text-xs"
                       >
