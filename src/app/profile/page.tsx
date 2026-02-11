@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
+import { InfoHint } from "@/components/ui/info-hint"
 import {
   User,
   Mail,
@@ -33,11 +34,15 @@ import {
   Trash2,
   Play,
   Info,
+  Send,
 } from "lucide-react"
 
 interface UserProfile {
   id: string
   name: string
+  firstName: string | null
+  lastName: string | null
+  telegramUsername: string | null
   email: string
   role: string
   totalXP: number
@@ -71,10 +76,13 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState("")
 
   // Form states
-  const [name, setName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [telegramUsername, setTelegramUsername] = useState("")
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   // Telegram states
   const [telegramStatus, setTelegramStatus] = useState<{
@@ -201,7 +209,18 @@ export default function ProfilePage() {
       if (!res.ok) throw new Error("Ошибка загрузки профиля")
       const data = await res.json()
       setProfile(data)
-      setName(data.name)
+      // Populate form fields; derive firstName/lastName from name if not stored
+      if (data.firstName) {
+        setFirstName(data.firstName)
+      } else {
+        setFirstName(data.name?.split(" ")[0] || "")
+      }
+      if (data.lastName) {
+        setLastName(data.lastName)
+      } else {
+        setLastName(data.name?.split(" ").slice(1).join(" ") || "")
+      }
+      setTelegramUsername(data.telegramUsername || "")
     } catch {
       setError("Не удалось загрузить профиля")
     } finally {
@@ -274,27 +293,74 @@ export default function ProfilePage() {
     }
   }
 
-  const handleUpdateName = async (e: React.FormEvent) => {
+  // Client-side validation matching registration rules
+  const validateProfileFields = (): Record<string, string> => {
+    const errors: Record<string, string> = {}
+    if (firstName.length < 2) errors.firstName = "Имя должно быть минимум 2 символа"
+    if (lastName.length < 2) errors.lastName = "Фамилия должна быть минимум 2 символа"
+    if (telegramUsername && !/^@[a-zA-Z0-9_]{5,32}$/.test(telegramUsername)) {
+      errors.telegramUsername = "Формат: @username (от 5 символов, латиница, цифры, _)"
+    }
+    return errors
+  }
+
+  const hasProfileChanges = () => {
+    if (!profile) return false
+    const origFirst = profile.firstName || profile.name?.split(" ")[0] || ""
+    const origLast = profile.lastName || profile.name?.split(" ").slice(1).join(" ") || ""
+    const origTelegram = profile.telegramUsername || ""
+    return firstName !== origFirst || lastName !== origLast || telegramUsername !== origTelegram
+  }
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setSuccess("")
+    setFieldErrors({})
+
+    // Client-side validation
+    const clientErrors = validateProfileFields()
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors)
+      return
+    }
+
     setSaving(true)
 
     try {
+      const payload: Record<string, string> = {
+        firstName,
+        lastName,
+      }
+      if (telegramUsername) {
+        payload.telegramUsername = telegramUsername
+      }
+
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {
         const data = await res.json()
+        if (data.fieldErrors) {
+          setFieldErrors(data.fieldErrors)
+        }
         throw new Error(data.error || "Ошибка обновления")
       }
 
-      setSuccess("Имя успешно обновлено")
-      await updateSession({ name })
+      const updatedData = await res.json()
+      setSuccess("Профиль успешно обновлён")
+
+      // Update session with new name so header reflects changes immediately
+      await updateSession({ name: updatedData.name })
+
+      // Re-fetch profile to sync all local state
       fetchProfile()
+
+      // Refresh server-side cached data (Next.js router cache)
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка обновления")
     } finally {
@@ -419,6 +485,12 @@ export default function ProfilePage() {
                 <Mail className="h-3 w-3" />
                 {profile.email}
               </p>
+              {profile.telegramUsername && (
+                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                  <Send className="h-3 w-3" />
+                  {profile.telegramUsername}
+                </p>
+              )}
               <Badge className={`mt-3 ${getRoleColor(profile.role)}`}>
                 {getRoleName(profile.role)}
               </Badge>
@@ -471,28 +543,108 @@ export default function ProfilePage() {
 
         {/* Edit Forms */}
         <div className="md:col-span-2 space-y-6">
-          {/* Change Name */}
+          {/* Personal Data */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Изменить имя
+                Личные данные
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleUpdateName} className="space-y-4">
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <Label htmlFor="firstName">Имя</Label>
+                      <InfoHint hint="Ваше имя. Минимум 2 символа. Обязательное поле." side="top" />
+                    </div>
+                    <Input
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => {
+                        setFirstName(e.target.value)
+                        setFieldErrors((prev) => { const { firstName: _, ...rest } = prev; return rest })
+                      }}
+                      placeholder="Иван"
+                      aria-describedby={fieldErrors.firstName ? "firstName-error" : undefined}
+                      aria-invalid={!!fieldErrors.firstName}
+                      required
+                    />
+                    {fieldErrors.firstName && (
+                      <p id="firstName-error" className="text-sm text-red-500 mt-1" role="alert">
+                        {fieldErrors.firstName}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <Label htmlFor="lastName">Фамилия</Label>
+                      <InfoHint hint="Ваша фамилия. Минимум 2 символа. Обязательное поле." side="top" />
+                    </div>
+                    <Input
+                      id="lastName"
+                      value={lastName}
+                      onChange={(e) => {
+                        setLastName(e.target.value)
+                        setFieldErrors((prev) => { const { lastName: _, ...rest } = prev; return rest })
+                      }}
+                      placeholder="Иванов"
+                      aria-describedby={fieldErrors.lastName ? "lastName-error" : undefined}
+                      aria-invalid={!!fieldErrors.lastName}
+                      required
+                    />
+                    {fieldErrors.lastName && (
+                      <p id="lastName-error" className="text-sm text-red-500 mt-1" role="alert">
+                        {fieldErrors.lastName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 <div>
-                  <Label htmlFor="name">Имя</Label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Label htmlFor="telegramUsername" className="flex items-center gap-1">
+                      <Send className="h-3.5 w-3.5" />
+                      Telegram
+                    </Label>
+                    <InfoHint hint="Ваш Telegram-ник в формате @username. От 5 до 32 символов: латиница, цифры и подчёркивание. Пример: @ivan_dev" side="top" />
+                  </div>
                   <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Введите имя"
-                    minLength={2}
-                    required
+                    id="telegramUsername"
+                    value={telegramUsername}
+                    onChange={(e) => {
+                      setTelegramUsername(e.target.value)
+                      setFieldErrors((prev) => { const { telegramUsername: _, ...rest } = prev; return rest })
+                    }}
+                    placeholder="@username"
+                    aria-describedby={fieldErrors.telegramUsername ? "telegramUsername-error" : undefined}
+                    aria-invalid={!!fieldErrors.telegramUsername}
+                  />
+                  {fieldErrors.telegramUsername && (
+                    <p id="telegramUsername-error" className="text-sm text-red-500 mt-1" role="alert">
+                      {fieldErrors.telegramUsername}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Label htmlFor="email-display" className="flex items-center gap-1">
+                      <Mail className="h-3.5 w-3.5" />
+                      Email
+                    </Label>
+                    <InfoHint hint="Email нельзя изменить после регистрации. Для смены email обратитесь к администратору." side="top" />
+                  </div>
+                  <Input
+                    id="email-display"
+                    value={profile.email}
+                    disabled
+                    className="bg-gray-50 text-gray-500"
                   />
                 </div>
-                <Button type="submit" disabled={saving || name === profile.name}>
+
+                <Button type="submit" disabled={saving || !hasProfileChanges()}>
                   {saving ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
@@ -515,7 +667,10 @@ export default function ProfilePage() {
             <CardContent>
               <form onSubmit={handleUpdatePassword} className="space-y-4">
                 <div>
-                  <Label htmlFor="currentPassword">Текущий пароль</Label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Label htmlFor="currentPassword">Текущий пароль</Label>
+                    <InfoHint hint="Введите текущий пароль для подтверждения изменения." side="top" />
+                  </div>
                   <Input
                     id="currentPassword"
                     type="password"
@@ -526,7 +681,10 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="newPassword">Новый пароль</Label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Label htmlFor="newPassword">Новый пароль</Label>
+                    <InfoHint hint="Минимум 6 символов. Используйте буквы, цифры и спецсимволы для надёжности." side="top" />
+                  </div>
                   <Input
                     id="newPassword"
                     type="password"
@@ -538,7 +696,10 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
+                    <InfoHint hint="Повторите новый пароль для подтверждения." side="top" />
+                  </div>
                   <Input
                     id="confirmPassword"
                     type="password"
