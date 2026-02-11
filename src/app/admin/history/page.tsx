@@ -1,15 +1,32 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { usePathname } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   History,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  List,
 } from "lucide-react"
+import {
+  PER_PAGE_OPTIONS,
+  type PerPageOption,
+  getUrlParams,
+  parsePageParam,
+  parsePerPageParam,
+  updateUrl,
+} from "@/lib/url-state"
 
 interface AuditLog {
   id: string
@@ -27,14 +44,37 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   REORDER: { label: "Сортировка", color: "bg-purple-100 text-purple-700" },
 }
 
+const FILTER_DEFAULTS = { page: "1", perPage: "50" }
+
 export default function AdminHistoryPage() {
+  const pathname = usePathname()
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState<PerPageOption>(50)
   const [totalPages, setTotalPages] = useState(1)
-  const limit = 50
 
-  const fetchLogs = async (pageNum: number) => {
+  // Read initial values from URL
+  useEffect(() => {
+    const params = getUrlParams()
+    const initialPage = parsePageParam(params.get("page"), 1)
+    const initialPerPage = parsePerPageParam(params.get("perPage"), 50)
+    setPage(initialPage)
+    setPerPage(initialPerPage)
+  }, [])
+
+  const syncUrl = useCallback(
+    (params: { page: number; perPage: number }) => {
+      updateUrl(
+        pathname,
+        { page: String(params.page), perPage: String(params.perPage) },
+        FILTER_DEFAULTS,
+      )
+    },
+    [pathname],
+  )
+
+  const fetchLogs = useCallback(async (pageNum: number, limit: number) => {
     try {
       setLoading(true)
       const offset = (pageNum - 1) * limit
@@ -56,11 +96,42 @@ export default function AdminHistoryPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
+  // Fetch logs when page or perPage changes (skip the first render before URL params are read)
+  const [initialized, setInitialized] = useState(false)
   useEffect(() => {
-    fetchLogs(page)
-  }, [page])
+    if (!initialized) {
+      // First render: read URL params, then mark as initialized
+      const params = getUrlParams()
+      const initialPage = parsePageParam(params.get("page"), 1)
+      const initialPerPage = parsePerPageParam(params.get("perPage"), 50)
+      setPage(initialPage)
+      setPerPage(initialPerPage)
+      setInitialized(true)
+      fetchLogs(initialPage, initialPerPage)
+      return
+    }
+    fetchLogs(page, perPage)
+  }, [page, perPage, initialized, fetchLogs])
+
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      setPage(newPage)
+      syncUrl({ page: newPage, perPage })
+    },
+    [perPage, syncUrl],
+  )
+
+  const handlePerPageChange = useCallback(
+    (value: string) => {
+      const newPerPage = parseInt(value, 10) as PerPageOption
+      setPerPage(newPerPage)
+      setPage(1)
+      syncUrl({ page: 1, perPage: newPerPage })
+    },
+    [syncUrl],
+  )
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("ru-RU", {
@@ -98,14 +169,29 @@ export default function AdminHistoryPage() {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => fetchLogs(page)}
-              variant="outline"
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Обновить
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+                <SelectTrigger className="w-[140px]">
+                  <List className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="На странице" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PER_PAGE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option} на стр.
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={() => fetchLogs(page, perPage)}
+                variant="outline"
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                Обновить
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -164,13 +250,13 @@ export default function AdminHistoryPage() {
               </div>
             )}
 
-            {/* Pagination */}
+            {/* Pagination - hidden when total fits in one page */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-6 pt-6 border-t">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => handlePageChange(Math.max(1, page - 1))}
                   disabled={page === 1 || loading}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -181,7 +267,7 @@ export default function AdminHistoryPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages || loading}
                 >
                   <ChevronRight className="h-4 w-4" />

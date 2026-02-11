@@ -8,7 +8,12 @@ export const dynamic = "force-dynamic"
 import { Users } from "lucide-react"
 import { StudentsSearch } from "@/components/students-search"
 
-export default async function TeacherStudentsPage() {
+export default async function TeacherStudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; trail?: string; sort?: string; page?: string; perPage?: string }>
+}) {
+  const resolvedSearchParams = await searchParams
   const session = await getServerSession(authOptions)
 
   // Allow TEACHER, CO_ADMIN, and ADMIN roles
@@ -217,7 +222,17 @@ export default async function TeacherStudentsPage() {
         </p>
       </div>
 
-      <StudentsSearch students={serializedStudents} trails={trailNames} />
+      <StudentsSearch
+        students={serializedStudents}
+        trails={trailNames}
+        initialFilters={{
+          q: resolvedSearchParams.q || "",
+          trail: resolvedSearchParams.trail || "all",
+          sort: resolvedSearchParams.sort || "xp",
+          page: resolvedSearchParams.page || "1",
+          perPage: resolvedSearchParams.perPage || "10",
+        }}
+      />
     </div>
   )
 }
