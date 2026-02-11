@@ -6,7 +6,12 @@ import { z } from "zod"
 import bcrypt from "bcryptjs"
 
 const updateProfileSchema = z.object({
-  name: z.string().min(2, "Имя должно быть минимум 2 символа").optional(),
+  firstName: z.string().min(2, "Имя должно быть минимум 2 символа").optional(),
+  lastName: z.string().min(2, "Фамилия должна быть минимум 2 символа").optional(),
+  telegramUsername: z
+    .string()
+    .regex(/^@[a-zA-Z0-9_]{5,32}$/, "Формат: @username (от 5 символов, латиница, цифры, _)")
+    .optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(6, "Пароль должен быть минимум 6 символов").optional(),
 })
@@ -25,6 +30,9 @@ export async function GET() {
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
+        telegramUsername: true,
         email: true,
         role: true,
         totalXP: true,
@@ -62,11 +70,37 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const data = updateProfileSchema.parse(body)
 
-    const updateData: { name?: string; password?: string } = {}
+    const updateData: {
+      name?: string
+      firstName?: string
+      lastName?: string
+      telegramUsername?: string
+      password?: string
+    } = {}
 
-    // Update name if provided
-    if (data.name) {
-      updateData.name = data.name
+    // Update firstName/lastName and recompute name
+    if (data.firstName !== undefined || data.lastName !== undefined) {
+      // Need current values to compute the full name
+      const currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { firstName: true, lastName: true },
+      })
+
+      if (!currentUser) {
+        return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
+      }
+
+      const newFirstName = data.firstName ?? currentUser.firstName ?? ""
+      const newLastName = data.lastName ?? currentUser.lastName ?? ""
+
+      if (data.firstName !== undefined) updateData.firstName = data.firstName
+      if (data.lastName !== undefined) updateData.lastName = data.lastName
+      updateData.name = `${newFirstName} ${newLastName}`.trim()
+    }
+
+    // Update telegramUsername if provided
+    if (data.telegramUsername !== undefined) {
+      updateData.telegramUsername = data.telegramUsername
     }
 
     // Update password if provided
@@ -109,6 +143,9 @@ export async function PATCH(request: NextRequest) {
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
+        telegramUsername: true,
         email: true,
       },
     })
@@ -116,7 +153,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(updatedUser)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors[0].message }, { status: 400 })
+      const fieldErrors: Record<string, string> = {}
+      for (const e of error.errors) {
+        const field = e.path.join(".")
+        if (!fieldErrors[field]) fieldErrors[field] = e.message
+      }
+      return NextResponse.json({ error: error.errors[0].message, fieldErrors }, { status: 400 })
     }
     console.error("Error updating profile:", error)
     return NextResponse.json({ error: "Ошибка при обновлении профиля" }, { status: 500 })
