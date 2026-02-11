@@ -38,6 +38,7 @@ import {
   parsePerPageParam,
   parseEnumParam,
   updateUrl,
+  loadFiltersFromStorage,
 } from "@/lib/url-state"
 
 const VALID_SORTS = ["xp", "name", "activity", "modules"] as const
@@ -149,6 +150,58 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
     },
     [pathname],
   )
+
+  // Restore filter state on mount: handles back navigation where Next.js RSC cache
+  // may provide stale initialFilters, and breadcrumb links without query params.
+  // Priority: URL params > sessionStorage > defaults (already set from initialFilters).
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const stored = loadFiltersFromStorage(pathname)
+
+    const resolvedQ = urlParams.get("q") ?? stored?.q ?? normalizedQ
+    const rawTrail = urlParams.get("trail") ?? stored?.trail ?? normalizedTrail
+    const resolvedTrail =
+      rawTrail === "all" || trails.includes(rawTrail) ? rawTrail : "all"
+    const resolvedSort = parseEnumParam(
+      urlParams.get("sort") ?? stored?.sort ?? undefined,
+      VALID_SORTS,
+      normalizedSort,
+    )
+    const resolvedPerPage = parsePerPageParam(
+      urlParams.get("perPage") ?? stored?.perPage ?? undefined,
+      normalizedPerPage,
+    )
+    const resolvedPage = parsePageParam(
+      urlParams.get("page") ?? stored?.page ?? undefined,
+      normalizedPage,
+    )
+
+    // Only update if something differs from the server-provided initial values
+    const needsUpdate =
+      resolvedQ !== normalizedQ ||
+      resolvedTrail !== normalizedTrail ||
+      resolvedSort !== normalizedSort ||
+      resolvedPerPage !== normalizedPerPage ||
+      resolvedPage !== normalizedPage
+
+    if (needsUpdate) {
+      setSearch(resolvedQ)
+      setTrailFilter(resolvedTrail)
+      setSortBy(resolvedSort)
+      setPerPage(resolvedPerPage)
+      setCurrentPage(resolvedPage)
+    }
+
+    // Always sync URL and sessionStorage to ensure consistency
+    syncUrl({
+      q: resolvedQ,
+      trail: resolvedTrail,
+      sort: resolvedSort,
+      page: resolvedPage,
+      perPage: resolvedPerPage,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Debounced URL sync for search input
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
