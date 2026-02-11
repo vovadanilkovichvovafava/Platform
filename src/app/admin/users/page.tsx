@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -77,7 +77,7 @@ const roleConfig: Record<UserRole, { label: string; color: string; icon: typeof 
   },
 }
 
-export default function AdminUsersPage() {
+function AdminUsersPageContent() {
   const { data: session } = useSession()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -591,5 +591,19 @@ export default function AdminUsersPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+        </div>
+      }
+    >
+      <AdminUsersPageContent />
+    </Suspense>
   )
 }
