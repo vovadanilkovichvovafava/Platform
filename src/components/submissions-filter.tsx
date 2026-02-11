@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,7 +34,19 @@ import {
   Timer,
   Pencil,
   ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  List,
 } from "lucide-react"
+import {
+  PER_PAGE_OPTIONS,
+  type PerPageOption,
+  parsePerPageParam,
+  parsePageParam,
+  parseEnumParam,
+  loadFiltersFromStorage,
+  saveFiltersToStorage,
+} from "@/lib/url-state"
 
 interface TimeTracking {
   moduleStartedAt: string | null
@@ -141,13 +153,17 @@ function getDaysWaitingLabel(days: number): { label: string; color: string } {
   return { label: `${days} дней`, color: "bg-red-100 text-red-700" }
 }
 
+const FILTER_DEFAULTS = { trail: "all", status: "all", sort: "waiting", q: "", perPage: "10", page: "1" }
+
 /** Build a URL query string from filter state. Default values are omitted to keep URLs clean. */
-function buildFilterQuery(filters: { trail: string; status: string; sort: string; q: string }): string {
+function buildFilterQuery(filters: { trail: string; status: string; sort: string; q: string; perPage?: string; page?: string }): string {
   const params = new URLSearchParams()
   if (filters.trail && filters.trail !== "all") params.set("trail", filters.trail)
   if (filters.status && filters.status !== "all") params.set("status", filters.status)
   if (filters.sort && filters.sort !== "waiting") params.set("sort", filters.sort)
   if (filters.q) params.set("q", filters.q)
+  if (filters.perPage && filters.perPage !== "10") params.set("perPage", filters.perPage)
+  if (filters.page && filters.page !== "1") params.set("page", filters.page)
   return params.toString()
 }
 
@@ -177,50 +193,112 @@ export function SubmissionsFilter({
   // Normalize and validate initial filter values from URL
   const normalized = useMemo(() => normalizeFilters(initialFilters, trails), [initialFilters, trails])
 
+  const searchParams = useSearchParams()
+
   const [search, setSearch] = useState(normalized.q)
   const [trailFilter, setTrailFilter] = useState(normalized.trail)
   const [statusFilter, setStatusFilter] = useState(normalized.status)
   const [sortBy, setSortBy] = useState<"waiting" | "time_to_submit">(normalized.sort)
+  const [perPage, setPerPage] = useState<PerPageOption>(10)
+  const [currentPage, setCurrentPage] = useState(1)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  // Keep trails in a ref to avoid effect re-runs on array reference changes
+  const trailsRef = useRef(trails)
+  trailsRef.current = trails
+
+  // Sync state from URL search params on navigation changes
+  useEffect(() => {
+    const currentTrails = trailsRef.current
+    const stored = loadFiltersFromStorage(pathname)
+    const validStatuses = ["all", "APPROVED", "REVISION", "FAILED"]
+    const validSorts = ["waiting", "time_to_submit"] as const
+
+    const rawTrail = searchParams.get("trail") ?? stored?.trail ?? "all"
+    const resolvedTrail = rawTrail === "all" || currentTrails.includes(rawTrail) ? rawTrail : "all"
+    const resolvedStatus = validStatuses.includes(searchParams.get("status") ?? stored?.status ?? "all")
+      ? (searchParams.get("status") ?? stored?.status ?? "all")
+      : "all"
+    const resolvedSort = parseEnumParam(
+      searchParams.get("sort") ?? stored?.sort ?? undefined,
+      validSorts,
+      "waiting",
+    )
+    const resolvedQ = searchParams.get("q") ?? stored?.q ?? ""
+    const resolvedPerPage = parsePerPageParam(searchParams.get("perPage") ?? stored?.perPage ?? undefined, 10)
+    const resolvedPage = parsePageParam(searchParams.get("page") ?? stored?.page ?? undefined, 1)
+
+    setSearch(resolvedQ)
+    setTrailFilter(resolvedTrail)
+    setStatusFilter(resolvedStatus)
+    setSortBy(resolvedSort)
+    setPerPage(resolvedPerPage)
+    setCurrentPage(resolvedPage)
+  }, [searchParams, pathname])
+
   // Sync filter state to URL (without triggering server re-render)
-  const updateUrl = useCallback((filters: { trail: string; status: string; sort: string; q: string }) => {
+  const updateUrl = useCallback((filters: { trail: string; status: string; sort: string; q: string; perPage?: string; page?: string }) => {
     const qs = buildFilterQuery(filters)
     const newUrl = qs ? `${pathname}?${qs}` : pathname
     window.history.replaceState(null, "", newUrl)
+    // Also persist to sessionStorage for survival across navigations
+    saveFiltersToStorage(pathname, {
+      trail: filters.trail,
+      status: filters.status,
+      sort: filters.sort,
+      q: filters.q,
+      perPage: filters.perPage ?? "10",
+      page: filters.page ?? "1",
+    })
   }, [pathname])
 
   // Build current query string for use in links
   const currentQueryString = useMemo(
-    () => buildFilterQuery({ trail: trailFilter, status: statusFilter, sort: sortBy, q: search }),
-    [trailFilter, statusFilter, sortBy, search],
+    () => buildFilterQuery({ trail: trailFilter, status: statusFilter, sort: sortBy, q: search, perPage: String(perPage), page: String(currentPage) }),
+    [trailFilter, statusFilter, sortBy, search, perPage, currentPage],
   )
 
   // Debounced URL sync for search input
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value)
+    setCurrentPage(1)
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
     searchTimerRef.current = setTimeout(() => {
-      updateUrl({ trail: trailFilter, status: statusFilter, sort: sortBy, q: value })
+      updateUrl({ trail: trailFilter, status: statusFilter, sort: sortBy, q: value, perPage: String(perPage), page: "1" })
     }, 300)
-  }, [trailFilter, statusFilter, sortBy, updateUrl])
+  }, [trailFilter, statusFilter, sortBy, perPage, updateUrl])
 
   // Immediate URL sync for select-based filters
   const handleTrailChange = useCallback((value: string) => {
     setTrailFilter(value)
-    updateUrl({ trail: value, status: statusFilter, sort: sortBy, q: search })
-  }, [statusFilter, sortBy, search, updateUrl])
+    setCurrentPage(1)
+    updateUrl({ trail: value, status: statusFilter, sort: sortBy, q: search, perPage: String(perPage), page: "1" })
+  }, [statusFilter, sortBy, search, perPage, updateUrl])
 
   const handleStatusChange = useCallback((value: string) => {
     setStatusFilter(value)
-    updateUrl({ trail: trailFilter, status: value, sort: sortBy, q: search })
-  }, [trailFilter, sortBy, search, updateUrl])
+    setCurrentPage(1)
+    updateUrl({ trail: trailFilter, status: value, sort: sortBy, q: search, perPage: String(perPage), page: "1" })
+  }, [trailFilter, sortBy, search, perPage, updateUrl])
 
   const handleSortChange = useCallback((value: string) => {
     setSortBy(value as "waiting" | "time_to_submit")
-    updateUrl({ trail: trailFilter, status: statusFilter, sort: value, q: search })
-  }, [trailFilter, statusFilter, search, updateUrl])
+    setCurrentPage(1)
+    updateUrl({ trail: trailFilter, status: statusFilter, sort: value, q: search, perPage: String(perPage), page: "1" })
+  }, [trailFilter, statusFilter, search, perPage, updateUrl])
+
+  const handlePerPageChange = useCallback((value: string) => {
+    const newPerPage = parseInt(value, 10) as PerPageOption
+    setPerPage(newPerPage)
+    setCurrentPage(1)
+    updateUrl({ trail: trailFilter, status: statusFilter, sort: sortBy, q: search, perPage: String(newPerPage), page: "1" })
+  }, [trailFilter, statusFilter, sortBy, search, updateUrl])
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page)
+    updateUrl({ trail: trailFilter, status: statusFilter, sort: sortBy, q: search, perPage: String(perPage), page: String(page) })
+  }, [trailFilter, statusFilter, sortBy, search, perPage, updateUrl])
 
   const [copiedTg, setCopiedTg] = useState<string | null>(null)
 
@@ -312,6 +390,22 @@ export function SubmissionsFilter({
     })
   }, [filteredPending, sortBy])
 
+  // Paginate pending submissions
+  const pendingTotalPages = Math.ceil(sortedPending.length / perPage)
+  const pendingSafePage = Math.min(currentPage, Math.max(1, pendingTotalPages))
+  const paginatedPending = useMemo(
+    () => sortedPending.slice((pendingSafePage - 1) * perPage, pendingSafePage * perPage),
+    [sortedPending, pendingSafePage, perPage],
+  )
+
+  // Paginate reviewed submissions
+  const reviewedTotalPages = Math.ceil(filteredReviewed.length / perPage)
+  const reviewedSafePage = Math.min(currentPage, Math.max(1, reviewedTotalPages))
+  const paginatedReviewed = useMemo(
+    () => filteredReviewed.slice((reviewedSafePage - 1) * perPage, reviewedSafePage * perPage),
+    [filteredReviewed, reviewedSafePage, perPage],
+  )
+
   return (
     <>
       {/* Filters */}
@@ -363,6 +457,19 @@ export function SubmissionsFilter({
                   <SelectItem value="FAILED">Провал</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+                <SelectTrigger className="w-[140px]">
+                  <List className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="На странице" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PER_PAGE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option} на стр.
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -398,7 +505,7 @@ export function SubmissionsFilter({
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedPending.map((submission) => {
+              {paginatedPending.map((submission) => {
                 const days = getDaysWaiting(submission.createdAt)
                 const { label, color } = getDaysWaitingLabel(days)
 
@@ -530,6 +637,30 @@ export function SubmissionsFilter({
               })}
             </div>
           )}
+          {/* Pending pagination */}
+          {pendingTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(Math.max(1, pendingSafePage - 1))}
+                disabled={pendingSafePage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-gray-600 px-4">
+                Страница {pendingSafePage} из {pendingTotalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(Math.min(pendingTotalPages, pendingSafePage + 1))}
+                disabled={pendingSafePage >= pendingTotalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -555,7 +686,7 @@ export function SubmissionsFilter({
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredReviewed.map((submission) => (
+              {paginatedReviewed.map((submission) => (
                 <div
                   key={submission.id}
                   className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
@@ -675,6 +806,30 @@ export function SubmissionsFilter({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {/* Reviewed pagination */}
+          {reviewedTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(Math.max(1, reviewedSafePage - 1))}
+                disabled={reviewedSafePage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-gray-600 px-4">
+                Страница {reviewedSafePage} из {reviewedTotalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(Math.min(reviewedTotalPages, reviewedSafePage + 1))}
+                disabled={reviewedSafePage >= reviewedTotalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           )}
         </CardContent>
