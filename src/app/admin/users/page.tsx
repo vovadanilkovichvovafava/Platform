@@ -200,6 +200,27 @@ function AdminUsersPageContent() {
     fetchUsers()
   }, [])
 
+  const students = users.filter(u => u.role === "STUDENT")
+  const teachers = users.filter(u => u.role === "TEACHER")
+  const admins = users.filter(u => u.role === "CO_ADMIN" || u.role === "ADMIN")
+
+  // Filter users by search and role
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = searchQuery === "" ||
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesRole = roleFilter === "ALL" || user.role === roleFilter
+    return matchesSearch && matchesRole
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / perPage)
+  const safePage = Math.min(currentPage, Math.max(1, totalPages))
+  const paginatedUsers = useMemo(
+    () => filteredUsers.slice((safePage - 1) * perPage, safePage * perPage),
+    [filteredUsers, safePage, perPage],
+  )
+
   const updateRole = async (userId: string, newRole: UserRole) => {
     // Only ADMIN can assign ADMIN role
     if (newRole === "ADMIN" && !isAdmin) {
@@ -299,27 +320,6 @@ function AdminUsersPageContent() {
       </div>
     )
   }
-
-  const students = users.filter(u => u.role === "STUDENT")
-  const teachers = users.filter(u => u.role === "TEACHER")
-  const admins = users.filter(u => u.role === "CO_ADMIN" || u.role === "ADMIN")
-
-  // Filter users by search and role
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = searchQuery === "" ||
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesRole = roleFilter === "ALL" || user.role === roleFilter
-    return matchesSearch && matchesRole
-  })
-
-  // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / perPage)
-  const safePage = Math.min(currentPage, Math.max(1, totalPages))
-  const paginatedUsers = useMemo(
-    () => filteredUsers.slice((safePage - 1) * perPage, safePage * perPage),
-    [filteredUsers, safePage, perPage],
-  )
 
   return (
     <div className="min-h-screen bg-gray-50">
