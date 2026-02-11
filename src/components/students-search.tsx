@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -38,6 +38,7 @@ import {
   parsePerPageParam,
   parseEnumParam,
   updateUrl,
+  loadFiltersFromStorage,
 } from "@/lib/url-state"
 
 const VALID_SORTS = ["xp", "name", "activity", "modules"] as const
@@ -114,8 +115,9 @@ function getInitials(name: string) {
 
 export function StudentsSearch({ students, trails, initialFilters }: StudentsSearchProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
-  // Normalize and validate initial filter values from URL
+  // Normalize and validate initial filter values from server props (for SSR hydration)
   const normalizedQ = initialFilters?.q || ""
   const normalizedTrail =
     initialFilters?.trail === "all" || (initialFilters?.trail && trails.includes(initialFilters.trail))
@@ -149,6 +151,43 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
     },
     [pathname],
   )
+
+  // Keep trails in a ref to avoid effect re-runs on array reference changes
+  const trailsRef = useRef(trails)
+  trailsRef.current = trails
+
+  // Sync state from URL search params on every navigation change.
+  // useSearchParams() reactively tracks URL changes (including replaceState in Next.js 14.1+),
+  // so this fires on back/forward navigation, breadcrumb clicks, and filter changes.
+  // Falls back to sessionStorage for breadcrumb links that navigate without query params.
+  useEffect(() => {
+    const currentTrails = trailsRef.current
+    const stored = loadFiltersFromStorage(pathname)
+
+    const resolvedQ = searchParams.get("q") ?? stored?.q ?? ""
+    const rawTrail = searchParams.get("trail") ?? stored?.trail ?? "all"
+    const resolvedTrail =
+      rawTrail === "all" || currentTrails.includes(rawTrail) ? rawTrail : "all"
+    const resolvedSort = parseEnumParam(
+      searchParams.get("sort") ?? stored?.sort ?? undefined,
+      VALID_SORTS,
+      "xp",
+    )
+    const resolvedPerPage = parsePerPageParam(
+      searchParams.get("perPage") ?? stored?.perPage ?? undefined,
+      10,
+    )
+    const resolvedPage = parsePageParam(
+      searchParams.get("page") ?? stored?.page ?? undefined,
+      1,
+    )
+
+    setSearch(resolvedQ)
+    setTrailFilter(resolvedTrail)
+    setSortBy(resolvedSort)
+    setPerPage(resolvedPerPage)
+    setCurrentPage(resolvedPage)
+  }, [searchParams, pathname])
 
   // Debounced URL sync for search input
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null)

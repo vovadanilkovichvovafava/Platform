@@ -26,6 +26,7 @@ import {
   parsePageParam,
   parsePerPageParam,
   updateUrl,
+  loadFiltersFromStorage,
 } from "@/lib/url-state"
 
 interface AuditLog {
@@ -54,11 +55,12 @@ export default function AdminHistoryPage() {
   const [perPage, setPerPage] = useState<PerPageOption>(50)
   const [totalPages, setTotalPages] = useState(1)
 
-  // Read initial values from URL
+  // Read initial values from URL, falling back to sessionStorage
   useEffect(() => {
     const params = getUrlParams()
-    const initialPage = parsePageParam(params.get("page"), 1)
-    const initialPerPage = parsePerPageParam(params.get("perPage"), 50)
+    const stored = loadFiltersFromStorage(pathname)
+    const initialPage = parsePageParam(params.get("page") ?? stored?.page, 1)
+    const initialPerPage = parsePerPageParam(params.get("perPage") ?? stored?.perPage, 50)
     setPage(initialPage)
     setPerPage(initialPerPage)
   }, [])
@@ -102,10 +104,11 @@ export default function AdminHistoryPage() {
   const [initialized, setInitialized] = useState(false)
   useEffect(() => {
     if (!initialized) {
-      // First render: read URL params, then mark as initialized
+      // First render: read URL params (with sessionStorage fallback), then mark as initialized
       const params = getUrlParams()
-      const initialPage = parsePageParam(params.get("page"), 1)
-      const initialPerPage = parsePerPageParam(params.get("perPage"), 50)
+      const stored = loadFiltersFromStorage(pathname)
+      const initialPage = parsePageParam(params.get("page") ?? stored?.page, 1)
+      const initialPerPage = parsePerPageParam(params.get("perPage") ?? stored?.perPage, 50)
       setPage(initialPage)
       setPerPage(initialPerPage)
       setInitialized(true)

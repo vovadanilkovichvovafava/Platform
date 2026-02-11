@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { usePathname } from "next/navigation"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/toast"
@@ -20,14 +20,25 @@ import {
   Search,
   X,
   Gift,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
-import { getUrlParams, parseEnumParam, updateUrl } from "@/lib/url-state"
+import {
+  getUrlParams,
+  parseEnumParam,
+  updateUrl,
+  PER_PAGE_OPTIONS,
+  type PerPageOption,
+  parsePerPageParam,
+  parsePageParam,
+  loadFiltersFromStorage,
+} from "@/lib/url-state"
 
 type UserRole = "STUDENT" | "TEACHER" | "CO_ADMIN" | "ADMIN"
 type RoleFilterValue = "ALL" | UserRole
 const VALID_ROLE_FILTERS: readonly RoleFilterValue[] = ["ALL", "STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
-const FILTER_DEFAULTS = { q: "", role: "ALL" }
+const FILTER_DEFAULTS = { q: "", role: "ALL", perPage: "10", page: "1" }
 
 interface User {
   id: string
@@ -69,6 +80,7 @@ const roleConfig: Record<UserRole, { label: string; color: string; icon: typeof 
 export default function AdminUsersPage() {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -77,27 +89,50 @@ export default function AdminUsersPage() {
   const [grantingAchievementId, setGrantingAchievementId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState<RoleFilterValue>("ALL")
+  const [perPage, setPerPage] = useState<PerPageOption>(10)
+  const [currentPage, setCurrentPage] = useState(1)
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
   const isAdmin = session?.user?.role === "ADMIN"
 
-  // Read initial filter values from URL on mount
-  useEffect(() => {
-    const params = getUrlParams()
-    const q = params.get("q") || ""
-    const role = parseEnumParam(params.get("role"), VALID_ROLE_FILTERS, "ALL")
-    if (q) setSearchQuery(q)
-    if (role !== "ALL") setRoleFilter(role)
-  }, [])
-
   // Sync filter state to URL
   const syncUrl = useCallback(
-    (params: { q: string; role: string }) => {
-      updateUrl(pathname, params, FILTER_DEFAULTS)
+    (params: { q: string; role: string; perPage: number; page: number }) => {
+      updateUrl(pathname, {
+        q: params.q,
+        role: params.role,
+        perPage: String(params.perPage),
+        page: String(params.page),
+      }, FILTER_DEFAULTS)
     },
     [pathname],
   )
+
+  // Sync state from URL search params on navigation changes
+  useEffect(() => {
+    const stored = loadFiltersFromStorage(pathname)
+
+    const resolvedQ = searchParams.get("q") ?? stored?.q ?? ""
+    const resolvedRole = parseEnumParam(
+      searchParams.get("role") ?? stored?.role ?? undefined,
+      VALID_ROLE_FILTERS,
+      "ALL",
+    )
+    const resolvedPerPage = parsePerPageParam(
+      searchParams.get("perPage") ?? stored?.perPage ?? undefined,
+      10,
+    )
+    const resolvedPage = parsePageParam(
+      searchParams.get("page") ?? stored?.page ?? undefined,
+      1,
+    )
+
+    setSearchQuery(resolvedQ)
+    setRoleFilter(resolvedRole)
+    setPerPage(resolvedPerPage)
+    setCurrentPage(resolvedPage)
+  }, [searchParams, pathname])
 
   // Debounced URL sync for search input
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -110,21 +145,41 @@ export default function AdminUsersPage() {
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchQuery(value)
+      setCurrentPage(1)
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
       searchTimerRef.current = setTimeout(() => {
-        syncUrl({ q: value, role: roleFilter })
+        syncUrl({ q: value, role: roleFilter, perPage, page: 1 })
       }, 300)
     },
-    [roleFilter, syncUrl],
+    [roleFilter, perPage, syncUrl],
   )
 
   const handleRoleFilterChange = useCallback(
     (value: string) => {
       const role = value as RoleFilterValue
       setRoleFilter(role)
-      syncUrl({ q: searchQuery, role })
+      setCurrentPage(1)
+      syncUrl({ q: searchQuery, role, perPage, page: 1 })
     },
-    [searchQuery, syncUrl],
+    [searchQuery, perPage, syncUrl],
+  )
+
+  const handlePerPageChange = useCallback(
+    (value: string) => {
+      const newPerPage = parseInt(value, 10) as PerPageOption
+      setPerPage(newPerPage)
+      setCurrentPage(1)
+      syncUrl({ q: searchQuery, role: roleFilter, perPage: newPerPage, page: 1 })
+    },
+    [searchQuery, roleFilter, syncUrl],
+  )
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setCurrentPage(page)
+      syncUrl({ q: searchQuery, role: roleFilter, perPage, page })
+    },
+    [searchQuery, roleFilter, perPage, syncUrl],
   )
 
   const fetchUsers = async () => {
@@ -258,6 +313,14 @@ export default function AdminUsersPage() {
     return matchesSearch && matchesRole
   })
 
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / perPage)
+  const safePage = Math.min(currentPage, Math.max(1, totalPages))
+  const paginatedUsers = useMemo(
+    () => filteredUsers.slice((safePage - 1) * perPage, safePage * perPage),
+    [filteredUsers, safePage, perPage],
+  )
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
@@ -372,6 +435,18 @@ export default function AdminUsersPage() {
                   <option value="CO_ADMIN">Со-админы</option>
                   <option value="ADMIN">Админы</option>
                 </select>
+                {/* Per page */}
+                <select
+                  value={String(perPage)}
+                  onChange={(e) => handlePerPageChange(e.target.value)}
+                  className="px-3 py-1.5 border rounded-lg text-sm bg-white"
+                >
+                  {PER_PAGE_OPTIONS.map((option) => (
+                    <option key={option} value={String(option)}>
+                      {option} на стр.
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             {/* Results count */}
@@ -388,7 +463,7 @@ export default function AdminUsersPage() {
             </div>
           ) : (
             <div className="divide-y">
-              {filteredUsers.map((user) => {
+              {paginatedUsers.map((user) => {
                 const config = roleConfig[user.role]
                 const RoleIcon = config.icon
                 const isUpdating = updatingId === user.id
@@ -475,6 +550,31 @@ export default function AdminUsersPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(Math.max(1, safePage - 1))}
+                disabled={safePage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-gray-600 px-4">
+                Страница {safePage} из {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(Math.min(totalPages, safePage + 1))}
+                disabled={safePage >= totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           )}
         </div>

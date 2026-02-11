@@ -76,6 +76,7 @@ export function buildQueryString(
 /**
  * Update the browser URL without triggering navigation (replaceState).
  * Keeps browser history clean — each filter change replaces the current entry.
+ * Also persists filter state to sessionStorage for survival across navigations.
  */
 export function updateUrl(
   pathname: string,
@@ -85,4 +86,42 @@ export function updateUrl(
   const qs = buildQueryString(params, defaults)
   const newUrl = qs ? `${pathname}?${qs}` : pathname
   window.history.replaceState(null, "", newUrl)
+  saveFiltersToStorage(pathname, params)
+}
+
+const FILTER_STORAGE_PREFIX = "page-filters:"
+
+/**
+ * Save filter state to sessionStorage for persistence across navigation.
+ * Used as a fallback when URL params are lost (e.g. Next.js RSC cache, breadcrumb links).
+ */
+export function saveFiltersToStorage(
+  pathname: string,
+  filters: Record<string, string | number>,
+): void {
+  if (typeof window === "undefined") return
+  try {
+    sessionStorage.setItem(
+      `${FILTER_STORAGE_PREFIX}${pathname}`,
+      JSON.stringify(filters),
+    )
+  } catch {
+    // sessionStorage may be unavailable or full
+  }
+}
+
+/**
+ * Load filter state from sessionStorage.
+ * Returns null if nothing is stored or sessionStorage is unavailable.
+ */
+export function loadFiltersFromStorage(
+  pathname: string,
+): Record<string, string> | null {
+  if (typeof window === "undefined") return null
+  try {
+    const stored = sessionStorage.getItem(`${FILTER_STORAGE_PREFIX}${pathname}`)
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
 }
