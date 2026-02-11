@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { usePathname } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { getUrlParams, parseEnumParam, updateUrl } from "@/lib/url-state"
 
 interface ChurnRiskStudent {
   id: string
@@ -265,7 +267,25 @@ const ANALYTICS_INFO = {
   },
 }
 
+// Valid filter values for URL parsing
+const VALID_PERIODS = ["7", "14", "30", "60", "90", "all"] as const
+const VALID_COMPLETION_FILTERS = ["all", "in_progress", "completed"] as const
+const VALID_SUBMISSION_FILTERS = ["all", "no_submissions", "has_submissions", "has_pending", "has_revision", "all_approved"] as const
+const VALID_SORT_COLUMNS = ["name", "dateStart", "dateEnd", "completionPercent", "avgScore", "modulesCompleted"] as const
+const VALID_SORT_DIRS = ["asc", "desc"] as const
+
+const ANALYTICS_FILTER_DEFAULTS: Record<string, string> = {
+  trail: "all",
+  period: "30",
+  completion: "all",
+  submission: "all",
+  q: "",
+  sortCol: "dateStart",
+  sortDir: "desc",
+}
+
 export default function AdvancedAnalyticsPage() {
+  const pathname = usePathname()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedRisk, setExpandedRisk] = useState<"high" | "medium" | "low" | null>("high")
@@ -284,6 +304,136 @@ export default function AdvancedAnalyticsPage() {
   const [studentSortDirection, setStudentSortDirection] = useState<"asc" | "desc" | null>("desc")
   // Submission filter within the "Students by directions" block
   const [submissionFilter, setSubmissionFilter] = useState<"all" | "no_submissions" | "has_submissions" | "has_pending" | "has_revision" | "all_approved">("all")
+
+  // URL sync: read initial filter values from URL on mount
+  const [urlInitialized, setUrlInitialized] = useState(false)
+  useEffect(() => {
+    const params = getUrlParams()
+    const trail = params.get("trail") || "all"
+    const period = parseEnumParam(params.get("period"), VALID_PERIODS, "30")
+    const completion = parseEnumParam(params.get("completion"), VALID_COMPLETION_FILTERS, "all")
+    const submission = parseEnumParam(params.get("submission"), VALID_SUBMISSION_FILTERS, "all")
+    const q = params.get("q") || ""
+    const sortCol = parseEnumParam(params.get("sortCol"), VALID_SORT_COLUMNS, "dateStart")
+    const sortDir = parseEnumParam(params.get("sortDir"), VALID_SORT_DIRS, "desc")
+
+    setTrailFilter(trail)
+    setPeriodFilter(period)
+    setCompletionFilter(completion)
+    setSubmissionFilter(submission)
+    setStudentSearch(q)
+    setStudentSortColumn(sortCol)
+    setStudentSortDirection(sortDir)
+    setUrlInitialized(true)
+  }, [])
+
+  // Sync all current filter values to URL
+  const syncAnalyticsUrl = useCallback(
+    (params: {
+      trail: string; period: string; completion: string;
+      submission: string; q: string; sortCol: string; sortDir: string
+    }) => {
+      updateUrl(pathname, params, ANALYTICS_FILTER_DEFAULTS)
+    },
+    [pathname],
+  )
+
+  // Debounced URL sync for student search input
+  const analyticsSearchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    return () => {
+      if (analyticsSearchTimerRef.current) clearTimeout(analyticsSearchTimerRef.current)
+    }
+  }, [])
+
+  // Helper to build current filter params for URL sync
+  const buildFilterParams = useCallback(
+    (overrides: Partial<Record<string, string>> = {}) => ({
+      trail: overrides.trail ?? trailFilter,
+      period: overrides.period ?? periodFilter,
+      completion: overrides.completion ?? completionFilter,
+      submission: overrides.submission ?? submissionFilter,
+      q: overrides.q ?? studentSearch,
+      sortCol: overrides.sortCol ?? (studentSortColumn || "dateStart"),
+      sortDir: overrides.sortDir ?? (studentSortDirection || "desc"),
+    }),
+    [trailFilter, periodFilter, completionFilter, submissionFilter, studentSearch, studentSortColumn, studentSortDirection],
+  )
+
+  // Wrapped handlers that sync filter changes to URL
+  const handleTrailFilterChange = useCallback(
+    (value: string) => {
+      setTrailFilter(value)
+      syncAnalyticsUrl(buildFilterParams({ trail: value }))
+    },
+    [buildFilterParams, syncAnalyticsUrl],
+  )
+
+  const handlePeriodFilterChange = useCallback(
+    (value: string) => {
+      setPeriodFilter(value)
+      syncAnalyticsUrl(buildFilterParams({ period: value }))
+    },
+    [buildFilterParams, syncAnalyticsUrl],
+  )
+
+  const handleCompletionFilterChange = useCallback(
+    (value: string) => {
+      setCompletionFilter(value as "all" | "in_progress" | "completed")
+      syncAnalyticsUrl(buildFilterParams({ completion: value }))
+    },
+    [buildFilterParams, syncAnalyticsUrl],
+  )
+
+  const handleSubmissionFilterChange = useCallback(
+    (value: string) => {
+      setSubmissionFilter(value as typeof submissionFilter)
+      syncAnalyticsUrl(buildFilterParams({ submission: value }))
+    },
+    [buildFilterParams, syncAnalyticsUrl],
+  )
+
+  const handleStudentSearchChange = useCallback(
+    (value: string) => {
+      setStudentSearch(value)
+      if (analyticsSearchTimerRef.current) clearTimeout(analyticsSearchTimerRef.current)
+      analyticsSearchTimerRef.current = setTimeout(() => {
+        syncAnalyticsUrl(buildFilterParams({ q: value }))
+      }, 300)
+    },
+    [buildFilterParams, syncAnalyticsUrl],
+  )
+
+  const handleAnalyticsSortChange = useCallback(
+    (column: string, direction: "asc" | "desc" | null, newColumn: string | null) => {
+      setStudentSortColumn(newColumn)
+      setStudentSortDirection(direction)
+      syncAnalyticsUrl(
+        buildFilterParams({
+          sortCol: newColumn || "dateStart",
+          sortDir: direction || "desc",
+        }),
+      )
+    },
+    [buildFilterParams, syncAnalyticsUrl],
+  )
+
+  const handleResetFilters = useCallback(() => {
+    setTrailFilter("all")
+    setPeriodFilter("30")
+    setCompletionFilter("all")
+    syncAnalyticsUrl(buildFilterParams({ trail: "all", period: "30", completion: "all" }))
+  }, [buildFilterParams, syncAnalyticsUrl])
+
+  const handleResetStudentFilters = useCallback(() => {
+    setSubmissionFilter("all")
+    setStudentSortColumn("dateStart")
+    setStudentSortDirection("desc")
+    syncAnalyticsUrl(
+      buildFilterParams({ submission: "all", sortCol: "dateStart", sortDir: "desc" }),
+    )
+  }, [buildFilterParams, syncAnalyticsUrl])
+
   // Collapsible section states - all open by default
   const [sectionsExpanded, setSectionsExpanded] = useState({
     difficulty: true,
@@ -506,8 +656,9 @@ export default function AdvancedAnalyticsPage() {
   const { confirm } = useConfirm()
 
   useEffect(() => {
+    if (!urlInitialized) return
     fetchAnalytics()
-  }, [trailFilter, periodFilter])
+  }, [trailFilter, periodFilter, urlInitialized])
 
   const fetchAnalytics = async () => {
     try {
@@ -594,15 +745,13 @@ export default function AdvancedAnalyticsPage() {
   // Three-state sort toggle: null -> asc -> desc -> null
   const toggleSort = useCallback((column: string) => {
     if (studentSortColumn !== column) {
-      setStudentSortColumn(column)
-      setStudentSortDirection("asc")
+      handleAnalyticsSortChange(column, "asc", column)
     } else if (studentSortDirection === "asc") {
-      setStudentSortDirection("desc")
+      handleAnalyticsSortChange(column, "desc", column)
     } else {
-      setStudentSortColumn(null)
-      setStudentSortDirection(null)
+      handleAnalyticsSortChange(column, null, null)
     }
-  }, [studentSortColumn, studentSortDirection])
+  }, [studentSortColumn, studentSortDirection, handleAnalyticsSortChange])
 
   // Sort students by current column and direction
   const sortStudents = useCallback((students: TrailStudent[]): TrailStudent[] => {
@@ -760,7 +909,7 @@ export default function AdvancedAnalyticsPage() {
               <Layers className="h-4 w-4 text-gray-400" />
               <select
                 value={trailFilter}
-                onChange={(e) => setTrailFilter(e.target.value)}
+                onChange={(e) => handleTrailFilterChange(e.target.value)}
                 className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="all">Все направления</option>
@@ -777,7 +926,7 @@ export default function AdvancedAnalyticsPage() {
               <Calendar className="h-4 w-4 text-gray-400" />
               <select
                 value={periodFilter}
-                onChange={(e) => setPeriodFilter(e.target.value)}
+                onChange={(e) => handlePeriodFilterChange(e.target.value)}
                 className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="7">Последние 7 дней</option>
@@ -793,7 +942,7 @@ export default function AdvancedAnalyticsPage() {
               <CheckCircle className="h-4 w-4 text-gray-400" />
               <select
                 value={completionFilter}
-                onChange={(e) => setCompletionFilter(e.target.value as "all" | "in_progress" | "completed")}
+                onChange={(e) => handleCompletionFilterChange(e.target.value)}
                 className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="all">Все статусы</option>
@@ -806,11 +955,7 @@ export default function AdvancedAnalyticsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setTrailFilter("all")
-                  setPeriodFilter("30")
-                  setCompletionFilter("all")
-                }}
+                onClick={handleResetFilters}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <XCircle className="h-4 w-4 mr-1" />
@@ -988,7 +1133,7 @@ export default function AdvancedAnalyticsPage() {
                     <input
                       type="text"
                       value={studentSearch}
-                      onChange={(e) => setStudentSearch(e.target.value)}
+                      onChange={(e) => handleStudentSearchChange(e.target.value)}
                       placeholder="Поиск студента по имени или TG-нику..."
                       className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
@@ -997,7 +1142,7 @@ export default function AdvancedAnalyticsPage() {
                     <ListFilter className="h-4 w-4 text-gray-400" />
                     <select
                       value={submissionFilter}
-                      onChange={(e) => setSubmissionFilter(e.target.value as typeof submissionFilter)}
+                      onChange={(e) => handleSubmissionFilterChange(e.target.value)}
                       className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="all">Все работы</option>
@@ -1011,11 +1156,7 @@ export default function AdvancedAnalyticsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setSubmissionFilter("all")
-                          setStudentSortColumn("dateStart")
-                          setStudentSortDirection("desc")
-                        }}
+                        onClick={handleResetStudentFilters}
                         className="text-gray-500 hover:text-gray-700 text-xs"
                       >
                         <XCircle className="h-3 w-3 mr-1" />

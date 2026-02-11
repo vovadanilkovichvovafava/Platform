@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/toast"
@@ -21,8 +22,12 @@ import {
   Gift,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { getUrlParams, parseEnumParam, updateUrl } from "@/lib/url-state"
 
 type UserRole = "STUDENT" | "TEACHER" | "CO_ADMIN" | "ADMIN"
+type RoleFilterValue = "ALL" | UserRole
+const VALID_ROLE_FILTERS: readonly RoleFilterValue[] = ["ALL", "STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
+const FILTER_DEFAULTS = { q: "", role: "ALL" }
 
 interface User {
   id: string
@@ -63,6 +68,7 @@ const roleConfig: Record<UserRole, { label: string; color: string; icon: typeof 
 
 export default function AdminUsersPage() {
   const { data: session } = useSession()
+  const pathname = usePathname()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -70,11 +76,56 @@ export default function AdminUsersPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [grantingAchievementId, setGrantingAchievementId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [roleFilter, setRoleFilter] = useState<"ALL" | UserRole>("ALL")
+  const [roleFilter, setRoleFilter] = useState<RoleFilterValue>("ALL")
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
   const isAdmin = session?.user?.role === "ADMIN"
+
+  // Read initial filter values from URL on mount
+  useEffect(() => {
+    const params = getUrlParams()
+    const q = params.get("q") || ""
+    const role = parseEnumParam(params.get("role"), VALID_ROLE_FILTERS, "ALL")
+    if (q) setSearchQuery(q)
+    if (role !== "ALL") setRoleFilter(role)
+  }, [])
+
+  // Sync filter state to URL
+  const syncUrl = useCallback(
+    (params: { q: string; role: string }) => {
+      updateUrl(pathname, params, FILTER_DEFAULTS)
+    },
+    [pathname],
+  )
+
+  // Debounced URL sync for search input
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [])
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value)
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = setTimeout(() => {
+        syncUrl({ q: value, role: roleFilter })
+      }, 300)
+    },
+    [roleFilter, syncUrl],
+  )
+
+  const handleRoleFilterChange = useCallback(
+    (value: string) => {
+      const role = value as RoleFilterValue
+      setRoleFilter(role)
+      syncUrl({ q: searchQuery, role })
+    },
+    [searchQuery, syncUrl],
+  )
 
   const fetchUsers = async () => {
     try {
@@ -297,12 +348,12 @@ export default function AdminUsersPage() {
                     type="text"
                     placeholder="Поиск по имени или email..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-9 pr-8 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {searchQuery && (
                     <button
-                      onClick={() => setSearchQuery("")}
+                      onClick={() => handleSearchChange("")}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       <X className="h-4 w-4" />
@@ -312,7 +363,7 @@ export default function AdminUsersPage() {
                 {/* Role filter */}
                 <select
                   value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
+                  onChange={(e) => handleRoleFilterChange(e.target.value)}
                   className="px-3 py-1.5 border rounded-lg text-sm bg-white"
                 >
                   <option value="ALL">Все роли</option>

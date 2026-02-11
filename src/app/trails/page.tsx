@@ -7,7 +7,12 @@ import { ROLE_STUDENT } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 
-export default async function TrailsPage() {
+export default async function TrailsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const resolvedSearchParams = await searchParams
   const session = await getServerSession(authOptions)
 
   // Get user's trail access if logged in
@@ -163,6 +168,7 @@ export default async function TrailsPage() {
           trails={trails}
           enrolledTrailIds={enrolledTrailIds}
           progressMap={progressMap}
+          initialSearch={resolvedSearchParams.q || ""}
         />
       </div>
     </div>

@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback, useRef, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { TrailCard } from "@/components/trail-card"
+import { updateUrl } from "@/lib/url-state"
 
 interface Trail {
   id: string
@@ -22,10 +24,45 @@ interface TrailSearchProps {
   trails: Trail[]
   enrolledTrailIds: string[]
   progressMap: Record<string, number>
+  initialSearch?: string
 }
 
-export function TrailSearch({ trails, enrolledTrailIds, progressMap }: TrailSearchProps) {
-  const [search, setSearch] = useState("")
+const FILTER_DEFAULTS = { q: "" }
+
+export function TrailSearch({ trails, enrolledTrailIds, progressMap, initialSearch }: TrailSearchProps) {
+  const pathname = usePathname()
+  const [search, setSearch] = useState(initialSearch || "")
+
+  // Debounced URL sync for search input
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [])
+
+  const syncUrl = useCallback(
+    (q: string) => {
+      updateUrl(pathname, { q }, FILTER_DEFAULTS)
+    },
+    [pathname],
+  )
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value)
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = setTimeout(() => {
+        syncUrl(value)
+      }, 300)
+    },
+    [syncUrl],
+  )
+
+  const handleClear = useCallback(() => {
+    setSearch("")
+    syncUrl("")
+  }, [syncUrl])
 
   const filteredTrails = useMemo(() => {
     if (!search.trim()) return trails
@@ -46,13 +83,13 @@ export function TrailSearch({ trails, enrolledTrailIds, progressMap }: TrailSear
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Поиск по названию или описанию..."
             className="pl-10 pr-10"
           />
           {search && (
             <button
-              onClick={() => setSearch("")}
+              onClick={handleClear}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <X className="h-4 w-4" />
@@ -82,9 +119,9 @@ export function TrailSearch({ trails, enrolledTrailIds, progressMap }: TrailSear
       ) : (
         <div className="text-center py-12 text-gray-500">
           <Search className="h-12 w-12 mx-auto mb-4 opacity-30" />
-          <p>Ничего не найдено по запросу "{search}"</p>
+          <p>Ничего не найдено по запросу &quot;{search}&quot;</p>
           <button
-            onClick={() => setSearch("")}
+            onClick={handleClear}
             className="mt-2 text-orange-500 hover:underline"
           >
             Сбросить поиск

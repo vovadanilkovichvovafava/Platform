@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback, useRef, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -27,10 +28,36 @@ import {
   SortAsc,
   ChevronLeft,
   ChevronRight,
+  List,
 } from "lucide-react"
 import { pluralizeRu } from "@/lib/utils"
+import {
+  PER_PAGE_OPTIONS,
+  type PerPageOption,
+  parsePageParam,
+  parsePerPageParam,
+  parseEnumParam,
+  updateUrl,
+} from "@/lib/url-state"
 
-const STUDENTS_PER_PAGE = 5
+const VALID_SORTS = ["xp", "name", "activity", "modules"] as const
+type SortOption = (typeof VALID_SORTS)[number]
+
+const FILTER_DEFAULTS = {
+  q: "",
+  trail: "all",
+  sort: "xp",
+  page: "1",
+  perPage: "10",
+}
+
+interface InitialFilters {
+  q: string
+  trail: string
+  sort: string
+  page: string
+  perPage: string
+}
 
 interface StudentEnrollment {
   trailId: string
@@ -73,6 +100,7 @@ interface Student {
 interface StudentsSearchProps {
   students: Student[]
   trails: string[]
+  initialFilters?: InitialFilters
 }
 
 function getInitials(name: string) {
@@ -84,12 +112,99 @@ function getInitials(name: string) {
     .slice(0, 2)
 }
 
-export function StudentsSearch({ students, trails }: StudentsSearchProps) {
-  const [search, setSearch] = useState("")
-  const [trailFilter, setTrailFilter] = useState("all")
-  const [sortBy, setSortBy] = useState("xp")
-  const [currentPage, setCurrentPage] = useState(1)
+export function StudentsSearch({ students, trails, initialFilters }: StudentsSearchProps) {
+  const pathname = usePathname()
+
+  // Normalize and validate initial filter values from URL
+  const normalizedQ = initialFilters?.q || ""
+  const normalizedTrail =
+    initialFilters?.trail === "all" || (initialFilters?.trail && trails.includes(initialFilters.trail))
+      ? initialFilters.trail
+      : "all"
+  const normalizedSort = parseEnumParam(initialFilters?.sort, VALID_SORTS, "xp")
+  const normalizedPerPage = parsePerPageParam(initialFilters?.perPage, 10)
+  const normalizedPage = parsePageParam(initialFilters?.page, 1)
+
+  const [search, setSearch] = useState(normalizedQ)
+  const [trailFilter, setTrailFilter] = useState(normalizedTrail)
+  const [sortBy, setSortBy] = useState<SortOption>(normalizedSort)
+  const [perPage, setPerPage] = useState<PerPageOption>(normalizedPerPage)
+  const [currentPage, setCurrentPage] = useState(normalizedPage)
   const [copiedTg, setCopiedTg] = useState<string | null>(null)
+
+  // Sync filter state to URL (without triggering server re-render)
+  const syncUrl = useCallback(
+    (params: { q: string; trail: string; sort: string; page: number; perPage: number }) => {
+      updateUrl(
+        pathname,
+        {
+          q: params.q,
+          trail: params.trail,
+          sort: params.sort,
+          page: String(params.page),
+          perPage: String(params.perPage),
+        },
+        FILTER_DEFAULTS,
+      )
+    },
+    [pathname],
+  )
+
+  // Debounced URL sync for search input
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [])
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value)
+      setCurrentPage(1)
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = setTimeout(() => {
+        syncUrl({ q: value, trail: trailFilter, sort: sortBy, page: 1, perPage })
+      }, 300)
+    },
+    [trailFilter, sortBy, perPage, syncUrl],
+  )
+
+  const handleTrailFilterChange = useCallback(
+    (value: string) => {
+      setTrailFilter(value)
+      setCurrentPage(1)
+      syncUrl({ q: search, trail: value, sort: sortBy, page: 1, perPage })
+    },
+    [search, sortBy, perPage, syncUrl],
+  )
+
+  const handleSortChange = useCallback(
+    (value: string) => {
+      setSortBy(value as SortOption)
+      setCurrentPage(1)
+      syncUrl({ q: search, trail: trailFilter, sort: value, page: 1, perPage })
+    },
+    [search, trailFilter, perPage, syncUrl],
+  )
+
+  const handlePerPageChange = useCallback(
+    (value: string) => {
+      const newPerPage = parseInt(value, 10) as PerPageOption
+      setPerPage(newPerPage)
+      setCurrentPage(1)
+      syncUrl({ q: search, trail: trailFilter, sort: sortBy, page: 1, perPage: newPerPage })
+    },
+    [search, trailFilter, sortBy, syncUrl],
+  )
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setCurrentPage(page)
+      syncUrl({ q: search, trail: trailFilter, sort: sortBy, page, perPage })
+    },
+    [search, trailFilter, sortBy, perPage, syncUrl],
+  )
 
   // Filter and sort students
   const filteredStudents = useMemo(() => {
@@ -125,27 +240,14 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
   }, [students, search, trailFilter, sortBy])
 
   // Pagination
-  const totalPages = Math.ceil(filteredStudents.length / STUDENTS_PER_PAGE)
+  const totalPages = Math.ceil(filteredStudents.length / perPage)
+  // Clamp currentPage to valid range
+  const safePage = Math.min(currentPage, Math.max(1, totalPages))
+
   const paginatedStudents = useMemo(() => {
-    const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE
-    return filteredStudents.slice(startIndex, startIndex + STUDENTS_PER_PAGE)
-  }, [filteredStudents, currentPage])
-
-  // Reset to page 1 when filters change
-  const handleSearchChange = (value: string) => {
-    setSearch(value)
-    setCurrentPage(1)
-  }
-
-  const handleTrailFilterChange = (value: string) => {
-    setTrailFilter(value)
-    setCurrentPage(1)
-  }
-
-  const handleSortChange = (value: string) => {
-    setSortBy(value)
-    setCurrentPage(1)
-  }
+    const startIndex = (safePage - 1) * perPage
+    return filteredStudents.slice(startIndex, startIndex + perPage)
+  }, [filteredStudents, safePage, perPage])
 
   return (
     <>
@@ -162,7 +264,7 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Select value={trailFilter} onValueChange={handleTrailFilterChange}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
@@ -187,6 +289,19 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
                   <SelectItem value="name">По имени</SelectItem>
                   <SelectItem value="activity">По активности</SelectItem>
                   <SelectItem value="modules">По модулям</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+                <SelectTrigger className="w-[140px]">
+                  <List className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="На странице" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PER_PAGE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option} на стр.
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -387,20 +502,20 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
         </div>
       )}
 
-      {/* Pagination */}
-      {filteredStudents.length > STUDENTS_PER_PAGE && (
+      {/* Pagination - hidden when total fits in one page */}
+      {filteredStudents.length > perPage && (
         <div className="flex items-center justify-between mt-6">
           <p className="text-sm text-gray-500">
-            Показано {(currentPage - 1) * STUDENTS_PER_PAGE + 1}–
-            {Math.min(currentPage * STUDENTS_PER_PAGE, filteredStudents.length)} из{" "}
+            Показано {(safePage - 1) * perPage + 1}–
+            {Math.min(safePage * perPage, filteredStudents.length)} из{" "}
             {filteredStudents.length}
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              onClick={() => handlePageChange(Math.max(1, safePage - 1))}
+              disabled={safePage === 1}
             >
               <ChevronLeft className="h-4 w-4" />
               Назад
@@ -409,10 +524,10 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <Button
                   key={page}
-                  variant={page === currentPage ? "default" : "outline"}
+                  variant={page === safePage ? "default" : "outline"}
                   size="sm"
                   className="w-8 h-8 p-0"
-                  onClick={() => setCurrentPage(page)}
+                  onClick={() => handlePageChange(page)}
                 >
                   {page}
                 </Button>
@@ -421,8 +536,8 @@ export function StudentsSearch({ students, trails }: StudentsSearchProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(Math.min(totalPages, safePage + 1))}
+              disabled={safePage === totalPages}
             >
               Вперёд
               <ChevronRight className="h-4 w-4" />
