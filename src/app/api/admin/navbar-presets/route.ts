@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { isAnyAdmin } from "@/lib/admin-access"
+import { isAnyAdminOrHR } from "@/lib/admin-access"
 
 // Valid icon names from lucide-react used in navbar
 const VALID_ICONS = [
@@ -71,7 +71,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdminOrHR(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdminOrHR(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -204,7 +204,7 @@ export async function PATCH() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdminOrHR(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 

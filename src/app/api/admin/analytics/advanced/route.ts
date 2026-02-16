@@ -650,6 +650,7 @@ export async function GET(request: NextRequest) {
                 id: mod.id,
                 title: mod.title,
                 order: mod.order,
+                type: mod.type,
                 status: progress?.status || "NOT_STARTED",
                 submissionId: latestSub?.id || null,
               }

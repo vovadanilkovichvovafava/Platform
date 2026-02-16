@@ -127,15 +127,27 @@ export async function POST(request: Request) {
         },
       })
 
-      // Assign trail access from invite
+      // Assign trail access from invite based on role
       if (validTrailIds.length > 0) {
-        await tx.studentTrailAccess.createMany({
-          data: validTrailIds.map((trailId) => ({
-            studentId: newUser.id,
-            trailId,
-          })),
-          skipDuplicates: true, // Prevent errors on re-registration attempts
-        })
+        if (assignedRole === "HR" || assignedRole === "CO_ADMIN") {
+          // HR and CO_ADMIN get admin-level trail access
+          await tx.adminTrailAccess.createMany({
+            data: validTrailIds.map((trailId) => ({
+              adminId: newUser.id,
+              trailId,
+            })),
+            skipDuplicates: true,
+          })
+        } else {
+          // STUDENT, TEACHER, ADMIN get student trail access
+          await tx.studentTrailAccess.createMany({
+            data: validTrailIds.map((trailId) => ({
+              studentId: newUser.id,
+              trailId,
+            })),
+            skipDuplicates: true,
+          })
+        }
       }
 
       return newUser

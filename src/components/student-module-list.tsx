@@ -43,13 +43,16 @@ interface StudentModuleListProps {
   studentId: string
   enrollments: Enrollment[]
   progressMap: Map<string, ModuleProgress>
+  userRole?: string
 }
 
 export function StudentModuleList({
   studentId,
   enrollments,
   progressMap: initialProgressMap,
+  userRole,
 }: StudentModuleListProps) {
+  const canSkipModules = userRole !== "HR"
   const [progressMap, setProgressMap] = useState(initialProgressMap)
   const [loading, setLoading] = useState<string | null>(null)
   const { showToast } = useToast()
@@ -245,30 +248,32 @@ export function StudentModuleList({
                           <div className="flex items-center gap-3">
                             <span className="text-sm text-gray-500 font-medium">{module.points} XP</span>
 
-                            {/* Skip/Revert button */}
-                            {isLoading ? (
-                              <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
-                            ) : isSkipped ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                                onClick={() => revertSkip(module.id, module.title)}
-                              >
-                                <Undo2 className="h-3 w-3 mr-1" />
-                                Отменить
-                              </Button>
-                            ) : !isCompleted ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100"
-                                onClick={() => skipModule(module.id, module.title)}
-                              >
-                                <SkipForward className="h-3 w-3 mr-1" />
-                                Закрыть
-                              </Button>
-                            ) : null}
+                            {/* Skip/Revert button - hidden for HR */}
+                            {canSkipModules && (
+                              isLoading ? (
+                                <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
+                              ) : isSkipped ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
+                                  onClick={() => revertSkip(module.id, module.title)}
+                                >
+                                  <Undo2 className="h-3 w-3 mr-1" />
+                                  Отменить
+                                </Button>
+                              ) : !isCompleted ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100"
+                                  onClick={() => skipModule(module.id, module.title)}
+                                >
+                                  <SkipForward className="h-3 w-3 mr-1" />
+                                  Закрыть
+                                </Button>
+                              ) : null
+                            )}
                           </div>
                         </div>
                       )

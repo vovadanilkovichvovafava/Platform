@@ -321,6 +321,7 @@ export default async function StudentDetailPage({ params }: Props) {
               },
             }))}
             progressMap={progressMap}
+            userRole={session.user.role}
           />
         </section>
 

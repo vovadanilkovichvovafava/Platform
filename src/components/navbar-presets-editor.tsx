@@ -117,8 +117,8 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
     setMounted(true)
   }, [])
 
-  // Only show for admins
-  const isAdmin = userRole === "ADMIN" || userRole === "CO_ADMIN"
+  // Show for admins and HR
+  const isAdmin = userRole === "ADMIN" || userRole === "CO_ADMIN" || userRole === "HR"
 
   // Fetch presets on mount
   const fetchPresets = useCallback(async () => {
