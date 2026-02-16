@@ -46,6 +46,14 @@ const authMiddleware = withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
+    // If token is invalidated (user no longer exists in DB), redirect to login
+    if (!token?.id || !token?.role) {
+      if (path === "/login" || path === "/register") {
+        return NextResponse.next()
+      }
+      return NextResponse.redirect(new URL("/login", req.url))
+    }
+
     // Redirect authenticated users away from login/register pages
     if (token && (path === "/login" || path === "/register")) {
       return NextResponse.redirect(new URL("/dashboard", req.url))
@@ -121,8 +129,8 @@ const authMiddleware = withAuth(
           return true
         }
 
-        // All other routes require authentication
-        return !!token
+        // Require valid token with existing user (token.id is cleared when user not found in DB)
+        return !!token && !!token.id
       },
     },
   }

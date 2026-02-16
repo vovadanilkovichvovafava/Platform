@@ -4,6 +4,7 @@ import { AuthProvider } from "@/components/providers/session-provider"
 import { Header } from "@/components/header"
 import { ToastProvider } from "@/components/ui/toast"
 import { ConfirmProvider } from "@/components/ui/confirm-dialog"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 export const metadata: Metadata = {
   title: "R&D Academy - Обучающая платформа",
@@ -24,8 +25,10 @@ export default function RootLayout({
         <AuthProvider>
           <ToastProvider>
             <ConfirmProvider>
-              <Header />
-              <main>{children}</main>
+              <ErrorBoundary>
+                <Header />
+                <main>{children}</main>
+              </ErrorBoundary>
             </ConfirmProvider>
           </ToastProvider>
         </AuthProvider>

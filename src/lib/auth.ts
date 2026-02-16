@@ -59,9 +59,14 @@ export const authOptions: NextAuthOptions = {
           })
           if (dbUser) {
             token.role = dbUser.role
+          } else {
+            // User no longer exists (e.g. after DB reseed) - invalidate token
+            // Empty strings are falsy, so middleware check `!!token.id` will fail
+            token.id = ""
+            token.role = ""
           }
         } catch {
-          // Ignore errors, keep existing token role
+          // Ignore transient DB errors, keep existing token role
         }
       }
       return token
