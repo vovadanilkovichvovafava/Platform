@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 
 async function main() {
   console.log('Running database migrations...');
-  execSync('npx prisma db push', { stdio: 'inherit' });
+  execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
 
   const prisma = new PrismaClient();
 
