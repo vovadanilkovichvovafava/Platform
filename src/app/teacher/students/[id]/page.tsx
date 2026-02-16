@@ -4,7 +4,7 @@ import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { pluralizeRu } from "@/lib/utils"
-import { isPrivileged, isAdmin, getTeacherAllowedTrailIds, getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, isAdmin, getTeacherAllowedTrailIds, getAdminAllowedTrailIds } from "@/lib/admin-access"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -45,17 +45,17 @@ export default async function StudentDetailPage({ params }: Props) {
   const { id } = await params
   const session = await getServerSession(authOptions)
 
-  // Allow TEACHER, CO_ADMIN, and ADMIN roles
-  if (!session || !isPrivileged(session.user.role)) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR roles
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
 
   // Get allowed trail IDs based on user role
-  // ADMIN: null (all trails), TEACHER/CO_ADMIN: specific trail IDs
+  // ADMIN: null (all trails), CO_ADMIN/HR: from AdminTrailAccess, TEACHER: from TrailTeacher
   let allowedTrailIds: string[] | null = null
 
   if (!isAdmin(session.user.role)) {
-    if (session.user.role === "CO_ADMIN") {
+    if (session.user.role === "CO_ADMIN" || isHR(session.user.role)) {
       allowedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
     } else {
       // TEACHER
