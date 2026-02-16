@@ -47,27 +47,27 @@ interface PresetListItem {
 // Available menu items that can be added - comprehensive list of all useful pages
 const ALL_AVAILABLE_ITEMS: Omit<NavbarItemDTO, "id" | "order">[] = [
   // Student pages
-  { label: "Dashboard", href: "/dashboard", icon: "Flame", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
-  { label: "Trails", href: "/trails", icon: "BookOpen", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Dashboard", href: "/dashboard", icon: "Flame", visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
+  { label: "Trails", href: "/trails", icon: "BookOpen", visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
   { label: "Мои работы", href: "/my-work", icon: "ClipboardCheck", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Лидерборд", href: "/leaderboard", icon: "Trophy", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Сертификаты", href: "/certificates", icon: "Award", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
-  { label: "Мой профиль", href: "/profile", icon: "User", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Мой профиль", href: "/profile", icon: "User", visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
   { label: "Контент", href: "/content", icon: "FolderKanban", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
-  { label: "Главная", href: "/", icon: "Home", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Главная", href: "/", icon: "Home", visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
 
   // Teacher pages
   { label: "Панель эксперта", href: "/teacher", icon: "Settings", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Аналитика эксперта", href: "/teacher/analytics", icon: "BarChart3", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
   { label: "Контент эксперта", href: "/teacher/content", icon: "Layers", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
-  { label: "Статистика эксперта", href: "/teacher/stats", icon: "Target", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
-  { label: "Мои студенты", href: "/teacher/students", icon: "GraduationCap", visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Статистика эксперта", href: "/teacher/stats", icon: "Target", visibleTo: ["TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
+  { label: "Мои студенты", href: "/teacher/students", icon: "GraduationCap", visibleTo: ["TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
 
   // Admin pages
-  { label: "Админ панель", href: "/admin/invites", icon: "Shield", visibleTo: ["CO_ADMIN", "ADMIN"] },
-  { label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { label: "Админ панель", href: "/admin/invites", icon: "Shield", visibleTo: ["HR", "CO_ADMIN", "ADMIN"] },
+  { label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", visibleTo: ["HR", "CO_ADMIN", "ADMIN"] },
   { label: "Пользователи", href: "/admin/users", icon: "Users", visibleTo: ["CO_ADMIN", "ADMIN"] },
-  { label: "Приглашения", href: "/admin/invites", icon: "FileText", visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { label: "Приглашения", href: "/admin/invites", icon: "FileText", visibleTo: ["HR", "CO_ADMIN", "ADMIN"] },
   { label: "Эксперты", href: "/admin/access?tab=teachers", icon: "UserCheck", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "История", href: "/admin/history", icon: "History", visibleTo: ["CO_ADMIN", "ADMIN"] },
   { label: "Доступы", href: "/admin/access?tab=student-access", icon: "Lock", visibleTo: ["CO_ADMIN", "ADMIN"] },

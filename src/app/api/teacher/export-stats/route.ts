@@ -2,24 +2,25 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged, isAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, isAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || !isPrivileged(session.user.role)) {
+    if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
     const isAdminUser = isAdmin(session.user.role)
     const isCoAdmin = session.user.role === "CO_ADMIN"
+    const isHRUser = isHR(session.user.role)
 
     // Get assigned trail IDs based on role
     let assignedTrailIds: string[] | null = null // null = all trails (ADMIN)
 
-    if (isCoAdmin) {
-      // CO_ADMIN - get trails from AdminTrailAccess
+    if (isCoAdmin || isHRUser) {
+      // CO_ADMIN/HR - get trails from AdminTrailAccess
       assignedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
     } else if (!isAdminUser) {
       // TEACHER role - get assigned trails

@@ -4,18 +4,20 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import {
   isAdmin,
+  isHR,
   isPrivileged,
   getAdminAllowedTrailIds,
   getTeacherAllowedTrailIds,
   ROLE_TEACHER,
+  ROLE_HR,
 } from "@/lib/admin-access"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    // Allow ADMIN, CO_ADMIN, and TEACHER
-    if (!session?.user?.id || !isPrivileged(session.user.role)) {
+    // Allow ADMIN, CO_ADMIN, TEACHER, and HR (read-only)
+    if (!session?.user?.id || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -33,16 +35,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(logs)
     }
 
-    // CO_ADMIN and TEACHER: filter by accessible trails
+    // CO_ADMIN, TEACHER, and HR: filter by accessible trails
     let allowedTrailIds: string[]
 
     if (session.user.role === ROLE_TEACHER) {
       // TEACHER: get trails from TrailTeacher + ALL_TEACHERS visibility
       allowedTrailIds = await getTeacherAllowedTrailIds(session.user.id)
     } else {
-      // CO_ADMIN: get trails from AdminTrailAccess
+      // CO_ADMIN or HR: get trails from AdminTrailAccess
       const trailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
-      allowedTrailIds = trailIds || [] // null means all, but CO_ADMIN shouldn't get null
+      allowedTrailIds = trailIds || []
     }
 
     // If no trails assigned, return empty

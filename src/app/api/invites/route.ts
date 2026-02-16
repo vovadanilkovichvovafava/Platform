@@ -3,10 +3,10 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds, ROLE_STUDENT, ROLE_TEACHER, ROLE_CO_ADMIN, ROLE_ADMIN } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, isHR, isAnyAdminOrHR, getAdminAllowedTrailIds, ROLE_STUDENT, ROLE_TEACHER, ROLE_CO_ADMIN, ROLE_ADMIN, ROLE_HR } from "@/lib/admin-access"
 
 // Allowed roles for invite creation
-const ALLOWED_INVITE_ROLES = [ROLE_STUDENT, ROLE_TEACHER, ROLE_CO_ADMIN, ROLE_ADMIN] as const
+const ALLOWED_INVITE_ROLES = [ROLE_STUDENT, ROLE_TEACHER, ROLE_CO_ADMIN, ROLE_ADMIN, ROLE_HR] as const
 
 const createInviteSchema = z.object({
   code: z.string().min(3, "Код должен быть минимум 3 символа").toUpperCase(),
@@ -24,12 +24,12 @@ const CLEANUP_PERIODS: Record<string, number> = {
   "1d": 24 * 60 * 60 * 1000,    // 1 day (default)
 }
 
-// GET - List all invites (ADMIN and CO_ADMIN)
+// GET - List all invites (ADMIN, CO_ADMIN, and HR)
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdminOrHR(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -92,12 +92,12 @@ export async function GET(request: Request) {
   }
 }
 
-// POST - Create new invite (ADMIN and CO_ADMIN)
+// POST - Create new invite (ADMIN, CO_ADMIN, and HR)
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdminOrHR(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
@@ -114,6 +114,14 @@ export async function POST(request: Request) {
     if ((inviteRole === ROLE_ADMIN || inviteRole === ROLE_CO_ADMIN) && !isAdmin(session.user.role)) {
       return NextResponse.json(
         { error: "Только главный админ может создавать приглашения с ролью админа" },
+        { status: 403 }
+      )
+    }
+
+    // RBAC: HR can only create invites for STUDENT or HR roles
+    if (isHR(session.user.role) && inviteRole !== ROLE_STUDENT && inviteRole !== ROLE_HR) {
+      return NextResponse.json(
+        { error: "HR может создавать приглашения только для студентов и HR" },
         { status: 403 }
       )
     }
@@ -222,12 +230,12 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE - Delete invite (ADMIN and CO_ADMIN)
+// DELETE - Delete invite (ADMIN, CO_ADMIN, and HR)
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdminOrHR(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 

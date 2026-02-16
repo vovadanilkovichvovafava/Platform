@@ -15,7 +15,7 @@ model User {
   firstName     String?
   lastName      String?
   telegramUsername String? // @username format
-  role          String    @default("STUDENT") // STUDENT, TEACHER, CO_ADMIN, ADMIN
+  role          String    @default("STUDENT") // STUDENT, TEACHER, HR, CO_ADMIN, ADMIN
   totalXP       Int       @default(0)
   currentStreak Int       @default(0)
   avatarUrl     String?
@@ -68,7 +68,7 @@ model Invite {
   id          String    @id @default(cuid())
   code        String    @unique
   email       String?   // Optional: restrict to specific email
-  role        String    @default("STUDENT") // Role assigned on registration: STUDENT, TEACHER, CO_ADMIN, ADMIN
+  role        String    @default("STUDENT") // Role assigned on registration: STUDENT, TEACHER, HR, CO_ADMIN, ADMIN
   maxUses     Int       @default(1)
   usedCount   Int       @default(0)
   expiresAt   DateTime?
@@ -191,7 +191,7 @@ model StudentTrailAccess {
   @@index([trailId])
 }
 
-// Grant specific CO_ADMINs access to specific trails (ADMIN has access to all)
+// Grant specific CO_ADMINs/HRs access to specific trails (ADMIN has access to all)
 model AdminTrailAccess {
   id        String   @id @default(cuid())
   adminId   String
