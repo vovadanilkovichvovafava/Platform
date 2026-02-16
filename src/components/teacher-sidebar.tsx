@@ -52,21 +52,19 @@ export function TeacherSidebar({ initialPendingCount }: TeacherSidebarProps) {
         </div>
 
         <nav className="flex-1 px-2 space-y-1">
-          {/* Reviews - hidden for HR */}
-          {!isHR && (
-            <Link
-              href="/teacher"
-              className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-            >
-              <ClipboardList className="h-5 w-5" />
-              <span className="flex-1">Работы на проверку</span>
-              {pendingCount > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-bold text-white">
-                  {pendingCount > 99 ? "99+" : pendingCount}
-                </span>
-              )}
-            </Link>
-          )}
+          {/* Submissions — visible for all roles (HR = read-only) */}
+          <Link
+            href="/teacher"
+            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+          >
+            <ClipboardList className="h-5 w-5" />
+            <span className="flex-1">{isHR ? "Работы студентов" : "Работы на проверку"}</span>
+            {pendingCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-bold text-white">
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
+          </Link>
           <Link
             href="/teacher/students"
             className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"

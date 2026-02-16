@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged, privilegedHasTrailAccess } from "@/lib/admin-access"
+import { isPrivileged, isHR, privilegedHasTrailAccess } from "@/lib/admin-access"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -37,10 +37,12 @@ export default async function ReviewPage({ params, searchParams }: Props) {
   const backHref = returnQuery ? `/teacher?${returnQuery}` : "/teacher"
   const session = await getServerSession(authOptions)
 
-  // Allow TEACHER, CO_ADMIN, and ADMIN roles
-  if (!session || !isPrivileged(session.user.role)) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR (HR = read-only view)
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
+
+  const isHRUser = isHR(session.user.role)
 
   const submission = await prisma.submission.findUnique({
     where: { id },
@@ -246,8 +248,8 @@ export default async function ReviewPage({ params, searchParams }: Props) {
             </Card>
           )}
 
-          {/* Review Form */}
-          {submission.status === "PENDING" && (
+          {/* Review Form — hidden for HR (read-only access) */}
+          {submission.status === "PENDING" && !isHRUser && (
             <Card>
               <CardHeader>
                 <CardTitle>Оценка работы</CardTitle>

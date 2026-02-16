@@ -72,8 +72,8 @@ const authMiddleware = withAuth(
       if (hrDeniedAdminPaths.some(p => path === p || path.startsWith(p + "/"))) {
         return NextResponse.redirect(new URL("/admin/invites", req.url))
       }
-      // HR cannot review submissions or edit content via teacher routes
-      const hrDeniedTeacherPaths = ["/teacher/reviews", "/teacher/content"]
+      // HR cannot edit content via teacher routes (but CAN view submissions read-only)
+      const hrDeniedTeacherPaths = ["/teacher/content"]
       if (hrDeniedTeacherPaths.some(p => path === p || path.startsWith(p + "/"))) {
         return NextResponse.redirect(new URL("/teacher/stats", req.url))
       }
