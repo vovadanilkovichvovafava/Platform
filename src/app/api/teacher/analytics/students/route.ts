@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -11,7 +11,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  if (!isPrivileged(session.user.role)) {
+  // Allow privileged roles AND HR (read-only analytics)
+  if (!isPrivileged(session.user.role) && !isHR(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

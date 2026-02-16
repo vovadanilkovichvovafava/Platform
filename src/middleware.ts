@@ -51,32 +51,45 @@ const authMiddleware = withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Protect teacher routes (allow TEACHER, CO_ADMIN, and ADMIN)
-    if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN") {
+    // Protect teacher routes (allow TEACHER, CO_ADMIN, ADMIN, and HR for read-only analytics)
+    if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN" && token?.role !== "HR") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Protect admin routes (allow CO_ADMIN and ADMIN)
-    if (path.startsWith("/admin") && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN") {
+    // Protect admin routes (allow CO_ADMIN, ADMIN, and HR)
+    if (path.startsWith("/admin") && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN" && token?.role !== "HR") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
     // Redirect /admin to /admin/invites (default admin landing page)
-    if (path === "/admin" && (token?.role === "CO_ADMIN" || token?.role === "ADMIN")) {
+    if (path === "/admin" && (token?.role === "CO_ADMIN" || token?.role === "ADMIN" || token?.role === "HR")) {
       return NextResponse.redirect(new URL("/admin/invites", req.url))
     }
 
-    // Protect shared content editing routes (allow TEACHER, CO_ADMIN, and ADMIN)
+    // HR: block access to admin pages and teacher pages that HR should not see
+    if (token?.role === "HR") {
+      const hrDeniedAdminPaths = ["/admin/users", "/admin/access", "/admin/content", "/admin/history"]
+      if (hrDeniedAdminPaths.some(p => path === p || path.startsWith(p + "/"))) {
+        return NextResponse.redirect(new URL("/admin/invites", req.url))
+      }
+      // HR cannot review submissions or edit content via teacher routes
+      const hrDeniedTeacherPaths = ["/teacher/reviews", "/teacher/content"]
+      if (hrDeniedTeacherPaths.some(p => path === p || path.startsWith(p + "/"))) {
+        return NextResponse.redirect(new URL("/teacher/stats", req.url))
+      }
+    }
+
+    // Protect shared content editing routes (allow TEACHER, CO_ADMIN, and ADMIN — NOT HR)
     if (path.startsWith("/content/modules/") && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Protect /content main page (allow TEACHER, CO_ADMIN, and ADMIN)
+    // Protect /content main page (allow TEACHER, CO_ADMIN, and ADMIN — NOT HR)
     if (path === "/content" && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Redirects for backward compatibility: /admin/content → /content
+    // Redirects for backward compatibility: /admin/content → /content (not for HR)
     if (path === "/admin/content" && (token?.role === "CO_ADMIN" || token?.role === "ADMIN")) {
       return NextResponse.redirect(new URL("/content", req.url))
     }

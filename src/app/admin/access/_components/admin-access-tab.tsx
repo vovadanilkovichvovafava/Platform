@@ -23,6 +23,7 @@ interface CoAdmin {
   id: string
   name: string
   email: string
+  role: string
   trailIds: string[]
 }
 
@@ -202,9 +203,9 @@ export function AdminAccessTab() {
       {coAdmins.length === 0 ? (
         <div className="bg-white rounded-xl border p-12 text-center">
           <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 mb-2">Нет пользователей с ролью CO_ADMIN</p>
+          <p className="text-gray-500 mb-2">Нет пользователей с ролью CO_ADMIN или HR</p>
           <p className="text-sm text-gray-400">
-            Назначьте пользователям роль CO_ADMIN в разделе{" "}
+            Назначьте пользователям роль CO_ADMIN или HR в разделе{" "}
             <a href="/admin/users" className="text-blue-600 hover:underline">
               Управление пользователями
             </a>
@@ -227,14 +228,14 @@ export function AdminAccessTab() {
                 {/* Co-admin header */}
                 <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Shield className="h-5 w-5 text-purple-600" />
+                    <div className={`p-2 rounded-lg ${coAdmin.role === "HR" ? "bg-amber-100" : "bg-purple-100"}`}>
+                      <Shield className={`h-5 w-5 ${coAdmin.role === "HR" ? "text-amber-600" : "text-purple-600"}`} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{coAdmin.name}</span>
-                        <Badge className="bg-purple-100 text-purple-700 border-0 text-xs">
-                          CO_ADMIN
+                        <Badge className={`border-0 text-xs ${coAdmin.role === "HR" ? "bg-amber-100 text-amber-700" : "bg-purple-100 text-purple-700"}`}>
+                          {coAdmin.role}
                         </Badge>
                         {changed && (
                           <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">

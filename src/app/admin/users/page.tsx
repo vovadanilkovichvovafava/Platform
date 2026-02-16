@@ -35,9 +35,9 @@ import {
   loadFiltersFromStorage,
 } from "@/lib/url-state"
 
-type UserRole = "STUDENT" | "TEACHER" | "CO_ADMIN" | "ADMIN"
+type UserRole = "STUDENT" | "TEACHER" | "HR" | "CO_ADMIN" | "ADMIN"
 type RoleFilterValue = "ALL" | UserRole
-const VALID_ROLE_FILTERS: readonly RoleFilterValue[] = ["ALL", "STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
+const VALID_ROLE_FILTERS: readonly RoleFilterValue[] = ["ALL", "STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"]
 const FILTER_DEFAULTS = { q: "", role: "ALL", perPage: "10", page: "1" }
 
 interface User {
@@ -64,6 +64,11 @@ const roleConfig: Record<UserRole, { label: string; color: string; icon: typeof 
     label: "Учитель",
     color: "bg-green-100 text-green-700",
     icon: BookOpen,
+  },
+  HR: {
+    label: "HR",
+    color: "bg-amber-100 text-amber-700",
+    icon: Users,
   },
   CO_ADMIN: {
     label: "Со-админ",
@@ -514,6 +519,7 @@ function AdminUsersPageContent() {
                           >
                             <option value="STUDENT">Студент</option>
                             <option value="TEACHER">Учитель</option>
+                            <option value="HR">HR</option>
                             {/* Only ADMIN can assign CO_ADMIN/ADMIN roles */}
                             {isAdmin && <option value="CO_ADMIN">Со-админ</option>}
                             {isAdmin && <option value="ADMIN">Админ</option>}

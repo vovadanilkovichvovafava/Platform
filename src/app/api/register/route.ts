@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // Determine role from invite with safe fallback
-    const VALID_ROLES = ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
+    const VALID_ROLES = ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"]
     let assignedRole = "STUDENT"
     if (invite.role && VALID_ROLES.includes(invite.role)) {
       assignedRole = invite.role

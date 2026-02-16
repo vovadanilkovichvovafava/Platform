@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { isAnyAdminOrHR, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 // AI API configuration from environment
 const AI_API_ENDPOINT = process.env.AI_API_ENDPOINT || "https://api.anthropic.com/v1/messages"
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
   try {
     // Auth check
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdminOrHR(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 

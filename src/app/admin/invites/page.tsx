@@ -35,6 +35,7 @@ interface Invite {
 const ROLE_OPTIONS = [
   { value: "STUDENT", label: "Студент" },
   { value: "TEACHER", label: "Преподаватель" },
+  { value: "HR", label: "HR" },
   { value: "CO_ADMIN", label: "Со-админ" },
   { value: "ADMIN", label: "Админ" },
 ] as const
@@ -43,6 +44,7 @@ const ROLE_OPTIONS = [
 const ROLE_BADGE_STYLES: Record<string, string> = {
   STUDENT: "bg-slate-100 text-slate-700",
   TEACHER: "bg-blue-100 text-blue-700",
+  HR: "bg-amber-100 text-amber-700",
   CO_ADMIN: "bg-purple-100 text-purple-700",
   ADMIN: "bg-red-100 text-red-700",
 }
@@ -50,6 +52,7 @@ const ROLE_BADGE_STYLES: Record<string, string> = {
 const ROLE_LABELS: Record<string, string> = {
   STUDENT: "Студент",
   TEACHER: "Преподаватель",
+  HR: "HR",
   CO_ADMIN: "Со-админ",
   ADMIN: "Админ",
 }
@@ -176,7 +179,7 @@ export default function AdminInvitesPage() {
       }
     }
 
-    if (session?.user?.role === "ADMIN" || session?.user?.role === "CO_ADMIN") {
+    if (session?.user?.role === "ADMIN" || session?.user?.role === "CO_ADMIN" || session?.user?.role === "HR") {
       fetchTrails()
     }
   }, [session])
@@ -210,8 +213,8 @@ export default function AdminInvitesPage() {
   useEffect(() => {
     if (status === "loading") return
 
-    // Allow both ADMIN and CO_ADMIN
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "CO_ADMIN")) {
+    // Allow ADMIN, CO_ADMIN, and HR
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "CO_ADMIN" && session.user.role !== "HR")) {
       router.push("/")
       return
     }
@@ -331,8 +334,8 @@ export default function AdminInvitesPage() {
     )
   }
 
-  // Allow both ADMIN and CO_ADMIN
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "CO_ADMIN")) {
+  // Allow ADMIN, CO_ADMIN, and HR
+  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "CO_ADMIN" && session.user.role !== "HR")) {
     return null
   }
 
@@ -350,20 +353,24 @@ export default function AdminInvitesPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              href="/admin/users"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              <Users className="h-4 w-4" />
-              Пользователи
-            </Link>
-            <Link
-              href="/admin/content"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              <FileText className="h-4 w-4" />
-              Контент
-            </Link>
+            {session.user.role !== "HR" && (
+              <Link
+                href="/admin/users"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Users className="h-4 w-4" />
+                Пользователи
+              </Link>
+            )}
+            {session.user.role !== "HR" && (
+              <Link
+                href="/admin/content"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                Контент
+              </Link>
+            )}
             <Link
               href="/admin/analytics"
               className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
@@ -527,6 +534,14 @@ export default function AdminInvitesPage() {
                 >
                   {ROLE_OPTIONS.filter((opt) => {
                     // CO_ADMIN can only create STUDENT and TEACHER invites
+                    if (session?.user?.role === "CO_ADMIN" && (opt.value === "CO_ADMIN" || opt.value === "ADMIN")) {
+                      return false
+                    }
+                    // HR can only create STUDENT and HR invites
+                    if (session?.user?.role === "HR" && opt.value !== "STUDENT" && opt.value !== "HR") {
+                      return false
+                    }
+                    // Only ADMIN can create CO_ADMIN and ADMIN invites
                     if (session?.user?.role !== "ADMIN" && (opt.value === "CO_ADMIN" || opt.value === "ADMIN")) {
                       return false
                     }

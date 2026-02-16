@@ -2,9 +2,9 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
 
-// GET - Get pending submissions count for teacher/admin
+// GET - Get pending submissions count for teacher/admin/HR
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -13,8 +13,8 @@ export async function GET() {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    // Allow TEACHER, CO_ADMIN, and ADMIN roles
-    if (!isPrivileged(session.user.role)) {
+    // Allow TEACHER, CO_ADMIN, ADMIN, and HR roles (HR: read-only view)
+    if (!isPrivileged(session.user.role) && !isHR(session.user.role)) {
       return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 })
     }
 

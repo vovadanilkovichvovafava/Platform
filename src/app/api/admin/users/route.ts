@@ -6,7 +6,7 @@ import { z } from "zod"
 import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 const updateUserSchema = z.object({
-  role: z.enum(["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]).optional(),
+  role: z.enum(["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"]).optional(),
 })
 
 // GET - List all users (admin only)

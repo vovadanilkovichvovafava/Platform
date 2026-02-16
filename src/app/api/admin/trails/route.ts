@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { isAnyAdmin, isAdmin, getAdminTrailFilter, isPrivileged } from "@/lib/admin-access"
+import { isAnyAdmin, isAdmin, isHR, getAdminTrailFilter, isPrivileged } from "@/lib/admin-access"
 import { hashTrailPassword } from "@/lib/trail-password"
 
 // Transliterate Cyrillic to Latin for URL-safe slugs
@@ -46,18 +46,18 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isPrivileged(session.user.role)) {
+    if (!session?.user?.id || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     // Build where clause based on role
     // ADMIN: no filter (sees all)
-    // CO_ADMIN: filter by AdminTrailAccess
+    // CO_ADMIN/HR: filter by AdminTrailAccess
     // TEACHER: filter by TrailTeacher + ALL_TEACHERS visibility
     let whereClause = {}
 
-    if (isAnyAdmin(session.user.role) && !isAdmin(session.user.role)) {
-      // CO_ADMIN - filter by allowed trails
+    if ((isAnyAdmin(session.user.role) && !isAdmin(session.user.role)) || isHR(session.user.role)) {
+      // CO_ADMIN or HR - filter by allowed trails
       const trailFilter = await getAdminTrailFilter(session.user.id, session.user.role)
       if (trailFilter) {
         whereClause = trailFilter

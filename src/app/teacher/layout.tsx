@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { TeacherSidebar } from "@/components/teacher-sidebar"
-import { isPrivileged, isAdmin as checkIsAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, isAdmin as checkIsAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 export default async function TeacherLayout({
   children,
@@ -12,14 +12,15 @@ export default async function TeacherLayout({
 }) {
   const session = await getServerSession(authOptions)
 
-  // Allow TEACHER, CO_ADMIN, and ADMIN roles
-  if (!session || !isPrivileged(session.user.role)) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR (HR for read-only analytics)
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
 
   // Get initial pending submissions count for this teacher
   const isAdmin = checkIsAdmin(session.user.role)
   const isCoAdmin = session.user.role === "CO_ADMIN"
+  const isHRUser = isHR(session.user.role)
 
   let pendingCount = 0
   if (isAdmin) {
@@ -27,8 +28,8 @@ export default async function TeacherLayout({
     pendingCount = await prisma.submission.count({
       where: { status: "PENDING" },
     })
-  } else if (isCoAdmin) {
-    // CO_ADMIN sees only submissions from their assigned trails
+  } else if (isCoAdmin || isHRUser) {
+    // CO_ADMIN/HR sees only submissions from their assigned trails
     const allowedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
 
     if (allowedTrailIds && allowedTrailIds.length > 0) {

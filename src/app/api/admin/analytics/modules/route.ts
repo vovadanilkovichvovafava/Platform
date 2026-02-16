@@ -2,13 +2,13 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isAnyAdmin, isAdmin, getAdminTrailFilter } from "@/lib/admin-access"
+import { isAnyAdminOrHR, isAdmin, getAdminTrailFilter } from "@/lib/admin-access"
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id || !isAnyAdmin(session.user.role)) {
+    if (!session?.user?.id || !isAnyAdminOrHR(session.user.role)) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 

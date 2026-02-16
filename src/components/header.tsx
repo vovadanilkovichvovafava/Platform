@@ -48,14 +48,15 @@ interface NavbarItemDTO {
 
 // Default navbar items (fallback when no preset is active or API fails)
 const ALL_DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = [
-  { id: "default-1", label: "Dashboard", href: "/dashboard", icon: "Flame", order: 0, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
-  { id: "default-2", label: "Trails", href: "/trails", icon: "BookOpen", order: 1, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { id: "default-1", label: "Dashboard", href: "/dashboard", icon: "Flame", order: 0, visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
+  { id: "default-2", label: "Trails", href: "/trails", icon: "BookOpen", order: 1, visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
   { id: "default-3", label: "Мои работы", href: "/my-work", icon: "ClipboardCheck", order: 2, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { id: "default-4", label: "Лидерборд", href: "/leaderboard", icon: "Trophy", order: 3, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { id: "default-5", label: "Панель эксперта", href: "/teacher", icon: "Settings", order: 4, visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
   { id: "default-6", label: "Контент", href: "/content", icon: "FolderKanban", order: 5, visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
-  { id: "default-7", label: "Админ панель", href: "/admin/invites", icon: "Shield", order: 6, visibleTo: ["CO_ADMIN", "ADMIN"] },
-  { id: "default-8", label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", order: 7, visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { id: "default-7", label: "Инвайты", href: "/admin/invites", icon: "Shield", order: 6, visibleTo: ["HR", "CO_ADMIN", "ADMIN"] },
+  { id: "default-8", label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", order: 7, visibleTo: ["HR", "CO_ADMIN", "ADMIN"] },
+  { id: "default-9", label: "Статистика", href: "/teacher/stats", icon: "BarChart3", order: 8, visibleTo: ["HR"] },
 ]
 
 // Filter out disabled features
@@ -65,7 +66,7 @@ const DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = ALL_DEFAULT_NAVBAR_ITEMS.filter(
 
 // Dropdown menu items (always shown, not from preset)
 const DROPDOWN_STATIC_ITEMS = [
-  { label: "Мой профиль", href: "/profile", icon: "User", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { label: "Мой профиль", href: "/profile", icon: "User", visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
   { label: "Сертификаты", href: "/certificates", icon: "Award", visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
 ]
 
