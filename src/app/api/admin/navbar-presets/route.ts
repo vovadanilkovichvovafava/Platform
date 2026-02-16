@@ -18,7 +18,7 @@ const VALID_ICONS = [
 ]
 
 // Valid roles for visibility
-const VALID_ROLES = ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
+const VALID_ROLES = ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"]
 
 // Schema for navbar item
 const navbarItemSchema = z.object({
@@ -29,7 +29,7 @@ const navbarItemSchema = z.object({
     message: `Иконка должна быть одной из: ${VALID_ICONS.slice(0, 10).join(", ")}...`,
   }),
   order: z.number().int().min(0),
-  visibleTo: z.array(z.enum(["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"])).min(1, "Выберите хотя бы одну роль"),
+  visibleTo: z.array(z.enum(["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"])).min(1, "Выберите хотя бы одну роль"),
 })
 
 // Schema for creating/updating preset

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { FEATURE_FLAGS } from "@/lib/feature-flags"
-import { isAnyAdmin } from "@/lib/admin-access"
+import { isAnyAdminOrHR } from "@/lib/admin-access"
 
 // DTO type for navbar items - safe for client serialization
 export interface NavbarItemDTO {
@@ -51,7 +51,7 @@ export async function GET() {
     }
 
     // Only admins have personal presets; non-admins always see defaults
-    if (!isAnyAdmin(session.user.role)) {
+    if (!isAnyAdminOrHR(session.user.role)) {
       const defaultPreset: NavbarPresetDTO = {
         id: "default",
         name: "Default",

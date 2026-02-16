@@ -156,14 +156,20 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [isEditing])
 
+  // Filter items to only those visible to the current user role
+  const filterItemsForRole = (items: NavbarItemDTO[]) => {
+    return items.filter(item => item.visibleTo.includes(userRole))
+  }
+
   // Start editing
   const handleStartEdit = () => {
+    const itemsForEdit = filterItemsForRole(currentItems)
     if (activePresetId === null || activePresetId === "default") {
       // Default preset - need to create new
       setIsCreatingNew(true)
-      setEditItems([...currentItems])
+      setEditItems([...itemsForEdit])
     } else {
-      setEditItems([...currentItems])
+      setEditItems([...itemsForEdit])
     }
     setIsEditing(true)
     setIsOpen(false)
@@ -310,7 +316,7 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
   // Create new preset (open dialog)
   const handleCreateNew = () => {
     setIsCreatingNew(true)
-    setEditItems([...currentItems])
+    setEditItems([...filterItemsForRole(currentItems)])
     setIsEditing(true)
     setIsOpen(false)
   }
