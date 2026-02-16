@@ -79,7 +79,9 @@ export default async function StudentDetailPage({ params }: Props) {
     include: {
       enrollments: {
         where: enrollmentFilter,
-        include: {
+        select: {
+          trailId: true,
+          trailStatus: true,
           trail: {
             include: {
               modules: {
@@ -315,6 +317,7 @@ export default async function StudentDetailPage({ params }: Props) {
             studentId={student.id}
             enrollments={student.enrollments.map((e) => ({
               trailId: e.trailId,
+              trailStatus: e.trailStatus,
               trail: {
                 title: e.trail.title,
                 modules: e.trail.modules,
