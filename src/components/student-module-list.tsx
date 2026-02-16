@@ -15,6 +15,9 @@ import {
   SkipForward,
   Undo2,
   RefreshCw,
+  Ban,
+  GraduationCap,
+  BookOpen,
 } from "lucide-react"
 
 interface Module {
@@ -44,19 +47,76 @@ interface StudentModuleListProps {
   enrollments: Enrollment[]
   progressMap: Map<string, ModuleProgress>
   userRole?: string
+  initialTrailStatuses?: Record<string, string>
 }
+
+const STATUS_CONFIG = {
+  NOT_ADMITTED: {
+    label: "Недопущен",
+    color: "bg-red-100 text-red-700 border-red-300",
+    activeColor: "bg-red-500 text-white border-red-500",
+    icon: Ban,
+  },
+  LEARNING: {
+    label: "Обучается",
+    color: "bg-blue-100 text-blue-700 border-blue-300",
+    activeColor: "bg-blue-500 text-white border-blue-500",
+    icon: BookOpen,
+  },
+  ACCEPTED: {
+    label: "Принят",
+    color: "bg-green-100 text-green-700 border-green-300",
+    activeColor: "bg-green-500 text-white border-green-500",
+    icon: GraduationCap,
+  },
+} as const
+
+type TrailStatusKey = keyof typeof STATUS_CONFIG
 
 export function StudentModuleList({
   studentId,
   enrollments,
   progressMap: initialProgressMap,
   userRole,
+  initialTrailStatuses,
 }: StudentModuleListProps) {
   const canSkipModules = userRole !== "HR"
+  const canSetStatus = userRole !== "HR"
   const [progressMap, setProgressMap] = useState(initialProgressMap)
   const [loading, setLoading] = useState<string | null>(null)
+  const [statusLoading, setStatusLoading] = useState<string | null>(null)
+  const [trailStatuses, setTrailStatuses] = useState<Record<string, string>>(
+    initialTrailStatuses || {}
+  )
   const { showToast } = useToast()
   const { confirm } = useConfirm()
+
+  const setTrailStatus = async (trailId: string, status: TrailStatusKey) => {
+    // If already this status, skip
+    const currentStatus = trailStatuses[trailId] || "LEARNING"
+    if (currentStatus === status) return
+
+    try {
+      setStatusLoading(trailId)
+      const res = await fetch("/api/teacher/student-trail-status", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, trailId, status }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to set status")
+      }
+
+      setTrailStatuses((prev) => ({ ...prev, [trailId]: status }))
+      showToast(`Статус изменён на "${STATUS_CONFIG[status].label}"`, "success")
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Ошибка", "error")
+    } finally {
+      setStatusLoading(null)
+    }
+  }
 
   const skipModule = async (moduleId: string, moduleTitle: string) => {
     const confirmed = await confirm({
@@ -154,6 +214,9 @@ export function StudentModuleList({
             ? Math.round((completedModules.length / trailModules.length) * 100)
             : 0
 
+        const currentStatus = (trailStatuses[enrollment.trailId] || "LEARNING") as TrailStatusKey
+        const isStatusLoading = statusLoading === enrollment.trailId
+
         return (
           <Card key={enrollment.trailId}>
             <Collapsible defaultOpen>
@@ -188,6 +251,34 @@ export function StudentModuleList({
                     </div>
                   </button>
                 </CollapsibleTrigger>
+
+                {/* Status buttons row */}
+                {canSetStatus && (
+                  <div className="px-4 py-2 border-t border-gray-100 flex items-center gap-2">
+                    <span className="text-xs text-gray-500 mr-1">Статус:</span>
+                    {isStatusLoading ? (
+                      <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
+                    ) : (
+                      (Object.keys(STATUS_CONFIG) as TrailStatusKey[]).map((statusKey) => {
+                        const config = STATUS_CONFIG[statusKey]
+                        const isActive = currentStatus === statusKey
+                        const Icon = config.icon
+                        return (
+                          <button
+                            key={statusKey}
+                            onClick={() => setTrailStatus(enrollment.trailId, statusKey)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
+                              isActive ? config.activeColor : config.color
+                            } hover:opacity-80`}
+                          >
+                            <Icon className="h-3 w-3" />
+                            {config.label}
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                )}
 
                 {/* Module list (collapsible content) */}
                 <CollapsibleContent>

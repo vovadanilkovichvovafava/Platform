@@ -167,6 +167,23 @@ export default async function TeacherStudentsPage({
     }
   }
 
+  // Fetch all trail statuses for active students in batch
+  const activeStudentIds = activeStudents.map((s) => s.id)
+  const allTrailStatusRecords = activeStudentIds.length > 0
+    ? await prisma.studentTrailStatus.findMany({
+        where: { studentId: { in: activeStudentIds } },
+        select: { studentId: true, trailId: true, status: true },
+      })
+    : []
+  // Build a map: studentId -> { trailId -> status }
+  const studentTrailStatusMap: Record<string, Record<string, string>> = {}
+  for (const r of allTrailStatusRecords) {
+    if (!studentTrailStatusMap[r.studentId]) {
+      studentTrailStatusMap[r.studentId] = {}
+    }
+    studentTrailStatusMap[r.studentId][r.trailId] = r.status
+  }
+
   // Get unique trail names for filter
   const trailNames = [...new Set(allTrails.map((t) => t.title))].sort()
 
@@ -201,6 +218,7 @@ export default async function TeacherStudentsPage({
       _count: student._count,
       stats: getStudentStats(student.id),
       maxXP,
+      trailStatuses: studentTrailStatusMap[student.id] || {},
     }
   })
 
