@@ -315,6 +315,9 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
     application: "Применение",
     reflection: "Рефлексия",
     verification: "Верификация",
+    analysis: "Анализ",
+    evaluation: "Оценка",
+    synthesis: "Синтез",
   }
   const difficultyColors: Record<string, string> = {
     easy: "bg-green-100 text-green-700",

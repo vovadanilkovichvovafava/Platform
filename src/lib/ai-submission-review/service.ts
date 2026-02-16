@@ -12,6 +12,7 @@
 import { prisma } from "@/lib/prisma"
 import { collectSubmissionContext } from "./context-collector"
 import { buildUserPrompt, getSystemPrompt } from "./prompt-builder"
+import { filterQuestions } from "./question-filter"
 import type { AiReviewResult, AiReviewDTO } from "./types"
 
 // AI API configuration — reuses same env vars as other AI features
@@ -106,6 +107,29 @@ export async function runAiSubmissionReview(
       `${LOG_PREFIX} Response parsed in ${Date.now() - parseStart}ms`
     )
 
+    // Step 4b: Post-processing quality filter
+    const filterStart = Date.now()
+    const submissionText = context.submissionText ?? ""
+    const moduleText = [
+      context.moduleContent ?? "",
+      context.moduleRequirements ?? "",
+      context.moduleDescription ?? "",
+    ].join(" ")
+    const filtered = filterQuestions(
+      parsed.questions,
+      submissionText,
+      moduleText,
+      context.previousQuestions
+    )
+    parsed.questions = filtered.accepted
+    // Log quality metrics
+    console.log(
+      `${LOG_PREFIX} Quality filter: ${filtered.totalCandidates} candidates, ` +
+      `${filtered.accepted.length} accepted, ${filtered.rejected.length} rejected ` +
+      `(${filtered.rejectedReasons.join(", ") || "none"}). ` +
+      `Took ${Date.now() - filterStart}ms`
+    )
+
     // Step 5: Save to DB
     const saveStart = Date.now()
     await prisma.aiSubmissionReview.update({
@@ -118,6 +142,12 @@ export async function runAiSubmissionReview(
           ...parsed.coverage,
           // Merge our actual coverage with AI's self-reported coverage
           notes: `${coverage.notes}. AI: ${parsed.coverage.notes}`,
+          qualityMetrics: {
+            totalCandidates: filtered.totalCandidates,
+            accepted: filtered.accepted.length,
+            rejected: filtered.rejected.length,
+            rejectedReasons: filtered.rejectedReasons,
+          },
         }),
         finishedAt: new Date(),
       },
@@ -250,8 +280,8 @@ function validateAiResult(data: Record<string, unknown>): AiReviewResult {
       question: String(q.question ?? ""),
       type: validateEnum(
         String(q.type),
-        ["knowledge", "application", "reflection", "verification"],
-        "knowledge"
+        ["knowledge", "application", "reflection", "verification", "analysis", "evaluation", "synthesis"],
+        "application"
       ),
       difficulty: validateEnum(
         String(q.difficulty),

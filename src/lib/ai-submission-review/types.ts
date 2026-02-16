@@ -7,7 +7,7 @@
 export type AiReviewStatus = "pending" | "processing" | "completed" | "failed"
 
 /** Question type taxonomy */
-export type QuestionType = "knowledge" | "application" | "reflection" | "verification"
+export type QuestionType = "knowledge" | "application" | "reflection" | "verification" | "analysis" | "evaluation" | "synthesis"
 
 /** Difficulty level */
 export type QuestionDifficulty = "easy" | "medium" | "hard"
@@ -64,6 +64,8 @@ export interface SubmissionContext {
   /** Trail context */
   trailTitle: string
   trailDescription: string
+  /** Previously generated questions (for deduplication on re-runs) */
+  previousQuestions: string[]
 }
 
 /** What sources were successfully gathered */
