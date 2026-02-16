@@ -56,6 +56,25 @@ export async function collectSubmissionContext(
   const mod = submission.module
   const trail = mod.trail
 
+  // Fetch previous questions from existing review (for deduplication on re-runs)
+  let previousQuestions: string[] = []
+  try {
+    const existingReview = await prisma.aiSubmissionReview.findUnique({
+      where: { submissionId },
+      select: { questions: true },
+    })
+    if (existingReview?.questions) {
+      const parsed = JSON.parse(existingReview.questions)
+      if (Array.isArray(parsed)) {
+        previousQuestions = parsed
+          .map((q: Record<string, unknown>) => String(q.question ?? ""))
+          .filter((q: string) => q.length > 0)
+      }
+    }
+  } catch {
+    // Silently ignore — previous questions are optional context
+  }
+
   // Determine what was successfully gathered
   const submissionTextUsed = !!submission.comment && submission.comment.trim().length > 0
   const fileUrlUsed = !!submission.fileUrl
@@ -80,6 +99,7 @@ export async function collectSubmissionContext(
     moduleRequirements: truncate(mod.requirements, MAX_CONTENT_LENGTH),
     trailTitle: trail.title,
     trailDescription: truncate(trail.description, 5000) ?? trail.description,
+    previousQuestions,
   }
 
   const coverage: SourceCoverageResult = {
