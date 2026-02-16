@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged, isAdmin as checkIsAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, isAdmin as checkIsAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Users } from "lucide-react"
@@ -16,19 +16,20 @@ export default async function TeacherStudentsPage({
   const resolvedSearchParams = await searchParams
   const session = await getServerSession(authOptions)
 
-  // Allow TEACHER, CO_ADMIN, and ADMIN roles
-  if (!session || !isPrivileged(session.user.role)) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR roles
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
 
   const isAdmin = checkIsAdmin(session.user.role)
   const isCoAdmin = session.user.role === "CO_ADMIN"
+  const isHRUser = isHR(session.user.role)
 
   // Get assigned trail IDs based on role
   let assignedTrailIds: string[] | null = null // null = all trails (ADMIN)
 
-  if (isCoAdmin) {
-    // CO_ADMIN - get trails from AdminTrailAccess
+  if (isCoAdmin || isHRUser) {
+    // CO_ADMIN/HR - get trails from AdminTrailAccess
     assignedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
   } else if (!isAdmin) {
     // TEACHER role - get assigned trails

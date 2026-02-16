@@ -23,14 +23,15 @@ export interface NavbarPresetDTO {
 
 // Default navbar items when no preset is active
 const DEFAULT_NAVBAR_ITEMS: NavbarItemDTO[] = [
-  { id: "default-1", label: "Dashboard", href: "/dashboard", icon: "Flame", order: 0, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
-  { id: "default-2", label: "Trails", href: "/trails", icon: "BookOpen", order: 1, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
+  { id: "default-1", label: "Dashboard", href: "/dashboard", icon: "Flame", order: 0, visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
+  { id: "default-2", label: "Trails", href: "/trails", icon: "BookOpen", order: 1, visibleTo: ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"] },
   { id: "default-3", label: "Мои работы", href: "/my-work", icon: "ClipboardCheck", order: 2, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { id: "default-4", label: "Лидерборд", href: "/leaderboard", icon: "Trophy", order: 3, visibleTo: ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"] },
   { id: "default-5", label: "Панель эксперта", href: "/teacher", icon: "Settings", order: 4, visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
   { id: "default-6", label: "Контент", href: "/content", icon: "FolderKanban", order: 5, visibleTo: ["TEACHER", "CO_ADMIN", "ADMIN"] },
-  { id: "default-7", label: "Админ панель", href: "/admin/invites", icon: "Shield", order: 6, visibleTo: ["CO_ADMIN", "ADMIN"] },
-  { id: "default-8", label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", order: 7, visibleTo: ["CO_ADMIN", "ADMIN"] },
+  { id: "default-7", label: "Инвайты", href: "/admin/invites", icon: "Shield", order: 6, visibleTo: ["HR", "CO_ADMIN", "ADMIN"] },
+  { id: "default-8", label: "Аналитика", href: "/admin/analytics", icon: "BarChart3", order: 7, visibleTo: ["HR", "CO_ADMIN", "ADMIN"] },
+  { id: "default-9", label: "Статистика", href: "/teacher/stats", icon: "BarChart3", order: 8, visibleTo: ["HR"] },
 ]
 
 // Filter out items disabled by feature flags
@@ -117,8 +118,8 @@ function safeParseVisibleTo(visibleTo: string): string[] {
     if (Array.isArray(parsed)) {
       return parsed.filter((v): v is string => typeof v === "string")
     }
-    return ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
+    return ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"]
   } catch {
-    return ["STUDENT", "TEACHER", "CO_ADMIN", "ADMIN"]
+    return ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"]
   }
 }

@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged, isAdmin as checkIsAdmin, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, isAdmin as checkIsAdmin, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,8 +22,8 @@ export default async function TeacherDashboard({
   const resolvedSearchParams = await searchParams
   const session = await getServerSession(authOptions)
 
-  // Allow TEACHER, CO_ADMIN, and ADMIN roles
-  if (!session || !isPrivileged(session.user.role)) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR (HR = read-only view)
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
 
