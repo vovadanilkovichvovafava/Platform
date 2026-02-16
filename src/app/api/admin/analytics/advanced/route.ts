@@ -598,6 +598,22 @@ export async function GET(request: NextRequest) {
         const moduleIds = trail.modules.map((m: { id: string }) => m.id)
         const trailModules = trail.modules as Array<{ id: string; title: string; order: number; type: string }>
 
+        // Batch-fetch all student trail statuses for this trail
+        const studentIds = trail.enrollments.map((e: EnrollmentData) => e.user.id)
+        const trailStatusRecords = studentIds.length > 0
+          ? await prisma.studentTrailStatus.findMany({
+              where: {
+                trailId: trail.id,
+                studentId: { in: studentIds },
+              },
+              select: { studentId: true, status: true },
+            })
+          : []
+        const trailStatusMap = new Map<string, string>()
+        for (const r of trailStatusRecords) {
+          trailStatusMap.set(r.studentId, r.status)
+        }
+
         const studentsWithProgress = await Promise.all(
           trail.enrollments.map(async (enrollment: EnrollmentData) => {
             const userId = enrollment.user.id
@@ -729,6 +745,7 @@ export async function GET(request: NextRequest) {
               dateStart,
               dateEnd,
               modules: moduleDetails,
+              trailStatus: trailStatusMap.get(userId) || "LEARNING",
             }
           })
         )

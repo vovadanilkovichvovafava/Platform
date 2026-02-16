@@ -148,6 +148,22 @@ export default async function StudentDetailPage({ params }: Props) {
     notFound()
   }
 
+  // Fetch student trail statuses for all enrolled trails
+  const enrolledTrailIdsForStatus = student.enrollments.map((e) => e.trailId)
+  const trailStatusRecords = enrolledTrailIdsForStatus.length > 0
+    ? await prisma.studentTrailStatus.findMany({
+        where: {
+          studentId: id,
+          trailId: { in: enrolledTrailIdsForStatus },
+        },
+        select: { trailId: true, status: true },
+      })
+    : []
+  const trailStatusMap: Record<string, string> = {}
+  for (const r of trailStatusRecords) {
+    trailStatusMap[r.trailId] = r.status
+  }
+
   // Create a map of module progress for quick lookup
   const progressMap = new Map(
     student.moduleProgress.map((p) => [p.moduleId, {
@@ -322,6 +338,7 @@ export default async function StudentDetailPage({ params }: Props) {
             }))}
             progressMap={progressMap}
             userRole={session.user.role}
+            initialTrailStatuses={trailStatusMap}
           />
         </section>
 

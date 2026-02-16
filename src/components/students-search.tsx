@@ -96,6 +96,7 @@ interface Student {
     revision: number
   }
   maxXP: number
+  trailStatuses?: Record<string, string> // trailId -> status (NOT_ADMITTED, LEARNING, ACCEPTED)
 }
 
 interface StudentsSearchProps {
@@ -413,15 +414,25 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
                             )}
                           </div>
                           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                            {student.enrollments.map((e) => (
-                              <Badge
-                                key={e.trailId}
-                                variant="secondary"
-                                className="text-xs px-1.5 py-0"
-                              >
-                                {e.trail.title}
-                              </Badge>
-                            ))}
+                            {student.enrollments.map((e) => {
+                              const status = student.trailStatuses?.[e.trailId] || "LEARNING"
+                              const statusDot = status === "NOT_ADMITTED"
+                                ? "bg-red-400"
+                                : status === "ACCEPTED"
+                                ? "bg-green-400"
+                                : "bg-blue-400"
+                              return (
+                                <Badge
+                                  key={e.trailId}
+                                  variant="secondary"
+                                  className="text-xs px-1.5 py-0 inline-flex items-center gap-1"
+                                  title={status === "NOT_ADMITTED" ? "Недопущен" : status === "ACCEPTED" ? "Принят" : "Обучается"}
+                                >
+                                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${statusDot}`} />
+                                  {e.trail.title}
+                                </Badge>
+                              )
+                            })}
                           </div>
                         </div>
                       </div>
