@@ -573,7 +573,6 @@ export async function GET(request: NextRequest) {
           orderBy: { createdAt: "desc" },
           select: {
             createdAt: true,
-            trailStatus: true,
             user: {
               select: {
                 id: true,
@@ -729,18 +728,9 @@ export async function GET(request: NextRequest) {
               dateStart,
               dateEnd,
               modules: moduleDetails,
-              trailStatus: enrollment.trailStatus || "LEARNING",
             }
           })
         )
-
-        // Calculate status counts
-        const statusCounts = {
-          total: studentsWithProgress.length,
-          learning: studentsWithProgress.filter(s => (s.trailStatus || "LEARNING") === "LEARNING").length,
-          notAdmitted: studentsWithProgress.filter(s => s.trailStatus === "NOT_ADMITTED").length,
-          accepted: studentsWithProgress.filter(s => s.trailStatus === "ACCEPTED").length,
-        }
 
         return {
           trailId: trail.id,
@@ -749,7 +739,6 @@ export async function GET(request: NextRequest) {
           isPasswordProtected: trail.isPasswordProtected,
           createdById: trail.createdById,
           students: studentsWithProgress.sort((a, b) => b.completionPercent - a.completionPercent),
-          statusCounts,
         }
       })
     )
