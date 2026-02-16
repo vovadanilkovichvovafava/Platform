@@ -151,7 +151,6 @@ interface TrailStudent {
   dateStart: string | null
   dateEnd: string | null
   modules?: ModuleCircle[]
-  trailStatus?: string
 }
 
 interface TrailStudentsGroup {
@@ -161,12 +160,6 @@ interface TrailStudentsGroup {
   isPasswordProtected?: boolean
   isLocked?: boolean
   students: TrailStudent[]
-  statusCounts?: {
-    total: number
-    learning: number
-    notAdmitted: number
-    accepted: number
-  }
 }
 
 interface ModuleDropoffStats {
@@ -278,8 +271,7 @@ const ANALYTICS_INFO = {
 const VALID_PERIODS = ["7", "14", "30", "60", "90", "all"] as const
 const VALID_COMPLETION_FILTERS = ["all", "in_progress", "completed"] as const
 const VALID_SUBMISSION_FILTERS = ["all", "no_submissions", "has_submissions", "has_pending", "has_revision", "all_approved"] as const
-const VALID_TRAIL_STATUS_FILTERS = ["all", "NOT_ADMITTED", "LEARNING", "ACCEPTED"] as const
-const VALID_SORT_COLUMNS = ["name", "dateStart", "dateEnd", "completionPercent", "avgScore", "modulesCompleted", "trailStatus"] as const
+const VALID_SORT_COLUMNS = ["name", "dateStart", "dateEnd", "completionPercent", "avgScore", "modulesCompleted"] as const
 const VALID_SORT_DIRS = ["asc", "desc"] as const
 
 const ANALYTICS_FILTER_DEFAULTS: Record<string, string> = {
@@ -287,23 +279,9 @@ const ANALYTICS_FILTER_DEFAULTS: Record<string, string> = {
   period: "30",
   completion: "all",
   submission: "all",
-  trailStatusFilter: "all",
   q: "",
   sortCol: "dateStart",
   sortDir: "desc",
-}
-
-const TRAIL_STATUS_LABELS: Record<string, string> = {
-  NOT_ADMITTED: "Недопущен",
-  LEARNING: "Обучается",
-  ACCEPTED: "Принят",
-}
-
-// Fixed sort order for trail statuses: NOT_ADMITTED=0, LEARNING=1, ACCEPTED=2
-const TRAIL_STATUS_SORT_ORDER: Record<string, number> = {
-  NOT_ADMITTED: 0,
-  LEARNING: 1,
-  ACCEPTED: 2,
 }
 
 export default function AdvancedAnalyticsPage() {
@@ -326,8 +304,6 @@ export default function AdvancedAnalyticsPage() {
   const [studentSortDirection, setStudentSortDirection] = useState<"asc" | "desc" | null>("desc")
   // Submission filter within the "Students by directions" block
   const [submissionFilter, setSubmissionFilter] = useState<"all" | "no_submissions" | "has_submissions" | "has_pending" | "has_revision" | "all_approved">("all")
-  // Trail status filter
-  const [trailStatusFilter, setTrailStatusFilter] = useState<"all" | "NOT_ADMITTED" | "LEARNING" | "ACCEPTED">("all")
 
   // URL sync: read initial filter values from URL on mount
   const [urlInitialized, setUrlInitialized] = useState(false)
@@ -337,7 +313,6 @@ export default function AdvancedAnalyticsPage() {
     const period = parseEnumParam(params.get("period"), VALID_PERIODS, "30")
     const completion = parseEnumParam(params.get("completion"), VALID_COMPLETION_FILTERS, "all")
     const submission = parseEnumParam(params.get("submission"), VALID_SUBMISSION_FILTERS, "all")
-    const tsFilter = parseEnumParam(params.get("trailStatusFilter"), VALID_TRAIL_STATUS_FILTERS, "all")
     const q = params.get("q") || ""
     const sortCol = parseEnumParam(params.get("sortCol"), VALID_SORT_COLUMNS, "dateStart")
     const sortDir = parseEnumParam(params.get("sortDir"), VALID_SORT_DIRS, "desc")
@@ -346,7 +321,6 @@ export default function AdvancedAnalyticsPage() {
     setPeriodFilter(period)
     setCompletionFilter(completion)
     setSubmissionFilter(submission)
-    setTrailStatusFilter(tsFilter)
     setStudentSearch(q)
     setStudentSortColumn(sortCol)
     setStudentSortDirection(sortDir)
@@ -357,7 +331,7 @@ export default function AdvancedAnalyticsPage() {
   const syncAnalyticsUrl = useCallback(
     (params: {
       trail: string; period: string; completion: string;
-      submission: string; trailStatusFilter: string; q: string; sortCol: string; sortDir: string
+      submission: string; q: string; sortCol: string; sortDir: string
     }) => {
       updateUrl(pathname, params, ANALYTICS_FILTER_DEFAULTS)
     },
@@ -379,12 +353,11 @@ export default function AdvancedAnalyticsPage() {
       period: overrides.period ?? periodFilter,
       completion: overrides.completion ?? completionFilter,
       submission: overrides.submission ?? submissionFilter,
-      trailStatusFilter: overrides.trailStatusFilter ?? trailStatusFilter,
       q: overrides.q ?? studentSearch,
       sortCol: overrides.sortCol ?? (studentSortColumn || "dateStart"),
       sortDir: overrides.sortDir ?? (studentSortDirection || "desc"),
     }),
-    [trailFilter, periodFilter, completionFilter, submissionFilter, trailStatusFilter, studentSearch, studentSortColumn, studentSortDirection],
+    [trailFilter, periodFilter, completionFilter, submissionFilter, studentSearch, studentSortColumn, studentSortDirection],
   )
 
   // Wrapped handlers that sync filter changes to URL
@@ -416,14 +389,6 @@ export default function AdvancedAnalyticsPage() {
     (value: string) => {
       setSubmissionFilter(value as typeof submissionFilter)
       syncAnalyticsUrl(buildFilterParams({ submission: value }))
-    },
-    [buildFilterParams, syncAnalyticsUrl],
-  )
-
-  const handleTrailStatusFilterChange = useCallback(
-    (value: string) => {
-      setTrailStatusFilter(value as typeof trailStatusFilter)
-      syncAnalyticsUrl(buildFilterParams({ trailStatusFilter: value }))
     },
     [buildFilterParams, syncAnalyticsUrl],
   )
@@ -462,11 +427,10 @@ export default function AdvancedAnalyticsPage() {
 
   const handleResetStudentFilters = useCallback(() => {
     setSubmissionFilter("all")
-    setTrailStatusFilter("all")
     setStudentSortColumn("dateStart")
     setStudentSortDirection("desc")
     syncAnalyticsUrl(
-      buildFilterParams({ submission: "all", trailStatusFilter: "all", sortCol: "dateStart", sortDir: "desc" }),
+      buildFilterParams({ submission: "all", sortCol: "dateStart", sortDir: "desc" }),
     )
   }, [buildFilterParams, syncAnalyticsUrl])
 
@@ -778,12 +742,6 @@ export default function AdvancedAnalyticsPage() {
     }
   }
 
-  // Filter students by trail status
-  const filterByTrailStatus = (students: TrailStudent[]): TrailStudent[] => {
-    if (trailStatusFilter === "all") return students
-    return students.filter(s => (s.trailStatus || "LEARNING") === trailStatusFilter)
-  }
-
   // Three-state sort toggle: null -> asc -> desc -> null
   const toggleSort = useCallback((column: string) => {
     if (studentSortColumn !== column) {
@@ -822,11 +780,6 @@ export default function AdvancedAnalyticsPage() {
           const sa = a.avgScore ?? -1
           const sb = b.avgScore ?? -1
           return dir * (sa - sb)
-        }
-        case "trailStatus": {
-          const oa = TRAIL_STATUS_SORT_ORDER[a.trailStatus || "LEARNING"] ?? 1
-          const ob = TRAIL_STATUS_SORT_ORDER[b.trailStatus || "LEARNING"] ?? 1
-          return dir * (oa - ob)
         }
         default:
           return 0
@@ -1199,17 +1152,7 @@ export default function AdvancedAnalyticsPage() {
                       <option value="has_revision">Есть работы на доработке</option>
                       <option value="all_approved">Все работы приняты</option>
                     </select>
-                    <select
-                      value={trailStatusFilter}
-                      onChange={(e) => handleTrailStatusFilterChange(e.target.value)}
-                      className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      <option value="all">Все статусы</option>
-                      <option value="NOT_ADMITTED">Недопущен</option>
-                      <option value="LEARNING">Обучается</option>
-                      <option value="ACCEPTED">Принят</option>
-                    </select>
-                    {(submissionFilter !== "all" || trailStatusFilter !== "all" || studentSortColumn !== "dateStart" || studentSortDirection !== "desc") && (
+                    {(submissionFilter !== "all" || studentSortColumn !== "dateStart" || studentSortDirection !== "desc") && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1231,13 +1174,12 @@ export default function AdvancedAnalyticsPage() {
                         (s.telegramUsername && s.telegramUsername.toLowerCase().includes(studentSearch.toLowerCase()))
                       )
                     : trailGroup.students
-                  // Apply completion filter, then submission filter, then trail status filter, then sort
+                  // Apply completion filter, then submission filter, then sort
                   const completionFiltered = filterByCompletion(searchFiltered)
                   const submissionFiltered = filterBySubmissions(completionFiltered)
-                  const trailStatusFiltered = filterByTrailStatus(submissionFiltered)
-                  const filteredStudents = sortStudents(trailStatusFiltered)
+                  const filteredStudents = sortStudents(submissionFiltered)
 
-                  if (filteredStudents.length === 0 && (studentSearch || completionFilter !== "all" || submissionFilter !== "all" || trailStatusFilter !== "all")) return null
+                  if (filteredStudents.length === 0 && (studentSearch || completionFilter !== "all" || submissionFilter !== "all")) return null
 
                   // Password lock check (Module D)
                   const isLocked = trailGroup.isLocked === true
@@ -1269,24 +1211,9 @@ export default function AdvancedAnalyticsPage() {
                               Требуется пароль
                             </Badge>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 flex-wrap">
-                              <Badge variant="outline" className="text-xs">
-                                {filteredStudents.length} студентов
-                              </Badge>
-                              {trailGroup.statusCounts && (
-                                <>
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-yellow-100 text-yellow-700 border-0">
-                                    {trailGroup.statusCounts.learning} обуч.
-                                  </Badge>
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-red-100 text-red-700 border-0">
-                                    {trailGroup.statusCounts.notAdmitted} недоп.
-                                  </Badge>
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border-0">
-                                    {trailGroup.statusCounts.accepted} прин.
-                                  </Badge>
-                                </>
-                              )}
-                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {filteredStudents.length} студентов
+                            </Badge>
                           )}
                         </div>
                         {!isLocked && (
@@ -1326,15 +1253,6 @@ export default function AdvancedAnalyticsPage() {
                                     <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
                                       Имя {getSortIcon("name")}
                                     </button>
-                                  </th>
-                                  <th className="py-2 px-3 font-medium text-center">
-                                    {trailStatusFilter === "all" ? (
-                                      <button onClick={() => toggleSort("trailStatus")} className="flex items-center gap-1 mx-auto hover:text-indigo-600 transition-colors">
-                                        Статус {getSortIcon("trailStatus")}
-                                      </button>
-                                    ) : (
-                                      <span className="text-gray-500">Статус</span>
-                                    )}
                                   </th>
                                   <th className="py-2 px-3 font-medium text-center">
                                     <button onClick={() => toggleSort("dateStart")} className="flex items-center gap-1 mx-auto hover:text-indigo-600 transition-colors">
@@ -1382,19 +1300,6 @@ export default function AdvancedAnalyticsPage() {
                                       {student.telegramUsername && (
                                         <p className="text-xs text-gray-400">{student.telegramUsername}</p>
                                       )}
-                                    </td>
-                                    <td className="py-2 px-3 text-center">
-                                      <Badge
-                                        className={`text-xs border-0 ${
-                                          (student.trailStatus || "LEARNING") === "NOT_ADMITTED"
-                                            ? "bg-red-100 text-red-700"
-                                            : (student.trailStatus || "LEARNING") === "ACCEPTED"
-                                            ? "bg-green-100 text-green-700"
-                                            : "bg-yellow-100 text-yellow-700"
-                                        }`}
-                                      >
-                                        {TRAIL_STATUS_LABELS[student.trailStatus || "LEARNING"] || "Обучается"}
-                                      </Badge>
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       <span className="text-xs text-gray-600">{formatDate(student.dateStart)}</span>

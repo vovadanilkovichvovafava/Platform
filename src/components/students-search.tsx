@@ -62,7 +62,6 @@ interface InitialFilters {
 
 interface StudentEnrollment {
   trailId: string
-  trailStatus?: string
   trail: {
     id: string
     title: string
@@ -415,25 +414,13 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
                           </div>
                           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                             {student.enrollments.map((e) => (
-                              <span key={e.trailId} className="inline-flex items-center gap-0.5">
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs px-1.5 py-0"
-                                >
-                                  {e.trail.title}
-                                </Badge>
-                                {e.trailStatus && e.trailStatus !== "LEARNING" && (
-                                  <Badge
-                                    className={`text-[10px] px-1 py-0 border-0 ${
-                                      e.trailStatus === "NOT_ADMITTED"
-                                        ? "bg-red-100 text-red-700"
-                                        : "bg-green-100 text-green-700"
-                                    }`}
-                                  >
-                                    {e.trailStatus === "NOT_ADMITTED" ? "Недоп." : "Принят"}
-                                  </Badge>
-                                )}
-                              </span>
+                              <Badge
+                                key={e.trailId}
+                                variant="secondary"
+                                className="text-xs px-1.5 py-0"
+                              >
+                                {e.trail.title}
+                              </Badge>
                             ))}
                           </div>
                         </div>
