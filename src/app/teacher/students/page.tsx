@@ -57,7 +57,9 @@ export default async function TeacherStudentsPage({
       enrollments: {
         // For non-admin, only show enrollments in assigned trails
         where: assignedTrailIds !== null ? { trailId: { in: assignedTrailIds } } : undefined,
-        include: {
+        select: {
+          trailId: true,
+          trailStatus: true,
           trail: {
             select: {
               id: true,
