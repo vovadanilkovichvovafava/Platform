@@ -378,6 +378,26 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
                 ? Math.round((student.totalXP / student.maxXP) * 100)
                 : 0
 
+            // Compute aggregated status across all trails
+            const statuses = Object.values(student.trailStatuses || {})
+            const aggregatedStatus = statuses.length === 0
+              ? "LEARNING"
+              : statuses.every((s) => s === "ACCEPTED")
+                ? "ACCEPTED"
+                : statuses.some((s) => s === "NOT_ADMITTED")
+                  ? "NOT_ADMITTED"
+                  : "LEARNING"
+            const statusLabel = aggregatedStatus === "NOT_ADMITTED"
+              ? "Недопущен"
+              : aggregatedStatus === "ACCEPTED"
+                ? "Принят"
+                : "Обучается"
+            const statusColor = aggregatedStatus === "NOT_ADMITTED"
+              ? "bg-red-100 text-red-700"
+              : aggregatedStatus === "ACCEPTED"
+                ? "bg-green-100 text-green-700"
+                : "bg-blue-100 text-blue-700"
+
             return (
               <Link key={student.id} href={`/teacher/students/${student.id}`}>
                 <Card className="hover:shadow-md hover:border-blue-200 transition-all cursor-pointer pt-2">
@@ -391,8 +411,11 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-semibold text-gray-900 text-sm">
+                          <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
                             {student.name}
+                            <Badge className={`text-xs font-normal ${statusColor} border-0`}>
+                              {statusLabel}
+                            </Badge>
                           </h3>
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             <span>{student.email}</span>
