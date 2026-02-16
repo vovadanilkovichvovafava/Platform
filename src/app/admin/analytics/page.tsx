@@ -134,6 +134,7 @@ interface ModuleCircle {
   id: string
   title: string
   order: number
+  type?: string // THEORY, PRACTICE, PROJECT
   status: string // COMPLETED, IN_PROGRESS, NOT_STARTED
   submissionId: string | null
 }
@@ -1166,6 +1167,35 @@ export default function AdvancedAnalyticsPage() {
                   </div>
                 </div>
 
+                {/* Legend for module type indicators */}
+                <div className="flex items-center gap-4 text-xs text-gray-500 px-1 py-2 border-b border-gray-100">
+                  <span className="font-medium text-gray-600">Легенда модулей:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-gray-400">Т</span>
+                    <span>— Теория</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-blue-500">П</span>
+                    <span>— Практика</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-purple-500">Пр</span>
+                    <span>— Проект</span>
+                  </div>
+                  <div className="flex items-center gap-1 ml-2 border-l border-gray-200 pl-3">
+                    <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-green-500" />
+                    <span>Завершён</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-yellow-100 border-2 border-yellow-400" />
+                    <span>В процессе</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-white border-2 border-gray-300" />
+                    <span>Не начат</span>
+                  </div>
+                </div>
+
                 {data.studentsByTrail.map((trailGroup) => {
                   // Apply search filter
                   const searchFiltered = studentSearch
@@ -1311,27 +1341,38 @@ export default function AdvancedAnalyticsPage() {
                                             const isCompleted = mod.status === "COMPLETED"
                                             const isInProgress = mod.status === "IN_PROGRESS"
                                             const hasSubmission = mod.submissionId !== null
+                                            const modType = mod.type || "THEORY"
+                                            const typeLabel = modType === "PRACTICE" ? "П" : modType === "PROJECT" ? "Пр" : "Т"
 
                                             const circleEl = (
                                               <div
                                                 key={mod.id}
-                                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                                  isCompleted
-                                                    ? "bg-green-500 border-green-500"
-                                                    : isInProgress
-                                                    ? "bg-yellow-100 border-yellow-400"
-                                                    : "bg-white border-gray-300"
-                                                } ${hasSubmission ? "cursor-pointer hover:scale-125 hover:shadow-md" : ""}`}
-                                                title={`${mod.title} — ${
-                                                  isCompleted ? "Завершён" : isInProgress ? "В процессе" : "Не начат"
-                                                }`}
+                                                className="flex flex-col items-center shrink-0"
                                               >
-                                                {isCompleted && (
-                                                  <CheckCircle className="h-3 w-3 text-white" />
-                                                )}
-                                                {isInProgress && (
-                                                  <div className="w-2 h-2 rounded-full bg-yellow-400" />
-                                                )}
+                                                <div
+                                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                                    isCompleted
+                                                      ? "bg-green-500 border-green-500"
+                                                      : isInProgress
+                                                      ? "bg-yellow-100 border-yellow-400"
+                                                      : "bg-white border-gray-300"
+                                                  } ${hasSubmission ? "cursor-pointer hover:scale-125 hover:shadow-md" : ""}`}
+                                                  title={`${mod.title} — ${
+                                                    isCompleted ? "Завершён" : isInProgress ? "В процессе" : "Не начат"
+                                                  } (${modType === "PRACTICE" ? "Практика" : modType === "PROJECT" ? "Проект" : "Теория"})`}
+                                                >
+                                                  {isCompleted && (
+                                                    <CheckCircle className="h-3 w-3 text-white" />
+                                                  )}
+                                                  {isInProgress && (
+                                                    <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                                                  )}
+                                                </div>
+                                                <span className={`text-[8px] leading-tight mt-0.5 font-medium ${
+                                                  modType === "PRACTICE" ? "text-blue-500" : modType === "PROJECT" ? "text-purple-500" : "text-gray-400"
+                                                }`}>
+                                                  {typeLabel}
+                                                </span>
                                               </div>
                                             )
 
