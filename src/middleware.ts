@@ -46,11 +46,14 @@ const authMiddleware = withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
-    // Redirect authenticated users away from login/register pages
-    // Check token.id (not just token) to avoid redirect loop when session is invalidated
-    if (token?.id && (path === "/login" || path === "/register")) {
-      return NextResponse.redirect(new URL("/dashboard", req.url))
-    }
+    // NOTE: We intentionally do NOT redirect /login or /register → /dashboard here.
+    // The middleware uses getToken() which decodes the raw JWT cookie without running
+    // jwt/session callbacks. If the user was deleted from DB, the cookie still has a
+    // valid token.id, but getServerSession (which runs callbacks) returns an empty session.
+    // A server-side redirect here would cause an infinite loop:
+    //   middleware(/login) → redirect(/dashboard) → getServerSession → redirect(/login) → ...
+    // Instead, login/register pages handle the redirect client-side via useSession(),
+    // which calls /api/auth/session — this endpoint runs callbacks AND updates the cookie.
 
     // Protect teacher routes (allow TEACHER, CO_ADMIN, ADMIN, and HR for read-only analytics)
     if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN" && token?.role !== "HR") {

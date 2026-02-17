@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -21,8 +21,20 @@ type LoginForm = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const router = useRouter()
+  const { status } = useSession()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Redirect authenticated users to dashboard (client-side).
+  // This replaces the old middleware redirect which caused ERR_TOO_MANY_REDIRECTS
+  // because middleware reads the raw JWT cookie (without running callbacks),
+  // while useSession calls /api/auth/session which properly runs callbacks
+  // and updates the cookie if the session is stale.
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard")
+    }
+  }, [status, router])
 
   const {
     register,
