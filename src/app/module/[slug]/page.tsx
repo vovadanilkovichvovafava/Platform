@@ -58,7 +58,7 @@ export default async function ModulePage({ params }: Props) {
         include: {
           modules: {
             orderBy: { order: "asc" },
-            select: { id: true, slug: true, title: true, order: true },
+            select: { id: true, slug: true, title: true, order: true, type: true },
           },
         },
       },
@@ -119,6 +119,61 @@ export default async function ModulePage({ params }: Props) {
       },
     },
   })
+
+  // Server-side module progression check — prevent direct URL access to locked modules
+  // Only check for students whose module is NOT yet started (IN_PROGRESS/COMPLETED = already allowed)
+  if (!isPrivileged && !progress) {
+    const allTrailModules = courseModule.trail.modules
+
+    if (courseModule.type === "PROJECT") {
+      // PROJECT modules: all assessment modules must be COMPLETED
+      const assessmentModuleIds = allTrailModules
+        .filter((m) => m.type !== "PROJECT")
+        .map((m) => m.id)
+
+      if (assessmentModuleIds.length > 0) {
+        const completedCount = await prisma.moduleProgress.count({
+          where: {
+            userId: session.user.id,
+            moduleId: { in: assessmentModuleIds },
+            status: "COMPLETED",
+          },
+        })
+        if (completedCount < assessmentModuleIds.length) {
+          redirect(`/trails/${courseModule.trail.slug}`)
+        }
+      }
+    } else {
+      // ASSESSMENT module: previous assessment must allow progression
+      const assessmentModules = allTrailModules.filter((m) => m.type !== "PROJECT")
+      const currentIdx = assessmentModules.findIndex((m) => m.id === courseModule.id)
+
+      if (currentIdx > 0) {
+        const prevModule = assessmentModules[currentIdx - 1]
+        const prevProgress = await prisma.moduleProgress.findUnique({
+          where: { userId_moduleId: { userId: session.user.id, moduleId: prevModule.id } },
+        })
+
+        const prevCompleted = prevProgress?.status === "COMPLETED"
+
+        let canProgress = prevCompleted
+        if (!prevCompleted && courseModule.trail.allowSkipReview) {
+          // Free mode: allow if previous is IN_PROGRESS with a PENDING submission
+          if (prevProgress?.status === "IN_PROGRESS") {
+            const prevPendingSubmission = await prisma.submission.findFirst({
+              where: { userId: session.user.id, moduleId: prevModule.id, status: "PENDING" },
+              select: { id: true },
+            })
+            canProgress = !!prevPendingSubmission
+          }
+        }
+
+        if (!canProgress) {
+          redirect(`/trails/${courseModule.trail.slug}`)
+        }
+      }
+    }
+  }
 
   // Get submission if project OR practice with requiresSubmission
   let submission = null
