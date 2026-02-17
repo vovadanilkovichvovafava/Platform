@@ -25,6 +25,7 @@ import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { FEATURE_FLAGS } from "@/lib/feature-flags"
 import { getAiReviewDTO } from "@/lib/ai-submission-review"
 import { AiSubmissionReview } from "@/components/ai-submission-review"
+import { NotificationSyncTrigger } from "@/components/notification-sync-trigger"
 
 interface Props {
   params: Promise<{ id: string }>
@@ -43,6 +44,17 @@ export default async function ReviewPage({ params, searchParams }: Props) {
   }
 
   const isHRUser = isHR(session.user.role)
+
+  // Синхронизация уведомлений: автопрочтение при просмотре работы
+  // Учитель зашёл на страницу работы — уведомление о ней уже не нужно
+  prisma.notification.updateMany({
+    where: {
+      userId: session.user.id,
+      link: `/teacher/reviews/${id}`,
+      isRead: false,
+    },
+    data: { isRead: true },
+  }).catch(() => {})
 
   const submission = await prisma.submission.findUnique({
     where: { id },
@@ -141,6 +153,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
 
   return (
     <div className="p-8">
+      <NotificationSyncTrigger />
       <Link
         href={backHref}
         className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"

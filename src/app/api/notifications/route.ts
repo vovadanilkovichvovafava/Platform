@@ -63,13 +63,28 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { notificationIds, markAllRead } = body
+    const { notificationIds, markAllRead, link } = body
 
     if (markAllRead) {
       // Отметить все уведомления как прочитанные
       await prisma.notification.updateMany({
         where: {
           userId: session.user.id,
+          isRead: false,
+        },
+        data: { isRead: true },
+      })
+    } else if (link) {
+      // Синхронизация: отметить уведомления по ссылке на контент
+      // Используется для автопрочтения при просмотре связанного контента
+      if (typeof link !== "string" || link.length > 500) {
+        return NextResponse.json({ error: "Неверный формат ссылки" }, { status: 400 })
+      }
+
+      await prisma.notification.updateMany({
+        where: {
+          userId: session.user.id,
+          link: link,
           isRead: false,
         },
         data: { isRead: true },

@@ -237,6 +237,17 @@ export async function POST(request: Request) {
       }
     }
 
+    // Синхронизация уведомлений: автопрочтение SUBMISSION_PENDING для проверяющего
+    // Учитель проверил работу — уведомление о ней больше не актуально
+    prisma.notification.updateMany({
+      where: {
+        userId: session.user.id,
+        link: `/teacher/reviews/${data.submissionId}`,
+        isRead: false,
+      },
+      data: { isRead: true },
+    }).catch(() => {})
+
     // Check and award achievements for the student after review
     // Non-blocking: don't fail the review if achievement check errors
     processAchievementEvent("REVIEW_RECEIVED", data.userId).catch((err) =>

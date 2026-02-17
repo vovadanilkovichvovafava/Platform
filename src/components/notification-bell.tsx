@@ -75,6 +75,14 @@ export function NotificationBell() {
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
+  // Мгновенное обновление при синхронизации уведомлений с контентом
+  // (когда сервер автоматически помечает уведомления как прочитанные)
+  useEffect(() => {
+    const handleSync = () => fetchNotifications()
+    window.addEventListener("notifications-sync", handleSync)
+    return () => window.removeEventListener("notifications-sync", handleSync)
+  }, [fetchNotifications])
+
   const markAsRead = async (notificationId: string, optimistic = true) => {
     // Optimistic update - сразу обновляем UI
     if (optimistic) {
