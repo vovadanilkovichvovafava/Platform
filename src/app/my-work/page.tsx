@@ -18,6 +18,7 @@ import {
   Globe,
   FileText,
 } from "lucide-react"
+import { NotificationSyncTrigger } from "@/components/notification-sync-trigger"
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   PENDING: {
@@ -49,6 +50,17 @@ export default async function MyWorkPage() {
     redirect("/login")
   }
 
+  // Синхронизация уведомлений: автопрочтение при посещении "Мои работы"
+  // Студент зашёл смотреть свои работы — уведомления о рецензиях уже не нужны
+  prisma.notification.updateMany({
+    where: {
+      userId: session.user.id,
+      link: "/my-work",
+      isRead: false,
+    },
+    data: { isRead: true },
+  }).catch(() => {})
+
   const submissions = await prisma.submission.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
@@ -64,6 +76,7 @@ export default async function MyWorkPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <NotificationSyncTrigger />
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">

@@ -108,6 +108,17 @@ export async function DELETE(
       },
     })
 
+    // Синхронизация уведомлений: автопрочтение SUBMISSION_PENDING для учителя
+    // Работа удалена — уведомление о ней больше не актуально
+    prisma.notification.updateMany({
+      where: {
+        userId: session.user.id,
+        link: `/teacher/reviews/${id}`,
+        isRead: false,
+      },
+      data: { isRead: true },
+    }).catch(() => {})
+
     // Notify the student about deletion (optional - helpful for awareness)
     await prisma.notification.create({
       data: {
