@@ -501,8 +501,8 @@ export default async function ModulePage({ params }: Props) {
           </div>
         )}
 
-        {/* CTA to next module when submission is PENDING (not yet reviewed) */}
-        {!isCompleted && submission?.status === "PENDING" && nextModule && (
+        {/* CTA to next module when submission is PENDING (not yet reviewed) - FREE mode only */}
+        {!isCompleted && submission?.status === "PENDING" && nextModule && courseModule.trail.allowSkipReview && (
           <div className="mt-8 flex flex-col items-center gap-4">
             <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-200 max-w-md">
               <p className="text-amber-700 text-sm">
@@ -519,6 +519,17 @@ export default async function ModulePage({ params }: Props) {
               Перейти к следующей практике
               <ArrowRight className="h-4 w-4 ml-2" />
             </ModuleButton>
+          </div>
+        )}
+
+        {/* STRICT mode: show "waiting for review" message when submission is PENDING */}
+        {!isCompleted && submission?.status === "PENDING" && !courseModule.trail.allowSkipReview && (
+          <div className="mt-8 flex justify-center">
+            <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-200 max-w-md">
+              <p className="text-amber-700 text-sm">
+                Ваша работа отправлена на проверку. Переход к следующему модулю будет доступен после проверки преподавателем.
+              </p>
+            </div>
           </div>
         )}
 

@@ -138,7 +138,7 @@ export async function POST(request: Request) {
     // Get trail to check teacherVisibility and get title for notifications
     const trail = await prisma.trail.findUnique({
       where: { id: courseModule.trailId },
-      select: { teacherVisibility: true, title: true },
+      select: { teacherVisibility: true, title: true, allowSkipReview: true },
     })
 
     // Collect user IDs to notify (teachers and admins)
@@ -218,10 +218,11 @@ export async function POST(request: Request) {
     })
 
     // Instant progress unlock: Start next assessment module (non-PROJECT) automatically
-    // This allows the student to continue learning while waiting for review
+    // Only in FREE mode (allowSkipReview=true) — allows the student to continue learning while waiting for review
+    // In STRICT mode (allowSkipReview=false) — student must wait for teacher review before proceeding
     // NOTE: startedAt is intentionally NOT set here — it will be set when the student
     // actually opens the module (via modal, gate, or page auto-start)
-    if (courseModule.type !== "PROJECT") {
+    if (courseModule.type !== "PROJECT" && trail?.allowSkipReview) {
       const nextModule = await prisma.module.findFirst({
         where: {
           trailId: courseModule.trailId,
