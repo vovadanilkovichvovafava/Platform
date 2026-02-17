@@ -25,6 +25,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+  })
+
   // Redirect authenticated users to dashboard (client-side).
   // This replaces the old middleware redirect which caused ERR_TOO_MANY_REDIRECTS
   // because middleware reads the raw JWT cookie (without running callbacks),
@@ -44,14 +52,6 @@ export default function LoginPage() {
       </div>
     )
   }
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-  })
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)

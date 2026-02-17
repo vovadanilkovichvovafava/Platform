@@ -39,6 +39,17 @@ function RegisterFormComponent() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      inviteCode: inviteFromUrl,
+    },
+  })
+
   // Redirect authenticated users to dashboard (client-side)
   useEffect(() => {
     if (status === "authenticated") {
@@ -54,17 +65,6 @@ function RegisterFormComponent() {
       </div>
     )
   }
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      inviteCode: inviteFromUrl,
-    },
-  })
 
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
