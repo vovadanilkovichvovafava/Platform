@@ -46,6 +46,15 @@ function RegisterFormComponent() {
     }
   }, [status, router])
 
+  // Show spinner while session is being checked
+  if (status === "loading" || status === "authenticated") {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
+  }
+
   const {
     register,
     handleSubmit,
