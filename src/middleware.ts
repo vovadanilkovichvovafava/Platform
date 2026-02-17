@@ -47,7 +47,8 @@ const authMiddleware = withAuth(
     const path = req.nextUrl.pathname
 
     // Redirect authenticated users away from login/register pages
-    if (token && (path === "/login" || path === "/register")) {
+    // Check token.id (not just token) to avoid redirect loop when session is invalidated
+    if (token?.id && (path === "/login" || path === "/register")) {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
@@ -122,7 +123,8 @@ const authMiddleware = withAuth(
         }
 
         // All other routes require authentication
-        return !!token
+        // Check token.id specifically — a token without id means the user was invalidated
+        return !!token?.id
       },
     },
   }
