@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { ReviewForm } from "@/components/review-form"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { LocalDate } from "@/components/local-date"
 import { FEATURE_FLAGS } from "@/lib/feature-flags"
 import { getAiReviewDTO } from "@/lib/ai-submission-review"
 import { AiSubmissionReview } from "@/components/ai-submission-review"
@@ -376,13 +377,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                   Дата отправки
                 </div>
                 <div className="font-medium">
-                  {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  <LocalDate date={submission.createdAt.toISOString()} format="long" />
                 </div>
               </div>
             </CardContent>
@@ -401,12 +396,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Старт модуля</span>
                   <span className="font-medium">
-                    {moduleStartedAt.toLocaleDateString("ru-RU", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    <LocalDate date={moduleStartedAt.toISOString()} format="short" />
                   </span>
                 </div>
               )}
@@ -432,12 +422,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Последнее обновление</span>
                 <span className="font-medium">
-                  {new Date(submission.lastEditedAt ?? submission.createdAt).toLocaleDateString("ru-RU", {
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  <LocalDate date={(submission.lastEditedAt ?? submission.createdAt).toISOString()} format="short" />
                 </span>
               </div>
             </CardContent>
