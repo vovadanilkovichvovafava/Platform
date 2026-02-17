@@ -108,11 +108,11 @@ export async function DELETE(
       },
     })
 
-    // Синхронизация уведомлений: автопрочтение SUBMISSION_PENDING для учителя
-    // Работа удалена — уведомление о ней больше не актуально
+    // Синхронизация уведомлений: автопрочтение SUBMISSION_PENDING для ВСЕХ учителей
+    // Работа удалена — уведомления о ней у всех получателей больше не актуальны
     prisma.notification.updateMany({
       where: {
-        userId: session.user.id,
+        type: "SUBMISSION_PENDING",
         link: `/teacher/reviews/${id}`,
         isRead: false,
       },

@@ -181,7 +181,9 @@ export async function POST(request: Request) {
           userId: userId,
           type: "SUBMISSION_PENDING",
           title: "Новая работа на проверку",
-          message: `${session.user.name} отправил(а) работу "${courseModule.title}"`,
+          message: trail?.title
+            ? `${session.user.name} отправил(а) работу "${courseModule.title}" (${trail.title})`
+            : `${session.user.name} отправил(а) работу "${courseModule.title}"`,
           link: `/teacher/reviews/${submission.id}`,
         })),
       })

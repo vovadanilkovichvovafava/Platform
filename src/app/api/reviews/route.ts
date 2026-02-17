@@ -237,11 +237,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Синхронизация уведомлений: автопрочтение SUBMISSION_PENDING для проверяющего
-    // Учитель проверил работу — уведомление о ней больше не актуально
+    // Синхронизация уведомлений: автопрочтение SUBMISSION_PENDING для ВСЕХ учителей
+    // Работа проверена — уведомления о ней у всех получателей больше не актуальны
     prisma.notification.updateMany({
       where: {
-        userId: session.user.id,
+        type: "SUBMISSION_PENDING",
         link: `/teacher/reviews/${data.submissionId}`,
         isRead: false,
       },
