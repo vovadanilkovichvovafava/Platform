@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, Suspense } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -32,11 +32,28 @@ type RegisterForm = z.infer<typeof registerSchema>
 
 function RegisterFormComponent() {
   const router = useRouter()
+  const { status } = useSession()
   const searchParams = useSearchParams()
   const inviteFromUrl = searchParams.get("invite") || ""
 
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Redirect authenticated users to dashboard (client-side)
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard")
+    }
+  }, [status, router])
+
+  // Show spinner while session is being checked
+  if (status === "loading" || status === "authenticated") {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
+  }
 
   const {
     register,
