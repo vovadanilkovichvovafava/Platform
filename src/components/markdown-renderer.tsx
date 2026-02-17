@@ -23,7 +23,7 @@ function CodeBlock({ code, language }: CodeBlockProps) {
   }
 
   return (
-    <div className="relative group my-4">
+    <div className="relative group my-2">
       <div className="absolute right-2 top-2 z-10">
         <button
           onClick={handleCopy}
@@ -207,7 +207,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       // Horizontal rule ---
       if (line.trim() === "---" || line.trim() === "***" || line.trim() === "___") {
         elements.push(
-          <hr key={`hr-${i}`} className="my-6 border-t border-gray-300" />
+          <hr key={`hr-${i}`} className="my-3 border-t border-gray-300" />
         )
         i++
         continue
@@ -216,7 +216,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       // Headers
       if (line.startsWith("# ")) {
         elements.push(
-          <h1 key={`h1-${i}`} className="text-2xl font-bold mt-8 mb-4">
+          <h1 key={`h1-${i}`} className="text-2xl font-bold mt-4 mb-2">
             {parseInlineMarkdown(line.slice(2))}
           </h1>
         )
@@ -226,7 +226,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
 
       if (line.startsWith("## ")) {
         elements.push(
-          <h2 key={`h2-${i}`} className="text-xl font-semibold mt-6 mb-3">
+          <h2 key={`h2-${i}`} className="text-xl font-semibold mt-3 mb-1.5">
             {parseInlineMarkdown(line.slice(3))}
           </h2>
         )
@@ -236,7 +236,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
 
       if (line.startsWith("### ")) {
         elements.push(
-          <h3 key={`h3-${i}`} className="text-lg font-medium mt-4 mb-2">
+          <h3 key={`h3-${i}`} className="text-lg font-medium mt-2 mb-1">
             {parseInlineMarkdown(line.slice(4))}
           </h3>
         )
@@ -295,7 +295,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         }
 
         elements.push(
-          <ul key={`ul-${startIdx}`} className="ml-6 my-2" style={{ listStyleType: 'disc' }}>
+          <ul key={`ul-${startIdx}`} className="ml-6 my-1" style={{ listStyleType: 'disc' }}>
             {listItems}
           </ul>
         )
@@ -307,14 +307,20 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       if (/^\d+\. /.test(line)) {
         const listItems: ReactNode[] = []
         const startIdx = i
+        let firstNumber: number | null = null
 
         while (i < lines.length) {
           // Check if current line is a numbered item
-          if (/^\d+\. /.test(lines[i])) {
+          const numMatch = lines[i].match(/^(\d+)\. /)
+          if (numMatch) {
+            const itemNumber = parseInt(numMatch[1], 10)
+            if (firstNumber === null) {
+              firstNumber = itemNumber
+            }
             const itemLine = lines[i]
             const itemContent = itemLine.slice(itemLine.indexOf(" ") + 1)
             listItems.push(
-              <li key={`oli-${i}`} className="mb-1">
+              <li key={`oli-${i}`} className="mb-1" value={itemNumber}>
                 {parseInlineMarkdown(itemContent)}
               </li>
             )
@@ -341,23 +347,26 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         }
 
         elements.push(
-          <ol key={`ol-${startIdx}`} className="ml-6 my-2" style={{ listStyleType: 'decimal' }}>
+          <ol key={`ol-${startIdx}`} className="ml-6 my-1" style={{ listStyleType: 'decimal' }} start={firstNumber ?? 1}>
             {listItems}
           </ol>
         )
         continue
       }
 
-      // Empty line
+      // Empty line - collapse consecutive blank lines into a single spacer
       if (line.trim() === "") {
-        elements.push(<br key={`br-${i}`} />)
-        i++
+        // Skip all consecutive blank lines
+        while (i < lines.length && lines[i].trim() === "") {
+          i++
+        }
+        elements.push(<div key={`spacer-${i}`} className="h-2" />)
         continue
       }
 
       // Regular paragraph
       elements.push(
-        <p key={`p-${i}`} className="mb-2">
+        <p key={`p-${i}`} className="mb-1">
           {parseInlineMarkdown(line)}
         </p>
       )
