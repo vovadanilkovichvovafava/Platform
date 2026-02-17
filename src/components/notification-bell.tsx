@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { Bell, Check, X } from "lucide-react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { Bell, Check, X, ClipboardList } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -18,6 +18,12 @@ interface Notification {
   link: string | null
   isRead: boolean
   createdAt: string
+  trailTitle?: string
+}
+
+interface TrailGroup {
+  title: string
+  notifications: Notification[]
 }
 
 export function NotificationBell() {
@@ -82,6 +88,30 @@ export function NotificationBell() {
     window.addEventListener("notifications-sync", handleSync)
     return () => window.removeEventListener("notifications-sync", handleSync)
   }, [fetchNotifications])
+
+  // Group unread SUBMISSION_PENDING notifications by trail
+  const { trailGroups, otherNotifications } = useMemo(() => {
+    const unreadPending = notifications.filter(
+      (n) => n.type === "SUBMISSION_PENDING" && !n.isRead && n.trailTitle
+    )
+    const rest = notifications.filter(
+      (n) => !(n.type === "SUBMISSION_PENDING" && !n.isRead && n.trailTitle)
+    )
+
+    const groupMap = new Map<string, Notification[]>()
+    for (const n of unreadPending) {
+      const trail = n.trailTitle!
+      if (!groupMap.has(trail)) groupMap.set(trail, [])
+      groupMap.get(trail)!.push(n)
+    }
+
+    const groups: TrailGroup[] = []
+    for (const [title, notifs] of groupMap) {
+      groups.push({ title, notifications: notifs })
+    }
+
+    return { trailGroups: groups, otherNotifications: rest }
+  }, [notifications])
 
   const markAsRead = async (notificationId: string, optimistic = true) => {
     // Optimistic update - сразу обновляем UI
@@ -154,6 +184,53 @@ export function NotificationBell() {
     return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
   }
 
+  // Reusable notification item renderer
+  const renderNotificationItem = (notification: Notification, compact = false) => (
+    <div
+      key={notification.id}
+      onClick={() => handleNotificationClick(notification)}
+      className={`p-3 border-b last:border-0 cursor-pointer transition-colors ${
+        notification.isRead ? "bg-white" : "bg-orange-50"
+      } hover:bg-gray-50`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          {!compact && (
+            <div className="flex items-center gap-2">
+              <h4 className={`text-sm ${notification.isRead ? "text-gray-700" : "font-semibold text-gray-900"}`}>
+                {notification.title}
+              </h4>
+              {!notification.isRead && (
+                <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+              )}
+            </div>
+          )}
+          <p className={`text-xs text-gray-500 ${compact ? "" : "mt-0.5"} line-clamp-2`}>
+            {notification.message}
+          </p>
+          <p className="text-[10px] text-gray-400 mt-1">
+            {formatTime(notification.createdAt)}
+          </p>
+        </div>
+        {!notification.isRead && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              markAsRead(notification.id)
+            }}
+            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+            title="Отметить как прочитанное"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+
+  const hasTrailGroups = trailGroups.length > 0
+  const isEmpty = notifications.length === 0
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
@@ -182,52 +259,39 @@ export function NotificationBell() {
         </div>
 
         <div className="max-h-[400px] overflow-y-auto">
-          {notifications.length === 0 ? (
+          {isEmpty ? (
             <div className="p-6 text-center text-gray-500">
               <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Нет уведомлений</p>
             </div>
           ) : (
-            notifications.map((notification) => (
-              <div
-                key={notification.id}
-                onClick={() => handleNotificationClick(notification)}
-                className={`p-3 border-b last:border-0 cursor-pointer transition-colors ${
-                  notification.isRead ? "bg-white" : "bg-orange-50"
-                } hover:bg-gray-50`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className={`text-sm ${notification.isRead ? "text-gray-700" : "font-semibold text-gray-900"}`}>
-                        {notification.title}
-                      </h4>
-                      {!notification.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                      {notification.message}
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      {formatTime(notification.createdAt)}
-                    </p>
+            <>
+              {/* Trail-grouped SUBMISSION_PENDING (unread) */}
+              {trailGroups.map((group) => (
+                <div key={group.title}>
+                  <div className="px-3 py-1.5 bg-slate-50 border-b flex items-center gap-2">
+                    <ClipboardList className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                    <span className="text-xs font-medium text-slate-600 truncate">
+                      {group.title}
+                    </span>
+                    <span className="text-[10px] text-orange-500 font-medium ml-auto flex-shrink-0">
+                      {group.notifications.length}
+                    </span>
                   </div>
-                  {!notification.isRead && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        markAsRead(notification.id)
-                      }}
-                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-                      title="Отметить как прочитанное"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
+                  {group.notifications.map((n) => renderNotificationItem(n, true))}
                 </div>
-              </div>
-            ))
+              ))}
+
+              {/* Separator between trail groups and other notifications */}
+              {hasTrailGroups && otherNotifications.length > 0 && (
+                <div className="px-3 py-1 bg-slate-50 border-b">
+                  <span className="text-[10px] text-slate-400 font-medium">Другие</span>
+                </div>
+              )}
+
+              {/* Other notifications (flat list) */}
+              {otherNotifications.map((n) => renderNotificationItem(n))}
+            </>
           )}
         </div>
       </DropdownMenuContent>

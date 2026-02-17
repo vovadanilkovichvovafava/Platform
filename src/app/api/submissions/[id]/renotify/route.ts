@@ -133,7 +133,7 @@ export async function POST(
         userId,
         type: "SUBMISSION_PENDING",
         title: "Напоминание: работа ожидает проверки",
-        message: `${submission.user.name} напоминает о работе "${submission.module.title}" (повторное уведомление)`,
+        message: `${submission.user.name} напоминает о работе "${submission.module.title}" (${trail.title}, повторное уведомление)`,
         link: `/teacher/reviews/${submission.id}`,
       })),
     })
