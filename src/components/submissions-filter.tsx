@@ -357,6 +357,20 @@ export function SubmissionsFilter({
     })
   }, [pendingSubmissions, search, trailFilter])
 
+  // Sync filtered pending count to sidebar badge via custom event
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("pending-count-update", {
+      detail: { count: filteredPending.length },
+    }))
+  }, [filteredPending.length])
+
+  // Notify sidebar when filter component unmounts (user leaves teacher page)
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new Event("pending-count-unmount"))
+    }
+  }, [])
+
   const filteredReviewed = useMemo(() => {
     return reviewedSubmissions.filter((sub) => {
       const matchesSearch =

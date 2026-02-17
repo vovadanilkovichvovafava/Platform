@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { ClipboardList, Users, BarChart3, BookOpen, Eye } from "lucide-react"
@@ -14,9 +14,38 @@ export function TeacherSidebar({ initialPendingCount }: TeacherSidebarProps) {
   const [pendingCount, setPendingCount] = useState(initialPendingCount)
 
   const isHR = session?.user?.role === "HR"
+  const isFilterActiveRef = useRef(false)
 
+  // Listen for filtered pending count from SubmissionsFilter (teacher page)
+  useEffect(() => {
+    const handleCountUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      setPendingCount(detail.count)
+      isFilterActiveRef.current = true
+    }
+    const handleFilterUnmount = () => {
+      isFilterActiveRef.current = false
+      // Immediately fetch unfiltered count when leaving teacher page
+      fetch("/api/teacher/pending-count")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setPendingCount(data.pendingCount)
+        })
+        .catch(() => {})
+    }
+
+    window.addEventListener("pending-count-update", handleCountUpdate)
+    window.addEventListener("pending-count-unmount", handleFilterUnmount)
+    return () => {
+      window.removeEventListener("pending-count-update", handleCountUpdate)
+      window.removeEventListener("pending-count-unmount", handleFilterUnmount)
+    }
+  }, [])
+
+  // Poll API every 10 seconds, but skip when filter component provides the count
   useEffect(() => {
     const fetchPendingCount = async () => {
+      if (isFilterActiveRef.current) return
       try {
         const res = await fetch("/api/teacher/pending-count")
         if (res.ok) {
@@ -28,7 +57,6 @@ export function TeacherSidebar({ initialPendingCount }: TeacherSidebarProps) {
       }
     }
 
-    // Poll every 10 seconds (same as notifications)
     const interval = setInterval(fetchPendingCount, 10000)
     return () => clearInterval(interval)
   }, [])
