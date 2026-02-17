@@ -98,11 +98,14 @@ export default async function TeacherDashboard({
   const revisionCount = stats.find((s) => s.status === "REVISION")?._count || 0
   const failedCount = stats.find((s) => s.status === "FAILED")?._count || 0
 
-  // Get unique trails for filter
-  const allTrails = new Set<string>()
-  pendingSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
-  reviewedSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
-  const trails = Array.from(allTrails).sort()
+  // Get unique trails for filter — fetch from DB so all assigned trails appear,
+  // not just those that happen to have submissions in the current result set.
+  const trailRecords = await prisma.trail.findMany({
+    where: shouldFilter ? { id: { in: assignedTrailIds } } : undefined,
+    select: { title: true },
+    orderBy: { title: "asc" },
+  })
+  const trails = [...new Set(trailRecords.map((t) => t.title))]
 
   // --- Time tracking: fetch ModuleProgress startedAt + first submission dates ---
   const allSubmissions = [...pendingSubmissions, ...reviewedSubmissions]
