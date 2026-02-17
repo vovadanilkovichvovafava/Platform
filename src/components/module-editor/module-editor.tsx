@@ -47,6 +47,12 @@ const typeIcons: Record<string, typeof BookOpen> = {
   PROJECT: FolderGit2,
 }
 
+const typeLabels: Record<string, string> = {
+  THEORY: "Теория",
+  PRACTICE: "Практика",
+  PROJECT: "Проект",
+}
+
 const questionTypeLabels: Record<QuestionType, { label: string; icon: typeof CircleDot }> = {
   SINGLE_CHOICE: { label: "Один правильный ответ", icon: CircleDot },
   MATCHING: { label: "Сопоставление", icon: Link2 },
@@ -127,6 +133,8 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
   const [description, setDescription] = useState("")
   const [content, setContent] = useState("")
   const [requirements, setRequirements] = useState("")
+  const [moduleType, setModuleType] = useState<"THEORY" | "PRACTICE" | "PROJECT">("THEORY")
+  const [level, setLevel] = useState("Beginner")
   const [points, setPoints] = useState(0)
   const [duration, setDuration] = useState("")
   const [requiresSubmission, setRequiresSubmission] = useState(false)
@@ -151,6 +159,8 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
       setDescription(data.description || "")
       setContent(data.content || "")
       setRequirements(data.requirements || "")
+      setModuleType(data.type)
+      setLevel(data.level || "Beginner")
       setPoints(data.points)
       setDuration(data.duration || "")
       setRequiresSubmission(data.requiresSubmission || false)
@@ -209,6 +219,8 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
           description,
           content,
           requirements,
+          type: moduleType,
+          level,
           points,
           duration,
           requiresSubmission,
@@ -328,8 +340,8 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
     )
   }
 
-  const TypeIcon = typeIcons[module.type]
-  const isProject = module.type === "PROJECT"
+  const TypeIcon = typeIcons[moduleType]
+  const isProject = moduleType === "PROJECT"
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -414,7 +426,60 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                     placeholder="Краткое описание"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                {/* Тип модуля */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">
+                    Тип модуля
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["THEORY", "PRACTICE", "PROJECT"] as const).map((type) => {
+                      const Icon = typeIcons[type]
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setModuleType(type)}
+                          className={`p-3 rounded-lg border text-center transition-colors ${
+                            moduleType === type
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 hover:bg-gray-50"
+                          }`}
+                        >
+                          <Icon
+                            className={`h-5 w-5 mx-auto mb-1 ${
+                              moduleType === type ? "text-blue-600" : "text-gray-500"
+                            }`}
+                          />
+                          <span
+                            className={`text-xs font-medium ${
+                              moduleType === type ? "text-blue-700" : "text-gray-600"
+                            }`}
+                          >
+                            {typeLabels[type]}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Уровень и Баллы */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                      Уровень
+                    </label>
+                    <select
+                      value={level}
+                      onChange={(e) => setLevel(e.target.value)}
+                      className="w-full p-2 border rounded-lg text-sm"
+                    >
+                      <option value="Beginner">Beginner</option>
+                      <option value="Junior">Junior</option>
+                      <option value="Middle">Middle</option>
+                      <option value="Senior">Senior</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">
                       Баллы (XP)
