@@ -203,6 +203,38 @@ export async function POST(request: Request) {
           },
         })
       }
+
+      // Auto-start next assessment module after approval
+      // In STRICT mode (allowSkipReview=false) the next module was NOT started on submission,
+      // so we start it now after teacher review. In FREE mode this is a harmless no-op
+      // since the next module was already started on submission.
+      if (currentModule && currentModule.type !== "PROJECT") {
+        const nextModule = await prisma.module.findFirst({
+          where: {
+            trailId: currentModule.trailId,
+            order: { gt: currentModule.order },
+            type: { not: "PROJECT" },
+          },
+          orderBy: { order: "asc" },
+        })
+
+        if (nextModule) {
+          await prisma.moduleProgress.upsert({
+            where: {
+              userId_moduleId: {
+                userId: data.userId,
+                moduleId: nextModule.id,
+              },
+            },
+            update: {},
+            create: {
+              userId: data.userId,
+              moduleId: nextModule.id,
+              status: "IN_PROGRESS",
+            },
+          })
+        }
+      }
     }
 
     // Check and award achievements for the student after review

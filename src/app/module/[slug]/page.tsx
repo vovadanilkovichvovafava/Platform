@@ -58,7 +58,7 @@ export default async function ModulePage({ params }: Props) {
         include: {
           modules: {
             orderBy: { order: "asc" },
-            select: { id: true, slug: true, title: true, order: true },
+            select: { id: true, slug: true, title: true, order: true, type: true },
           },
         },
       },
@@ -119,6 +119,61 @@ export default async function ModulePage({ params }: Props) {
       },
     },
   })
+
+  // Server-side module progression check — prevent direct URL access to locked modules
+  // Only check for students whose module is NOT yet started (IN_PROGRESS/COMPLETED = already allowed)
+  if (!isPrivileged && !progress) {
+    const allTrailModules = courseModule.trail.modules
+
+    if (courseModule.type === "PROJECT") {
+      // PROJECT modules: all assessment modules must be COMPLETED
+      const assessmentModuleIds = allTrailModules
+        .filter((m) => m.type !== "PROJECT")
+        .map((m) => m.id)
+
+      if (assessmentModuleIds.length > 0) {
+        const completedCount = await prisma.moduleProgress.count({
+          where: {
+            userId: session.user.id,
+            moduleId: { in: assessmentModuleIds },
+            status: "COMPLETED",
+          },
+        })
+        if (completedCount < assessmentModuleIds.length) {
+          redirect(`/trails/${courseModule.trail.slug}`)
+        }
+      }
+    } else {
+      // ASSESSMENT module: previous assessment must allow progression
+      const assessmentModules = allTrailModules.filter((m) => m.type !== "PROJECT")
+      const currentIdx = assessmentModules.findIndex((m) => m.id === courseModule.id)
+
+      if (currentIdx > 0) {
+        const prevModule = assessmentModules[currentIdx - 1]
+        const prevProgress = await prisma.moduleProgress.findUnique({
+          where: { userId_moduleId: { userId: session.user.id, moduleId: prevModule.id } },
+        })
+
+        const prevCompleted = prevProgress?.status === "COMPLETED"
+
+        let canProgress = prevCompleted
+        if (!prevCompleted && courseModule.trail.allowSkipReview) {
+          // Free mode: allow if previous is IN_PROGRESS with a PENDING submission
+          if (prevProgress?.status === "IN_PROGRESS") {
+            const prevPendingSubmission = await prisma.submission.findFirst({
+              where: { userId: session.user.id, moduleId: prevModule.id, status: "PENDING" },
+              select: { id: true },
+            })
+            canProgress = !!prevPendingSubmission
+          }
+        }
+
+        if (!canProgress) {
+          redirect(`/trails/${courseModule.trail.slug}`)
+        }
+      }
+    }
+  }
 
   // Get submission if project OR practice with requiresSubmission
   let submission = null
@@ -501,8 +556,8 @@ export default async function ModulePage({ params }: Props) {
           </div>
         )}
 
-        {/* CTA to next module when submission is PENDING (not yet reviewed) */}
-        {!isCompleted && submission?.status === "PENDING" && nextModule && (
+        {/* CTA to next module when submission is PENDING (not yet reviewed) - FREE mode only */}
+        {!isCompleted && submission?.status === "PENDING" && nextModule && courseModule.trail.allowSkipReview && (
           <div className="mt-8 flex flex-col items-center gap-4">
             <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-200 max-w-md">
               <p className="text-amber-700 text-sm">
@@ -519,6 +574,17 @@ export default async function ModulePage({ params }: Props) {
               Перейти к следующей практике
               <ArrowRight className="h-4 w-4 ml-2" />
             </ModuleButton>
+          </div>
+        )}
+
+        {/* STRICT mode: show "waiting for review" message when submission is PENDING */}
+        {!isCompleted && submission?.status === "PENDING" && !courseModule.trail.allowSkipReview && (
+          <div className="mt-8 flex justify-center">
+            <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-200 max-w-md">
+              <p className="text-amber-700 text-sm">
+                Ваша работа отправлена на проверку. Переход к следующему модулю будет доступен после проверки преподавателем.
+              </p>
+            </div>
           </div>
         )}
 
