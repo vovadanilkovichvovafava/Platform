@@ -175,9 +175,9 @@ export default async function ModulePage({ params }: Props) {
     }
   }
 
-  // Get submission if project OR practice with requiresSubmission
+  // Get submission if project OR practice (all practice modules require submission)
   let submission = null
-  if (courseModule.type === "PROJECT" || courseModule.requiresSubmission) {
+  if (courseModule.type === "PROJECT" || courseModule.type === "PRACTICE" || courseModule.requiresSubmission) {
     submission = await prisma.submission.findFirst({
       where: {
         userId: session.user.id,
