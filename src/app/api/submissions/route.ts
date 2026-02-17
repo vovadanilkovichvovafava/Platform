@@ -87,8 +87,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Разрешаем отправку для проектов и модулей с requiresSubmission
-    if (courseModule.type !== "PROJECT" && !courseModule.requiresSubmission) {
+    // Разрешаем отправку для проектов, практик и модулей с requiresSubmission
+    if (courseModule.type !== "PROJECT" && courseModule.type !== "PRACTICE" && !courseModule.requiresSubmission) {
       return NextResponse.json(
         { error: "Этот модуль не требует отправки работы" },
         { status: 400 }
