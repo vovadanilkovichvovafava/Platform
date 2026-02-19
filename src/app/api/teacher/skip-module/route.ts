@@ -59,6 +59,7 @@ export async function POST(request: Request) {
       where: { id: moduleId },
       select: {
         id: true,
+        title: true,
         points: true,
         trailId: true,
       },
@@ -129,10 +130,67 @@ export async function POST(request: Request) {
       })
     }
 
+    // Auto-approve any PENDING submissions for this student + module
+    // When teacher closes a module, pending works should be accepted automatically
+    const pendingSubmissions = await prisma.submission.findMany({
+      where: {
+        userId: studentId,
+        moduleId: moduleId,
+        status: "PENDING",
+      },
+    })
+
+    for (const submission of pendingSubmissions) {
+      // Update submission status to APPROVED
+      await prisma.submission.update({
+        where: { id: submission.id },
+        data: { status: "APPROVED" },
+      })
+
+      // Create auto-review by teacher
+      await prisma.review.create({
+        data: {
+          submissionId: submission.id,
+          reviewerId: session.user.id,
+          score: 10,
+          comment: "Автоматически принято при закрытии модуля учителем",
+          criteria: null,
+          strengths: null,
+          improvements: null,
+        },
+      })
+
+      // Notify student that their work was accepted
+      await prisma.notification.create({
+        data: {
+          userId: studentId,
+          type: "REVIEW_RECEIVED",
+          title: "Работа принята!",
+          message: `Ваша работа по модулю "${courseModule.title}" была автоматически принята при закрытии модуля`,
+          link: "/my-work",
+        },
+      })
+
+      // Mark SUBMISSION_PENDING notifications as read for all teachers
+      prisma.notification.updateMany({
+        where: {
+          type: "SUBMISSION_PENDING",
+          link: `/teacher/reviews/${submission.id}`,
+          isRead: false,
+        },
+        data: { isRead: true },
+      }).catch(() => {})
+    }
+
     // Check and award achievements for the student
     const newAchievements = await checkAndAwardAchievements(studentId)
 
-    return NextResponse.json({ success: true, progress, achievements: newAchievements })
+    return NextResponse.json({
+      success: true,
+      progress,
+      achievements: newAchievements,
+      autoApprovedSubmissions: pendingSubmissions.length,
+    })
   } catch (error) {
     console.error("Skip module error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

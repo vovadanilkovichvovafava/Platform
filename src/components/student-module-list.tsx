@@ -141,13 +141,20 @@ export function StudentModuleList({
         throw new Error(data.error || "Failed to skip module")
       }
 
+      const data = await res.json()
+
       // Update local state
       setProgressMap((prev) => {
         const next = new Map(prev)
         next.set(moduleId, { moduleId, status: "COMPLETED", skippedByTeacher: true })
         return next
       })
-      showToast("Модуль закрыт", "success")
+
+      if (data.autoApprovedSubmissions > 0) {
+        showToast(`Модуль закрыт. Работ автоматически принято: ${data.autoApprovedSubmissions}`, "success")
+      } else {
+        showToast("Модуль закрыт", "success")
+      }
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Ошибка", "error")
     } finally {
