@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isAdmin, setCoAdminTrailAccess, getCoAdminsWithTrailAccess, ROLE_CO_ADMIN } from "@/lib/admin-access"
+import { isAdmin, setCoAdminTrailAccess, getCoAdminsWithTrailAccess, ROLE_CO_ADMIN, ROLE_HR } from "@/lib/admin-access"
 import { z } from "zod"
 
 const updateAccessSchema = z.object({
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = updateAccessSchema.parse(body)
 
-    // Verify co-admin exists and has CO_ADMIN role
+    // Verify user exists and has CO_ADMIN or HR role
     const coAdmin = await prisma.user.findUnique({
       where: { id: data.coAdminId },
       select: { id: true, role: true },
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Со-администратор не найден" }, { status: 404 })
     }
 
-    if (coAdmin.role !== ROLE_CO_ADMIN) {
-      return NextResponse.json({ error: "Пользователь не является со-администратором" }, { status: 400 })
+    if (coAdmin.role !== ROLE_CO_ADMIN && coAdmin.role !== ROLE_HR) {
+      return NextResponse.json({ error: "Пользователь не является со-администратором или HR" }, { status: 400 })
     }
 
     // Verify all trail IDs exist
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         action: "UPDATE",
         entityType: "CO_ADMIN_ACCESS",
         entityId: data.coAdminId,
-        entityName: `Co-admin access updated (${data.trailIds.length} trails)`,
+        entityName: `${coAdmin.role === ROLE_HR ? "HR" : "Co-admin"} access updated (${data.trailIds.length} trails)`,
         details: JSON.stringify({ trailIds: data.trailIds }),
       },
     })
