@@ -74,6 +74,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
             select: {
               id: true,
               title: true,
+              slug: true,
             },
           },
         },
@@ -170,9 +171,11 @@ export default async function ReviewPage({ params, searchParams }: Props) {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary">
-                  {submission.module.trail.title}
-                </Badge>
+                <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
+                  <Badge variant="secondary" className="hover:bg-gray-200 cursor-pointer transition-colors">
+                    {submission.module.trail.title}
+                  </Badge>
+                </Link>
                 <Badge
                   className={
                     submission.status === "PENDING"
@@ -190,13 +193,21 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                     : "На доработку"}
                 </Badge>
               </div>
-              <CardTitle>{submission.module.title}</CardTitle>
+              <CardTitle>
+                <Link
+                  href={`/module/${submission.module.slug}`}
+                  target="_blank"
+                  className="hover:text-[#0176D3] hover:underline transition-colors"
+                >
+                  {submission.module.title}
+                </Link>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">{submission.module.description}</p>
 
               {/* Links */}
-              <div className="flex gap-4 mt-4">
+              <div className="flex flex-wrap gap-4 mt-4">
                 {submission.githubUrl && (
                   <a
                     href={submission.githubUrl}
@@ -233,6 +244,15 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
+                <Link
+                  href={`/module/${submission.module.slug}?scrollTo=task`}
+                  target="_blank"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Задача модуля
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
               </div>
 
               {/* Student Comment */}

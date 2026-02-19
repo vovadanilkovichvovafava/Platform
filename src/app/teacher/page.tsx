@@ -49,7 +49,7 @@ export default async function TeacherDashboard({
       },
       module: {
         include: {
-          trail: { select: { title: true } },
+          trail: { select: { title: true, slug: true } },
         },
       },
     },
@@ -70,7 +70,7 @@ export default async function TeacherDashboard({
       },
       module: {
         include: {
-          trail: { select: { title: true } },
+          trail: { select: { title: true, slug: true } },
         },
       },
       review: {
