@@ -26,7 +26,7 @@ export function ScrollToTaskHeading() {
 
     // Small delay to let the page render fully
     const timer = setTimeout(() => {
-      const headings = document.querySelectorAll("h1, h2, h3, h4, h5, h6")
+      const headings = document.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")
 
       for (const heading of headings) {
         const text = (heading.textContent || "").toLowerCase().trim()
