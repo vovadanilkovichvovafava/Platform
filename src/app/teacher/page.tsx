@@ -36,7 +36,7 @@ export default async function TeacherDashboard({
 
   // ADMIN sees all submissions, CO_ADMIN and TEACHER only see assigned trails
   const shouldFilter = allowedTrailIds !== null && assignedTrailIds.length > 0
-  const pendingSubmissions = await prisma.submission.findMany({
+  const allPendingSubmissions = await prisma.submission.findMany({
     where: {
       status: "PENDING",
       ...(shouldFilter ? { module: { trailId: { in: assignedTrailIds } } } : {}),
@@ -54,6 +54,55 @@ export default async function TeacherDashboard({
       },
     },
   })
+
+  // Auto-approve orphaned PENDING submissions whose modules are already closed by teacher.
+  // This catches: legacy data before auto-approval was added, race conditions, etc.
+  let pendingSubmissions = allPendingSubmissions
+  if (allPendingSubmissions.length > 0) {
+    const closedProgresses = await prisma.moduleProgress.findMany({
+      where: {
+        OR: allPendingSubmissions.map((s) => ({ userId: s.userId, moduleId: s.moduleId })),
+        skippedByTeacher: true,
+      },
+      select: { userId: true, moduleId: true },
+    })
+
+    if (closedProgresses.length > 0) {
+      const closedKeys = new Set(closedProgresses.map((p) => `${p.userId}:${p.moduleId}`))
+      const orphaned = allPendingSubmissions.filter((s) => closedKeys.has(`${s.userId}:${s.moduleId}`))
+      pendingSubmissions = allPendingSubmissions.filter((s) => !closedKeys.has(`${s.userId}:${s.moduleId}`))
+
+      // Auto-approve orphaned submissions in background
+      for (const sub of orphaned) {
+        prisma.submission.update({
+          where: { id: sub.id },
+          data: { status: "APPROVED" },
+        }).then(() =>
+          prisma.review.create({
+            data: {
+              submissionId: sub.id,
+              reviewerId: session.user.id,
+              score: 10,
+              comment: "Автоматически принято: модуль был закрыт учителем",
+              criteria: null,
+              strengths: null,
+              improvements: null,
+            },
+          })
+        ).then(() =>
+          prisma.notification.create({
+            data: {
+              userId: sub.userId,
+              type: "REVIEW_RECEIVED",
+              title: "Работа принята!",
+              message: `Ваша работа по модулю "${sub.module.title}" была автоматически принята при закрытии модуля`,
+              link: "/my-work",
+            },
+          })
+        ).catch(() => {}) // Silently handle - will self-correct on next load
+      }
+    }
+  }
 
   // Get all reviewed submissions (approved, revision, failed) for history
   const reviewedSubmissions = await prisma.submission.findMany({

@@ -172,7 +172,7 @@ export async function POST(request: Request) {
       })
 
       // Mark SUBMISSION_PENDING notifications as read for all teachers
-      prisma.notification.updateMany({
+      await prisma.notification.updateMany({
         where: {
           type: "SUBMISSION_PENDING",
           link: `/teacher/reviews/${submission.id}`,

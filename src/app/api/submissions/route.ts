@@ -121,6 +121,23 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check if the module has been closed by a teacher for this student
+    const moduleProgress = await prisma.moduleProgress.findUnique({
+      where: {
+        userId_moduleId: {
+          userId: session.user.id,
+          moduleId: data.moduleId,
+        },
+      },
+    })
+
+    if (moduleProgress?.skippedByTeacher) {
+      return NextResponse.json(
+        { error: "Этот модуль был закрыт учителем. Отправка работы невозможна." },
+        { status: 400 }
+      )
+    }
+
     // Create submission
     const submission = await prisma.submission.create({
       data: {
