@@ -245,7 +245,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                   </a>
                 )}
                 <Link
-                  href={`/module/${submission.module.slug}?scrollTo=task`}
+                  href={`/module/${submission.module.slug}`}
                   target="_blank"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
                 >

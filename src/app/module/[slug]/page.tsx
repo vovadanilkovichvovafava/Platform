@@ -26,7 +26,7 @@ import { AssessmentSection } from "@/components/assessment-section"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { ModuleButton } from "@/components/module-button"
 import { ModuleStartGate } from "@/components/module-start-gate"
-import { ScrollToTaskHeading } from "@/components/scroll-to-task-heading"
+
 
 const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
@@ -274,7 +274,6 @@ export default async function ModulePage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ScrollToTaskHeading />
       {/* Header */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">

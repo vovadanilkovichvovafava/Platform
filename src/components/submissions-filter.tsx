@@ -630,7 +630,7 @@ export function SubmissionsFilter({
                           </a>
                         )}
                         <Link
-                          href={`/module/${submission.module.slug}?scrollTo=task`}
+                          href={`/module/${submission.module.slug}`}
                           target="_blank"
                           className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
                           title="Задача модуля"
@@ -841,7 +841,7 @@ export function SubmissionsFilter({
                         </a>
                       )}
                       <Link
-                        href={`/module/${submission.module.slug}?scrollTo=task`}
+                        href={`/module/${submission.module.slug}`}
                         target="_blank"
                         className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
                         title="Задача модуля"
