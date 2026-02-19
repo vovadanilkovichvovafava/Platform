@@ -27,6 +27,7 @@ import {
   ClipboardList,
   History,
   Search,
+  BookOpen,
   Filter,
   AlertTriangle,
   Trash2,
@@ -73,8 +74,10 @@ interface Submission {
   }
   module: {
     title: string
+    slug: string
     trail: {
       title: string
+      slug: string
     }
   }
   review?: {
@@ -530,9 +533,11 @@ export function SubmissionsFilter({
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <Badge variant="secondary" className="text-xs">
-                          {submission.module.trail.title}
-                        </Badge>
+                        <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
+                          <Badge variant="secondary" className="text-xs hover:bg-gray-200 cursor-pointer transition-colors">
+                            {submission.module.trail.title}
+                          </Badge>
+                        </Link>
                         <Badge className={`${color} border-0`}>
                           <Clock className="h-3 w-3 mr-1" />
                           {label}
@@ -542,7 +547,13 @@ export function SubmissionsFilter({
                         )}
                       </div>
                       <h3 className="font-medium text-gray-900">
-                        {submission.module.title}
+                        <Link
+                          href={`/module/${submission.module.slug}`}
+                          target="_blank"
+                          className="hover:text-[#0176D3] hover:underline transition-colors"
+                        >
+                          {submission.module.title}
+                        </Link>
                       </h3>
                       <p className="text-sm text-gray-500">
                         {submission.user.name} ({submission.user.email}){submission.user.telegramUsername && <button
@@ -602,6 +613,7 @@ export function SubmissionsFilter({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                            title="GitHub"
                           >
                             <Github className="h-4 w-4" />
                           </a>
@@ -612,10 +624,19 @@ export function SubmissionsFilter({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                            title="Деплой"
                           >
                             <Globe className="h-4 w-4" />
                           </a>
                         )}
+                        <Link
+                          href={`/module/${submission.module.slug}?scrollTo=task`}
+                          target="_blank"
+                          className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                          title="Задача модуля"
+                        >
+                          <BookOpen className="h-4 w-4" />
+                        </Link>
                       </div>
 
                       <Button asChild>
@@ -707,9 +728,11 @@ export function SubmissionsFilter({
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {submission.module.trail.title}
-                      </Badge>
+                      <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
+                        <Badge variant="secondary" className="text-xs hover:bg-gray-200 cursor-pointer transition-colors">
+                          {submission.module.trail.title}
+                        </Badge>
+                      </Link>
                       <Badge
                         className={
                           submission.status === "APPROVED"
@@ -738,7 +761,13 @@ export function SubmissionsFilter({
                       </Badge>
                     </div>
                     <h3 className="font-medium text-gray-900">
-                      {submission.module.title}
+                      <Link
+                        href={`/module/${submission.module.slug}`}
+                        target="_blank"
+                        className="hover:text-[#0176D3] hover:underline transition-colors"
+                      >
+                        {submission.module.title}
+                      </Link>
                     </h3>
                     <p className="text-sm text-gray-500">
                       {submission.user.name}{submission.user.telegramUsername && <button
@@ -795,6 +824,7 @@ export function SubmissionsFilter({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                          title="GitHub"
                         >
                           <Github className="h-4 w-4" />
                         </a>
@@ -805,10 +835,19 @@ export function SubmissionsFilter({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                          title="Деплой"
                         >
                           <Globe className="h-4 w-4" />
                         </a>
                       )}
+                      <Link
+                        href={`/module/${submission.module.slug}?scrollTo=task`}
+                        target="_blank"
+                        className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                        title="Задача модуля"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                      </Link>
                     </div>
 
                     <Button asChild variant="outline" size="sm">
