@@ -513,7 +513,7 @@ model NavbarItem {
   @@index([order])
 }
 
-// Track student status per trail (Недопущен/Обучается/Принят)
+// Track student status per trail (Отклонен/Обучается/Принят)
 // Status is set by teachers/admins and is NOT visible to students
 model StudentTrailStatus {
   id        String   @id @default(cuid())
