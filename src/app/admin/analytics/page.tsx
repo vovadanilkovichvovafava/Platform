@@ -1188,7 +1188,7 @@ export default function AdvancedAnalyticsPage() {
                       className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="all">Все статусы</option>
-                      <option value="NOT_ADMITTED">Недопущен</option>
+                      <option value="NOT_ADMITTED">Отклонен</option>
                       <option value="LEARNING">Обучается</option>
                       <option value="ACCEPTED">Принят</option>
                     </select>
@@ -1513,7 +1513,7 @@ export default function AdvancedAnalyticsPage() {
                                       {(() => {
                                         const st = student.trailStatus || "LEARNING"
                                         if (st === "NOT_ADMITTED") {
-                                          return <Badge className="text-xs bg-red-100 text-red-700 border-0">Недопущен</Badge>
+                                          return <Badge className="text-xs bg-red-100 text-red-700 border-0">Отклонен</Badge>
                                         }
                                         if (st === "ACCEPTED") {
                                           return <Badge className="text-xs bg-green-100 text-green-700 border-0">Принят</Badge>

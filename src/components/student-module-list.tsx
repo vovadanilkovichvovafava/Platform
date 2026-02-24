@@ -52,7 +52,7 @@ interface StudentModuleListProps {
 
 const STATUS_CONFIG = {
   NOT_ADMITTED: {
-    label: "Недопущен",
+    label: "Отклонен",
     color: "bg-red-100 text-red-700 border-red-300",
     activeColor: "bg-red-500 text-white border-red-500",
     icon: Ban,

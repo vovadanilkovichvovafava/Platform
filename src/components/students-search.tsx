@@ -388,7 +388,7 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
                   ? "NOT_ADMITTED"
                   : "LEARNING"
             const statusLabel = aggregatedStatus === "NOT_ADMITTED"
-              ? "Недопущен"
+              ? "Отклонен"
               : aggregatedStatus === "ACCEPTED"
                 ? "Принят"
                 : "Обучается"
@@ -449,7 +449,7 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
                                   key={e.trailId}
                                   variant="secondary"
                                   className="text-xs px-1.5 py-0 inline-flex items-center gap-1"
-                                  title={status === "NOT_ADMITTED" ? "Недопущен" : status === "ACCEPTED" ? "Принят" : "Обучается"}
+                                  title={status === "NOT_ADMITTED" ? "Отклонен" : status === "ACCEPTED" ? "Принят" : "Обучается"}
                                 >
                                   <span className={`inline-block w-1.5 h-1.5 rounded-full ${statusDot}`} />
                                   {e.trail.title}
