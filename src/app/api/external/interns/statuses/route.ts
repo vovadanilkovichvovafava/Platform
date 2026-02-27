@@ -84,6 +84,7 @@ export async function POST(request: Request) {
         id: true,
         email: true,
         name: true,
+        telegramUsername: true,
         trailStatuses: {
           select: {
             status: true,
@@ -113,6 +114,7 @@ export async function POST(request: Request) {
             email: user.email,
             found: true as const,
             internId: user.id,
+            telegramUsername: user.telegramUsername ?? null,
             status,
             statusUpdatedAt,
           }
@@ -127,6 +129,7 @@ export async function POST(request: Request) {
             email: user.email,
             found: true as const,
             internId: user.id,
+            telegramUsername: user.telegramUsername ?? null,
             status,
             statusUpdatedAt,
           }
