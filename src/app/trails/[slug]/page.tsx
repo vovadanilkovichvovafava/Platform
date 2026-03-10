@@ -278,7 +278,7 @@ export default async function TrailPage({ params }: Props) {
   const assessmentCompletedCount = assessmentModules.filter(
     m => moduleProgressMap[m.id] === "COMPLETED"
   ).length
-  const allAssessmentsCompleted = assessmentModules.length > 0 && assessmentCompletedCount === assessmentModules.length
+  const allAssessmentsCompleted = assessmentModules.length === 0 || assessmentCompletedCount === assessmentModules.length
 
   // Check if at least one project is completed
   const completedProjectCount = projectModules.filter(
