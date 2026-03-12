@@ -30,6 +30,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
+    // Check that Supabase Storage is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json(
+        { error: "Загрузка файлов не настроена. Добавьте NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY в переменные окружения." },
+        { status: 503 }
+      )
+    }
+
     const { fileName, fileSize, type: blockType } = await request.json()
 
     if (!fileName || !blockType) {
