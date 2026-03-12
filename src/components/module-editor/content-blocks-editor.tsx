@@ -15,7 +15,14 @@ import {
   X,
   Loader2,
   CheckCircle2,
+  Check,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type { ContentBlock, ContentBlockType } from "./types"
 
 interface ContentBlocksEditorProps {
@@ -221,13 +228,10 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
     e.target.value = ""
   }
 
-  const BLOCK_TYPES: ContentBlockType[] = ["VIDEO", "AUDIO", "TEXT"]
-
-  const cycleBlockType = (index: number) => {
+  const changeBlockType = (index: number, newType: ContentBlockType) => {
     if (readOnly) return
     const block = blocks[index]
-    const currentIdx = BLOCK_TYPES.indexOf(block.type)
-    const nextType = BLOCK_TYPES[(currentIdx + 1) % BLOCK_TYPES.length]
+    if (block.type === newType) return
 
     // Clear file data when switching away from media types
     if ((block.type === "VIDEO" || block.type === "AUDIO") && block.fileKey) {
@@ -239,7 +243,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
     }
 
     const updates: Partial<ContentBlock> = {
-      type: nextType,
+      type: newType,
       url: null,
       fileKey: null,
       fileName: null,
@@ -247,7 +251,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
       mimeType: null,
     }
 
-    if (nextType === "TEXT") {
+    if (newType === "TEXT") {
       updates.description = null
       updates.content = block.content || block.description || ""
     } else {
@@ -312,18 +316,47 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
               {!readOnly && (
                 <GripVertical className="h-4 w-4 text-gray-400 cursor-grab active:cursor-grabbing shrink-0" />
               )}
-              <button
-                type="button"
-                onClick={() => cycleBlockType(index)}
-                disabled={readOnly}
-                className={`flex items-center gap-1.5 ${readOnly ? "" : "cursor-pointer hover:opacity-70"} transition-opacity`}
-                title={readOnly ? undefined : "Нажмите, чтобы сменить тип блока"}
-              >
-                <Icon className={`h-4 w-4 ${config.color} shrink-0`} />
-                <span className={`text-sm font-medium ${config.color}`}>
-                  {config.label}
-                </span>
-              </button>
+              {!readOnly ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 cursor-pointer hover:opacity-70 transition-opacity"
+                    >
+                      <Icon className={`h-4 w-4 ${config.color} shrink-0`} />
+                      <span className={`text-sm font-medium ${config.color}`}>
+                        {config.label}
+                      </span>
+                      <ChevronDown className="h-3 w-3 text-gray-400" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-40">
+                    {(Object.entries(blockTypeConfig) as [ContentBlockType, typeof config][]).map(([type, cfg]) => {
+                      const TypeIcon = cfg.icon
+                      return (
+                        <DropdownMenuItem
+                          key={type}
+                          onClick={() => changeBlockType(index, type)}
+                          className="flex items-center gap-2"
+                        >
+                          <TypeIcon className={`h-4 w-4 ${cfg.color}`} />
+                          <span>{cfg.label}</span>
+                          {block.type === type && (
+                            <Check className="h-3 w-3 ml-auto text-green-500" />
+                          )}
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Icon className={`h-4 w-4 ${config.color} shrink-0`} />
+                  <span className={`text-sm font-medium ${config.color}`}>
+                    {config.label}
+                  </span>
+                </div>
+              )}
               {block.title && (
                 <span className="text-xs text-gray-500 truncate">
                   — {block.title}
