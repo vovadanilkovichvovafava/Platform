@@ -28,6 +28,7 @@ import { AssessmentSection } from "@/components/assessment-section"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { ModuleButton } from "@/components/module-button"
 import { ModuleStartGate } from "@/components/module-start-gate"
+import { VideoPlayer } from "@/components/video-player"
 
 
 const typeIcons: Record<string, typeof BookOpen> = {
@@ -373,10 +374,7 @@ export default async function ModulePage({ params }: Props) {
                                 />
                               </div>
                             ) : (
-                              <video controls className="w-full rounded-lg" preload="metadata">
-                                <source src={block.url} type={block.mimeType || undefined} />
-                                Ваш браузер не поддерживает воспроизведение видео.
-                              </video>
+                              <VideoPlayer url={block.url} mimeType={block.mimeType || undefined} />
                             )}
                           </div>
                         )}
