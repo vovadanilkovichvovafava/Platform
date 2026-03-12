@@ -20,6 +20,16 @@ const cspHeader = `
 const nextConfig: NextConfig = {
   // Prevent 307 redirects for trailing slash - important for webhooks (Telegram)
   skipTrailingSlashRedirect: true,
+  async rewrites() {
+    return [
+      // Serve uploaded media files via API route (files added at runtime
+      // are not reliably served from public/ in production)
+      {
+        source: '/uploads/media/:path*',
+        destination: '/api/media/:path*',
+      },
+    ];
+  },
   async redirects() {
     return [
       // Legacy routes -> unified /admin/access page with tabs
