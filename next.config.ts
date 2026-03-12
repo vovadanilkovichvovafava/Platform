@@ -2,13 +2,16 @@ import type { NextConfig } from "next";
 
 // Content Security Policy - start with permissive policy, tighten as needed
 // Uses 'unsafe-inline' for styles (required by Tailwind/Next.js) and scripts (Next.js hydration)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://*.supabase.co';
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'unsafe-eval';
   style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob: https://images.unsplash.com;
+  img-src 'self' data: blob: https://images.unsplash.com ${supabaseUrl};
   font-src 'self';
-  connect-src 'self' https://api.iconify.design;
+  connect-src 'self' https://api.iconify.design ${supabaseUrl};
+  media-src 'self' ${supabaseUrl} blob:;
+  frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com;
   frame-ancestors 'self';
   form-action 'self';
   base-uri 'self';

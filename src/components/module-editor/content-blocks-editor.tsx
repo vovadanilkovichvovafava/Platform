@@ -1,11 +1,9 @@
 "use client"
 
-import { useState, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Plus,
   Trash2,
   GripVertical,
   Video,
@@ -13,6 +11,10 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Upload,
+  X,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react"
 import type { ContentBlock, ContentBlockType } from "./types"
 
@@ -22,20 +24,45 @@ interface ContentBlocksEditorProps {
   readOnly?: boolean
 }
 
+const VIDEO_ACCEPT = ".mp4,.webm,.mov,.avi,.mkv,.m4v"
+const AUDIO_ACCEPT = ".mp3,.wav,.ogg,.m4a,.aac,.flac,.wma,.opus"
+
+const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v"]
+const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac", ".wma", ".opus"]
+
 const blockTypeConfig: Record<ContentBlockType, { label: string; icon: typeof Video; color: string; bgColor: string; borderColor: string }> = {
   VIDEO: { label: "Видео", icon: Video, color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
   AUDIO: { label: "Аудио", icon: Music, color: "text-pink-600", bgColor: "bg-pink-50", borderColor: "border-pink-200" },
   TEXT: { label: "Текст", icon: FileText, color: "text-gray-600", bgColor: "bg-gray-50", borderColor: "border-gray-200" },
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} Б`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} ГБ`
+}
+
+function getExtension(filename: string): string {
+  const dotIndex = filename.lastIndexOf(".")
+  return dotIndex >= 0 ? filename.slice(dotIndex).toLowerCase() : ""
+}
+
 export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: ContentBlocksEditorProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
 
   const addBlock = (type: ContentBlockType) => {
     const newBlock: ContentBlock = {
       type,
-      url: type !== "TEXT" ? "" : null,
+      url: null,
+      fileKey: null,
+      fileName: null,
+      fileSize: null,
+      mimeType: null,
       title: "",
       description: type !== "TEXT" ? "" : null,
       content: type === "TEXT" ? "" : null,
@@ -52,6 +79,15 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
   }
 
   const removeBlock = (index: number) => {
+    const block = blocks[index]
+    // Delete file from storage if it exists
+    if (block.fileKey) {
+      fetch("/api/admin/upload/media", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileKey: block.fileKey }),
+      }).catch(console.error)
+    }
     onChange(blocks.filter((_, i) => i !== index))
   }
 
@@ -97,14 +133,129 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
     setDragOverIndex(null)
   }
 
+  const validateFile = (file: File, blockType: ContentBlockType): string | null => {
+    const ext = getExtension(file.name)
+    if (blockType === "VIDEO") {
+      if (!VIDEO_EXTENSIONS.includes(ext)) {
+        return `Недопустимый формат видео: ${ext}. Допустимые: ${VIDEO_EXTENSIONS.join(", ")}`
+      }
+      if (file.size > 500 * 1024 * 1024) {
+        return `Видео файл слишком большой (${formatFileSize(file.size)}). Максимум: 500 МБ`
+      }
+    } else if (blockType === "AUDIO") {
+      if (!AUDIO_EXTENSIONS.includes(ext)) {
+        return `Недопустимый формат аудио: ${ext}. Допустимые: ${AUDIO_EXTENSIONS.join(", ")}`
+      }
+      if (file.size > 100 * 1024 * 1024) {
+        return `Аудио файл слишком большой (${formatFileSize(file.size)}). Максимум: 100 МБ`
+      }
+    }
+    return null
+  }
+
+  const handleFileUpload = async (index: number, file: File) => {
+    const block = blocks[index]
+    const validationError = validateFile(file, block.type)
+    if (validationError) {
+      setUploadError(validationError)
+      return
+    }
+
+    setUploadError(null)
+    setUploadingIndex(index)
+
+    try {
+      // Delete old file if replacing
+      if (block.fileKey) {
+        await fetch("/api/admin/upload/media", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileKey: block.fileKey }),
+        }).catch(console.error)
+      }
+
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", block.type)
+
+      const res = await fetch("/api/admin/upload/media", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Ошибка загрузки")
+      }
+
+      const data = await res.json()
+      updateBlock(index, {
+        url: data.url,
+        fileKey: data.fileKey,
+        fileName: data.fileName,
+        fileSize: data.compressedSize,
+        mimeType: data.mimeType,
+      })
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Ошибка загрузки файла")
+    } finally {
+      setUploadingIndex(null)
+    }
+  }
+
+  const handleFileDropZone = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      handleFileUpload(index, files[0])
+    }
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      handleFileUpload(index, files[0])
+    }
+    // Reset input so same file can be selected again
+    e.target.value = ""
+  }
+
+  const removeFile = (index: number) => {
+    const block = blocks[index]
+    if (block.fileKey) {
+      fetch("/api/admin/upload/media", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileKey: block.fileKey }),
+      }).catch(console.error)
+    }
+    updateBlock(index, {
+      url: null,
+      fileKey: null,
+      fileName: null,
+      fileSize: null,
+      mimeType: null,
+    })
+  }
+
   return (
     <div className="space-y-4">
+      {/* Upload error */}
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+          <X className="h-4 w-4 text-red-500 mt-0.5 shrink-0 cursor-pointer" onClick={() => setUploadError(null)} />
+          <p className="text-sm text-red-600">{uploadError}</p>
+        </div>
+      )}
+
       {/* Block list */}
       {blocks.map((block, index) => {
         const config = blockTypeConfig[block.type]
         const Icon = config.icon
         const isDragged = draggedIndex === index
         const isDragOver = dragOverIndex === index
+        const isUploading = uploadingIndex === index
 
         return (
           <div
@@ -182,24 +333,95 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                 />
               </div>
 
-              {/* VIDEO / AUDIO specific fields */}
+              {/* VIDEO / AUDIO: File upload zone */}
               {(block.type === "VIDEO" || block.type === "AUDIO") && (
                 <>
                   <div>
                     <label className="text-xs font-medium text-gray-600 block mb-1">
-                      URL {block.type === "VIDEO" ? "видео" : "аудио"}
+                      Файл {block.type === "VIDEO" ? "видео" : "аудио"}
                     </label>
-                    <Input
-                      value={block.url || ""}
-                      onChange={(e) => updateBlock(index, { url: e.target.value })}
-                      placeholder={
-                        block.type === "VIDEO"
-                          ? "https://youtube.com/watch?v=... или прямая ссылка"
-                          : "https://soundcloud.com/... или прямая ссылка"
-                      }
-                      className="text-sm"
-                      disabled={readOnly}
-                    />
+
+                    {block.fileKey && block.url ? (
+                      /* File already uploaded */
+                      <div className={`border rounded-lg p-3 ${config.bgColor} ${config.borderColor}`}>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{block.fileName || "Загруженный файл"}</p>
+                            <p className="text-xs text-gray-500">
+                              {block.fileSize ? formatFileSize(block.fileSize) : ""}{" "}
+                              {block.mimeType ? `• ${block.mimeType}` : ""}
+                            </p>
+                          </div>
+                          {!readOnly && (
+                            <Button
+                              size="sm"
+                              variant="ghost-destructive"
+                              className="shrink-0"
+                              onClick={() => removeFile(index)}
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Удалить
+                            </Button>
+                          )}
+                        </div>
+                        {/* Preview */}
+                        {block.type === "VIDEO" && (
+                          <video controls className="w-full rounded-lg mt-3 max-h-48" preload="metadata">
+                            <source src={block.url} type={block.mimeType || undefined} />
+                          </video>
+                        )}
+                        {block.type === "AUDIO" && (
+                          <audio controls className="w-full mt-3" preload="metadata">
+                            <source src={block.url} type={block.mimeType || undefined} />
+                          </audio>
+                        )}
+                      </div>
+                    ) : isUploading ? (
+                      /* Upload in progress */
+                      <div className="border-2 border-dashed rounded-lg p-8 text-center border-blue-300 bg-blue-50">
+                        <Loader2 className="h-8 w-8 mx-auto mb-2 text-blue-500 animate-spin" />
+                        <p className="text-sm text-blue-600 font-medium">Загрузка и сжатие файла...</p>
+                        <p className="text-xs text-blue-500 mt-1">Это может занять некоторое время</p>
+                      </div>
+                    ) : (
+                      /* Drop zone */
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+                        onDrop={(e) => handleFileDropZone(e, index)}
+                        onClick={() => !readOnly && fileInputRefs.current[index]?.click()}
+                        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                          readOnly
+                            ? "border-gray-200 bg-gray-50 cursor-default"
+                            : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50"
+                        }`}
+                      >
+                        <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm text-gray-600">
+                          Перетащите {block.type === "VIDEO" ? "видеофайл" : "аудиофайл"} сюда
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          или нажмите для выбора файла
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          {block.type === "VIDEO"
+                            ? `Форматы: ${VIDEO_EXTENSIONS.join(", ")} • Макс. 500 МБ`
+                            : `Форматы: ${AUDIO_EXTENSIONS.join(", ")} • Макс. 100 МБ`
+                          }
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          Файл будет автоматически сжат для экономии места
+                        </p>
+                        <input
+                          ref={(el) => { fileInputRefs.current[index] = el }}
+                          type="file"
+                          accept={block.type === "VIDEO" ? VIDEO_ACCEPT : AUDIO_ACCEPT}
+                          className="hidden"
+                          onChange={(e) => handleFileInput(e, index)}
+                          disabled={readOnly}
+                        />
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600 block mb-1">

@@ -169,7 +169,11 @@ model ModuleContentBlock {
   id          String   @id @default(cuid())
   moduleId    String
   type        String   // VIDEO, AUDIO, TEXT
-  url         String?  // URL for video/audio
+  url         String?  // URL for video/audio (or public URL of uploaded file)
+  fileKey     String?  // Storage key for uploaded file (Supabase Storage path)
+  fileName    String?  // Original file name
+  fileSize    Int?     // File size in bytes
+  mimeType    String?  // MIME type of uploaded file
   title       String?  // Optional title for the block
   description String?  @db.Text // Markdown description for video/audio blocks
   content     String?  @db.Text // Markdown content for TEXT blocks

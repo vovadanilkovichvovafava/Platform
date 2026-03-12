@@ -374,7 +374,7 @@ export default async function ModulePage({ params }: Props) {
                               </div>
                             ) : (
                               <video controls className="w-full rounded-lg" preload="metadata">
-                                <source src={block.url} />
+                                <source src={block.url} type={block.mimeType || undefined} />
                                 Ваш браузер не поддерживает воспроизведение видео.
                               </video>
                             )}
@@ -401,7 +401,7 @@ export default async function ModulePage({ params }: Props) {
                         {block.url && (
                           <div className="mb-4">
                             <audio controls className="w-full" preload="metadata">
-                              <source src={block.url} />
+                              <source src={block.url} type={block.mimeType || undefined} />
                               Ваш браузер не поддерживает воспроизведение аудио.
                             </audio>
                           </div>
