@@ -29,6 +29,7 @@ import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { ModuleButton } from "@/components/module-button"
 import { ModuleStartGate } from "@/components/module-start-gate"
 import { VideoPlayer } from "@/components/video-player"
+import { AudioPlayer } from "@/components/audio-player"
 
 
 const typeIcons: Record<string, typeof BookOpen> = {
@@ -398,10 +399,7 @@ export default async function ModulePage({ params }: Props) {
                       <CardContent className="p-6">
                         {block.url && (
                           <div className="mb-4">
-                            <audio controls className="w-full" preload="metadata">
-                              <source src={block.url} type={block.mimeType || undefined} />
-                              Ваш браузер не поддерживает воспроизведение аудио.
-                            </audio>
+                            <AudioPlayer url={block.url} mimeType={block.mimeType || undefined} />
                           </div>
                         )}
                         {block.description && (
