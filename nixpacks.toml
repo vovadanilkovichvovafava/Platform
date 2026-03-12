@@ -1,4 +1,0 @@
-# Nixpacks config for Railway
-# ffmpeg is needed for server-side video/audio compression
-[phases.setup]
-aptPkgs = ["ffmpeg"]

@@ -59,8 +59,6 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<number>(0) // 0-100
-  const [uploadStage, setUploadStage] = useState<"uploading" | "compressing" | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
 
@@ -148,15 +146,15 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
       if (!VIDEO_EXTENSIONS.includes(ext)) {
         return `Недопустимый формат видео: ${ext}. Допустимые: ${VIDEO_EXTENSIONS.join(", ")}`
       }
-      if (file.size > 2 * 1024 * 1024 * 1024) {
-        return `Видео слишком большое (${formatFileSize(file.size)}). Максимум: 2 ГБ`
+      if (file.size > 500 * 1024 * 1024) {
+        return `Видео слишком большое (${formatFileSize(file.size)}). Максимум: 500 МБ`
       }
     } else if (blockType === "AUDIO") {
       if (!AUDIO_EXTENSIONS.includes(ext)) {
         return `Недопустимый формат аудио: ${ext}. Допустимые: ${AUDIO_EXTENSIONS.join(", ")}`
       }
-      if (file.size > 500 * 1024 * 1024) {
-        return `Аудио слишком большое (${formatFileSize(file.size)}). Максимум: 500 МБ`
+      if (file.size > 100 * 1024 * 1024) {
+        return `Аудио слишком большое (${formatFileSize(file.size)}). Максимум: 100 МБ`
       }
     }
     return null
@@ -172,8 +170,6 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
 
     setUploadError(null)
     setUploadingIndex(index)
-    setUploadProgress(0)
-    setUploadStage("uploading")
 
     try {
       // Delete old file if replacing
@@ -185,89 +181,32 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
         }).catch(console.error)
       }
 
-      // Step 1: Get signed upload URL from our API
-      const presignRes = await fetch("/api/admin/upload/media", {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", block.type)
+
+      const res = await fetch("/api/admin/upload/media", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileSize: file.size,
-          type: block.type,
-        }),
+        body: formData,
       })
 
-      if (!presignRes.ok) {
-        const data = await presignRes.json()
-        throw new Error(data.error || "Ошибка получения URL для загрузки")
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Ошибка загрузки")
       }
 
-      const { signedUrl, token, fileKey, publicUrl } = await presignRes.json()
-
-      // Step 2: Upload directly to Supabase Storage with progress via XHR
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open("PUT", signedUrl, true)
-        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream")
-
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.round((e.loaded / e.total) * 100))
-          }
-        }
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve()
-          } else {
-            reject(new Error(`Ошибка загрузки в хранилище: ${xhr.status}`))
-          }
-        }
-
-        xhr.onerror = () => reject(new Error("Сетевая ошибка при загрузке"))
-        xhr.send(file)
-      })
-
-      // Step 3: Update block with upload info immediately (file is available)
+      const data = await res.json()
       updateBlock(index, {
-        url: publicUrl,
-        fileKey,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
+        url: data.url,
+        fileKey: data.fileKey,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+        mimeType: data.mimeType,
       })
-
-      // Step 4: Trigger server-side compression (async, non-blocking for the user)
-      setUploadStage("compressing")
-      setUploadProgress(0)
-
-      try {
-        const compressRes = await fetch("/api/admin/upload/media/compress", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fileKey, type: block.type }),
-        })
-
-        if (compressRes.ok) {
-          const compressData = await compressRes.json()
-          // Update with compressed file info
-          updateBlock(index, {
-            url: compressData.publicUrl,
-            fileKey: compressData.fileKey,
-            fileSize: compressData.compressedSize || compressData.originalSize,
-            mimeType: compressData.mimeType || file.type,
-          })
-        }
-        // If compression fails, the original file is still in storage — no data loss
-      } catch {
-        // Compression failed silently — original file remains usable
-        console.warn("Compression failed, original file kept")
-      }
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Ошибка загрузки файла")
     } finally {
       setUploadingIndex(null)
-      setUploadStage(null)
-      setUploadProgress(0)
     }
   }
 
@@ -518,29 +457,10 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                       </div>
                     ) : isUploading ? (
                       /* Upload in progress */
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center border-blue-300 bg-blue-50">
+                      <div className="border-2 border-dashed rounded-lg p-8 text-center border-blue-300 bg-blue-50">
                         <Loader2 className="h-8 w-8 mx-auto mb-2 text-blue-500 animate-spin" />
-                        <p className="text-sm text-blue-600 font-medium">
-                          {uploadStage === "compressing"
-                            ? "Сжатие файла на сервере..."
-                            : "Загрузка файла в хранилище..."}
-                        </p>
-                        {uploadStage === "uploading" && uploadProgress > 0 && (
-                          <div className="mt-3 max-w-xs mx-auto">
-                            <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                                style={{ width: `${uploadProgress}%` }}
-                              />
-                            </div>
-                            <p className="text-xs text-blue-500 mt-1">{uploadProgress}%</p>
-                          </div>
-                        )}
-                        {uploadStage === "compressing" && (
-                          <p className="text-xs text-blue-500 mt-1">
-                            Для больших файлов это может занять несколько минут
-                          </p>
-                        )}
+                        <p className="text-sm text-blue-600 font-medium">Загрузка файла...</p>
+                        <p className="text-xs text-blue-500 mt-1">Это может занять некоторое время</p>
                       </div>
                     ) : (
                       /* Drop zone */
@@ -563,12 +483,9 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                         </p>
                         <p className="text-xs text-gray-400 mt-2">
                           {block.type === "VIDEO"
-                            ? `Форматы: ${VIDEO_EXTENSIONS.join(", ")} • Макс. 2 ГБ`
-                            : `Форматы: ${AUDIO_EXTENSIONS.join(", ")} • Макс. 500 МБ`
+                            ? `Форматы: ${VIDEO_EXTENSIONS.join(", ")} • Макс. 500 МБ`
+                            : `Форматы: ${AUDIO_EXTENSIONS.join(", ")} • Макс. 100 МБ`
                           }
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">
-                          Файл будет автоматически сжат для экономии места
                         </p>
                         <input
                           ref={(el) => { fileInputRefs.current[index] = el }}
