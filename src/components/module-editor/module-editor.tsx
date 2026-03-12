@@ -36,10 +36,12 @@ import type {
   CaseAnalysisData,
   TrueFalseData,
   FillBlankData,
+  ContentBlock,
   Module,
   QuestionFormData,
   ModuleEditorProps,
 } from "./types"
+import { ContentBlocksEditor } from "./content-blocks-editor"
 
 const typeIcons: Record<string, typeof BookOpen> = {
   THEORY: BookOpen,
@@ -139,6 +141,9 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
   const [duration, setDuration] = useState("")
   const [requiresSubmission, setRequiresSubmission] = useState(false)
 
+  // Content blocks state
+  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([])
+
   // Questions state
   const [questions, setQuestions] = useState<QuestionFormData[]>([])
 
@@ -164,6 +169,29 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
       setPoints(data.points)
       setDuration(data.duration || "")
       setRequiresSubmission(data.requiresSubmission || false)
+
+      // Load content blocks - if module has blocks, use them; otherwise create a TEXT block from content
+      if (data.contentBlocks && data.contentBlocks.length > 0) {
+        setContentBlocks(data.contentBlocks.map((b) => ({
+          id: b.id,
+          type: b.type as ContentBlock["type"],
+          url: b.url,
+          title: b.title,
+          description: b.description,
+          content: b.content,
+          order: b.order,
+        })))
+      } else if (data.content) {
+        // Backward compatibility: wrap existing content in a TEXT block
+        setContentBlocks([{
+          type: "TEXT",
+          content: data.content,
+          order: 0,
+        }])
+      } else {
+        setContentBlocks([])
+      }
+
       setQuestions(
         data.questions.map((q) => {
           const questionType = (q.type as QuestionType) || "SINGLE_CHOICE"
@@ -210,6 +238,10 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
       setError("")
       setSuccess("")
 
+      // Determine content from blocks for backward compatibility
+      const textBlock = contentBlocks.find((b) => b.type === "TEXT")
+      const moduleContent = textBlock?.content || content
+
       // Save module
       const moduleRes = await fetch(`/api/admin/modules/${moduleId}`, {
         method: "PATCH",
@@ -217,7 +249,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
         body: JSON.stringify({
           title,
           description,
-          content,
+          content: moduleContent,
           requirements,
           type: moduleType,
           level,
@@ -230,6 +262,28 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
       if (!moduleRes.ok) {
         const data = await moduleRes.json()
         throw new Error(data.error || "Failed to save module")
+      }
+
+      // Save content blocks
+      const blocksRes = await fetch(`/api/admin/modules/${moduleId}/content-blocks`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blocks: contentBlocks.map((b, i) => ({
+            id: b.id,
+            type: b.type,
+            url: b.url || null,
+            title: b.title || null,
+            description: b.description || null,
+            content: b.content || null,
+            order: i,
+          })),
+        }),
+      })
+
+      if (!blocksRes.ok) {
+        const blocksData = await blocksRes.json()
+        throw new Error(blocksData.error || "Failed to save content blocks")
       }
 
       // Save questions
@@ -532,23 +586,19 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
               </CardContent>
             </Card>
 
-            {/* Content */}
+            {/* Content Blocks */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">
-                  {isProject ? "Описание проекта" : "Теоретический материал"}
+                  Контент модуля
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full h-96 p-4 font-mono text-sm border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Markdown контент..."
+                <ContentBlocksEditor
+                  blocks={contentBlocks}
+                  onChange={setContentBlocks}
+                  readOnly={readOnly}
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  Поддерживается Markdown: # заголовки, **жирный**, - списки
-                </p>
               </CardContent>
             </Card>
 
