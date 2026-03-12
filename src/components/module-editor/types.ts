@@ -61,6 +61,10 @@ export interface ContentBlock {
   id?: string
   type: ContentBlockType
   url?: string | null
+  fileKey?: string | null
+  fileName?: string | null
+  fileSize?: number | null
+  mimeType?: string | null
   title?: string | null
   description?: string | null
   content?: string | null

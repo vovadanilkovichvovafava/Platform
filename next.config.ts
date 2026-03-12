@@ -9,6 +9,8 @@ const cspHeader = `
   img-src 'self' data: blob: https://images.unsplash.com;
   font-src 'self';
   connect-src 'self' https://api.iconify.design;
+  media-src 'self' blob:;
+  frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com;
   frame-ancestors 'self';
   form-action 'self';
   base-uri 'self';
