@@ -17,6 +17,8 @@ import {
   Wrench,
   FolderGit2,
   Pencil,
+  Video,
+  Music,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SubmitProjectForm } from "@/components/submit-project-form"
@@ -64,6 +66,9 @@ export default async function ModulePage({ params }: Props) {
         },
       },
       questions: {
+        orderBy: { order: "asc" },
+      },
+      contentBlocks: {
         orderBy: { order: "asc" },
       },
     },
@@ -331,20 +336,118 @@ export default async function ModulePage({ params }: Props) {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardContent className="p-6">
-                {courseModule.content ? (
-                  <MarkdownRenderer content={courseModule.content} />
-                ) : (
-                  <p className="text-gray-500">Контент модуля скоро появится</p>
-                )}
-              </CardContent>
-            </Card>
+          <div className="lg:col-span-2 space-y-6">
+            {courseModule.contentBlocks && courseModule.contentBlocks.length > 0 ? (
+              /* Render content blocks in order */
+              courseModule.contentBlocks.map((block) => {
+                if (block.type === "VIDEO") {
+                  return (
+                    <Card key={block.id} className="overflow-hidden border-blue-200">
+                      <div className="bg-blue-50 px-4 py-2 border-b border-blue-200 flex items-center gap-2">
+                        <Video className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-700">
+                          {block.title || "Видео"}
+                        </span>
+                      </div>
+                      <CardContent className="p-6">
+                        {block.url && (
+                          <div className="mb-4">
+                            {block.url.includes("youtube.com") || block.url.includes("youtu.be") ? (
+                              <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                                <iframe
+                                  src={block.url
+                                    .replace("watch?v=", "embed/")
+                                    .replace("youtu.be/", "youtube.com/embed/")
+                                    .replace(/&.*$/, "")}
+                                  className="w-full h-full"
+                                  allowFullScreen
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                />
+                              </div>
+                            ) : block.url.includes("vimeo.com") ? (
+                              <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                                <iframe
+                                  src={block.url.replace("vimeo.com/", "player.vimeo.com/video/")}
+                                  className="w-full h-full"
+                                  allowFullScreen
+                                />
+                              </div>
+                            ) : (
+                              <video controls className="w-full rounded-lg" preload="metadata">
+                                <source src={block.url} />
+                                Ваш браузер не поддерживает воспроизведение видео.
+                              </video>
+                            )}
+                          </div>
+                        )}
+                        {block.description && (
+                          <MarkdownRenderer content={block.description} />
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                }
+
+                if (block.type === "AUDIO") {
+                  return (
+                    <Card key={block.id} className="overflow-hidden border-pink-200">
+                      <div className="bg-pink-50 px-4 py-2 border-b border-pink-200 flex items-center gap-2">
+                        <Music className="h-4 w-4 text-pink-600" />
+                        <span className="text-sm font-medium text-pink-700">
+                          {block.title || "Аудио"}
+                        </span>
+                      </div>
+                      <CardContent className="p-6">
+                        {block.url && (
+                          <div className="mb-4">
+                            <audio controls className="w-full" preload="metadata">
+                              <source src={block.url} />
+                              Ваш браузер не поддерживает воспроизведение аудио.
+                            </audio>
+                          </div>
+                        )}
+                        {block.description && (
+                          <MarkdownRenderer content={block.description} />
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                }
+
+                // TEXT block
+                return (
+                  <Card key={block.id}>
+                    {block.title && (
+                      <CardHeader>
+                        <CardTitle>{block.title}</CardTitle>
+                      </CardHeader>
+                    )}
+                    <CardContent className={block.title ? "" : "p-6"}>
+                      {block.content ? (
+                        <MarkdownRenderer content={block.content} />
+                      ) : (
+                        <p className="text-gray-500">Контент скоро появится</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })
+            ) : (
+              /* Fallback: legacy content field */
+              <Card>
+                <CardContent className="p-6">
+                  {courseModule.content ? (
+                    <MarkdownRenderer content={courseModule.content} />
+                  ) : (
+                    <p className="text-gray-500">Контент модуля скоро появится</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Requirements for projects */}
             {isProject && courseModule.requirements && (
-              <Card className="mt-6">
+              <Card>
                 <CardHeader>
                   <CardTitle>Требования к проекту</CardTitle>
                 </CardHeader>

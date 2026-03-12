@@ -46,6 +46,9 @@ export async function GET(request: NextRequest, { params }: Props) {
         questions: {
           orderBy: { order: "asc" },
         },
+        contentBlocks: {
+          orderBy: { order: "asc" },
+        },
       },
     })
 

@@ -4,6 +4,8 @@ export type {
   MatchingData,
   OrderingData,
   CaseAnalysisData,
+  ContentBlockType,
+  ContentBlock,
   Question,
   Module,
   QuestionFormData,

@@ -55,6 +55,19 @@ export interface AdjacentModule {
   order: number
 }
 
+export type ContentBlockType = "VIDEO" | "AUDIO" | "TEXT"
+
+export interface ContentBlock {
+  id?: string
+  type: ContentBlockType
+  url?: string | null
+  title?: string | null
+  description?: string | null
+  content?: string | null
+  order: number
+  isNew?: boolean
+}
+
 export interface Module {
   id: string
   slug: string
@@ -75,6 +88,7 @@ export interface Module {
     modules: AdjacentModule[]
   }
   questions: Question[]
+  contentBlocks?: ContentBlock[]
   prevModule: AdjacentModule | null
   nextModule: AdjacentModule | null
 }

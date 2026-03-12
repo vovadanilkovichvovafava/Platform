@@ -154,13 +154,33 @@ model Module {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  trail       Trail            @relation(fields: [trailId], references: [id], onDelete: Cascade)
-  units       Unit[]
-  progress    ModuleProgress[]
-  submissions Submission[]
-  questions   Question[]
+  trail         Trail                @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  units         Unit[]
+  progress      ModuleProgress[]
+  submissions   Submission[]
+  questions     Question[]
+  contentBlocks ModuleContentBlock[]
 
   @@index([trailId])
+}
+
+// Content blocks for modules: VIDEO, AUDIO, TEXT with ordering
+model ModuleContentBlock {
+  id          String   @id @default(cuid())
+  moduleId    String
+  type        String   // VIDEO, AUDIO, TEXT
+  url         String?  // URL for video/audio
+  title       String?  // Optional title for the block
+  description String?  @db.Text // Markdown description for video/audio blocks
+  content     String?  @db.Text // Markdown content for TEXT blocks
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId])
+  @@index([moduleId, order])
 }
 
 // Assign teachers to specific trails they can review
