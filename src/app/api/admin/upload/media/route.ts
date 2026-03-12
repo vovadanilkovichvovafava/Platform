@@ -6,6 +6,9 @@ import { writeFile, mkdir, unlink } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
 
+// Allow long-running uploads for large media files
+export const maxDuration = 300 // 5 minutes
+
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v"]
 const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac", ".wma", ".opus"]
 
@@ -13,6 +16,24 @@ const MAX_VIDEO_SIZE = 500 * 1024 * 1024 // 500MB
 const MAX_AUDIO_SIZE = 100 * 1024 * 1024 // 100MB
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "media")
+
+// MIME type fallback — some browsers report empty file.type for certain formats
+const MIME_FALLBACK: Record<string, string> = {
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".ogg": "audio/ogg",
+  ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
+  ".flac": "audio/flac",
+  ".wma": "audio/x-ms-wma",
+  ".opus": "audio/opus",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".mov": "video/quicktime",
+  ".avi": "video/x-msvideo",
+  ".mkv": "video/x-matroska",
+  ".m4v": "video/mp4",
+}
 
 function getExtension(filename: string): string {
   const dotIndex = filename.lastIndexOf(".")
@@ -91,15 +112,18 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     await writeFile(filePath, Buffer.from(arrayBuffer))
 
-    // Public URL path
+    // Public URL path (served via rewrite → /api/media/...)
     const fileKey = `uploads/media/${blockType.toLowerCase()}/${fileName}`
     const url = `/${fileKey}`
+
+    // Use browser-reported MIME type, fall back to extension-based lookup
+    const mimeType = file.type || MIME_FALLBACK[ext] || "application/octet-stream"
 
     return NextResponse.json({
       fileKey,
       fileName: file.name,
       fileSize: file.size,
-      mimeType: file.type,
+      mimeType,
       url,
     })
   } catch (error) {
