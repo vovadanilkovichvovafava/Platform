@@ -301,20 +301,22 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
         return (
           <div
             key={block.id || `new-${index}`}
-            draggable={!readOnly}
-            onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={(e) => handleDragOver(e, index)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
             className={`border rounded-lg transition-all ${config.borderColor} ${
               isDragged ? "opacity-40" : ""
             } ${isDragOver ? "border-blue-500 border-2 shadow-md" : ""}`}
           >
             {/* Block header */}
-            <div className={`flex items-center gap-2 px-3 py-2 ${config.bgColor} rounded-t-lg border-b ${config.borderColor}`}>
+            <div
+              draggable={!readOnly}
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`flex items-center gap-2 px-3 py-2 ${config.bgColor} rounded-t-lg border-b ${config.borderColor} ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}`}
+            >
               {!readOnly && (
-                <GripVertical className="h-4 w-4 text-gray-400 cursor-grab active:cursor-grabbing shrink-0" />
+                <GripVertical className="h-4 w-4 text-gray-400 shrink-0" />
               )}
               {!readOnly ? (
                 <DropdownMenu>
