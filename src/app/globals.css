@@ -387,6 +387,88 @@ body {
 .achievement-sparkle:nth-child(4) { bottom: 15%; right: 15%; animation-delay: 0.9s; }
 
 /* Achievements scroll container */
+/* Video player fixed sizing */
+.video-player-container {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-landscape {
+  max-width: 854px;
+  aspect-ratio: 16 / 9;
+}
+
+.video-portrait {
+  max-width: 380px;
+  aspect-ratio: 9 / 16;
+}
+
+/* Fullscreen overrides */
+.video-player-container:fullscreen {
+  max-width: 100%;
+  aspect-ratio: unset;
+  border-radius: 0;
+}
+
+.video-player-container:fullscreen video {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Custom audio player styling */
+audio {
+  width: 100%;
+  height: 48px;
+  border-radius: 0.75rem;
+}
+
+audio::-webkit-media-controls-panel {
+  background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 50%, #ede9fe 100%);
+  border-radius: 0.75rem;
+  padding: 0 12px;
+}
+
+audio::-webkit-media-controls-play-button {
+  background-color: #7c3aed;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  filter: brightness(0) invert(1);
+  cursor: pointer;
+}
+
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+  color: #4c1d95;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+audio::-webkit-media-controls-timeline {
+  background-color: #c4b5fd;
+  border-radius: 4px;
+  height: 6px;
+}
+
+audio::-webkit-media-controls-volume-slider {
+  background-color: #c4b5fd;
+  border-radius: 4px;
+}
+
+audio::-webkit-media-controls-mute-button {
+  filter: brightness(0) saturate(100%) invert(16%) sepia(60%) saturate(5000%) hue-rotate(262deg) brightness(90%) contrast(100%);
+}
+
+/* Firefox audio styling */
+@-moz-document url-prefix() {
+  audio {
+    background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 50%, #ede9fe 100%);
+    border-radius: 0.75rem;
+  }
+}
+
 .achievements-scroll {
   scrollbar-width: thin;
   scrollbar-color: #d1d5db transparent;
