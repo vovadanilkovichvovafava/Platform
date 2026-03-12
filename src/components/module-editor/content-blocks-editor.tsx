@@ -221,6 +221,43 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
     e.target.value = ""
   }
 
+  const BLOCK_TYPES: ContentBlockType[] = ["VIDEO", "AUDIO", "TEXT"]
+
+  const cycleBlockType = (index: number) => {
+    if (readOnly) return
+    const block = blocks[index]
+    const currentIdx = BLOCK_TYPES.indexOf(block.type)
+    const nextType = BLOCK_TYPES[(currentIdx + 1) % BLOCK_TYPES.length]
+
+    // Clear file data when switching away from media types
+    if ((block.type === "VIDEO" || block.type === "AUDIO") && block.fileKey) {
+      fetch("/api/admin/upload/media", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileKey: block.fileKey }),
+      }).catch(console.error)
+    }
+
+    const updates: Partial<ContentBlock> = {
+      type: nextType,
+      url: null,
+      fileKey: null,
+      fileName: null,
+      fileSize: null,
+      mimeType: null,
+    }
+
+    if (nextType === "TEXT") {
+      updates.description = null
+      updates.content = block.content || block.description || ""
+    } else {
+      updates.content = null
+      updates.description = block.description || block.content || ""
+    }
+
+    updateBlock(index, updates)
+  }
+
   const removeFile = (index: number) => {
     const block = blocks[index]
     if (block.fileKey) {
@@ -275,10 +312,18 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
               {!readOnly && (
                 <GripVertical className="h-4 w-4 text-gray-400 cursor-grab active:cursor-grabbing shrink-0" />
               )}
-              <Icon className={`h-4 w-4 ${config.color} shrink-0`} />
-              <span className={`text-sm font-medium ${config.color}`}>
-                {config.label}
-              </span>
+              <button
+                type="button"
+                onClick={() => cycleBlockType(index)}
+                disabled={readOnly}
+                className={`flex items-center gap-1.5 ${readOnly ? "" : "cursor-pointer hover:opacity-70"} transition-opacity`}
+                title={readOnly ? undefined : "Нажмите, чтобы сменить тип блока"}
+              >
+                <Icon className={`h-4 w-4 ${config.color} shrink-0`} />
+                <span className={`text-sm font-medium ${config.color}`}>
+                  {config.label}
+                </span>
+              </button>
               {block.title && (
                 <span className="text-xs text-gray-500 truncate">
                   — {block.title}
