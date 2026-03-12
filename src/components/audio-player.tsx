@@ -174,7 +174,7 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
     }
   }, [])
 
-  const handlePlayPause = useCallback(() => {
+  const handlePlayPause = useCallback(async () => {
     const audio = audioRef.current
     if (!audio) return
 
@@ -182,10 +182,17 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
       connectAnalyser()
     }
 
+    // Resume AudioContext if suspended (browsers require user gesture)
+    if (audioContextRef.current?.state === "suspended") {
+      await audioContextRef.current.resume()
+    }
+
     if (isPlaying) {
       audio.pause()
     } else {
-      audio.play()
+      audio.play().catch(() => {
+        // Playback failed — browser may block autoplay
+      })
     }
   }, [isPlaying, connectAnalyser])
 
@@ -250,7 +257,7 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
 
   return (
     <div ref={containerRef} className="audio-player-container">
-      <audio ref={audioRef} preload="metadata" crossOrigin="anonymous">
+      <audio ref={audioRef} preload="metadata">
         <source src={url} type={mimeType || undefined} />
       </audio>
 

@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { VideoPlayer } from "@/components/video-player"
+import { AudioPlayer } from "@/components/audio-player"
 import type { ContentBlock, ContentBlockType } from "./types"
 
 interface ContentBlocksEditorProps {
@@ -445,14 +447,14 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                         </div>
                         {/* Preview */}
                         {block.type === "VIDEO" && (
-                          <video controls className="w-full rounded-lg mt-3 max-h-48" preload="metadata">
-                            <source src={block.url} type={block.mimeType || undefined} />
-                          </video>
+                          <div className="mt-3">
+                            <VideoPlayer url={block.url} mimeType={block.mimeType || undefined} />
+                          </div>
                         )}
                         {block.type === "AUDIO" && (
-                          <audio controls className="w-full mt-3" preload="metadata">
-                            <source src={block.url} type={block.mimeType || undefined} />
-                          </audio>
+                          <div className="mt-3">
+                            <AudioPlayer url={block.url} mimeType={block.mimeType || undefined} />
+                          </div>
                         )}
                       </div>
                     ) : isUploading ? (
