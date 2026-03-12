@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState, useCallback, useEffect } from "react"
-import { Play, Pause, Gauge } from "lucide-react"
+import { Play, Pause, Gauge, Volume2, VolumeX } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,23 @@ interface AudioPlayerProps {
 }
 
 const PLAYBACK_SPEEDS = [0.8, 1, 1.2, 1.5, 1.7, 2]
+const VOLUME_STORAGE_KEY = "audio-player-volume"
+const MUTED_STORAGE_KEY = "audio-player-muted"
+
+function getSavedVolume(): number {
+  if (typeof window === "undefined") return 1
+  const saved = localStorage.getItem(VOLUME_STORAGE_KEY)
+  if (saved !== null) {
+    const val = parseFloat(saved)
+    if (isFinite(val) && val >= 0 && val <= 1) return val
+  }
+  return 1
+}
+
+function getSavedMuted(): boolean {
+  if (typeof window === "undefined") return false
+  return localStorage.getItem(MUTED_STORAGE_KEY) === "true"
+}
 
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) return "0:00"
@@ -39,6 +56,9 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [waveformReady, setWaveformReady] = useState(false)
+  const [volume, setVolume] = useState(1)
+  const [isMuted, setIsMuted] = useState(false)
+  const previousVolumeRef = useRef(1)
 
   // Generate static waveform from audio data
   const generateWaveform = useCallback(async () => {
@@ -253,6 +273,46 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
     }
   }, [])
 
+  // Load saved volume on mount and apply to audio element
+  useEffect(() => {
+    const savedVolume = getSavedVolume()
+    const savedMuted = getSavedMuted()
+    setVolume(savedVolume)
+    setIsMuted(savedMuted)
+    previousVolumeRef.current = savedVolume
+    if (audioRef.current) {
+      audioRef.current.volume = savedMuted ? 0 : savedVolume
+    }
+  }, [])
+
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    const clamped = Math.max(0, Math.min(1, newVolume))
+    setVolume(clamped)
+    setIsMuted(clamped === 0)
+    previousVolumeRef.current = clamped > 0 ? clamped : previousVolumeRef.current
+    if (audioRef.current) {
+      audioRef.current.volume = clamped
+    }
+    localStorage.setItem(VOLUME_STORAGE_KEY, String(clamped))
+    localStorage.setItem(MUTED_STORAGE_KEY, String(clamped === 0))
+  }, [])
+
+  const handleMuteToggle = useCallback(() => {
+    if (isMuted) {
+      const restored = previousVolumeRef.current > 0 ? previousVolumeRef.current : 1
+      setVolume(restored)
+      setIsMuted(false)
+      if (audioRef.current) audioRef.current.volume = restored
+      localStorage.setItem(VOLUME_STORAGE_KEY, String(restored))
+      localStorage.setItem(MUTED_STORAGE_KEY, "false")
+    } else {
+      previousVolumeRef.current = volume > 0 ? volume : 1
+      setIsMuted(true)
+      if (audioRef.current) audioRef.current.volume = 0
+      localStorage.setItem(MUTED_STORAGE_KEY, "true")
+    }
+  }, [isMuted, volume])
+
   // Cleanup animation frame
   useEffect(() => {
     return () => {
@@ -324,10 +384,35 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
           </DropdownMenu>
         </div>
 
-        {/* Time display */}
-        <div className="flex items-center justify-between text-xs text-gray-500 px-1">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
+        {/* Volume control + Time display */}
+        <div className="flex items-center gap-3 px-1">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleMuteToggle}
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-pink-500 hover:text-pink-600 transition-colors"
+              title={isMuted ? "Включить звук" : "Выключить звук"}
+            >
+              {isMuted ? (
+                <VolumeX className="h-4 w-4" />
+              ) : (
+                <Volume2 className="h-4 w-4" />
+              )}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={isMuted ? 0 : volume}
+              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+              className="w-20 h-1.5 appearance-none rounded-full bg-pink-100 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-pink-500 [&::-webkit-slider-thumb]:hover:bg-pink-600 [&::-webkit-slider-thumb]:transition-colors [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-pink-500 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:hover:bg-pink-600"
+              title={`Громкость: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+            />
+          </div>
+          <div className="flex-1 flex items-center justify-between text-xs text-gray-500">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
         </div>
       </div>
     </div>
