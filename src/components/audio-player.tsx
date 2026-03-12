@@ -236,6 +236,13 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
     audio.addEventListener("loadedmetadata", onLoadedMetadata)
     audio.addEventListener("durationchange", onDurationChange)
 
+    // Handle SSR race condition: if the browser already loaded metadata
+    // before React hydrated and attached listeners, read the current state
+    if (audio.readyState >= 1 && audio.duration && isFinite(audio.duration)) {
+      setDuration(audio.duration)
+      setCurrentTime(audio.currentTime)
+    }
+
     return () => {
       audio.removeEventListener("play", onPlay)
       audio.removeEventListener("pause", onPause)
