@@ -204,6 +204,72 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         continue
       }
 
+      // Markdown table: starts with | and has at least one | separator
+      if (line.trim().startsWith("|") && line.trim().endsWith("|") && line.includes("|")) {
+        const tableRows: string[][] = []
+        let hasHeader = false
+        const tableStartIdx = i
+
+        // Collect all table lines
+        while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+          const rowText = lines[i].trim()
+          // Check if this is a separator row (|---|---|)
+          if (/^\|[\s\-:]+(\|[\s\-:]+)+\|$/.test(rowText)) {
+            hasHeader = true
+            i++
+            continue
+          }
+          // Parse cells: split by |, trim, remove first and last empty entries
+          const cells = rowText.split("|").slice(1, -1).map(cell => cell.trim())
+          tableRows.push(cells)
+          i++
+        }
+
+        if (tableRows.length > 0) {
+          const headerRow = hasHeader ? tableRows[0] : null
+          const bodyRows = hasHeader ? tableRows.slice(1) : tableRows
+
+          elements.push(
+            <div key={`table-wrapper-${tableStartIdx}`} className="my-3 overflow-x-auto rounded-lg border border-gray-200">
+              <table className="w-full border-collapse text-sm">
+                {headerRow && (
+                  <thead>
+                    <tr className="bg-gray-50">
+                      {headerRow.map((cell, cellIdx) => (
+                        <th
+                          key={`th-${tableStartIdx}-${cellIdx}`}
+                          className="px-4 py-2.5 text-left font-semibold text-gray-700 border-b border-gray-200"
+                        >
+                          {parseInlineMarkdown(cell)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                )}
+                <tbody>
+                  {bodyRows.map((row, rowIdx) => (
+                    <tr
+                      key={`tr-${tableStartIdx}-${rowIdx}`}
+                      className={rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}
+                    >
+                      {row.map((cell, cellIdx) => (
+                        <td
+                          key={`td-${tableStartIdx}-${rowIdx}-${cellIdx}`}
+                          className="px-4 py-2 text-gray-600 border-b border-gray-100"
+                        >
+                          {parseInlineMarkdown(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+          continue
+        }
+      }
+
       // Horizontal rule ---
       if (line.trim() === "---" || line.trim() === "***" || line.trim() === "___") {
         elements.push(
