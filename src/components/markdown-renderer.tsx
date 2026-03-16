@@ -204,48 +204,54 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         continue
       }
 
-      // Markdown table: starts with | and has at least one | separator
-      if (line.trim().startsWith("|") && line.trim().endsWith("|") && line.includes("|")) {
-        const tableRows: string[][] = []
-        let hasHeader = false
+      // Markdown table detection: requires header row, separator row, and at least one data row
+      // Look ahead to verify this is a real table (header + separator + body) before consuming lines
+      if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
         const tableStartIdx = i
+        let isValidTable = false
 
-        // Collect all table lines
-        while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
-          const rowText = lines[i].trim()
-          // Check if this is a separator row (|---|---|)
-          if (/^\|[\s\-:]+(\|[\s\-:]+)+\|$/.test(rowText)) {
-            hasHeader = true
-            i++
-            continue
-          }
-          // Parse cells: split by |, trim, remove first and last empty entries
-          const cells = rowText.split("|").slice(1, -1).map(cell => cell.trim())
-          tableRows.push(cells)
-          i++
+        // Look ahead: line 0 = header, line 1 = separator, line 2+ = data
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim()
+          // Separator row: pipes with dashes/colons/spaces between them, tolerant of ||
+          isValidTable = /^\|[-\s:|]*\|[-\s:|]*\|/.test(nextLine) &&
+            /[-]{1,}/.test(nextLine)
         }
 
-        if (tableRows.length > 0) {
-          const headerRow = hasHeader ? tableRows[0] : null
-          const bodyRows = hasHeader ? tableRows.slice(1) : tableRows
+        if (isValidTable) {
+          const headerCells = line.trim().split("|").slice(1, -1).map(cell => cell.trim())
+          i += 2 // Skip header and separator rows
+
+          const bodyRows: string[][] = []
+
+          // Collect body rows — only lines that start and end with |
+          while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+            const rowText = lines[i].trim()
+            // Stop if we hit another separator row (nested tables edge case)
+            if (/^\|[-\s:|]*\|[-\s:|]*\|$/.test(rowText) && !/[a-zA-Zа-яА-Я0-9]/.test(rowText)) {
+              i++
+              continue
+            }
+            const cells = rowText.split("|").slice(1, -1).map(cell => cell.trim())
+            bodyRows.push(cells)
+            i++
+          }
 
           elements.push(
             <div key={`table-wrapper-${tableStartIdx}`} className="my-3 overflow-x-auto rounded-lg border border-gray-200">
               <table className="w-full border-collapse text-sm">
-                {headerRow && (
-                  <thead>
-                    <tr className="bg-gray-50">
-                      {headerRow.map((cell, cellIdx) => (
-                        <th
-                          key={`th-${tableStartIdx}-${cellIdx}`}
-                          className="px-4 py-2.5 text-left font-semibold text-gray-700 border-b border-gray-200"
-                        >
-                          {parseInlineMarkdown(cell)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                )}
+                <thead>
+                  <tr className="bg-gray-50">
+                    {headerCells.map((cell, cellIdx) => (
+                      <th
+                        key={`th-${tableStartIdx}-${cellIdx}`}
+                        className="px-4 py-2.5 text-left font-semibold text-gray-700 border-b border-gray-200"
+                      >
+                        {parseInlineMarkdown(cell)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
                   {bodyRows.map((row, rowIdx) => (
                     <tr
