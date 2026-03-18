@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Suspense } from "react"
+import { Suspense, useEffect, useRef } from "react"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TeachersTab } from "./_components/teachers-tab"
@@ -32,6 +32,17 @@ function AccessPageContent() {
     : "teachers"
 
   const isAdmin = session?.user?.role === "ADMIN"
+  const studentIdCleaned = useRef(false)
+
+  // Clean studentId from URL after initial mount so it doesn't persist on refresh/save
+  useEffect(() => {
+    if (searchParams.get("studentId") && !studentIdCleaned.current) {
+      studentIdCleaned.current = true
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete("studentId")
+      router.replace(`/admin/access?${params.toString()}`, { scroll: false })
+    }
+  }, [searchParams, router])
 
   const handleTabChange = (value: string) => {
     const newTab = value as TabValue
