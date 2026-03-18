@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     where,
     include: {
       student: {
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, telegramUsername: true },
       },
       trail: {
         select: { id: true, title: true, slug: true },
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     data: { studentId, trailId },
     include: {
       student: {
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, telegramUsername: true },
       },
       trail: {
         select: { id: true, title: true, slug: true },

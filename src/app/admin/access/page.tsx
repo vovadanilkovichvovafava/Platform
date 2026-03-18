@@ -7,17 +7,19 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TeachersTab } from "./_components/teachers-tab"
 import { StudentAccessTab } from "./_components/student-access-tab"
+import { TrailSettingsTab } from "./_components/trail-settings-tab"
 import { AdminAccessTab } from "./_components/admin-access-tab"
 import {
   Users,
   Lock,
+  BookOpen,
   ShieldCheck,
   RefreshCw,
 } from "lucide-react"
 
-type TabValue = "teachers" | "student-access" | "admin-access"
+type TabValue = "teachers" | "student-access" | "trail-settings" | "admin-access"
 
-const VALID_TABS: TabValue[] = ["teachers", "student-access", "admin-access"]
+const VALID_TABS: TabValue[] = ["teachers", "student-access", "trail-settings", "admin-access"]
 
 function AccessPageContent() {
   const searchParams = useSearchParams()
@@ -42,6 +44,8 @@ function AccessPageContent() {
         return "Назначение учителей"
       case "student-access":
         return "Доступ студентов"
+      case "trail-settings":
+        return "Доступ трейлов"
       case "admin-access":
         return "Доступ админов"
       default:
@@ -54,7 +58,9 @@ function AccessPageContent() {
       case "teachers":
         return "Перетащите учителя на trail для назначения"
       case "student-access":
-        return "Управляйте видимостью trails для определённых студентов"
+        return "Назначайте трейлы студентам через карточки"
+      case "trail-settings":
+        return "Управляйте публикацией, ограничениями и паролями trails"
       case "admin-access":
         return "Назначьте каким trails имеет доступ каждый со-админ"
       default:
@@ -94,8 +100,12 @@ function AccessPageContent() {
               Учителя
             </TabsTrigger>
             <TabsTrigger value="student-access" className="gap-2">
-              <Lock className="h-4 w-4" />
+              <Users className="h-4 w-4" />
               Доступ студентов
+            </TabsTrigger>
+            <TabsTrigger value="trail-settings" className="gap-2">
+              <BookOpen className="h-4 w-4" />
+              Доступ трейлов
             </TabsTrigger>
             <TabsTrigger
               value="admin-access"
@@ -117,6 +127,10 @@ function AccessPageContent() {
 
           <TabsContent value="student-access">
             <StudentAccessTab initialStudentId={searchParams.get("studentId") || undefined} />
+          </TabsContent>
+
+          <TabsContent value="trail-settings">
+            <TrailSettingsTab />
           </TabsContent>
 
           <TabsContent value="admin-access">
