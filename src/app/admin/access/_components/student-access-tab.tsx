@@ -1,11 +1,25 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useSession } from "next-auth/react"
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/toast"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import {
   RefreshCw,
   Users,
@@ -21,9 +35,16 @@ import {
   MessageCircle,
   User,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  MoreVertical,
+  Trash2,
+  ArrowUpRight,
 } from "lucide-react"
 import { HowItWorks } from "@/components/ui/how-it-works"
 import { adminPageLegends } from "@/lib/admin-help-texts"
+import { PER_PAGE_OPTIONS, type PerPageOption } from "@/lib/url-state"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -63,8 +84,6 @@ interface PendingChange {
 // Main Component
 // ────────────────────────────────────────────────────────────────────────────
 
-const STUDENTS_PER_PAGE = 24
-
 interface StudentAccessTabProps {
   initialStudentId?: string
 }
@@ -85,7 +104,8 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
   const [searchQuery, setSearchQuery] = useState("")
 
   // Pagination
-  const [studentPage, setStudentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [perPage, setPerPage] = useState<PerPageOption>(20)
 
   // Pending changes (save/cancel pattern)
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
@@ -341,6 +361,18 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
     }
   }
 
+  // ── Helper: get trail slug by trailId ──────────────────────────────────
+
+  const getTrailSlug = (trailId: string, studentId: string): string | null => {
+    const fromTrails = trails.find((t) => t.id === trailId)
+    if (fromTrails) return fromTrails.slug
+    const fromAccess = access.find(
+      (a) => a.studentId === studentId && a.trailId === trailId
+    )?.trail
+    if (fromAccess) return fromAccess.slug
+    return null
+  }
+
   // ── Filtered & paginated students ─────────────────────────────────────
 
   const filteredStudents = searchQuery
@@ -355,11 +387,13 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       )
     : students
 
+  const totalPages = Math.ceil(filteredStudents.length / perPage)
+  const safePage = Math.min(currentPage, Math.max(1, totalPages))
+
   const paginatedStudents = filteredStudents.slice(
-    0,
-    studentPage * STUDENTS_PER_PAGE
+    (safePage - 1) * perPage,
+    safePage * perPage
   )
-  const hasMoreStudents = filteredStudents.length > paginatedStudents.length
 
   // ── Get available trails for a student dropdown ────────────────────────
 
@@ -379,6 +413,50 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       )
   }
 
+  // ── Trail badge with dropdown menu (shared between grid & list) ────────
+
+  const renderActiveTrailBadge = (trailId: string, studentId: string) => {
+    const trailInfo =
+      access.find(
+        (a) => a.studentId === studentId && a.trailId === trailId
+      )?.trail ||
+      trails.find((t) => t.id === trailId)
+    const slug = getTrailSlug(trailId, studentId)
+
+    return (
+      <DropdownMenu key={trailId}>
+        <Badge variant="secondary" className="text-xs gap-1 pr-1 cursor-pointer">
+          {trailInfo?.title || trailId}
+          <DropdownMenuTrigger asChild>
+            <button className="ml-0.5 p-0.5 rounded hover:bg-gray-300/50">
+              <MoreVertical className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+        </Badge>
+        <DropdownMenuContent align="start" sideOffset={4}>
+          {slug && (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href={`/trails/${slug}`} target="_blank">
+                  <ArrowUpRight className="h-4 w-4 mr-2" />
+                  Перейти к трейлу
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => removeTrailFromStudent(studentId, trailId)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Удалить
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -390,7 +468,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
   }
 
   return (
-    <div>
+    <div className="pb-64">
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
           <AlertCircle className="h-5 w-5" />
@@ -404,7 +482,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       {/* How it works */}
       <HowItWorks legend={adminPageLegends.studentAccess} className="mb-6" />
 
-      {/* ── Header: search, view toggle, refresh ───────────────────── */}
+      {/* ── Header: search, view toggle, per-page, refresh ───────── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -413,7 +491,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
-              setStudentPage(1)
+              setCurrentPage(1)
             }}
             placeholder="Поиск по имени, email или Telegram..."
             className="w-full p-2 pl-10 border rounded-lg text-sm"
@@ -422,7 +500,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
             <button
               onClick={() => {
                 setSearchQuery("")
-                setStudentPage(1)
+                setCurrentPage(1)
               }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
@@ -432,6 +510,27 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Per-page select */}
+          <Select
+            value={String(perPage)}
+            onValueChange={(v) => {
+              setPerPage(parseInt(v, 10) as PerPageOption)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-[130px] h-9 text-xs">
+              <List className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PER_PAGE_OPTIONS.map((option) => (
+                <SelectItem key={option} value={String(option)}>
+                  {option} на стр.
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {/* View toggle */}
           <div className="flex border rounded-lg overflow-hidden">
             <button
@@ -534,6 +633,13 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                       <span className="font-medium text-gray-900 truncate">
                         {student.name}
                       </span>
+                      <Link
+                        href={`/teacher/students/${student.id}`}
+                        className="ml-auto shrink-0 p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                        title="На страницу студента"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Mail className="h-3 w-3 shrink-0" />
@@ -552,33 +658,9 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                   {/* Trail tags */}
                   <div className="flex flex-wrap gap-1.5 mb-3 min-h-[28px]">
                     {/* Active trails */}
-                    {trailState.active.map((trailId) => {
-                      const trailInfo =
-                        access.find(
-                          (a) =>
-                            a.studentId === student.id &&
-                            a.trailId === trailId
-                        )?.trail ||
-                        trails.find((t) => t.id === trailId)
-
-                      return (
-                        <Badge
-                          key={trailId}
-                          variant="secondary"
-                          className="text-xs gap-1 pr-1"
-                        >
-                          {trailInfo?.title || trailId}
-                          <button
-                            onClick={() =>
-                              removeTrailFromStudent(student.id, trailId)
-                            }
-                            className="ml-0.5 p-0.5 rounded hover:bg-gray-300/50"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      )
-                    })}
+                    {trailState.active.map((trailId) =>
+                      renderActiveTrailBadge(trailId, student.id)
+                    )}
 
                     {/* Pending adds */}
                     {trailState.pendingAdd.map((change) => (
@@ -726,12 +808,19 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                     className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 hover:bg-gray-50"
                   >
                     {/* Student info */}
-                    <div className="min-w-0 sm:w-64 shrink-0">
+                    <div className="min-w-0 sm:w-72 shrink-0">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-gray-400 shrink-0" />
                         <span className="font-medium text-sm text-gray-900 truncate">
                           {student.name}
                         </span>
+                        <Link
+                          href={`/teacher/students/${student.id}`}
+                          className="shrink-0 p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition-colors"
+                          title="На страницу студента"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
                       </div>
                       <div className="text-xs text-gray-500 ml-6 truncate">
                         {student.email}
@@ -743,33 +832,9 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
 
                     {/* Trail tags */}
                     <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
-                      {trailState.active.map((trailId) => {
-                        const trailInfo =
-                          access.find(
-                            (a) =>
-                              a.studentId === student.id &&
-                              a.trailId === trailId
-                          )?.trail ||
-                          trails.find((t) => t.id === trailId)
-
-                        return (
-                          <Badge
-                            key={trailId}
-                            variant="secondary"
-                            className="text-xs gap-1 pr-1"
-                          >
-                            {trailInfo?.title || trailId}
-                            <button
-                              onClick={() =>
-                                removeTrailFromStudent(student.id, trailId)
-                              }
-                              className="ml-0.5 p-0.5 rounded hover:bg-gray-300/50"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        )
-                      })}
+                      {trailState.active.map((trailId) =>
+                        renderActiveTrailBadge(trailId, student.id)
+                      )}
 
                       {trailState.pendingAdd.map((change) => (
                         <Badge
@@ -824,7 +889,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
 
                     {/* Assign button */}
                     {assignableTrails.length > 0 && (
-                      <div className="relative shrink-0" ref={activeDropdownId === student.id ? dropdownRef : undefined}>
+                      <div className="relative sm:w-48 shrink-0" ref={activeDropdownId === student.id ? dropdownRef : undefined}>
                         <Button
                           variant="outline"
                           size="sm"
@@ -836,11 +901,13 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                             )
                             setTrailDropdownSearch("")
                           }}
-                          className="text-xs whitespace-nowrap"
+                          className="w-full text-xs whitespace-nowrap justify-between"
                         >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Назначить
-                          <ChevronDown className="h-3 w-3 ml-1" />
+                          <span className="flex items-center gap-1">
+                            <Plus className="h-3 w-3" />
+                            Назначить трейл
+                          </span>
+                          <ChevronDown className="h-3 w-3" />
                         </Button>
 
                         {activeDropdownId === student.id && (
@@ -901,15 +968,47 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
         </Card>
       )}
 
-      {/* ── Load more ──────────────────────────────────────────────── */}
-      {hasMoreStudents && (
-        <div className="mt-6 text-center">
-          <Button
-            variant="outline"
-            onClick={() => setStudentPage((p) => p + 1)}
-          >
-            Показать ещё ({filteredStudents.length - paginatedStudents.length})
-          </Button>
+      {/* ── Pagination ───────────────────────────────────────────────── */}
+      {filteredStudents.length > perPage && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-gray-500">
+            Показано {(safePage - 1) * perPage + 1}–
+            {Math.min(safePage * perPage, filteredStudents.length)} из{" "}
+            {filteredStudents.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+              disabled={safePage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Назад
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={page === safePage ? "default" : "outline"}
+                  size="sm"
+                  className="w-8 h-8 p-0"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+              disabled={safePage === totalPages}
+            >
+              Вперёд
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
