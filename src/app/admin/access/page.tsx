@@ -32,6 +32,7 @@ function AccessPageContent() {
     : "teachers"
 
   const isAdmin = session?.user?.role === "ADMIN"
+  const initialStudentId = useRef(searchParams.get("studentId"))
   const studentIdCleaned = useRef(false)
 
   // Clean studentId from URL after initial mount so it doesn't persist on refresh/save
@@ -137,7 +138,7 @@ function AccessPageContent() {
           </TabsContent>
 
           <TabsContent value="student-access">
-            <StudentAccessTab initialStudentId={searchParams.get("studentId") || undefined} />
+            <StudentAccessTab initialStudentId={initialStudentId.current || undefined} />
           </TabsContent>
 
           <TabsContent value="trail-settings">
