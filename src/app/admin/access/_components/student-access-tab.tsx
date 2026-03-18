@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import {
   RefreshCw,
@@ -38,9 +37,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  MoreVertical,
-  Trash2,
   ArrowUpRight,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
 import { HowItWorks } from "@/components/ui/how-it-works"
 import { adminPageLegends } from "@/lib/admin-help-texts"
@@ -55,6 +54,7 @@ interface Student {
   name: string
   email: string
   telegramUsername: string | null
+  createdAt: string
 }
 
 interface Trail {
@@ -111,10 +111,15 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [saving, setSaving] = useState(false)
 
+  // Sorting
+  const [sortField, setSortField] = useState<"name" | "trails" | "createdAt">("name")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
   // Trail assignment dropdown
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null)
   const [trailDropdownSearch, setTrailDropdownSearch] = useState("")
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const initialStudentApplied = useRef(false)
 
   // ── Fetch data ────────────────────────────────────────────────────────────
 
@@ -133,11 +138,12 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       setStudents(
         allUsers
           .filter((u: { role: string }) => u.role === "STUDENT")
-          .map((u: { id: string; name: string; email: string; telegramUsername?: string | null }) => ({
+          .map((u: { id: string; name: string; email: string; telegramUsername?: string | null; createdAt?: string }) => ({
             id: u.id,
             name: u.name,
             email: u.email,
             telegramUsername: u.telegramUsername ?? null,
+            createdAt: u.createdAt ?? "",
           }))
       )
 
@@ -165,13 +171,14 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
     fetchData()
   }, [fetchData])
 
-  // Auto-focus on student if initialStudentId provided
+  // Auto-focus on student if initialStudentId provided (only once)
   useEffect(() => {
-    if (initialStudentId && students.length > 0) {
+    if (initialStudentId && students.length > 0 && !initialStudentApplied.current) {
       const student = students.find((s) => s.id === initialStudentId)
       if (student) {
         setSearchQuery(student.name)
       }
+      initialStudentApplied.current = true
     }
   }, [initialStudentId, students])
 
@@ -373,7 +380,23 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
     return null
   }
 
-  // ── Filtered & paginated students ─────────────────────────────────────
+  // ── Sort toggle ──────────────────────────────────────────────────────
+
+  const toggleSort = (field: "name" | "trails" | "createdAt") => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortField(field)
+      setSortDirection("asc")
+    }
+  }
+
+  const getStudentTrailCount = useCallback(
+    (studentId: string) => access.filter((a) => a.studentId === studentId).length,
+    [access]
+  )
+
+  // ── Filtered, sorted & paginated students ───────────────────────────
 
   const filteredStudents = searchQuery
     ? students.filter(
@@ -387,10 +410,28 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       )
     : students
 
-  const totalPages = Math.ceil(filteredStudents.length / perPage)
+  const sortedStudents = useMemo(() => {
+    return [...filteredStudents].sort((a, b) => {
+      let cmp = 0
+      switch (sortField) {
+        case "name":
+          cmp = a.name.localeCompare(b.name, "ru")
+          break
+        case "trails":
+          cmp = getStudentTrailCount(a.id) - getStudentTrailCount(b.id)
+          break
+        case "createdAt":
+          cmp = a.createdAt.localeCompare(b.createdAt)
+          break
+      }
+      return sortDirection === "asc" ? cmp : -cmp
+    })
+  }, [filteredStudents, sortField, sortDirection, getStudentTrailCount])
+
+  const totalPages = Math.ceil(sortedStudents.length / perPage)
   const safePage = Math.min(currentPage, Math.max(1, totalPages))
 
-  const paginatedStudents = filteredStudents.slice(
+  const paginatedStudents = sortedStudents.slice(
     (safePage - 1) * perPage,
     safePage * perPage
   )
@@ -424,36 +465,33 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
     const slug = getTrailSlug(trailId, studentId)
 
     return (
-      <DropdownMenu key={trailId}>
-        <Badge variant="secondary" className="text-xs gap-1 pr-1 cursor-pointer">
-          {trailInfo?.title || trailId}
-          <DropdownMenuTrigger asChild>
-            <button className="ml-0.5 p-0.5 rounded hover:bg-gray-300/50">
-              <MoreVertical className="h-3 w-3" />
-            </button>
-          </DropdownMenuTrigger>
-        </Badge>
-        <DropdownMenuContent align="start" sideOffset={4}>
-          {slug && (
-            <>
+      <Badge key={trailId} variant="secondary" className="text-xs gap-1 pr-1">
+        {slug ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="cursor-pointer hover:underline">
+                {trailInfo?.title || trailId}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" sideOffset={4}>
               <DropdownMenuItem asChild>
                 <Link href={`/trails/${slug}`} target="_blank">
                   <ArrowUpRight className="h-4 w-4 mr-2" />
                   Перейти к трейлу
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
-          )}
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => removeTrailFromStudent(studentId, trailId)}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Удалить
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span>{trailInfo?.title || trailId}</span>
+        )}
+        <button
+          onClick={() => removeTrailFromStudent(studentId, trailId)}
+          className="ml-0.5 p-0.5 rounded hover:bg-gray-300/50"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </Badge>
     )
   }
 
@@ -509,7 +547,33 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Sort buttons */}
+          <div className="flex items-center gap-1">
+            {([
+              { field: "name" as const, label: "Имя" },
+              { field: "trails" as const, label: "Трейлы" },
+              { field: "createdAt" as const, label: "Дата" },
+            ]).map(({ field, label }) => (
+              <button
+                key={field}
+                onClick={() => toggleSort(field)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs transition-colors ${
+                  sortField === field
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "bg-white text-gray-500 hover:bg-gray-50 border-gray-200"
+                }`}
+              >
+                {label}
+                {sortField === field && (
+                  sortDirection === "asc"
+                    ? <ArrowUp className="h-3 w-3" />
+                    : <ArrowDown className="h-3 w-3" />
+                )}
+              </button>
+            ))}
+          </div>
+
           {/* Per-page select */}
           <Select
             value={String(perPage)}
@@ -518,7 +582,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
               setCurrentPage(1)
             }}
           >
-            <SelectTrigger className="w-[130px] h-9 text-xs">
+            <SelectTrigger className="w-[150px] h-9 text-xs">
               <List className="h-3.5 w-3.5 mr-1.5" />
               <SelectValue />
             </SelectTrigger>
@@ -610,7 +674,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       </div>
 
       {/* ── Student cards ───────────────────────────────────────────── */}
-      {filteredStudents.length === 0 ? (
+      {sortedStudents.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-gray-500">
             <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -969,12 +1033,12 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       )}
 
       {/* ── Pagination ───────────────────────────────────────────────── */}
-      {filteredStudents.length > perPage && (
+      {sortedStudents.length > perPage && (
         <div className="flex items-center justify-between mt-6">
           <p className="text-sm text-gray-500">
             Показано {(safePage - 1) * perPage + 1}–
-            {Math.min(safePage * perPage, filteredStudents.length)} из{" "}
-            {filteredStudents.length}
+            {Math.min(safePage * perPage, sortedStudents.length)} из{" "}
+            {sortedStudents.length}
           </p>
           <div className="flex items-center gap-2">
             <Button
