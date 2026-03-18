@@ -71,6 +71,7 @@ export async function GET() {
         role: true,
         totalXP: true,
         createdAt: true,
+        telegramUsername: true,
         _count: {
           select: {
             enrollments: true,
