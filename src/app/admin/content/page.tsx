@@ -963,7 +963,7 @@ export default function AdminContentPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline" size="sm">
-                <Link href="/admin/access?tab=student-access">
+                <Link href="/admin/access?tab=trail-settings">
                   <Lock className="h-4 w-4 mr-2" />
                   Доступ
                 </Link>

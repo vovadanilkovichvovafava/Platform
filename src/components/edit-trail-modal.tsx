@@ -251,7 +251,7 @@ export function EditTrailModal({
 
       if (mode === "create") {
         // Include access settings only in create mode
-        // In edit mode, access is managed via admin/access?tab=student-access
+        // In edit mode, access is managed via admin/access?tab=trail-settings
         payload.isPublished = form.isPublished
         payload.isRestricted = form.isRestricted
 
@@ -610,7 +610,7 @@ export function EditTrailModal({
               <p className="text-xs text-blue-700">
                 Публикация, видимость и защита паролем управляются в{" "}
                 <a
-                  href="/admin/access?tab=student-access"
+                  href="/admin/access?tab=trail-settings"
                   className="underline font-medium hover:text-blue-900"
                   target="_blank"
                   rel="noopener noreferrer"
