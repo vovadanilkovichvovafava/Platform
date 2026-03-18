@@ -116,7 +116,7 @@ function AccessPageContent() {
           </TabsContent>
 
           <TabsContent value="student-access">
-            <StudentAccessTab />
+            <StudentAccessTab initialStudentId={searchParams.get("studentId") || undefined} />
           </TabsContent>
 
           <TabsContent value="admin-access">

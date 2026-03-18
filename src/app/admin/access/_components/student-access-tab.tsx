@@ -26,6 +26,8 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldCheck,
+  Filter,
+  UserCheck,
 } from "lucide-react"
 import { AdminTrailPasswordModal } from "@/components/admin-trail-password-modal"
 import { InfoHint } from "@/components/ui/info-hint"
@@ -300,7 +302,11 @@ function TrailPasswordModal({
 
 const STUDENTS_PER_PAGE = 20
 
-export function StudentAccessTab() {
+interface StudentAccessTabProps {
+  initialStudentId?: string
+}
+
+export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
   const { data: session } = useSession()
   const { showToast } = useToast()
 
@@ -337,6 +343,13 @@ export function StudentAccessTab() {
 
   // Expanded trail sections
   const [expandedTrails, setExpandedTrails] = useState<Set<string>>(new Set())
+
+  // Student filter (for filtering access list by student)
+  const [filterStudentId, setFilterStudentId] = useState<string>(initialStudentId || "")
+  const [filterStudentSearch, setFilterStudentSearch] = useState("")
+  const [showFilterStudentDropdown, setShowFilterStudentDropdown] = useState(false)
+  const [filterStudentPage, setFilterStudentPage] = useState(1)
+  const filterStudentRef = useRef<HTMLDivElement>(null)
 
   // Password verification for expanding locked trails
   const [verifiedTrails, setVerifiedTrails] = useState<Set<string>>(new Set())
@@ -385,12 +398,18 @@ export function StudentAccessTab() {
 
   const restrictedTrails = trails.filter((t) => t.isRestricted)
 
-  const accessByTrail = restrictedTrails.map((trail) => ({
-    trail,
-    students: access
-      .filter((a) => a.trailId === trail.id)
-      .map((a) => a.student),
-  }))
+  const accessByTrail = restrictedTrails
+    .map((trail) => ({
+      trail,
+      students: access
+        .filter((a) => a.trailId === trail.id)
+        .map((a) => a.student),
+    }))
+    .filter((item) =>
+      filterStudentId
+        ? item.students.some((s) => s.id === filterStudentId)
+        : true
+    )
 
   // ── Click outside handlers ────────────────────────────────────────────────
 
@@ -407,6 +426,12 @@ export function StudentAccessTab() {
         !trailSearchRef.current.contains(event.target as Node)
       ) {
         setShowTrailDropdown(false)
+      }
+      if (
+        filterStudentRef.current &&
+        !filterStudentRef.current.contains(event.target as Node)
+      ) {
+        setShowFilterStudentDropdown(false)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -446,6 +471,16 @@ export function StudentAccessTab() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Auto-populate filter student search text when data loads with initialStudentId
+  useEffect(() => {
+    if (initialStudentId && students.length > 0 && !filterStudentSearch) {
+      const student = students.find((s) => s.id === initialStudentId)
+      if (student) {
+        setFilterStudentSearch(student.name)
+      }
+    }
+  }, [initialStudentId, students, filterStudentSearch])
 
   // ── Trail status update ───────────────────────────────────────────────────
 
@@ -664,6 +699,112 @@ export function StudentAccessTab() {
 
       {/* How it works legend */}
       <HowItWorks legend={adminPageLegends.studentAccess} className="mb-6" />
+
+      {/* ── Student Filter ─────────────────────────────────────────── */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Фильтр по студенту
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row md:items-end gap-4">
+            <div className="flex-1" ref={filterStudentRef}>
+              <label className="text-sm font-medium text-gray-700 block mb-2">
+                Студент
+              </label>
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={filterStudentSearch}
+                    onChange={(e) => {
+                      setFilterStudentSearch(e.target.value)
+                      setShowFilterStudentDropdown(true)
+                      setFilterStudentPage(1)
+                      if (!e.target.value) setFilterStudentId("")
+                    }}
+                    onFocus={() => setShowFilterStudentDropdown(true)}
+                    placeholder="Найти студента для фильтрации..."
+                    className="w-full p-2 pl-10 border rounded-lg"
+                  />
+                </div>
+                {showFilterStudentDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
+                    {(() => {
+                      const filtered = filterStudentSearch
+                        ? students.filter(
+                            (s) =>
+                              s.email.toLowerCase().includes(filterStudentSearch.toLowerCase()) ||
+                              s.name.toLowerCase().includes(filterStudentSearch.toLowerCase())
+                          )
+                        : students
+                      const paginated = filtered.slice(0, filterStudentPage * STUDENTS_PER_PAGE)
+                      const hasMore = filtered.length > paginated.length
+                      return paginated.length === 0 ? (
+                        <div className="p-3 text-gray-500 text-sm">
+                          {filterStudentSearch ? "Не найдено" : "Нет студентов"}
+                        </div>
+                      ) : (
+                        <>
+                          {paginated.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setFilterStudentId(s.id)
+                                setFilterStudentSearch(s.name)
+                                setShowFilterStudentDropdown(false)
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                                filterStudentId === s.id ? "bg-emerald-50" : ""
+                              }`}
+                            >
+                              <div className="font-medium text-sm">{s.name}</div>
+                              <div className="text-xs text-gray-500">{s.email}</div>
+                            </button>
+                          ))}
+                          {hasMore && (
+                            <button
+                              type="button"
+                              onClick={() => setFilterStudentPage((p) => p + 1)}
+                              className="w-full text-center px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border-t"
+                            >
+                              Показать ещё ({filtered.length - paginated.length})
+                            </button>
+                          )}
+                        </>
+                      )
+                    })()}
+                  </div>
+                )}
+              </div>
+              {filterStudentId && (
+                <div className="mt-2 text-sm text-emerald-600 flex items-center gap-1">
+                  <UserCheck className="h-3 w-3" />
+                  Фильтр активен: {students.find((s) => s.id === filterStudentId)?.name}
+                </div>
+              )}
+            </div>
+            {filterStudentId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFilterStudentId("")
+                  setFilterStudentSearch("")
+                }}
+                className="shrink-0"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Сбросить фильтр
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ── Trail Status Card ────────────────────────────────────────── */}
       <Card className="mb-8">
@@ -1028,8 +1169,13 @@ export function StudentAccessTab() {
 
       {/* ── Access List by Trail ──────────────────────────────────────── */}
       <div className="space-y-6">
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           Ограниченные Trails и доступ студентов
+          {filterStudentId && (
+            <Badge className="bg-emerald-100 text-emerald-700 border-0">
+              Фильтр: {students.find((s) => s.id === filterStudentId)?.name}
+            </Badge>
+          )}
         </h2>
 
         {restrictedTrails.length === 0 ? (
@@ -1068,26 +1214,39 @@ export function StudentAccessTab() {
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {trailStudents.map((student) => (
-                      <div
-                        key={student.id}
-                        className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg"
-                      >
-                        <Users className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {student.name}
-                          <span className="text-gray-400 ml-1">
-                            ({student.email})
-                          </span>
-                        </span>
-                        <button
-                          onClick={() => revokeAccess(student.id, trail.id)}
-                          className="ml-1 p-1 hover:bg-gray-200 rounded"
+                    {trailStudents.map((student) => {
+                      const isFiltered = filterStudentId === student.id
+                      return (
+                        <div
+                          key={student.id}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                            isFiltered
+                              ? "bg-emerald-100 ring-2 ring-emerald-400"
+                              : "bg-gray-100"
+                          }`}
                         >
-                          <X className="h-3 w-3 text-gray-500" />
-                        </button>
-                      </div>
-                    ))}
+                          {isFiltered ? (
+                            <UserCheck className="h-4 w-4 text-emerald-600" />
+                          ) : (
+                            <Users className="h-4 w-4 text-gray-500" />
+                          )}
+                          <span className={`text-sm ${isFiltered ? "font-medium text-emerald-800" : ""}`}>
+                            {student.name}
+                            <span className={`ml-1 ${isFiltered ? "text-emerald-600" : "text-gray-400"}`}>
+                              ({student.email})
+                            </span>
+                          </span>
+                          <button
+                            onClick={() => revokeAccess(student.id, trail.id)}
+                            className={`ml-1 p-1 rounded ${
+                              isFiltered ? "hover:bg-emerald-200" : "hover:bg-gray-200"
+                            }`}
+                          >
+                            <X className={`h-3 w-3 ${isFiltered ? "text-emerald-600" : "text-gray-500"}`} />
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </CardContent>

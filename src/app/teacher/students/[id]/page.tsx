@@ -4,7 +4,7 @@ import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { pluralizeRu } from "@/lib/utils"
-import { isPrivileged, isHR, isAdmin, getTeacherAllowedTrailIds, getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, isAdmin, isAnyAdmin, getTeacherAllowedTrailIds, getAdminAllowedTrailIds } from "@/lib/admin-access"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -24,6 +24,7 @@ import {
   ExternalLink,
   CalendarDays,
   AlertCircle,
+  Shield,
 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -250,6 +251,15 @@ export default async function StudentDetailPage({ params }: Props) {
                     {student.name}
                   </h1>
                   <div className="flex items-center gap-2">
+                    {isAnyAdmin(session.user.role) && (
+                      <Link
+                        href={`/admin/access?tab=student-access&studentId=${student.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                      >
+                        <Shield className="h-4 w-4" />
+                        Изменить доступы
+                      </Link>
+                    )}
                     <Link
                       href={`/dashboard/${student.id}`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
