@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban, ChevronDown, X, Map, Tag } from "lucide-react"
+import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban, ChevronDown, X, Map, Tag, Search, Pencil } from "lucide-react"
 import Link from "next/link"
 import { TAG_COLOR_CLASSES } from "@/components/student-tags-badges"
+import { COLOR_OPTIONS } from "@/components/tag-assign-dropdown"
 
 interface Trail {
   id: string
@@ -95,6 +96,14 @@ export default function AdminInvitesPage() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false)
   const tagDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Tag CRUD state
+  const [tagSearch, setTagSearch] = useState("")
+  const [newTagColor, setNewTagColor] = useState("gray")
+  const [editingTagId, setEditingTagId] = useState<string | null>(null)
+  const [editTagName, setEditTagName] = useState("")
+  const [editTagColor, setEditTagColor] = useState("gray")
+  const [confirmDeleteTagId, setConfirmDeleteTagId] = useState<string | null>(null)
 
   // Role selection
   const [selectedRole, setSelectedRole] = useState("STUDENT")
@@ -262,6 +271,83 @@ export default function AdminInvitesPage() {
   // Remove tag from selection
   const removeTag = (tagId: string) => {
     setSelectedTagIds((prev) => prev.filter((id) => id !== tagId))
+  }
+
+  // Create new tag
+  const handleCreateTag = async (name: string, color: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setAvailableTags((prev) => [...prev, { id: data.id, name: data.name, color: data.color }])
+        setTagSearch("")
+        setNewTagColor("gray")
+        showToast("Тег создан", "success")
+      } else if (data.tag) {
+        showToast("Тег с таким именем уже существует", "error")
+      } else {
+        showToast(data.error || "Ошибка создания тега", "error")
+      }
+    } catch {
+      showToast("Ошибка создания тега", "error")
+    }
+  }
+
+  // Edit tag
+  const handleEditTag = async () => {
+    if (!editingTagId || !editTagName.trim()) return
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingTagId, name: editTagName.trim(), color: editTagColor }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || "Ошибка редактирования тега", "error")
+        return
+      }
+      const updated = await res.json()
+      setAvailableTags((prev) => prev.map((t) => (t.id === editingTagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setEditingTagId(null)
+      showToast("Тег обновлён", "success")
+    } catch {
+      showToast("Ошибка редактирования тега", "error")
+    }
+  }
+
+  // Delete tag
+  const handleDeleteTag = async (tagId: string) => {
+    try {
+      const res = await fetch(`/api/admin/student-tags?id=${tagId}`, { method: "DELETE" })
+      if (!res.ok) {
+        showToast("Ошибка удаления тега", "error")
+        return
+      }
+      setAvailableTags((prev) => prev.filter((t) => t.id !== tagId))
+      setSelectedTagIds((prev) => prev.filter((id) => id !== tagId))
+      setConfirmDeleteTagId(null)
+      showToast("Тег удалён", "success")
+    } catch {
+      showToast("Ошибка удаления тега", "error")
+    }
+  }
+
+  const startEditTag = (tag: TagOption) => {
+    setEditingTagId(tag.id)
+    setEditTagName(tag.name)
+    setEditTagColor(tag.color)
+    setConfirmDeleteTagId(null)
+  }
+
+  const cancelEditTag = () => {
+    setEditingTagId(null)
+    setEditTagName("")
+    setEditTagColor("gray")
   }
 
   useEffect(() => {
@@ -688,87 +774,257 @@ export default function AdminInvitesPage() {
               </div>
             )}
 
-            {/* Tag Multi-Select */}
-            {availableTags.length > 0 && (
-              <div className="space-y-2">
-                <Label>Теги для студента (опционально)</Label>
-                <div ref={tagDropdownRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-slate-400" />
-                      {selectedTagIds.length === 0
-                        ? "Выберите теги..."
-                        : `Выбрано: ${selectedTagIds.length}`}
-                    </span>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isTagDropdownOpen ? "rotate-180" : ""}`} />
-                  </button>
+            {/* Tag Multi-Select with CRUD */}
+            <div className="space-y-2">
+              <Label>Теги для студента (опционально)</Label>
+              <div ref={tagDropdownRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTagDropdownOpen(!isTagDropdownOpen)
+                    setTagSearch("")
+                    setEditingTagId(null)
+                    setConfirmDeleteTagId(null)
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
+                  <span className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-slate-400" />
+                    {selectedTagIds.length === 0
+                      ? "Выберите теги..."
+                      : `Выбрано: ${selectedTagIds.length}`}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isTagDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
 
-                  {isTagDropdownOpen && (
-                    <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                      {availableTags.map((tag) => {
-                        const isSelected = selectedTagIds.includes(tag.id)
-                        return (
-                          <label
-                            key={tag.id}
-                            className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                              isSelected ? "bg-orange-50" : "hover:bg-slate-50"
-                            }`}
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleTagSelection(tag.id)}
-                            />
-                            <span className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${
-                              tag.color === "blue" ? "bg-blue-400" :
-                              tag.color === "green" ? "bg-green-400" :
-                              tag.color === "red" ? "bg-red-400" :
-                              tag.color === "purple" ? "bg-purple-400" :
-                              tag.color === "amber" ? "bg-amber-400" :
-                              tag.color === "pink" ? "bg-pink-400" :
-                              "bg-gray-400"
-                            }`} />
-                            <span className="text-sm text-slate-700 truncate">{tag.name}</span>
-                          </label>
-                        )
-                      })}
+                {isTagDropdownOpen && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-80 overflow-auto">
+                    {/* Search */}
+                    <div className="p-2 border-b sticky top-0 bg-white z-10">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                        <input
+                          type="text"
+                          value={tagSearch}
+                          onChange={(e) => setTagSearch(e.target.value)}
+                          placeholder="Поиск или создать тег..."
+                          className="w-full py-1 pl-7 pr-2 text-xs border rounded"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Selected tags chips */}
-                {selectedTagIds.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedTagIds.map((tagId) => {
-                      const tag = availableTags.find((t) => t.id === tagId)
-                      if (!tag) return null
-                      return (
-                        <span
-                          key={tagId}
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border ${TAG_COLOR_CLASSES[tag.color] || TAG_COLOR_CLASSES.gray}`}
-                        >
-                          {tag.name}
-                          <button
-                            type="button"
-                            onClick={() => removeTag(tagId)}
-                            className="hover:opacity-70 transition-opacity"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
+                    {/* Tags list */}
+                    {(() => {
+                      const filtered = availableTags.filter((t) =>
+                        tagSearch ? t.name.toLowerCase().includes(tagSearch.toLowerCase()) : true
                       )
-                    })}
+                      const hasExactMatch = availableTags.some(
+                        (t) => t.name.toLowerCase() === tagSearch.trim().toLowerCase()
+                      )
+                      const showCreate = tagSearch.trim().length > 0 && !hasExactMatch
+
+                      return (
+                        <>
+                          {filtered.length === 0 && !showCreate ? (
+                            <div className="p-3 text-gray-500 text-xs text-center">
+                              {tagSearch ? "Не найдено" : "Нет тегов"}
+                            </div>
+                          ) : (
+                            filtered.map((tag) => {
+                              // Edit mode
+                              if (editingTagId === tag.id) {
+                                return (
+                                  <div key={tag.id} className="px-3 py-2 border-b last:border-b-0 bg-gray-50">
+                                    <input
+                                      type="text"
+                                      value={editTagName}
+                                      onChange={(e) => setEditTagName(e.target.value)}
+                                      className="w-full py-1 px-2 text-xs border rounded mb-1.5"
+                                      autoFocus
+                                      onClick={(e) => e.stopPropagation()}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleEditTag()
+                                        if (e.key === "Escape") cancelEditTag()
+                                      }}
+                                    />
+                                    <div className="flex items-center gap-1 mb-1.5">
+                                      {COLOR_OPTIONS.map((c) => (
+                                        <button
+                                          key={c.value}
+                                          type="button"
+                                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditTagColor(c.value) }}
+                                          className={`w-4 h-4 rounded-full ${c.dot} ${
+                                            editTagColor === c.value
+                                              ? "ring-2 ring-offset-1 ring-gray-400"
+                                              : "hover:ring-1 hover:ring-offset-1 hover:ring-gray-300"
+                                          }`}
+                                          title={c.label}
+                                        />
+                                      ))}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditTag() }}
+                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                                      >
+                                        <Check className="h-3 w-3" /> Сохранить
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancelEditTag() }}
+                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                      >
+                                        <X className="h-3 w-3" /> Отмена
+                                      </button>
+                                    </div>
+                                  </div>
+                                )
+                              }
+
+                              // Confirm delete mode
+                              if (confirmDeleteTagId === tag.id) {
+                                return (
+                                  <div key={tag.id} className="px-3 py-2 border-b last:border-b-0 bg-red-50">
+                                    <p className="text-xs text-red-700 mb-1.5">
+                                      Удалить тег &laquo;{tag.name}&raquo;? Он будет убран у всех студентов.
+                                    </p>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteTag(tag.id) }}
+                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                                      >
+                                        <Trash2 className="h-3 w-3" /> Удалить
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteTagId(null) }}
+                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                      >
+                                        Отмена
+                                      </button>
+                                    </div>
+                                  </div>
+                                )
+                              }
+
+                              // Normal tag row with checkbox + edit/delete
+                              const isSelected = selectedTagIds.includes(tag.id)
+                              return (
+                                <div
+                                  key={tag.id}
+                                  className={`flex items-center gap-2 px-3 py-2 border-b last:border-b-0 transition-colors ${
+                                    isSelected ? "bg-orange-50" : "hover:bg-slate-50"
+                                  }`}
+                                >
+                                  <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleTagSelection(tag.id)}
+                                    />
+                                    <span className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${
+                                      COLOR_OPTIONS.find((c) => c.value === tag.color)?.dot || "bg-gray-400"
+                                    }`} />
+                                    <span className="text-sm text-slate-700 truncate">{tag.name}</span>
+                                  </label>
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditTag(tag) }}
+                                      className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                                      title="Редактировать тег"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteTagId(tag.id); setEditingTagId(null) }}
+                                      className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500"
+                                      title="Удалить тег"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })
+                          )}
+
+                          {/* Create new tag */}
+                          {showCreate && (
+                            <div className="border-t">
+                              <div className="px-3 py-2">
+                                <p className="text-xs text-gray-500 mb-1.5">Создать новый тег:</p>
+                                <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                                  {COLOR_OPTIONS.map((c) => (
+                                    <button
+                                      key={c.value}
+                                      type="button"
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNewTagColor(c.value) }}
+                                      className={`w-5 h-5 rounded-full ${c.dot} ${
+                                        newTagColor === c.value
+                                          ? "ring-2 ring-offset-1 ring-gray-400"
+                                          : "hover:ring-1 hover:ring-offset-1 hover:ring-gray-300"
+                                      }`}
+                                      title={c.label}
+                                    />
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleCreateTag(tagSearch.trim(), newTagColor)
+                                  }}
+                                  className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium hover:opacity-80 transition-opacity border ${
+                                    TAG_COLOR_CLASSES[newTagColor] || TAG_COLOR_CLASSES.gray
+                                  }`}
+                                >
+                                  + Создать &ldquo;{tagSearch.trim()}&rdquo;
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                 )}
-
-                <p className="text-xs text-slate-500">
-                  Студент получит выбранные теги при регистрации по приглашению
-                </p>
               </div>
-            )}
+
+              {/* Selected tags chips */}
+              {selectedTagIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedTagIds.map((tagId) => {
+                    const tag = availableTags.find((t) => t.id === tagId)
+                    if (!tag) return null
+                    return (
+                      <span
+                        key={tagId}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border ${TAG_COLOR_CLASSES[tag.color] || TAG_COLOR_CLASSES.gray}`}
+                      >
+                        {tag.name}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tagId)}
+                          className="hover:opacity-70 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+
+              <p className="text-xs text-slate-500">
+                Студент получит выбранные теги при регистрации по приглашению
+              </p>
+            </div>
 
             <Button type="submit" disabled={isCreating || hasErrors} className="bg-orange-500 hover:bg-orange-600">
               {isCreating ? (
