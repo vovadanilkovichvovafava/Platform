@@ -21,6 +21,8 @@ import {
   ArrowLeft,
 } from "lucide-react"
 import Link from "next/link"
+import { StudentTagsBadges } from "@/components/student-tags-badges"
+import { isPrivileged, isHR } from "@/lib/admin-access"
 
 function getRank(xp: number) {
   if (xp >= 1000) return { name: "Master", color: "text-purple-600", bg: "bg-purple-100" }
@@ -132,6 +134,18 @@ export default async function PublicDashboardPage({ params }: PageProps) {
     where: leaderboardWhereClause,
   })
   const leaderboardRank = higherRanked + 1
+
+  // Fetch student tags (only visible to privileged users and HR)
+  const viewerIsPrivileged = session && (isPrivileged(session.user.role) || isHR(session.user.role))
+  const studentTags = viewerIsPrivileged
+    ? (await prisma.studentTagAssignment.findMany({
+        where: { studentId: userId },
+        select: {
+          tag: { select: { id: true, name: true, color: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      })).map((a) => a.tag)
+    : []
 
   // Get user achievements
   const userAchievements = await prisma.userAchievement.findMany({
@@ -246,6 +260,12 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                     )}
                   </div>
                 </div>
+
+                {studentTags.length > 0 && (
+                  <div className="mb-4">
+                    <StudentTagsBadges tags={studentTags} maxVisible={4} />
+                  </div>
+                )}
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">

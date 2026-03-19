@@ -34,6 +34,15 @@ import {
   parsePageParam,
   loadFiltersFromStorage,
 } from "@/lib/url-state"
+import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
+import { TagAssignDropdown } from "@/components/tag-assign-dropdown"
+
+interface TagAssignment {
+  id: string
+  studentId: string
+  tagId: string
+  tag: TagInfo
+}
 
 type UserRole = "STUDENT" | "TEACHER" | "HR" | "CO_ADMIN" | "ADMIN"
 type RoleFilterValue = "ALL" | UserRole
@@ -92,6 +101,8 @@ function AdminUsersPageContent() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [grantingAchievementId, setGrantingAchievementId] = useState<string | null>(null)
+  const [allTags, setAllTags] = useState<TagInfo[]>([])
+  const [tagAssignments, setTagAssignments] = useState<TagAssignment[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState<RoleFilterValue>("ALL")
   const [perPage, setPerPage] = useState<PerPageOption>(10)
@@ -190,14 +201,104 @@ function AdminUsersPageContent() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const res = await fetch("/api/admin/users")
-      if (!res.ok) throw new Error("Failed to fetch")
-      const data = await res.json()
+      const [usersRes, tagsRes, tagAssignRes] = await Promise.all([
+        fetch("/api/admin/users"),
+        fetch("/api/admin/student-tags"),
+        fetch("/api/admin/student-tag-assignments"),
+      ])
+      if (!usersRes.ok) throw new Error("Failed to fetch")
+      const data = await usersRes.json()
       setUsers(data)
+
+      if (tagsRes.ok) {
+        const tagsData = await tagsRes.json()
+        setAllTags(tagsData.map((t: { id: string; name: string; color: string }) => ({ id: t.id, name: t.name, color: t.color })))
+      }
+      if (tagAssignRes.ok) {
+        const assignData = await tagAssignRes.json()
+        setTagAssignments(assignData)
+      }
     } catch {
       setError("Ошибка загрузки пользователей")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const getStudentTags = (studentId: string): TagInfo[] => {
+    return tagAssignments
+      .filter((a) => a.studentId === studentId)
+      .map((a) => a.tag)
+  }
+
+  const getStudentAssignedTagIds = (studentId: string): string[] => {
+    return tagAssignments
+      .filter((a) => a.studentId === studentId)
+      .map((a) => a.tagId)
+  }
+
+  const handleAssignTag = async (studentId: string, tagId: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tag-assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, tagId }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || "Ошибка", "error")
+        return
+      }
+      const assignment = await res.json()
+      setTagAssignments((prev) => [...prev, assignment])
+      showToast("Тег назначен", "success")
+    } catch {
+      showToast("Ошибка назначения тега", "error")
+    }
+  }
+
+  const handleRemoveTag = async (studentId: string, tagId: string) => {
+    try {
+      const res = await fetch(
+        `/api/admin/student-tag-assignments?studentId=${studentId}&tagId=${tagId}`,
+        { method: "DELETE" }
+      )
+      if (!res.ok) {
+        showToast("Ошибка удаления тега", "error")
+        return
+      }
+      setTagAssignments((prev) =>
+        prev.filter((a) => !(a.studentId === studentId && a.tagId === tagId))
+      )
+      showToast("Тег снят", "success")
+    } catch {
+      showToast("Ошибка удаления тега", "error")
+    }
+  }
+
+  const handleCreateAndAssignTag = async (studentId: string, name: string, color: string) => {
+    try {
+      const createRes = await fetch("/api/admin/student-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      })
+      const createData = await createRes.json()
+
+      let tagId: string
+      if (createRes.ok) {
+        tagId = createData.id
+        setAllTags((prev) => [...prev, { id: createData.id, name: createData.name, color: createData.color }])
+      } else if (createData.tag) {
+        tagId = createData.tag.id
+      } else {
+        showToast(createData.error || "Ошибка создания тега", "error")
+        return
+      }
+
+      await handleAssignTag(studentId, tagId)
+    } catch {
+      showToast("Ошибка создания тега", "error")
     }
   }
 
@@ -489,6 +590,16 @@ function AdminUsersPageContent() {
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-500">{user.email}</p>
+                          {/* Student tags */}
+                          {user.role === "STUDENT" && getStudentTags(user.id).length > 0 && (
+                            <div className="mt-1">
+                              <StudentTagsBadges
+                                tags={getStudentTags(user.id)}
+                                maxVisible={3}
+                                onRemove={(tagId) => handleRemoveTag(user.id, tagId)}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -524,6 +635,16 @@ function AdminUsersPageContent() {
                             {isAdmin && <option value="CO_ADMIN">Со-админ</option>}
                             {isAdmin && <option value="ADMIN">Админ</option>}
                           </select>
+                        )}
+
+                        {/* Tag assign dropdown (only for students) */}
+                        {user.role === "STUDENT" && (
+                          <TagAssignDropdown
+                            availableTags={allTags}
+                            assignedTagIds={getStudentAssignedTagIds(user.id)}
+                            onAssign={(tagId) => handleAssignTag(user.id, tagId)}
+                            onCreateAndAssign={(name, color) => handleCreateAndAssignTag(user.id, name, color)}
+                          />
                         )}
 
                         {/* Grant random achievement button */}

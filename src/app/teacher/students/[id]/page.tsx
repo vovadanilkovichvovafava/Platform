@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Shield,
 } from "lucide-react"
+import { StudentTagsBadges } from "@/components/student-tags-badges"
 
 export const dynamic = "force-dynamic"
 
@@ -165,6 +166,18 @@ export default async function StudentDetailPage({ params }: Props) {
     trailStatusMap[r.trailId] = r.status
   }
 
+  // Fetch student tags
+  const studentTagAssignments = await prisma.studentTagAssignment.findMany({
+    where: { studentId: id },
+    select: {
+      tag: {
+        select: { id: true, name: true, color: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  })
+  const studentTags = studentTagAssignments.map((a) => a.tag)
+
   // Create a map of module progress for quick lookup
   const progressMap = new Map(
     student.moduleProgress.map((p) => [p.moduleId, {
@@ -288,6 +301,11 @@ export default async function StudentDetailPage({ params }: Props) {
                     })}
                   </span>
                 </div>
+                {studentTags.length > 0 && (
+                  <div className="mt-2">
+                    <StudentTagsBadges tags={studentTags} maxVisible={5} />
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
