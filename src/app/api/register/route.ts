@@ -41,6 +41,13 @@ export async function POST(request: Request) {
             },
           },
         },
+        tags: {
+          include: {
+            tag: {
+              select: { id: true },
+            },
+          },
+        },
       },
     })
 
@@ -148,6 +155,23 @@ export async function POST(request: Request) {
             skipDuplicates: true,
           })
         }
+      }
+
+      // Assign tags from invite
+      const validTagIds = invite.tags
+        .map((t) => t.tag)
+        .filter((tag) => tag !== null)
+        .map((tag) => tag.id)
+
+      if (validTagIds.length > 0) {
+        await tx.studentTagAssignment.createMany({
+          data: validTagIds.map((tagId) => ({
+            studentId: newUser.id,
+            tagId,
+            assignedBy: invite.createdById,
+          })),
+          skipDuplicates: true,
+        })
       }
 
       return newUser

@@ -31,6 +31,8 @@ import {
   List,
 } from "lucide-react"
 import { TagFilterDropdown } from "@/components/tag-filter-dropdown"
+import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
+import { TagAssignDropdown } from "@/components/tag-assign-dropdown"
 import { pluralizeRu } from "@/lib/utils"
 import {
   PER_PAGE_OPTIONS,
@@ -146,6 +148,14 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
   const [copiedTg, setCopiedTg] = useState<string | null>(null)
   const [tagFilter, setTagFilter] = useState<string[]>([])
 
+  // Tag management state
+  const [allTags, setAllTags] = useState<TagInfo[]>(
+    tagsForFilter?.map((t) => ({ id: t.id, name: t.name, color: t.color })) || []
+  )
+  const [tagAssignments, setTagAssignments] = useState<Record<string, string[]>>(
+    studentTagIdsMap || {}
+  )
+
   // Sync filter state to URL (without triggering server re-render)
   const syncUrl = useCallback(
     (params: { q: string; trail: string; sort: string; page: number; perPage: number }) => {
@@ -257,6 +267,80 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
     [search, trailFilter, sortBy, perPage, syncUrl],
   )
 
+  // Fetch full tag list on mount for assign dropdown
+  useEffect(() => {
+    fetch("/api/admin/student-tags")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) =>
+        setAllTags(
+          data.map((t: { id: string; name: string; color: string }) => ({
+            id: t.id,
+            name: t.name,
+            color: t.color,
+          }))
+        )
+      )
+      .catch(() => {})
+  }, [])
+
+  // Tag assignment handlers
+  const handleAssignTag = useCallback(async (studentId: string, tagId: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tag-assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, tagId }),
+      })
+      if (res.ok) {
+        setTagAssignments((prev) => ({
+          ...prev,
+          [studentId]: [...(prev[studentId] || []), tagId],
+        }))
+      }
+    } catch {}
+  }, [])
+
+  const handleRemoveTag = useCallback(async (studentId: string, tagId: string) => {
+    try {
+      const res = await fetch(
+        `/api/admin/student-tag-assignments?studentId=${studentId}&tagId=${tagId}`,
+        { method: "DELETE" }
+      )
+      if (res.ok) {
+        setTagAssignments((prev) => ({
+          ...prev,
+          [studentId]: (prev[studentId] || []).filter((id) => id !== tagId),
+        }))
+      }
+    } catch {}
+  }, [])
+
+  const handleCreateAndAssignTag = useCallback(
+    async (studentId: string, name: string, color: string) => {
+      try {
+        const createRes = await fetch("/api/admin/student-tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, color }),
+        })
+        const createData = await createRes.json()
+
+        let tagId: string
+        if (createRes.ok) {
+          tagId = createData.id
+          setAllTags((prev) => [...prev, { id: createData.id, name: createData.name, color: createData.color }])
+        } else if (createData.tag) {
+          tagId = createData.tag.id
+        } else {
+          return
+        }
+
+        await handleAssignTag(studentId, tagId)
+      } catch {}
+    },
+    [handleAssignTag]
+  )
+
   // Filter and sort students
   const filteredStudents = useMemo(() => {
     let result = students.filter((student) => {
@@ -266,15 +350,15 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
         student.name.toLowerCase().includes(q) ||
         student.email.toLowerCase().includes(q) ||
         (student.telegramUsername && student.telegramUsername.toLowerCase().includes(q)) ||
-        (studentTagIdsMap && tagsForFilter && studentTagIdsMap[student.id]?.some((tagId) =>
-          tagsForFilter.find((t) => t.id === tagId)?.name.toLowerCase().includes(q)
+        (tagAssignments[student.id]?.some((tagId) =>
+          allTags.find((t) => t.id === tagId)?.name.toLowerCase().includes(q)
         ))
       const matchesTrail =
         trailFilter === "all" ||
         student.enrollments.some((e) => e.trail.title === trailFilter)
       const matchesTags =
         tagFilter.length === 0 ||
-        (studentTagIdsMap && tagFilter.some((tagId) => studentTagIdsMap[student.id]?.includes(tagId)))
+        tagFilter.some((tagId) => tagAssignments[student.id]?.includes(tagId))
       return matchesSearch && matchesTrail && matchesTags
     })
 
@@ -295,7 +379,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
     })
 
     return result
-  }, [students, search, trailFilter, sortBy, tagFilter, studentTagIdsMap])
+  }, [students, search, trailFilter, sortBy, tagFilter, tagAssignments, allTags])
 
   // Pagination
   const totalPages = Math.ceil(filteredStudents.length / perPage)
@@ -481,6 +565,27 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                                 </Badge>
                               )
                             })}
+                          </div>
+                          {/* Student tags */}
+                          <div
+                            className="flex items-center gap-1 mt-0.5"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+                          >
+                            <StudentTagsBadges
+                              tags={
+                                (tagAssignments[student.id] || [])
+                                  .map((tagId) => allTags.find((t) => t.id === tagId))
+                                  .filter(Boolean) as TagInfo[]
+                              }
+                              maxVisible={3}
+                              onRemove={(tagId) => handleRemoveTag(student.id, tagId)}
+                            />
+                            <TagAssignDropdown
+                              availableTags={allTags}
+                              assignedTagIds={tagAssignments[student.id] || []}
+                              onAssign={(tagId) => handleAssignTag(student.id, tagId)}
+                              onCreateAndAssign={(name, color) => handleCreateAndAssignTag(student.id, name, color)}
+                            />
                           </div>
                         </div>
                       </div>

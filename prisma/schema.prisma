@@ -80,6 +80,7 @@ model Invite {
 
   createdBy User          @relation("InviteCreator", fields: [createdById], references: [id])
   trails    InviteTrail[]
+  tags      InviteTag[]
 
   @@index([code])
   @@index([createdById])
@@ -98,6 +99,21 @@ model InviteTrail {
   @@unique([inviteId, trailId])
   @@index([inviteId])
   @@index([trailId])
+}
+
+// Link invites to tags - students get these tags assigned on registration
+model InviteTag {
+  id        String   @id @default(cuid())
+  inviteId  String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  invite Invite     @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  tag    StudentTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([inviteId, tagId])
+  @@index([inviteId])
+  @@index([tagId])
 }
 
 model Trail {
@@ -599,6 +615,7 @@ model StudentTag {
   updatedAt DateTime @updatedAt
 
   assignments StudentTagAssignment[]
+  invites     InviteTag[]
 }
 
 // Many-to-many: assign tags to students
