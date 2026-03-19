@@ -14,6 +14,7 @@ const createInviteSchema = z.object({
   maxUses: z.number().min(1).default(1),
   expiresAt: z.string().optional(),
   trailIds: z.array(z.string()).optional().default([]),
+  tagIds: z.array(z.string()).optional().default([]),
   role: z.string().optional().default(ROLE_STUDENT),
 })
 
@@ -75,14 +76,23 @@ export async function GET(request: Request) {
             },
           },
         },
+        tags: {
+          include: {
+            tag: {
+              select: { id: true, name: true, color: true },
+            },
+          },
+        },
       },
     })
 
-    // Transform to flatten trails for easier frontend consumption
+    // Transform to flatten trails and tags for easier frontend consumption
     const invitesWithTrails = invites.map((invite) => ({
       ...invite,
       selectedTrails: invite.trails.map((t) => t.trail),
+      selectedTags: invite.tags.map((t) => t.tag),
       trails: undefined, // Remove the nested structure
+      tags: undefined,
     }))
 
     return NextResponse.json(invitesWithTrails)
@@ -199,10 +209,28 @@ export async function POST(request: Request) {
         })
       }
 
+      // Create tag associations
+      const tagIds = [...new Set(data.tagIds)]
+      if (tagIds.length > 0) {
+        const existingTags = await tx.studentTag.findMany({
+          where: { id: { in: tagIds } },
+          select: { id: true },
+        })
+        const existingTagIds = new Set(existingTags.map((t) => t.id))
+        await tx.inviteTag.createMany({
+          data: tagIds
+            .filter((tagId) => existingTagIds.has(tagId))
+            .map((tagId) => ({
+              inviteId: newInvite.id,
+              tagId,
+            })),
+        })
+      }
+
       return newInvite
     })
 
-    // Fetch the complete invite with trails for response
+    // Fetch the complete invite with trails and tags for response
     const completeInvite = await prisma.invite.findUnique({
       where: { id: invite.id },
       include: {
@@ -213,13 +241,22 @@ export async function POST(request: Request) {
             },
           },
         },
+        tags: {
+          include: {
+            tag: {
+              select: { id: true, name: true, color: true },
+            },
+          },
+        },
       },
     })
 
     return NextResponse.json({
       ...completeInvite,
       selectedTrails: completeInvite?.trails.map((t) => t.trail) || [],
+      selectedTags: completeInvite?.tags.map((t) => t.tag) || [],
       trails: undefined,
+      tags: undefined,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

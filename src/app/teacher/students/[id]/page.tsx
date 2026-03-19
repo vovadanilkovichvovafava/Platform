@@ -26,7 +26,7 @@ import {
   AlertCircle,
   Shield,
 } from "lucide-react"
-import { StudentTagsBadges } from "@/components/student-tags-badges"
+import { StudentTagManager } from "@/components/student-tag-manager"
 
 export const dynamic = "force-dynamic"
 
@@ -301,11 +301,9 @@ export default async function StudentDetailPage({ params }: Props) {
                     })}
                   </span>
                 </div>
-                {studentTags.length > 0 && (
-                  <div className="mt-2">
-                    <StudentTagsBadges tags={studentTags} maxVisible={5} />
-                  </div>
-                )}
+                <div className="mt-2">
+                  <StudentTagManager studentId={student.id} initialTags={studentTags} />
+                </div>
               </div>
             </div>
           </CardContent>

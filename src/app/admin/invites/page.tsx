@@ -9,13 +9,20 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
-import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban, ChevronDown, X, Map } from "lucide-react"
+import { Loader2, Plus, Trash2, Copy, Check, Ticket, FileText, Users, BarChart3, AlertTriangle, CheckCircle, Clock, Ban, ChevronDown, X, Map, Tag } from "lucide-react"
 import Link from "next/link"
+import { TAG_COLOR_CLASSES } from "@/components/student-tags-badges"
 
 interface Trail {
   id: string
   title: string
   slug: string
+}
+
+interface TagOption {
+  id: string
+  name: string
+  color: string
 }
 
 interface Invite {
@@ -29,6 +36,7 @@ interface Invite {
   createdAt: string
   createdBy: { name: string; email: string }
   selectedTrails?: Trail[]
+  selectedTags?: TagOption[]
 }
 
 // Role options for invite creation
@@ -81,6 +89,12 @@ export default function AdminInvitesPage() {
   const [selectedTrailIds, setSelectedTrailIds] = useState<string[]>([])
   const [isTrailDropdownOpen, setIsTrailDropdownOpen] = useState(false)
   const trailDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Available tags for selection
+  const [availableTags, setAvailableTags] = useState<TagOption[]>([])
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false)
+  const tagDropdownRef = useRef<HTMLDivElement>(null)
 
   // Role selection
   const [selectedRole, setSelectedRole] = useState("STUDENT")
@@ -184,11 +198,37 @@ export default function AdminInvitesPage() {
     }
   }, [session])
 
-  // Close dropdown when clicking outside
+  // Fetch available tags on mount
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const res = await fetch("/api/admin/student-tags")
+        if (res.ok) {
+          const data = await res.json()
+          setAvailableTags(data.map((t: { id: string; name: string; color: string }) => ({
+            id: t.id,
+            name: t.name,
+            color: t.color,
+          })))
+        }
+      } catch (error) {
+        console.error("Error fetching tags:", error)
+      }
+    }
+
+    if (session?.user?.role === "ADMIN" || session?.user?.role === "CO_ADMIN" || session?.user?.role === "HR") {
+      fetchTags()
+    }
+  }, [session])
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (trailDropdownRef.current && !trailDropdownRef.current.contains(event.target as Node)) {
         setIsTrailDropdownOpen(false)
+      }
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(event.target as Node)) {
+        setIsTagDropdownOpen(false)
       }
     }
 
@@ -208,6 +248,20 @@ export default function AdminInvitesPage() {
   // Remove trail from selection
   const removeTrail = (trailId: string) => {
     setSelectedTrailIds((prev) => prev.filter((id) => id !== trailId))
+  }
+
+  // Toggle tag selection
+  const toggleTagSelection = (tagId: string) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId]
+    )
+  }
+
+  // Remove tag from selection
+  const removeTag = (tagId: string) => {
+    setSelectedTagIds((prev) => prev.filter((id) => id !== tagId))
   }
 
   useEffect(() => {
@@ -261,6 +315,7 @@ export default function AdminInvitesPage() {
           ...newInvite,
           code: newInvite.code.toUpperCase(),
           trailIds: selectedTrailIds,
+          tagIds: selectedTagIds,
           role: selectedRole,
         }),
       })
@@ -268,6 +323,7 @@ export default function AdminInvitesPage() {
       if (res.ok) {
         setNewInvite({ code: "", email: "", maxUses: 1, expiresAt: "" })
         setSelectedTrailIds([]) // Clear selected trails
+        setSelectedTagIds([]) // Clear selected tags
         setSelectedRole("STUDENT") // Reset role
         setErrors({}) // Clear validation errors
         fetchInvites()
@@ -632,6 +688,88 @@ export default function AdminInvitesPage() {
               </div>
             )}
 
+            {/* Tag Multi-Select */}
+            {availableTags.length > 0 && (
+              <div className="space-y-2">
+                <Label>Теги для студента (опционально)</Label>
+                <div ref={tagDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-slate-400" />
+                      {selectedTagIds.length === 0
+                        ? "Выберите теги..."
+                        : `Выбрано: ${selectedTagIds.length}`}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isTagDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isTagDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                      {availableTags.map((tag) => {
+                        const isSelected = selectedTagIds.includes(tag.id)
+                        return (
+                          <label
+                            key={tag.id}
+                            className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
+                              isSelected ? "bg-orange-50" : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleTagSelection(tag.id)}
+                            />
+                            <span className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${
+                              tag.color === "blue" ? "bg-blue-400" :
+                              tag.color === "green" ? "bg-green-400" :
+                              tag.color === "red" ? "bg-red-400" :
+                              tag.color === "purple" ? "bg-purple-400" :
+                              tag.color === "amber" ? "bg-amber-400" :
+                              tag.color === "pink" ? "bg-pink-400" :
+                              "bg-gray-400"
+                            }`} />
+                            <span className="text-sm text-slate-700 truncate">{tag.name}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected tags chips */}
+                {selectedTagIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedTagIds.map((tagId) => {
+                      const tag = availableTags.find((t) => t.id === tagId)
+                      if (!tag) return null
+                      return (
+                        <span
+                          key={tagId}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border ${TAG_COLOR_CLASSES[tag.color] || TAG_COLOR_CLASSES.gray}`}
+                        >
+                          {tag.name}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tagId)}
+                            className="hover:opacity-70 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-500">
+                  Студент получит выбранные теги при регистрации по приглашению
+                </p>
+              </div>
+            )}
+
             <Button type="submit" disabled={isCreating || hasErrors} className="bg-orange-500 hover:bg-orange-600">
               {isCreating ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -755,6 +893,21 @@ export default function AdminInvitesPage() {
                                 className="text-xs px-2 py-0.5 bg-orange-50 text-orange-700 rounded-md"
                               >
                                 {trail.title}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Selected Tags Display */}
+                        {invite.selectedTags && invite.selectedTags.length > 0 && (
+                          <div className="mt-1 flex items-center gap-2 flex-wrap">
+                            <Tag className="h-3 w-3 text-slate-400" />
+                            {invite.selectedTags.map((tag) => (
+                              <span
+                                key={tag.id}
+                                className={`text-xs px-2 py-0.5 rounded-md border ${TAG_COLOR_CLASSES[tag.color] || TAG_COLOR_CLASSES.gray}`}
+                              >
+                                {tag.name}
                               </span>
                             ))}
                           </div>

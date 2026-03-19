@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isAnyAdminOrHR } from "@/lib/admin-access"
+import { isAnyAdminOrHR, isPrivileged, isHR } from "@/lib/admin-access"
 
 const VALID_COLORS = ["gray", "blue", "green", "red", "purple", "amber", "pink"]
 
@@ -10,7 +10,7 @@ const VALID_COLORS = ["gray", "blue", "green", "red", "purple", "amber", "pink"]
 export async function GET() {
   const session = await getServerSession(authOptions)
 
-  if (!session || !isAnyAdminOrHR(session.user.role)) {
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -33,7 +33,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || !isAnyAdminOrHR(session.user.role)) {
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
