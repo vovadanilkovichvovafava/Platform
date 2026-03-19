@@ -341,6 +341,34 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
     [handleAssignTag]
   )
 
+  const handleEditTag = useCallback(async (tagId: string, name: string, color: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: tagId, name, color }),
+      })
+      if (!res.ok) return
+      const updated = await res.json()
+      setAllTags((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+    } catch {}
+  }, [])
+
+  const handleDeleteTag = useCallback(async (tagId: string) => {
+    try {
+      const res = await fetch(`/api/admin/student-tags?id=${tagId}`, { method: "DELETE" })
+      if (!res.ok) return
+      setAllTags((prev) => prev.filter((t) => t.id !== tagId))
+      setTagAssignments((prev) => {
+        const next = { ...prev }
+        for (const key of Object.keys(next)) {
+          next[key] = next[key].filter((id) => id !== tagId)
+        }
+        return next
+      })
+    } catch {}
+  }, [])
+
   // Filter and sort students
   const filteredStudents = useMemo(() => {
     let result = students.filter((student) => {
@@ -585,6 +613,8 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                               assignedTagIds={tagAssignments[student.id] || []}
                               onAssign={(tagId) => handleAssignTag(student.id, tagId)}
                               onCreateAndAssign={(name, color) => handleCreateAndAssignTag(student.id, name, color)}
+                              onEditTag={handleEditTag}
+                              onDeleteTag={handleDeleteTag}
                             />
                           </div>
                         </div>

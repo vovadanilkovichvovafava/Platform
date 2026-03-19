@@ -86,6 +86,35 @@ export function StudentTagManager({ studentId, initialTags }: StudentTagManagerP
     [handleAssign]
   )
 
+  const handleEditTag = useCallback(
+    async (tagId: string, name: string, color: string) => {
+      try {
+        const res = await fetch("/api/admin/student-tags", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: tagId, name, color }),
+        })
+        if (!res.ok) return
+        const updated = await res.json()
+        setAllTags((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+        setTags((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      } catch {}
+    },
+    []
+  )
+
+  const handleDeleteTag = useCallback(
+    async (tagId: string) => {
+      try {
+        const res = await fetch(`/api/admin/student-tags?id=${tagId}`, { method: "DELETE" })
+        if (!res.ok) return
+        setAllTags((prev) => prev.filter((t) => t.id !== tagId))
+        setTags((prev) => prev.filter((t) => t.id !== tagId))
+      } catch {}
+    },
+    []
+  )
+
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <StudentTagsBadges tags={tags} maxVisible={5} onRemove={handleRemove} />
@@ -94,6 +123,8 @@ export function StudentTagManager({ studentId, initialTags }: StudentTagManagerP
         assignedTagIds={tags.map((t) => t.id)}
         onAssign={handleAssign}
         onCreateAndAssign={handleCreateAndAssign}
+        onEditTag={handleEditTag}
+        onDeleteTag={handleDeleteTag}
       />
     </div>
   )

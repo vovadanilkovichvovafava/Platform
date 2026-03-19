@@ -115,7 +115,7 @@ export function TagAssignDropdown({
       </Button>
 
       {isOpen && (
-        <div className="absolute z-30 right-0 w-56 sm:w-72 mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-auto">
+        <div className="absolute z-30 left-0 w-56 sm:w-72 mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-auto">
           {/* Search */}
           <div className="p-2 border-b sticky top-0 bg-white z-10">
             <div className="relative">
