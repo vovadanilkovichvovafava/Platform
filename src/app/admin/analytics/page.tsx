@@ -58,6 +58,7 @@ import {
 import Link from "next/link"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { getUrlParams, parseEnumParam, updateUrl } from "@/lib/url-state"
+import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
 
 interface ChurnRiskStudent {
   id: string
@@ -310,6 +311,9 @@ export default function AdvancedAnalyticsPage() {
   const [submissionFilter, setSubmissionFilter] = useState<"all" | "no_submissions" | "has_submissions" | "has_pending" | "has_revision" | "all_approved">("all")
   // Trail status filter (NOT_ADMITTED, LEARNING, ACCEPTED)
   const [trailStatusFilter, setTrailStatusFilter] = useState<"all" | "NOT_ADMITTED" | "LEARNING" | "ACCEPTED">("all")
+
+  // Student tags (studentId -> TagInfo[])
+  const [studentTagsMap, setStudentTagsMap] = useState<Record<string, TagInfo[]>>({})
 
   // URL sync: read initial filter values from URL on mount
   const [urlInitialized, setUrlInitialized] = useState(false)
@@ -685,10 +689,22 @@ export default function AdvancedAnalyticsPage() {
         trail: trailFilter,
         period: periodFilter,
       })
-      const res = await fetch(`/api/admin/analytics/advanced?${params}`)
-      if (res.ok) {
-        const json = await res.json()
+      const [analyticsRes, tagAssignRes] = await Promise.all([
+        fetch(`/api/admin/analytics/advanced?${params}`),
+        fetch("/api/admin/student-tag-assignments"),
+      ])
+      if (analyticsRes.ok) {
+        const json = await analyticsRes.json()
         setData(json)
+      }
+      if (tagAssignRes.ok) {
+        const assignments: { studentId: string; tag: TagInfo }[] = await tagAssignRes.json()
+        const map: Record<string, TagInfo[]> = {}
+        for (const a of assignments) {
+          if (!map[a.studentId]) map[a.studentId] = []
+          map[a.studentId].push(a.tag)
+        }
+        setStudentTagsMap(map)
       }
     } catch (error) {
       console.error("Failed to fetch analytics:", error)
@@ -1398,6 +1414,11 @@ export default function AdvancedAnalyticsPage() {
                                       {student.telegramUsername && (
                                         <p className="text-xs text-gray-400">{student.telegramUsername}</p>
                                       )}
+                                      {studentTagsMap[student.id]?.length > 0 && (
+                                        <div className="mt-0.5">
+                                          <StudentTagsBadges tags={studentTagsMap[student.id]} maxVisible={2} />
+                                        </div>
+                                      )}
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       <span className="text-xs text-gray-600">{formatDate(student.dateStart)}</span>
@@ -2099,6 +2120,11 @@ export default function AdvancedAnalyticsPage() {
                               <span className="group-hover:underline">{student.name}</span>
                               <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500" />
                             </Link>
+                            {studentTagsMap[student.id]?.length > 0 && (
+                              <div className="mt-0.5">
+                                <StudentTagsBadges tags={studentTagsMap[student.id]} maxVisible={2} />
+                              </div>
+                            )}
                           </td>
                           <td className="py-2 text-center">
                             <span className="font-bold text-amber-600">{student.totalXP.toLocaleString()}</span>
@@ -2250,7 +2276,12 @@ export default function AdvancedAnalyticsPage() {
                     {data.churnRisk.high.map((student) => (
                       <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-red-200 transition-colors">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900">{student.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm text-gray-900">{student.name}</p>
+                            {studentTagsMap[student.id]?.length > 0 && (
+                              <StudentTagsBadges tags={studentTagsMap[student.id]} maxVisible={2} />
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             <span className="truncate">{student.email}</span>
                             {student.telegramUsername && (

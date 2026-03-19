@@ -44,6 +44,8 @@ import {
 import { HowItWorks } from "@/components/ui/how-it-works"
 import { adminPageLegends } from "@/lib/admin-help-texts"
 import { PER_PAGE_OPTIONS, type PerPageOption } from "@/lib/url-state"
+import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
+import { TagAssignDropdown } from "@/components/tag-assign-dropdown"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -73,11 +75,20 @@ interface Access {
   trail: { id: string; title: string; slug: string }
 }
 
+interface TagAssignment {
+  id: string
+  studentId: string
+  tagId: string
+  tag: TagInfo
+}
+
 interface PendingChange {
-  type: "add" | "remove"
+  type: "add" | "remove" | "add-tag" | "remove-tag"
   studentId: string
   trailId: string
   trailTitle: string
+  tagId: string
+  tagName: string
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -94,6 +105,8 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
   const [students, setStudents] = useState<Student[]>([])
   const [trails, setTrails] = useState<Trail[]>([])
   const [access, setAccess] = useState<Access[]>([])
+  const [allTags, setAllTags] = useState<TagInfo[]>([])
+  const [tagAssignments, setTagAssignments] = useState<TagAssignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -128,10 +141,12 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       setLoading(true)
       setError("")
 
-      const [usersRes, trailsRes, accessRes] = await Promise.all([
+      const [usersRes, trailsRes, accessRes, tagsRes, tagAssignRes] = await Promise.all([
         fetch("/api/admin/users"),
         fetch("/api/admin/trails"),
         fetch("/api/admin/student-access"),
+        fetch("/api/admin/student-tags"),
+        fetch("/api/admin/student-tag-assignments"),
       ])
 
       const allUsers = await usersRes.json()
@@ -160,6 +175,18 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
 
       const accessData = await accessRes.json()
       setAccess(accessData)
+
+      const tagsData = await tagsRes.json()
+      setAllTags(
+        tagsData.map((t: { id: string; name: string; color: string }) => ({
+          id: t.id,
+          name: t.name,
+          color: t.color,
+        }))
+      )
+
+      const tagAssignData = await tagAssignRes.json()
+      setTagAssignments(tagAssignData)
     } catch {
       setError("Ошибка загрузки данных")
     } finally {
@@ -259,6 +286,8 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
         studentId,
         trailId: trail.id,
         trailTitle: trail.title,
+        tagId: "",
+        tagName: "",
       },
     ])
   }
@@ -293,7 +322,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
 
     setPendingChanges((prev) => [
       ...prev,
-      { type: "remove", studentId, trailId, trailTitle },
+      { type: "remove", studentId, trailId, trailTitle, tagId: "", tagName: "" },
     ])
   }
 
@@ -308,6 +337,124 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
           )
       )
     )
+  }
+
+  // ── Tag pending changes ─────────────────────────────────────────────
+
+  const getStudentTags = useCallback(
+    (studentId: string): TagInfo[] => {
+      const currentTagIds = tagAssignments
+        .filter((a) => a.studentId === studentId)
+        .map((a) => a.tagId)
+
+      const pendingRemoveTagIds = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "remove-tag")
+        .map((p) => p.tagId)
+
+      const pendingAddTagIds = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "add-tag")
+        .map((p) => p.tagId)
+
+      const activeTags = currentTagIds
+        .filter((id) => !pendingRemoveTagIds.includes(id))
+        .map((id) => tagAssignments.find((a) => a.studentId === studentId && a.tagId === id)?.tag)
+        .filter(Boolean) as TagInfo[]
+
+      const pendingAddTags = pendingAddTagIds
+        .map((id) => allTags.find((t) => t.id === id))
+        .filter(Boolean) as TagInfo[]
+
+      return [...activeTags, ...pendingAddTags]
+    },
+    [tagAssignments, pendingChanges, allTags]
+  )
+
+  const getStudentAssignedTagIds = useCallback(
+    (studentId: string): string[] => {
+      const current = tagAssignments
+        .filter((a) => a.studentId === studentId)
+        .map((a) => a.tagId)
+      const pendingAdds = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "add-tag")
+        .map((p) => p.tagId!)
+      const pendingRemoves = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "remove-tag")
+        .map((p) => p.tagId!)
+      return [...current.filter((id) => !pendingRemoves.includes(id)), ...pendingAdds]
+    },
+    [tagAssignments, pendingChanges]
+  )
+
+  const addTagToStudent = (studentId: string, tagId: string) => {
+    const exists = pendingChanges.some(
+      (p) => p.studentId === studentId && p.tagId === tagId && p.type === "add-tag"
+    )
+    if (exists) return
+
+    // Check if undoing a pending remove
+    const removeIdx = pendingChanges.findIndex(
+      (p) => p.studentId === studentId && p.tagId === tagId && p.type === "remove-tag"
+    )
+    if (removeIdx !== -1) {
+      setPendingChanges((prev) => prev.filter((_, i) => i !== removeIdx))
+      return
+    }
+
+    const tag = allTags.find((t) => t.id === tagId)
+    setPendingChanges((prev) => [
+      ...prev,
+      { type: "add-tag", studentId, trailId: "", trailTitle: "", tagId, tagName: tag?.name || tagId },
+    ])
+  }
+
+  const removeTagFromStudent = (studentId: string, tagId: string) => {
+    // If it's a pending add, just remove it
+    const addIdx = pendingChanges.findIndex(
+      (p) => p.studentId === studentId && p.tagId === tagId && p.type === "add-tag"
+    )
+    if (addIdx !== -1) {
+      setPendingChanges((prev) => prev.filter((_, i) => i !== addIdx))
+      return
+    }
+
+    const alreadyPending = pendingChanges.some(
+      (p) => p.studentId === studentId && p.tagId === tagId && p.type === "remove-tag"
+    )
+    if (alreadyPending) return
+
+    const tag = allTags.find((t) => t.id === tagId)
+    const tagName = tag?.name || tagAssignments.find((a) => a.studentId === studentId && a.tagId === tagId)?.tag.name || tagId
+    setPendingChanges((prev) => [
+      ...prev,
+      { type: "remove-tag", studentId, trailId: "", trailTitle: "", tagId, tagName },
+    ])
+  }
+
+  const handleCreateAndAssignTag = async (studentId: string, name: string, color: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      })
+      const data = await res.json()
+
+      let tagId: string
+      if (res.ok) {
+        tagId = data.id
+        setAllTags((prev) => [...prev, { id: data.id, name: data.name, color: data.color }])
+      } else if (data.tag) {
+        // Tag already exists
+        tagId = data.tag.id
+      } else {
+        showToast(data.error || "Ошибка создания тега", "error")
+        return
+      }
+
+      addTagToStudent(studentId, tagId)
+    } catch {
+      showToast("Ошибка создания тега", "error")
+    }
   }
 
   const cancelAllChanges = () => {
@@ -337,12 +484,31 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
               const data = await res.json()
               throw new Error(data.error || "Ошибка")
             }
-          } else {
+          } else if (change.type === "remove") {
             const res = await fetch(
               `/api/admin/student-access?studentId=${change.studentId}&trailId=${change.trailId}`,
               { method: "DELETE" }
             )
             if (!res.ok) throw new Error("Ошибка удаления")
+          } else if (change.type === "add-tag") {
+            const res = await fetch("/api/admin/student-tag-assignments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                studentId: change.studentId,
+                tagId: change.tagId,
+              }),
+            })
+            if (!res.ok) {
+              const data = await res.json()
+              throw new Error(data.error || "Ошибка")
+            }
+          } else if (change.type === "remove-tag") {
+            const res = await fetch(
+              `/api/admin/student-tag-assignments?studentId=${change.studentId}&tagId=${change.tagId}`,
+              { method: "DELETE" }
+            )
+            if (!res.ok) throw new Error("Ошибка удаления тега")
           }
           successCount++
         } catch {
@@ -779,9 +945,33 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                     })}
                   </div>
 
+                  {/* Student tags */}
+                  {(() => {
+                    const studentTags = getStudentTags(student.id)
+                    return studentTags.length > 0 ? (
+                      <div className="mb-3">
+                        <StudentTagsBadges
+                          tags={studentTags}
+                          maxVisible={3}
+                          onRemove={(tagId) => removeTagFromStudent(student.id, tagId)}
+                        />
+                      </div>
+                    ) : null
+                  })()}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
+                    <TagAssignDropdown
+                      availableTags={allTags}
+                      assignedTagIds={getStudentAssignedTagIds(student.id)}
+                      onAssign={(tagId) => addTagToStudent(student.id, tagId)}
+                      onCreateAndAssign={(name, color) => handleCreateAndAssignTag(student.id, name, color)}
+                    />
+                  </div>
+
                   {/* Assign trail dropdown */}
                   {assignableTrails.length > 0 && (
-                    <div className="relative" ref={activeDropdownId === student.id ? dropdownRef : undefined}>
+                    <div className="relative mt-2" ref={activeDropdownId === student.id ? dropdownRef : undefined}>
                       <Button
                         variant="outline"
                         size="sm"
@@ -951,6 +1141,29 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                       })}
                     </div>
 
+                    {/* Student tags */}
+                    {(() => {
+                      const studentTags = getStudentTags(student.id)
+                      return studentTags.length > 0 ? (
+                        <div className="shrink-0">
+                          <StudentTagsBadges
+                            tags={studentTags}
+                            maxVisible={2}
+                            onRemove={(tagId) => removeTagFromStudent(student.id, tagId)}
+                          />
+                        </div>
+                      ) : null
+                    })()}
+
+                    {/* Tag + Trail assign buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <TagAssignDropdown
+                        availableTags={allTags}
+                        assignedTagIds={getStudentAssignedTagIds(student.id)}
+                        onAssign={(tagId) => addTagToStudent(student.id, tagId)}
+                        onCreateAndAssign={(name, color) => handleCreateAndAssignTag(student.id, name, color)}
+                      />
+
                     {/* Assign button */}
                     {assignableTrails.length > 0 && (
                       <div className="relative sm:w-48 shrink-0" ref={activeDropdownId === student.id ? dropdownRef : undefined}>
@@ -1024,6 +1237,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                         )}
                       </div>
                     )}
+                    </div>
                   </div>
                 )
               })}

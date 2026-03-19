@@ -46,6 +46,7 @@ model User {
   trailPasswordAccess  TrailPasswordAccess[]
   navbarPresets        NavbarPreset[]
   trailStatuses        StudentTrailStatus[]
+  tagAssignments       StudentTagAssignment[]
 }
 
 // Track daily user activity (one record per day per user)
@@ -587,4 +588,31 @@ model TrailPasswordAttempt {
   @@index([userId])
   @@index([createdAt])
   @@index([ipAddress])
+}
+
+// Custom tags for marking/categorizing students (HR feature)
+model StudentTag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("gray") // gray, blue, green, red, purple, amber, pink
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments StudentTagAssignment[]
+}
+
+// Many-to-many: assign tags to students
+model StudentTagAssignment {
+  id         String   @id @default(cuid())
+  studentId  String
+  tagId      String
+  assignedBy String   // ID of user who assigned
+  createdAt  DateTime @default(now())
+
+  student User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tag     StudentTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, tagId])
+  @@index([studentId])
+  @@index([tagId])
 }
