@@ -187,6 +187,31 @@ export default async function TeacherStudentsPage({
   // Get unique trail names for filter
   const trailNames = [...new Set(allTrails.map((t) => t.title))].sort()
 
+  // Fetch tags and tag assignments for filtering
+  const [allTags, allTagAssignments] = await Promise.all([
+    prisma.studentTag.findMany({
+      select: { id: true, name: true, color: true, _count: { select: { assignments: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.studentTagAssignment.findMany({
+      select: { studentId: true, tagId: true },
+    }),
+  ])
+
+  const tagsForFilter = allTags.map((t) => ({
+    id: t.id,
+    name: t.name,
+    color: t.color,
+    count: t._count.assignments,
+  }))
+
+  // Build studentId -> tagIds mapping
+  const studentTagIdsMap: Record<string, string[]> = {}
+  for (const a of allTagAssignments) {
+    if (!studentTagIdsMap[a.studentId]) studentTagIdsMap[a.studentId] = []
+    studentTagIdsMap[a.studentId].push(a.tagId)
+  }
+
   // Serialize students data for client component (inactive/at-risk filtered out, newcomers kept)
   const serializedStudents = activeStudents.map((student) => {
     // Get enrolled trail IDs for this student
@@ -244,6 +269,8 @@ export default async function TeacherStudentsPage({
       <StudentsSearch
         students={serializedStudents}
         trails={trailNames}
+        tagsForFilter={tagsForFilter}
+        studentTagIdsMap={studentTagIdsMap}
         initialFilters={{
           q: resolvedSearchParams.q || "",
           trail: resolvedSearchParams.trail || "all",

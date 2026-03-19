@@ -69,6 +69,51 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(tag)
 }
 
+// PATCH - Update a tag (name and/or color)
+export async function PATCH(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+
+  if (!session || !isAnyAdminOrHR(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { id, name, color } = await request.json()
+
+  if (!id || typeof id !== "string") {
+    return NextResponse.json({ error: "id is required" }, { status: 400 })
+  }
+
+  const updateData: { name?: string; color?: string } = {}
+
+  if (name !== undefined) {
+    if (typeof name !== "string" || name.trim().length === 0) {
+      return NextResponse.json({ error: "Название тега не может быть пустым" }, { status: 400 })
+    }
+    const trimmedName = name.trim()
+    const existing = await prisma.studentTag.findUnique({ where: { name: trimmedName } })
+    if (existing && existing.id !== id) {
+      return NextResponse.json({ error: "Тег с таким названием уже существует" }, { status: 400 })
+    }
+    updateData.name = trimmedName
+  }
+
+  if (color !== undefined) {
+    updateData.color = VALID_COLORS.includes(color) ? color : "gray"
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return NextResponse.json({ error: "Нет данных для обновления" }, { status: 400 })
+  }
+
+  const tag = await prisma.studentTag.update({
+    where: { id },
+    data: updateData,
+    select: { id: true, name: true, color: true },
+  })
+
+  return NextResponse.json(tag)
+}
+
 // DELETE - Delete a tag by id
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions)

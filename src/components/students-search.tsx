@@ -30,6 +30,7 @@ import {
   ChevronRight,
   List,
 } from "lucide-react"
+import { TagFilterDropdown } from "@/components/tag-filter-dropdown"
 import { pluralizeRu } from "@/lib/utils"
 import {
   PER_PAGE_OPTIONS,
@@ -99,9 +100,18 @@ interface Student {
   trailStatuses?: Record<string, string> // trailId -> status (NOT_ADMITTED, LEARNING, ACCEPTED)
 }
 
+interface TagForFilter {
+  id: string
+  name: string
+  color: string
+  count: number
+}
+
 interface StudentsSearchProps {
   students: Student[]
   trails: string[]
+  tagsForFilter?: TagForFilter[]
+  studentTagIdsMap?: Record<string, string[]>
   initialFilters?: InitialFilters
 }
 
@@ -114,7 +124,7 @@ function getInitials(name: string) {
     .slice(0, 2)
 }
 
-export function StudentsSearch({ students, trails, initialFilters }: StudentsSearchProps) {
+export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsMap, initialFilters }: StudentsSearchProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -134,6 +144,7 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
   const [perPage, setPerPage] = useState<PerPageOption>(normalizedPerPage)
   const [currentPage, setCurrentPage] = useState(normalizedPage)
   const [copiedTg, setCopiedTg] = useState<string | null>(null)
+  const [tagFilter, setTagFilter] = useState<string[]>([])
 
   // Sync filter state to URL (without triggering server re-render)
   const syncUrl = useCallback(
@@ -249,15 +260,22 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
   // Filter and sort students
   const filteredStudents = useMemo(() => {
     let result = students.filter((student) => {
+      const q = search.toLowerCase()
       const matchesSearch =
         !search ||
-        student.name.toLowerCase().includes(search.toLowerCase()) ||
-        student.email.toLowerCase().includes(search.toLowerCase()) ||
-        (student.telegramUsername && student.telegramUsername.toLowerCase().includes(search.toLowerCase()))
+        student.name.toLowerCase().includes(q) ||
+        student.email.toLowerCase().includes(q) ||
+        (student.telegramUsername && student.telegramUsername.toLowerCase().includes(q)) ||
+        (studentTagIdsMap && tagsForFilter && studentTagIdsMap[student.id]?.some((tagId) =>
+          tagsForFilter.find((t) => t.id === tagId)?.name.toLowerCase().includes(q)
+        ))
       const matchesTrail =
         trailFilter === "all" ||
         student.enrollments.some((e) => e.trail.title === trailFilter)
-      return matchesSearch && matchesTrail
+      const matchesTags =
+        tagFilter.length === 0 ||
+        (studentTagIdsMap && tagFilter.some((tagId) => studentTagIdsMap[student.id]?.includes(tagId)))
+      return matchesSearch && matchesTrail && matchesTags
     })
 
     // Sort
@@ -277,7 +295,7 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
     })
 
     return result
-  }, [students, search, trailFilter, sortBy])
+  }, [students, search, trailFilter, sortBy, tagFilter, studentTagIdsMap])
 
   // Pagination
   const totalPages = Math.ceil(filteredStudents.length / perPage)
@@ -300,11 +318,18 @@ export function StudentsSearch({ students, trails, initialFilters }: StudentsSea
               <Input
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Поиск по имени, email или TG-нику..."
+                placeholder="Поиск по имени, email, TG-нику или тегу..."
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
+              {tagsForFilter && tagsForFilter.length > 0 && (
+                <TagFilterDropdown
+                  tags={tagsForFilter}
+                  selectedTagIds={tagFilter}
+                  onChange={(ids) => { setTagFilter(ids); setCurrentPage(1) }}
+                />
+              )}
               <Select value={trailFilter} onValueChange={handleTrailFilterChange}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />

@@ -59,6 +59,7 @@ import Link from "next/link"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { getUrlParams, parseEnumParam, updateUrl } from "@/lib/url-state"
 import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
+import { TagFilterDropdown } from "@/components/tag-filter-dropdown"
 
 interface ChurnRiskStudent {
   id: string
@@ -314,6 +315,8 @@ export default function AdvancedAnalyticsPage() {
 
   // Student tags (studentId -> TagInfo[])
   const [studentTagsMap, setStudentTagsMap] = useState<Record<string, TagInfo[]>>({})
+  const [allTagsForFilter, setAllTagsForFilter] = useState<{ id: string; name: string; color: string; count: number }[]>([])
+  const [analyticsTagFilter, setAnalyticsTagFilter] = useState<string[]>([])
 
   // URL sync: read initial filter values from URL on mount
   const [urlInitialized, setUrlInitialized] = useState(false)
@@ -689,9 +692,10 @@ export default function AdvancedAnalyticsPage() {
         trail: trailFilter,
         period: periodFilter,
       })
-      const [analyticsRes, tagAssignRes] = await Promise.all([
+      const [analyticsRes, tagAssignRes, tagsRes] = await Promise.all([
         fetch(`/api/admin/analytics/advanced?${params}`),
         fetch("/api/admin/student-tag-assignments"),
+        fetch("/api/admin/student-tags"),
       ])
       if (analyticsRes.ok) {
         const json = await analyticsRes.json()
@@ -705,6 +709,12 @@ export default function AdvancedAnalyticsPage() {
           map[a.studentId].push(a.tag)
         }
         setStudentTagsMap(map)
+      }
+      if (tagsRes.ok) {
+        const tagsData = await tagsRes.json()
+        setAllTagsForFilter(tagsData.map((t: { id: string; name: string; color: string; _count?: { assignments: number } }) => ({
+          id: t.id, name: t.name, color: t.color, count: t._count?.assignments ?? 0,
+        })))
       }
     } catch (error) {
       console.error("Failed to fetch analytics:", error)
@@ -1180,12 +1190,17 @@ export default function AdvancedAnalyticsPage() {
                       type="text"
                       value={studentSearch}
                       onChange={(e) => handleStudentSearchChange(e.target.value)}
-                      placeholder="Поиск студента по имени или TG-нику..."
+                      placeholder="Поиск студента по имени, TG-нику или тегу..."
                       className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <ListFilter className="h-4 w-4 text-gray-400" />
+                    <TagFilterDropdown
+                      tags={allTagsForFilter}
+                      selectedTagIds={analyticsTagFilter}
+                      onChange={setAnalyticsTagFilter}
+                    />
                     <select
                       value={submissionFilter}
                       onChange={(e) => handleSubmissionFilterChange(e.target.value)}
@@ -1252,20 +1267,24 @@ export default function AdvancedAnalyticsPage() {
                 </div>
 
                 {data.studentsByTrail.map((trailGroup) => {
-                  // Apply search filter
-                  const searchFiltered = studentSearch
-                    ? trailGroup.students.filter((s) =>
-                        s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                        (s.telegramUsername && s.telegramUsername.toLowerCase().includes(studentSearch.toLowerCase()))
-                      )
-                    : trailGroup.students
+                  // Apply search filter and tag filter
+                  const searchFiltered = trailGroup.students.filter((s) => {
+                    const q = studentSearch.toLowerCase()
+                    const matchesSearch = !studentSearch ||
+                      s.name.toLowerCase().includes(q) ||
+                      (s.telegramUsername && s.telegramUsername.toLowerCase().includes(q)) ||
+                      (studentTagsMap[s.id]?.some((t) => t.name.toLowerCase().includes(q)))
+                    const matchesTags = analyticsTagFilter.length === 0 ||
+                      analyticsTagFilter.some((tagId) => studentTagsMap[s.id]?.some((t) => t.id === tagId))
+                    return matchesSearch && matchesTags
+                  })
                   // Apply completion filter, then submission filter, then sort
                   const completionFiltered = filterByCompletion(searchFiltered)
                   const submissionFiltered = filterBySubmissions(completionFiltered)
                   const statusFiltered = filterByTrailStatus(submissionFiltered)
                   const filteredStudents = sortStudents(statusFiltered)
 
-                  if (filteredStudents.length === 0 && (studentSearch || completionFilter !== "all" || submissionFilter !== "all" || trailStatusFilter !== "all")) return null
+                  if (filteredStudents.length === 0 && (studentSearch || completionFilter !== "all" || submissionFilter !== "all" || trailStatusFilter !== "all" || analyticsTagFilter.length > 0)) return null
 
                   // Password lock check (Module D)
                   const isLocked = trailGroup.isLocked === true

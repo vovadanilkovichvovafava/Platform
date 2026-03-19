@@ -36,6 +36,7 @@ import {
 } from "@/lib/url-state"
 import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
 import { TagAssignDropdown } from "@/components/tag-assign-dropdown"
+import { TagFilterDropdown } from "@/components/tag-filter-dropdown"
 
 interface TagAssignment {
   id: string
@@ -102,11 +103,13 @@ function AdminUsersPageContent() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [grantingAchievementId, setGrantingAchievementId] = useState<string | null>(null)
   const [allTags, setAllTags] = useState<TagInfo[]>([])
+  const [allTagsRaw, setAllTagsRaw] = useState<(TagInfo & { _count?: { assignments: number } })[]>([])
   const [tagAssignments, setTagAssignments] = useState<TagAssignment[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState<RoleFilterValue>("ALL")
   const [perPage, setPerPage] = useState<PerPageOption>(10)
   const [currentPage, setCurrentPage] = useState(1)
+  const [tagFilter, setTagFilter] = useState<string[]>([])
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
@@ -212,6 +215,7 @@ function AdminUsersPageContent() {
 
       if (tagsRes.ok) {
         const tagsData = await tagsRes.json()
+        setAllTagsRaw(tagsData)
         setAllTags(tagsData.map((t: { id: string; name: string; color: string }) => ({ id: t.id, name: t.name, color: t.color })))
       }
       if (tagAssignRes.ok) {
@@ -302,6 +306,64 @@ function AdminUsersPageContent() {
     }
   }
 
+  const handleEditTag = async (tagId: string, name: string, color: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: tagId, name, color }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || "Ошибка редактирования тега", "error")
+        return
+      }
+      const updated = await res.json()
+      setAllTags((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setAllTagsRaw((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setTagAssignments((prev) =>
+        prev.map((a) => (a.tagId === tagId ? { ...a, tag: { ...a.tag, name: updated.name, color: updated.color } } : a))
+      )
+      showToast("Тег обновлён", "success")
+    } catch {
+      showToast("Ошибка редактирования тега", "error")
+    }
+  }
+
+  const handleDeleteTag = async (tagId: string) => {
+    try {
+      const res = await fetch(`/api/admin/student-tags?id=${tagId}`, { method: "DELETE" })
+      if (!res.ok) {
+        showToast("Ошибка удаления тега", "error")
+        return
+      }
+      setAllTags((prev) => prev.filter((t) => t.id !== tagId))
+      setAllTagsRaw((prev) => prev.filter((t) => t.id !== tagId))
+      setTagAssignments((prev) => prev.filter((a) => a.tagId !== tagId))
+      setTagFilter((prev) => prev.filter((id) => id !== tagId))
+      showToast("Тег удалён", "success")
+    } catch {
+      showToast("Ошибка удаления тега", "error")
+    }
+  }
+
+  const handleTagFilterChange = useCallback(
+    (ids: string[]) => {
+      setTagFilter(ids)
+      setCurrentPage(1)
+    },
+    [],
+  )
+
+  const tagsForFilter = useMemo(() => {
+    return allTagsRaw.map((t) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+      count: t._count?.assignments ?? 0,
+    }))
+  }, [allTagsRaw])
+
   useEffect(() => {
     fetchUsers()
   }, [])
@@ -310,13 +372,17 @@ function AdminUsersPageContent() {
   const teachers = users.filter(u => u.role === "TEACHER")
   const admins = users.filter(u => u.role === "CO_ADMIN" || u.role === "ADMIN")
 
-  // Filter users by search and role
+  // Filter users by search, role, and tags
   const filteredUsers = users.filter(user => {
+    const q = searchQuery.toLowerCase()
     const matchesSearch = searchQuery === "" ||
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      user.name.toLowerCase().includes(q) ||
+      user.email.toLowerCase().includes(q) ||
+      getStudentTags(user.id).some((tag) => tag.name.toLowerCase().includes(q))
     const matchesRole = roleFilter === "ALL" || user.role === roleFilter
-    return matchesSearch && matchesRole
+    const matchesTags = tagFilter.length === 0 ||
+      tagFilter.some((tagId) => tagAssignments.some((a) => a.studentId === user.id && a.tagId === tagId))
+    return matchesSearch && matchesRole && matchesTags
   })
 
   // Pagination
@@ -515,7 +581,7 @@ function AdminUsersPageContent() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Поиск по имени или email..."
+                    placeholder="Поиск по имени, email или тегу..."
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-9 pr-8 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -541,6 +607,12 @@ function AdminUsersPageContent() {
                   <option value="CO_ADMIN">Со-админы</option>
                   <option value="ADMIN">Админы</option>
                 </select>
+                {/* Tag filter */}
+                <TagFilterDropdown
+                  tags={tagsForFilter}
+                  selectedTagIds={tagFilter}
+                  onChange={handleTagFilterChange}
+                />
                 {/* Per page */}
                 <select
                   value={String(perPage)}
@@ -556,7 +628,7 @@ function AdminUsersPageContent() {
               </div>
             </div>
             {/* Results count */}
-            {(searchQuery || roleFilter !== "ALL") && (
+            {(searchQuery || roleFilter !== "ALL" || tagFilter.length > 0) && (
               <p className="text-sm text-gray-500 mt-2">
                 Найдено: {filteredUsers.length} из {users.length}
               </p>
@@ -644,6 +716,8 @@ function AdminUsersPageContent() {
                             assignedTagIds={getStudentAssignedTagIds(user.id)}
                             onAssign={(tagId) => handleAssignTag(user.id, tagId)}
                             onCreateAndAssign={(name, color) => handleCreateAndAssignTag(user.id, name, color)}
+                            onEditTag={handleEditTag}
+                            onDeleteTag={handleDeleteTag}
                           />
                         )}
 
