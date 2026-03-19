@@ -78,7 +78,7 @@ export function TagFilterDropdown({
       )}
 
       {isOpen && (
-        <div className="absolute z-30 w-56 mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-auto">
+        <div className="absolute z-30 right-0 w-48 sm:w-56 mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-auto">
           {sortedTags.length === 0 ? (
             <div className="p-3 text-gray-500 text-xs text-center">Нет тегов</div>
           ) : (
