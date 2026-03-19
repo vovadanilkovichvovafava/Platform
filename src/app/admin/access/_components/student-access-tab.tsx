@@ -46,6 +46,7 @@ import { adminPageLegends } from "@/lib/admin-help-texts"
 import { PER_PAGE_OPTIONS, type PerPageOption } from "@/lib/url-state"
 import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
 import { TagAssignDropdown } from "@/components/tag-assign-dropdown"
+import { TagFilterDropdown } from "@/components/tag-filter-dropdown"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -106,7 +107,9 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
   const [trails, setTrails] = useState<Trail[]>([])
   const [access, setAccess] = useState<Access[]>([])
   const [allTags, setAllTags] = useState<TagInfo[]>([])
+  const [allTagsRaw, setAllTagsRaw] = useState<(TagInfo & { _count?: { assignments: number } })[]>([])
   const [tagAssignments, setTagAssignments] = useState<TagAssignment[]>([])
+  const [tagFilter, setTagFilter] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -177,6 +180,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       setAccess(accessData)
 
       const tagsData = await tagsRes.json()
+      setAllTagsRaw(tagsData)
       setAllTags(
         tagsData.map((t: { id: string; name: string; color: string }) => ({
           id: t.id,
@@ -534,6 +538,58 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
     }
   }
 
+  // ── Tag edit/delete handlers ──────────────────────────────────────────
+
+  const handleEditTag = async (tagId: string, name: string, color: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: tagId, name, color }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || "Ошибка редактирования тега", "error")
+        return
+      }
+      const updated = await res.json()
+      setAllTags((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setAllTagsRaw((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setTagAssignments((prev) =>
+        prev.map((a) => (a.tagId === tagId ? { ...a, tag: { ...a.tag, name: updated.name, color: updated.color } } : a))
+      )
+      showToast("Тег обновлён", "success")
+    } catch {
+      showToast("Ошибка редактирования тега", "error")
+    }
+  }
+
+  const handleDeleteTag = async (tagId: string) => {
+    try {
+      const res = await fetch(`/api/admin/student-tags?id=${tagId}`, { method: "DELETE" })
+      if (!res.ok) {
+        showToast("Ошибка удаления тега", "error")
+        return
+      }
+      setAllTags((prev) => prev.filter((t) => t.id !== tagId))
+      setAllTagsRaw((prev) => prev.filter((t) => t.id !== tagId))
+      setTagAssignments((prev) => prev.filter((a) => a.tagId !== tagId))
+      setTagFilter((prev) => prev.filter((id) => id !== tagId))
+      showToast("Тег удалён", "success")
+    } catch {
+      showToast("Ошибка удаления тега", "error")
+    }
+  }
+
+  const tagsForFilter = useMemo(() => {
+    return allTagsRaw.map((t) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+      count: t._count?.assignments ?? 0,
+    }))
+  }, [allTagsRaw])
+
   // ── Helper: get trail slug by trailId ──────────────────────────────────
 
   const getTrailSlug = (trailId: string, studentId: string): string | null => {
@@ -564,17 +620,16 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
 
   // ── Filtered, sorted & paginated students ───────────────────────────
 
-  const filteredStudents = searchQuery
-    ? students.filter(
-        (s) =>
-          s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (s.telegramUsername &&
-            s.telegramUsername
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase()))
-      )
-    : students
+  const filteredStudents = students.filter((s) => {
+    const matchesSearch = !searchQuery ||
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.telegramUsername &&
+        s.telegramUsername.toLowerCase().includes(searchQuery.toLowerCase()))
+    const matchesTags = tagFilter.length === 0 ||
+      tagFilter.some((tagId) => tagAssignments.some((a) => a.studentId === s.id && a.tagId === tagId))
+    return matchesSearch && matchesTags
+  })
 
   const sortedStudents = useMemo(() => {
     return [...filteredStudents].sort((a, b) => {
@@ -714,6 +769,12 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Tag filter */}
+          <TagFilterDropdown
+            tags={tagsForFilter}
+            selectedTagIds={tagFilter}
+            onChange={(ids) => { setTagFilter(ids); setCurrentPage(1) }}
+          />
           {/* Sort buttons */}
           <div className="flex items-center gap-1">
             {([
@@ -834,7 +895,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
       <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
         <span>
           Студентов: {filteredStudents.length}
-          {searchQuery && ` из ${students.length}`}
+          {(searchQuery || tagFilter.length > 0) && ` из ${students.length}`}
         </span>
         <span>Ограниченных трейлов: {assignableTrails.length}</span>
       </div>
@@ -966,6 +1027,8 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                       assignedTagIds={getStudentAssignedTagIds(student.id)}
                       onAssign={(tagId) => addTagToStudent(student.id, tagId)}
                       onCreateAndAssign={(name, color) => handleCreateAndAssignTag(student.id, name, color)}
+                      onEditTag={handleEditTag}
+                      onDeleteTag={handleDeleteTag}
                     />
                   </div>
 
