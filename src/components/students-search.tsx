@@ -260,11 +260,15 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
   // Filter and sort students
   const filteredStudents = useMemo(() => {
     let result = students.filter((student) => {
+      const q = search.toLowerCase()
       const matchesSearch =
         !search ||
-        student.name.toLowerCase().includes(search.toLowerCase()) ||
-        student.email.toLowerCase().includes(search.toLowerCase()) ||
-        (student.telegramUsername && student.telegramUsername.toLowerCase().includes(search.toLowerCase()))
+        student.name.toLowerCase().includes(q) ||
+        student.email.toLowerCase().includes(q) ||
+        (student.telegramUsername && student.telegramUsername.toLowerCase().includes(q)) ||
+        (studentTagIdsMap && tagsForFilter && studentTagIdsMap[student.id]?.some((tagId) =>
+          tagsForFilter.find((t) => t.id === tagId)?.name.toLowerCase().includes(q)
+        ))
       const matchesTrail =
         trailFilter === "all" ||
         student.enrollments.some((e) => e.trail.title === trailFilter)
@@ -314,7 +318,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
               <Input
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Поиск по имени, email или TG-нику..."
+                placeholder="Поиск по имени, email, TG-нику или тегу..."
                 className="pl-10"
               />
             </div>

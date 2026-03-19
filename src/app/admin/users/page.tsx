@@ -374,9 +374,11 @@ function AdminUsersPageContent() {
 
   // Filter users by search, role, and tags
   const filteredUsers = users.filter(user => {
+    const q = searchQuery.toLowerCase()
     const matchesSearch = searchQuery === "" ||
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      user.name.toLowerCase().includes(q) ||
+      user.email.toLowerCase().includes(q) ||
+      getStudentTags(user.id).some((tag) => tag.name.toLowerCase().includes(q))
     const matchesRole = roleFilter === "ALL" || user.role === roleFilter
     const matchesTags = tagFilter.length === 0 ||
       tagFilter.some((tagId) => tagAssignments.some((a) => a.studentId === user.id && a.tagId === tagId))
@@ -579,7 +581,7 @@ function AdminUsersPageContent() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Поиск по имени или email..."
+                    placeholder="Поиск по имени, email или тегу..."
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-9 pr-8 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -1190,7 +1190,7 @@ export default function AdvancedAnalyticsPage() {
                       type="text"
                       value={studentSearch}
                       onChange={(e) => handleStudentSearchChange(e.target.value)}
-                      placeholder="Поиск студента по имени или TG-нику..."
+                      placeholder="Поиск студента по имени, TG-нику или тегу..."
                       className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
@@ -1269,9 +1269,11 @@ export default function AdvancedAnalyticsPage() {
                 {data.studentsByTrail.map((trailGroup) => {
                   // Apply search filter and tag filter
                   const searchFiltered = trailGroup.students.filter((s) => {
+                    const q = studentSearch.toLowerCase()
                     const matchesSearch = !studentSearch ||
-                      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                      (s.telegramUsername && s.telegramUsername.toLowerCase().includes(studentSearch.toLowerCase()))
+                      s.name.toLowerCase().includes(q) ||
+                      (s.telegramUsername && s.telegramUsername.toLowerCase().includes(q)) ||
+                      (studentTagsMap[s.id]?.some((t) => t.name.toLowerCase().includes(q)))
                     const matchesTags = analyticsTagFilter.length === 0 ||
                       analyticsTagFilter.some((tagId) => studentTagsMap[s.id]?.some((t) => t.id === tagId))
                     return matchesSearch && matchesTags

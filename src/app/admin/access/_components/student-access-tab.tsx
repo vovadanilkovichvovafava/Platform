@@ -621,11 +621,12 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
   // ── Filtered, sorted & paginated students ───────────────────────────
 
   const filteredStudents = students.filter((s) => {
+    const q = searchQuery.toLowerCase()
     const matchesSearch = !searchQuery ||
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.telegramUsername &&
-        s.telegramUsername.toLowerCase().includes(searchQuery.toLowerCase()))
+      s.name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q) ||
+      (s.telegramUsername && s.telegramUsername.toLowerCase().includes(q)) ||
+      getStudentTags(s.id).some((tag) => tag.name.toLowerCase().includes(q))
     const matchesTags = tagFilter.length === 0 ||
       tagFilter.some((tagId) => tagAssignments.some((a) => a.studentId === s.id && a.tagId === tagId))
     return matchesSearch && matchesTags
@@ -752,7 +753,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
               setSearchQuery(e.target.value)
               setCurrentPage(1)
             }}
-            placeholder="Поиск по имени, email или Telegram..."
+            placeholder="Поиск по имени, email, Telegram или тегу..."
             className="w-full p-2 pl-10 border rounded-lg text-sm"
           />
           {searchQuery && (
