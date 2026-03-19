@@ -573,9 +573,9 @@ function AdminUsersPageContent() {
         {/* Users List */}
         <div className="bg-white rounded-xl border overflow-hidden">
           <div className="p-4 border-b bg-gray-50">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
               <h2 className="font-semibold">Все пользователи</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -584,7 +584,7 @@ function AdminUsersPageContent() {
                     placeholder="Поиск по имени, email или тегу..."
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-9 pr-8 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="pl-9 pr-8 py-1.5 border rounded-lg text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {searchQuery && (
                     <button
@@ -649,7 +649,7 @@ function AdminUsersPageContent() {
 
                 return (
                   <div key={user.id} className="p-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${config.color.replace('text-', 'bg-').replace('700', '100')}`}>
                           <RoleIcon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
@@ -675,7 +675,7 @@ function AdminUsersPageContent() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <div className="flex items-center gap-1 text-purple-600" title="Активных дней">
                             <CalendarDays className="h-4 w-4" />
