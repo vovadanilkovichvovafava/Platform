@@ -251,7 +251,7 @@ export default async function TeacherStudentsPage({
   const hasNoAccess = assignedTrailIds !== null && assignedTrailIds.length === 0
 
   return (
-    <div className="p-8">
+    <div className="p-8 pb-40">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
           <Users className="h-6 w-6" />
