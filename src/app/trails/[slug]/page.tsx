@@ -171,7 +171,7 @@ export default async function TrailPage({ params }: Props) {
   // IMPORTANT: modules are NOT loaded yet — no data leak
   if (needsPasswordUnlock) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
         <TrailPasswordForm
           trailId={trail.id}
           trailTitle={trail.title}
@@ -393,7 +393,7 @@ export default async function TrailPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header */}
       <div
         className="relative py-12"
@@ -415,10 +415,10 @@ export default async function TrailPage({ params }: Props) {
             <div className="flex-1">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
                     {trail.title}
                   </h1>
-                  <p className="text-lg text-gray-600 mb-4">{trail.subtitle}</p>
+                  <p className="text-lg text-gray-600 dark:text-slate-400 mb-4">{trail.subtitle}</p>
                 </div>
                 {/* Admin/Teacher edit button */}
                 {isPrivileged && (
@@ -441,11 +441,11 @@ export default async function TrailPage({ params }: Props) {
                   />
                 )}
               </div>
-              <p className="text-gray-600 mb-6 max-w-2xl">
+              <p className="text-gray-600 dark:text-slate-400 mb-6 max-w-2xl">
                 {trail.description}
               </p>
 
-              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-slate-400">
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   {trail.duration}
@@ -469,14 +469,14 @@ export default async function TrailPage({ params }: Props) {
               {isEnrolled ? (
                 <Card className="md:w-64">
                   <CardContent className="p-4">
-                    <div className="text-sm font-medium text-gray-600 mb-2">
+                    <div className="text-sm font-medium text-gray-600 dark:text-slate-400 mb-2">
                       Прогресс оценки
                     </div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl font-bold text-[#2E844A]">
                         {progressPercent}%
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-slate-400">
                         {assessmentCompletedCount}/{assessmentModules.length}
                       </span>
                     </div>
@@ -506,8 +506,8 @@ export default async function TrailPage({ params }: Props) {
       <div className="container mx-auto px-4 py-8">
         {/* Assessment Section */}
         <div className="mb-12">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Оценка знаний</h2>
-          <p className="text-gray-500 mb-6">Пройдите тесты для получения доступа к заданиям</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">Оценка знаний</h2>
+          <p className="text-gray-500 dark:text-slate-400 mb-6">Пройдите тесты для получения доступа к заданиям</p>
 
           <div className="space-y-4">
             {assessmentModules.map((module, index) => {
@@ -547,18 +547,18 @@ export default async function TrailPage({ params }: Props) {
                   <CardContent className="p-0">
                     {isLocked ? (
                       <div className="flex items-center gap-4 p-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-                          <Lock className="h-6 w-6 text-gray-400" />
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-800">
+                          <Lock className="h-6 w-6 text-gray-400 dark:text-slate-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-gray-400 truncate">{module.title}</h3>
-                          <p className="text-sm text-gray-400 line-clamp-1">{module.description}</p>
+                          <h3 className="font-medium text-gray-400 dark:text-slate-500 truncate">{module.title}</h3>
+                          <p className="text-sm text-gray-400 dark:text-slate-500 line-clamp-1">{module.description}</p>
                         </div>
                         {/* Admin/Teacher edit button - доступна даже на заблокированных модулях */}
                         {isPrivileged && (
                           <Link
                             href={`/content/modules/${module.id}`}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors shrink-0"
                             title="Редактировать модуль"
                           >
                             <Pencil className="h-4 w-4" />
@@ -569,7 +569,7 @@ export default async function TrailPage({ params }: Props) {
                       <div className="flex items-center gap-4 p-4">
                         <ModuleLink href={`/module/${module.slug}`} moduleSlug={module.slug} moduleId={module.id} skipWarning={skipModuleWarning || isCompleted} className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                            isCompleted ? "bg-green-100" : hasPendingSubmission ? "bg-amber-100" : isInProgress ? "bg-blue-100" : "bg-gray-100"
+                            isCompleted ? "bg-green-100 dark:bg-green-950" : hasPendingSubmission ? "bg-amber-100 dark:bg-amber-950" : isInProgress ? "bg-blue-100 dark:bg-blue-950" : "bg-gray-100 dark:bg-slate-800"
                           }`}>
                             {isCompleted ? (
                               <CheckCircle2 className="h-6 w-6 text-green-600" />
@@ -578,21 +578,21 @@ export default async function TrailPage({ params }: Props) {
                             ) : isInProgress ? (
                               <PlayCircle className="h-6 w-6 text-blue-600" />
                             ) : (
-                              <TypeIcon className="h-6 w-6 text-gray-500" />
+                              <TypeIcon className="h-6 w-6 text-gray-500 dark:text-slate-400" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <h3 className="font-medium text-gray-900 truncate">{module.title}</h3>
+                              <h3 className="font-medium text-gray-900 dark:text-slate-100 truncate">{module.title}</h3>
                               {hasPendingSubmission && (
                                 <Badge className="bg-amber-100 text-amber-700 border-0 text-xs shrink-0">
                                   На проверке
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-gray-500 line-clamp-1">{module.description}</p>
+                            <p className="text-sm text-gray-500 dark:text-slate-400 line-clamp-1">{module.description}</p>
                           </div>
-                          <div className="hidden sm:flex items-center gap-4 text-sm text-gray-500 shrink-0 ml-4">
+                          <div className="hidden sm:flex items-center gap-4 text-sm text-gray-500 dark:text-slate-400 shrink-0 ml-4">
                             <span className="whitespace-nowrap">{module.duration}</span>
                             <span className="whitespace-nowrap">{module.points} XP</span>
                           </div>
@@ -601,7 +601,7 @@ export default async function TrailPage({ params }: Props) {
                         {isPrivileged && (
                           <Link
                             href={`/content/modules/${module.id}`}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors shrink-0"
                             title="Редактировать модуль"
                           >
                             <Pencil className="h-4 w-4" />
@@ -619,8 +619,8 @@ export default async function TrailPage({ params }: Props) {
         {/* Project Section - Show completed and current available projects */}
         {projectModules.length > 0 && (
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Практическое задание</h2>
-            <p className="text-gray-500 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">Практическое задание</h2>
+            <p className="text-gray-500 dark:text-slate-400 mb-6">
               {allAssessmentsCompleted
                 ? "Выполните задание и отправьте на проверку"
                 : "Завершите оценку знаний для доступа к заданию"
@@ -628,7 +628,7 @@ export default async function TrailPage({ params }: Props) {
             </p>
 
             {!allAssessmentsCompleted && (
-              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3">
+              <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-900 rounded-lg flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-orange-500" />
                 <span className="text-orange-700">
                   Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданию
@@ -680,7 +680,7 @@ export default async function TrailPage({ params }: Props) {
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Badge className="bg-blue-100 text-blue-700 border-0">
+                            <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 border-0">
                               <FolderGit2 className="h-3 w-3 mr-1" />
                               Проект
                             </Badge>
@@ -691,7 +691,7 @@ export default async function TrailPage({ params }: Props) {
                             )}
                           </div>
                           {isProjectCompleted && (
-                            <Badge className="bg-green-100 text-green-700 border-0">
+                            <Badge className="bg-green-100 dark:bg-green-950 text-green-700 border-0">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Сдано
                             </Badge>
@@ -700,8 +700,8 @@ export default async function TrailPage({ params }: Props) {
                         <CardTitle className="text-lg">{project.title}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-500 mb-4">{project.description}</p>
-                        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">{project.description}</p>
+                        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-slate-400 mb-4">
                           <span>{project.duration}</span>
                           <span className="font-medium">{project.points} XP</span>
                         </div>
@@ -734,17 +734,17 @@ export default async function TrailPage({ params }: Props) {
         {/* Certificate Section */}
         {isEnrolled && allModulesCompleted && (
           <div className="mt-12">
-            <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+            <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-200 dark:border-amber-800">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-center gap-6">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
                     <Award className="h-8 w-8 text-amber-600" />
                   </div>
                   <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">
                       {hasCertificate ? "Сертификат получен!" : "Trail завершён!"}
                     </h3>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-slate-400">
                       {hasCertificate
                         ? "Вы уже получили сертификат за этот trail"
                         : "Поздравляем! Вы прошли все модули и можете получить сертификат"

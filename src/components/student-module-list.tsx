@@ -201,7 +201,7 @@ export function StudentModuleList({
   if (enrollments.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6 text-center text-gray-500">
+        <CardContent className="p-6 text-center text-gray-500 dark:text-slate-400">
           Студент не записан ни на один trail
         </CardContent>
       </Card>
@@ -230,28 +230,28 @@ export function StudentModuleList({
               <CardContent className="p-0">
                 {/* Trail header with collapsible trigger */}
                 <CollapsibleTrigger asChild>
-                  <button className="w-full p-4 pb-2 hover:bg-gray-50 transition-colors rounded-t-lg text-left group">
+                  <button className="w-full p-4 pb-2 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors rounded-t-lg text-left group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="font-semibold text-gray-900">{enrollment.trail.title}</span>
+                        <span className="font-semibold text-gray-900 dark:text-slate-100">{enrollment.trail.title}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant="secondary" className="text-sm">
                           {completedModules.length}/{trailModules.length}
                         </Badge>
-                        <span className="text-sm text-gray-500">{trailProgress}%</span>
-                        <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-aria-expanded:rotate-180" />
+                        <span className="text-sm text-gray-500 dark:text-slate-400">{trailProgress}%</span>
+                        <ChevronDown className="h-4 w-4 text-gray-500 dark:text-slate-400 transition-transform duration-200 group-aria-expanded:rotate-180" />
                       </div>
                     </div>
                     {/* Progress bar */}
                     <div className="mt-3">
-                      <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-2">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-300"
                           style={{ width: `${trailProgress}%` }}
                         />
                       </div>
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 mt-1">
                         <span>{completedModules.reduce((s, m) => s + m.points, 0)} XP заработано</span>
                         <span>{trailMaxXP} XP максимум</span>
                       </div>
@@ -261,10 +261,10 @@ export function StudentModuleList({
 
                 {/* Status buttons row */}
                 {canSetStatus && (
-                  <div className="px-4 py-2 border-t border-gray-100 flex items-center gap-2">
-                    <span className="text-xs text-gray-500 mr-1">Статус:</span>
+                  <div className="px-4 py-2 border-t border-gray-100 dark:border-slate-700 flex items-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-slate-400 mr-1">Статус:</span>
                     {isStatusLoading ? (
-                      <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
+                      <RefreshCw className="h-4 w-4 text-gray-400 dark:text-slate-500 animate-spin" />
                     ) : (
                       (Object.keys(STATUS_CONFIG) as TrailStatusKey[]).map((statusKey) => {
                         const config = STATUS_CONFIG[statusKey]
@@ -307,7 +307,7 @@ export function StudentModuleList({
                                 : "bg-green-50 hover:bg-green-100"
                               : isInProgress
                               ? "bg-blue-50 hover:bg-blue-100"
-                              : "bg-gray-50 hover:bg-gray-100"
+                              : "bg-gray-50 dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-700"
                           }`}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -320,7 +320,7 @@ export function StudentModuleList({
                             ) : isInProgress ? (
                               <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
                             ) : (
-                              <XCircle className="h-5 w-5 text-gray-300 flex-shrink-0" />
+                              <XCircle className="h-5 w-5 text-gray-300 dark:text-slate-600 flex-shrink-0" />
                             )}
                             <div className="flex-1 min-w-0">
                               <span
@@ -331,7 +331,7 @@ export function StudentModuleList({
                                       : "text-green-700"
                                     : isInProgress
                                     ? "text-blue-700"
-                                    : "text-gray-600"
+                                    : "text-gray-600 dark:text-slate-400"
                                 }`}
                               >
                                 {module.title}
@@ -344,12 +344,12 @@ export function StudentModuleList({
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-sm text-gray-500 font-medium">{module.points} XP</span>
+                            <span className="text-sm text-gray-500 dark:text-slate-400 font-medium">{module.points} XP</span>
 
                             {/* Skip/Revert button - hidden for HR */}
                             {canSkipModules && (
                               isLoading ? (
-                                <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
+                                <RefreshCw className="h-4 w-4 text-gray-400 dark:text-slate-500 animate-spin" />
                               ) : isSkipped ? (
                                 <Button
                                   variant="ghost"
@@ -364,7 +364,7 @@ export function StudentModuleList({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100"
+                                  className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 text-gray-600 dark:text-slate-400 hover:text-purple-600 hover:bg-purple-100"
                                   onClick={() => skipModule(module.id, module.title)}
                                 >
                                   <SkipForward className="h-3 w-3 mr-1" />

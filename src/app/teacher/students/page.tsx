@@ -253,11 +253,11 @@ export default async function TeacherStudentsPage({
   return (
     <div className="p-8 pb-40">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2 flex items-center gap-2">
           <Users className="h-6 w-6" />
           Ученики
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-slate-400">
           {hasNoAccess
             ? "У вас пока нет назначенных направлений"
             : isAdmin

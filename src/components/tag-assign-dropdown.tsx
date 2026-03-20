@@ -115,11 +115,11 @@ export function TagAssignDropdown({
       </Button>
 
       {isOpen && (
-        <div className="absolute z-30 left-0 w-56 sm:w-72 mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-auto">
+        <div className="absolute z-30 left-0 w-56 sm:w-72 mt-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg shadow-lg max-h-80 overflow-auto">
           {/* Search */}
-          <div className="p-2 border-b sticky top-0 bg-white z-10">
+          <div className="p-2 border-b dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 dark:text-slate-500" />
               <input
                 type="text"
                 value={search}
@@ -134,7 +134,7 @@ export function TagAssignDropdown({
 
           {/* Existing tags list */}
           {filteredTags.length === 0 && !showCreateOption ? (
-            <div className="p-3 text-gray-500 text-xs text-center">
+            <div className="p-3 text-gray-500 dark:text-slate-400 text-xs text-center">
               {search ? "Не найдено" : "Все теги уже назначены"}
             </div>
           ) : (
@@ -194,7 +194,7 @@ export function TagAssignDropdown({
                             e.stopPropagation()
                             cancelEdit()
                           }}
-                          className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                          className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300"
                         >
                           <X className="h-3 w-3" /> Отмена
                         </button>
@@ -230,7 +230,7 @@ export function TagAssignDropdown({
                             e.stopPropagation()
                             setConfirmDeleteId(null)
                           }}
-                          className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                          className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300"
                         >
                           Отмена
                         </button>
@@ -243,7 +243,7 @@ export function TagAssignDropdown({
                 return (
                   <div
                     key={tag.id}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 text-xs border-b last:border-b-0 flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 text-xs border-b last:border-b-0 flex items-center gap-2"
                   >
                     <button
                       type="button"
@@ -271,7 +271,7 @@ export function TagAssignDropdown({
                               e.stopPropagation()
                               startEdit(tag)
                             }}
-                            className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                             title="Редактировать тег"
                           >
                             <Pencil className="h-3 w-3" />
@@ -308,8 +308,8 @@ export function TagAssignDropdown({
             if (assignedTags.length === 0) return null
             return (
               <>
-                <div className="px-3 py-1.5 bg-gray-50 border-t border-b">
-                  <span className="text-xs text-gray-400">Назначенные</span>
+                <div className="px-3 py-1.5 bg-gray-50 dark:bg-slate-900 border-t border-b dark:border-slate-700">
+                  <span className="text-xs text-gray-400 dark:text-slate-500">Назначенные</span>
                 </div>
                 {assignedTags.map((tag) => {
                   if (editingTagId === tag.id) {
@@ -357,7 +357,7 @@ export function TagAssignDropdown({
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancelEdit() }}
-                            className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                            className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300"
                           >
                             <X className="h-3 w-3" /> Отмена
                           </button>
@@ -382,7 +382,7 @@ export function TagAssignDropdown({
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteId(null) }}
-                            className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                            className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300"
                           >
                             Отмена
                           </button>
@@ -406,7 +406,7 @@ export function TagAssignDropdown({
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEdit(tag) }}
-                            className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                             title="Редактировать тег"
                           >
                             <Pencil className="h-3 w-3" />
@@ -434,7 +434,7 @@ export function TagAssignDropdown({
           {showCreateOption && (
             <div className="border-t">
               <div className="px-3 py-2">
-                <p className="text-xs text-gray-500 mb-1.5">Создать новый тег:</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mb-1.5">Создать новый тег:</p>
                 <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                   {COLOR_OPTIONS.map((c) => (
                     <button

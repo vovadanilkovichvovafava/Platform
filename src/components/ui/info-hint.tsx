@@ -67,7 +67,7 @@ export function InfoHint({
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "inline-flex items-center justify-center rounded-full p-0.5",
-          "text-gray-400 hover:text-blue-600 hover:bg-blue-50",
+          "text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1",
           "transition-colors",
           iconClassName
@@ -81,8 +81,8 @@ export function InfoHint({
           role="tooltip"
           className={cn(
             "absolute z-50 w-64 max-w-[calc(100vw-2rem)]",
-            "rounded-lg border border-gray-200 bg-white p-3 shadow-lg",
-            "text-sm text-gray-700 leading-relaxed",
+            "rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-lg",
+            "text-sm text-gray-700 dark:text-slate-300 leading-relaxed",
             positionClasses[side]
           )}
         >

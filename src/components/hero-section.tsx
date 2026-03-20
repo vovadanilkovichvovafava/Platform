@@ -10,7 +10,7 @@ interface HeroSectionProps {
 export function HeroSection({ isLoggedIn = false }: HeroSectionProps) {
   return (
     <section
-      className="relative min-h-[90vh] flex items-center overflow-hidden bg-slate-900 bg-cover bg-center bg-no-repeat"
+      className="relative min-h-[90vh] flex items-center overflow-hidden bg-slate-900 dark:bg-slate-950 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/hero-bg.jpg')" }}
     >
       {/* Overlay for better text readability */}

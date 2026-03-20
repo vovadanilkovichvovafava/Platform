@@ -253,22 +253,22 @@ export default function TeacherContentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50">
+    <div className="bg-gray-50 dark:bg-slate-900">
       {/* Header */}
-      <div className="bg-white border-b px-4 py-4">
+      <div className="bg-white dark:bg-slate-800 border-b px-4 py-4">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 truncate">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-slate-100 truncate">
               Управление контентом
             </h1>
-            <p className="text-gray-500 text-sm truncate">
+            <p className="text-gray-500 dark:text-slate-400 text-sm truncate">
               Редактирование trails и модулей
             </p>
           </div>
@@ -286,7 +286,7 @@ export default function TeacherContentPage() {
       {/* Content */}
       <div className="p-4">
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between text-red-700 text-sm">
             <div className="flex items-center gap-2 min-w-0">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">{error}</span>
@@ -301,8 +301,8 @@ export default function TeacherContentPage() {
           {assignedTrails.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                <p className="text-gray-500 text-sm">Нет назначенных trails</p>
+                <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300 dark:text-slate-600" />
+                <p className="text-gray-500 dark:text-slate-400 text-sm">Нет назначенных trails</p>
               </CardContent>
             </Card>
           ) : (
@@ -327,7 +327,7 @@ export default function TeacherContentPage() {
                             {trail.isPublished ? "✓" : "○"}
                           </Badge>
                         </div>
-                        <p className="text-xs text-gray-500 truncate">{trail.subtitle}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{trail.subtitle}</p>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
@@ -344,7 +344,7 @@ export default function TeacherContentPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                           onClick={() => deleteTrail(trail.id, trail.title)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -356,7 +356,7 @@ export default function TeacherContentPage() {
                   {/* Modules List */}
                   <CardContent className="p-0">
                     {trail.modules.length === 0 ? (
-                      <p className="text-gray-400 text-sm text-center py-6">Нет модулей</p>
+                      <p className="text-gray-400 dark:text-slate-500 text-sm text-center py-6">Нет модулей</p>
                     ) : (
                       <div className="divide-y">
                         {trail.modules.map((module, index) => {
@@ -365,24 +365,24 @@ export default function TeacherContentPage() {
                           return (
                             <div
                               key={module.id}
-                              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 group"
+                              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-800 group"
                             >
-                              <span className="text-gray-400 text-xs w-4 flex-shrink-0">{index + 1}</span>
-                              <div className="flex h-7 w-7 items-center justify-center rounded bg-gray-100 flex-shrink-0">
-                                <TypeIcon className="h-3.5 w-3.5 text-gray-500" />
+                              <span className="text-gray-400 dark:text-slate-500 text-xs w-4 flex-shrink-0">{index + 1}</span>
+                              <div className="flex h-7 w-7 items-center justify-center rounded bg-gray-100 dark:bg-slate-800 flex-shrink-0">
+                                <TypeIcon className="h-3.5 w-3.5 text-gray-500 dark:text-slate-400" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm text-gray-900 truncate">{module.title}</div>
-                                <div className="text-xs text-gray-500 truncate">{module.description}</div>
+                                <div className="font-medium text-sm text-gray-900 dark:text-slate-100 truncate">{module.title}</div>
+                                <div className="text-xs text-gray-500 dark:text-slate-400 truncate">{module.description}</div>
                               </div>
-                              <div className="text-xs text-gray-400 flex-shrink-0">{module.points}xp</div>
+                              <div className="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0">{module.points}xp</div>
                               <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
                                 <Link href={`/content/modules/${module.id}`}>
                                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
                                     <Edit className="h-3.5 w-3.5" />
                                   </Button>
                                 </Link>
-                                <div className="w-px h-5 bg-gray-200 mx-1" />
+                                <div className="w-px h-5 bg-gray-200 dark:bg-slate-700 mx-1" />
                                 <Button
                                   variant="ghost-destructive"
                                   size="sm"
@@ -414,7 +414,7 @@ export default function TeacherContentPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>Создать новый Trail</CardTitle>
                 <button onClick={() => setShowTrailModal(false)}>
-                  <X className="h-5 w-5 text-gray-500" />
+                  <X className="h-5 w-5 text-gray-500 dark:text-slate-400" />
                 </button>
               </div>
             </CardHeader>
@@ -462,7 +462,7 @@ export default function TeacherContentPage() {
                     onChange={(e) =>
                       setTrailForm({ ...trailForm, icon: e.target.value })
                     }
-                    className="w-full p-2 border rounded-lg"
+                    className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800"
                   >
                     <option value="Code">Code</option>
                     <option value="Target">Target</option>
@@ -493,7 +493,7 @@ export default function TeacherContentPage() {
                   placeholder="2-4 недели"
                 />
               </div>
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800">
                 Новый trail будет закрыт для учеников до подтверждения администратором.
               </div>
               <div className="flex justify-end gap-2 pt-4">

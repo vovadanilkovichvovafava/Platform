@@ -75,14 +75,14 @@ export default async function MyWorkPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <NotificationSyncTrigger />
-      <div className="bg-white border-b">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-4">
             Мои работы
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 dark:text-slate-400">
             Все ваши проекты и их статусы
           </p>
         </div>
@@ -91,11 +91,11 @@ export default async function MyWorkPage() {
       <div className="container mx-auto px-4 py-8">
         {submissions.length === 0 ? (
           <div className="text-center py-12">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <FileText className="h-12 w-12 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">
               Нет отправленных работ
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-slate-400 mb-6">
               Начните обучение и сдайте свой первый проект
             </p>
             <Button asChild>
@@ -128,12 +128,12 @@ export default async function MyWorkPage() {
 
                         <Link
                           href={`/module/${submission.module.slug}`}
-                          className="text-lg font-semibold text-gray-900 hover:text-[#0176D3]"
+                          className="text-lg font-semibold text-gray-900 dark:text-slate-100 hover:text-[#0176D3]"
                         >
                           {submission.module.title}
                         </Link>
 
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
                           Отправлено{" "}
                           {new Date(submission.createdAt).toLocaleDateString(
                             "ru-RU",
@@ -146,7 +146,7 @@ export default async function MyWorkPage() {
                         </p>
 
                         {submission.comment && (
-                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                          <p className="text-sm text-gray-600 dark:text-slate-400 mt-2 line-clamp-2">
                             {submission.comment}
                           </p>
                         )}
@@ -158,7 +158,7 @@ export default async function MyWorkPage() {
                             href={submission.githubUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+                            className="inline-flex items-center text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100"
                           >
                             <Github className="h-4 w-4 mr-1" />
                             GitHub
@@ -170,7 +170,7 @@ export default async function MyWorkPage() {
                             href={submission.deployUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+                            className="inline-flex items-center text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100"
                           >
                             <Globe className="h-4 w-4 mr-1" />
                             Деплой
@@ -180,23 +180,23 @@ export default async function MyWorkPage() {
                       </div>
 
                       {submission.review && (
-                        <div className="text-center px-6 py-3 bg-gray-50 rounded-lg">
+                        <div className="text-center px-6 py-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                           <div className="text-3xl font-bold text-[#0176D3]">
                             {submission.review.score}/10
                           </div>
-                          <div className="text-xs text-gray-500">Оценка</div>
+                          <div className="text-xs text-gray-500 dark:text-slate-400">Оценка</div>
                         </div>
                       )}
                     </div>
 
                     {submission.review && (
                       <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                           Обратная связь
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {submission.review.strengths && (
-                            <div className="p-3 bg-green-50 rounded-lg">
+                            <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                               <div className="text-sm font-medium text-green-700 mb-1">
                                 Сильные стороны
                               </div>
@@ -206,7 +206,7 @@ export default async function MyWorkPage() {
                             </div>
                           )}
                           {submission.review.improvements && (
-                            <div className="p-3 bg-orange-50 rounded-lg">
+                            <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg">
                               <div className="text-sm font-medium text-orange-700 mb-1">
                                 Что улучшить
                               </div>
@@ -217,11 +217,11 @@ export default async function MyWorkPage() {
                           )}
                         </div>
                         {submission.review.comment && (
-                          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                            <div className="text-sm font-medium text-gray-700 mb-1">
+                          <div className="mt-3 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                            <div className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                               Комментарий
                             </div>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 dark:text-slate-400">
                               {submission.review.comment}
                             </p>
                           </div>

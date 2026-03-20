@@ -17,12 +17,14 @@ import {
   Search, Plus, Check, ArrowRight, ExternalLink, FileText, Users,
   Calendar, Clock, Target, Zap, Code, Database, Globe, Lock, Unlock, Edit, Trash2,
   GraduationCap, History, UserCheck, BookMarked, Layers, PenTool, Eye, MessageSquare,
+  Sun, Moon,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { NotificationBell } from "@/components/notification-bell"
 import { NavbarPresetsEditor } from "@/components/navbar-presets-editor"
 import { FEATURE_FLAGS } from "@/lib/feature-flags"
+import { useTheme } from "@/components/providers/theme-provider"
 
 // Icon map for dynamic rendering
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -172,6 +174,7 @@ function NavIcon({ name, className = "h-4 w-4" }: { name: string; className?: st
 export function Header() {
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { theme, toggleTheme } = useTheme()
 
   // Fetch navbar preset items
   const { items: navbarItems, setItems: setNavbarItems } = useNavbarPreset(!!session?.user?.id)
@@ -200,14 +203,14 @@ export function Header() {
   const dropdownNavItems = visibleItems
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4 md:gap-8">
           {/* Mobile menu button */}
           {session && (
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg"
+              className="md:hidden p-2 -ml-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -223,10 +226,10 @@ export function Header() {
               <Flame className="h-5 w-5 text-white" />
             </div>
             <div className="flex-col hidden sm:flex">
-              <span className="text-xl font-bold text-slate-900 leading-tight">
+              <span className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
                 Prometheus
               </span>
-              <span className="text-xs text-slate-500 leading-tight">
+              <span className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
                 R&D Academy
               </span>
             </div>
@@ -242,7 +245,7 @@ export function Header() {
                   className={`text-sm font-medium transition-colors ${
                     isPrivilegedItem(item)
                       ? "text-orange-500 hover:text-orange-600"
-                      : "text-slate-600 hover:text-orange-500"
+                      : "text-slate-600 dark:text-slate-300 hover:text-orange-500"
                   }`}
                 >
                   {item.label}
@@ -252,22 +255,22 @@ export function Header() {
               {overflowNavItems.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors flex items-center gap-1">
+                    <button className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-orange-500 transition-colors flex items-center gap-1">
                       Ещё
                       <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-48 bg-white border-slate-200" align="start">
+                  <DropdownMenuContent className="w-48 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700" align="start">
                     {overflowNavItems.map((item) => (
                       <DropdownMenuItem
                         key={item.id}
                         asChild
                         className={`cursor-pointer ${
                           isPrivilegedItem(item)
-                            ? "text-orange-600 hover:text-orange-700 focus:text-orange-700 focus:bg-orange-50"
-                            : "text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100"
+                            ? "text-orange-600 hover:text-orange-700 focus:text-orange-700 focus:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:focus:text-orange-300 dark:focus:bg-orange-950"
+                            : "text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100 dark:text-slate-300 dark:hover:text-slate-100 dark:focus:text-slate-100 dark:focus:bg-slate-700"
                         }`}
                       >
                         <Link href={item.href}>
@@ -295,7 +298,7 @@ export function Header() {
               <NotificationBell />
               <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-slate-100">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-gradient-to-br from-orange-500 to-amber-500 text-white">
                       {getInitials(session.user.name || "U")}
@@ -303,16 +306,16 @@ export function Header() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white border-slate-200" align="end">
+              <DropdownMenuContent className="w-56 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700" align="end">
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium text-slate-900">{session.user.name}</p>
-                    <p className="text-sm text-slate-500">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{session.user.name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
                       {session.user.email}
                     </p>
                   </div>
                 </div>
-                <DropdownMenuSeparator className="bg-slate-100" />
+                <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-700" />
 
                 {/* Static items (Profile, Certificates) */}
                 {DROPDOWN_STATIC_ITEMS.filter((item) =>
@@ -321,7 +324,7 @@ export function Header() {
                   <DropdownMenuItem
                     key={item.href}
                     asChild
-                    className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100"
+                    className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100 dark:text-slate-300 dark:hover:text-slate-100 dark:focus:text-slate-100 dark:focus:bg-slate-700"
                   >
                     <Link href={item.href} className="cursor-pointer">
                       <NavIcon name={item.icon} className="mr-2 h-4 w-4" />
@@ -330,7 +333,7 @@ export function Header() {
                   </DropdownMenuItem>
                 ))}
 
-                <DropdownMenuSeparator className="bg-slate-100" />
+                <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-700" />
 
                 {/* Dynamic items from preset */}
                 {dropdownNavItems.map((item, index) => {
@@ -342,10 +345,10 @@ export function Header() {
 
                   return (
                     <div key={item.id}>
-                      {showSeparator && <DropdownMenuSeparator className="bg-slate-100" />}
+                      {showSeparator && <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-700" />}
                       <DropdownMenuItem
                         asChild
-                        className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100"
+                        className="text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100 dark:text-slate-300 dark:hover:text-slate-100 dark:focus:text-slate-100 dark:focus:bg-slate-700"
                       >
                         <Link href={item.href} className="cursor-pointer">
                           <NavIcon name={item.icon} className="mr-2 h-4 w-4" />
@@ -356,9 +359,21 @@ export function Header() {
                   )
                 })}
 
-                <DropdownMenuSeparator className="bg-slate-100" />
+                <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-700" />
                 <DropdownMenuItem
-                  className="cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50"
+                  className="cursor-pointer text-slate-700 hover:text-slate-900 focus:text-slate-900 focus:bg-slate-100 dark:text-slate-300 dark:hover:text-slate-100 dark:focus:text-slate-100 dark:focus:bg-slate-700"
+                  onClick={toggleTheme}
+                >
+                  {theme === "light" ? (
+                    <Moon className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Sun className="mr-2 h-4 w-4" />
+                  )}
+                  {theme === "light" ? "Тёмная тема" : "Светлая тема"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-700" />
+                <DropdownMenuItem
+                  className="cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50 dark:text-red-400 dark:focus:text-red-300 dark:focus:bg-red-950"
                   onClick={() => signOut({ callbackUrl: "/" })}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -377,7 +392,7 @@ export function Header() {
 
       {/* Mobile Navigation Menu */}
       {session && mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white">
+        <div className="md:hidden border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
           <nav className="container mx-auto px-4 py-3 space-y-1">
             {visibleItems.map((item) => (
               <Link
@@ -386,8 +401,8 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg ${
                   isPrivilegedItem(item)
-                    ? "text-orange-600 hover:bg-orange-50"
-                    : "text-slate-700 hover:bg-slate-100"
+                    ? "text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950"
+                    : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                 }`}
               >
                 <NavIcon name={item.icon} />

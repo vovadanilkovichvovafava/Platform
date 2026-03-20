@@ -47,7 +47,7 @@ export function LevelBadge({
           <span>{current.name}</span>
         </div>
         {showXP && (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500 dark:text-slate-400">
             {formatXP(xp)} XP
           </span>
         )}
@@ -77,7 +77,7 @@ export function LevelBadge({
               </Badge>
             </div>
             {showXP && (
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-slate-400">
                 {formatXP(xp)} XP накоплено
               </span>
             )}
@@ -95,7 +95,7 @@ export function LevelBadge({
       {showProgress && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500 flex items-center gap-1">
+            <span className="text-gray-500 dark:text-slate-400 flex items-center gap-1">
               <TrendingUp className="h-4 w-4" />
               {isMaxLevel ? "Максимальный уровень достигнут!" : `До уровня ${next?.name}`}
             </span>
@@ -109,7 +109,7 @@ export function LevelBadge({
             value={progressPercent}
             className="h-2"
           />
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500">
             <span>{current.name}</span>
             {next && <span>{next.name}</span>}
           </div>
@@ -154,7 +154,7 @@ export function RankBadge({
           {current.name}
         </Badge>
         {!isMaxRank && next && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500 dark:text-slate-400">
             до {next.name}: {xpToNext} XP
           </span>
         )}
@@ -203,7 +203,7 @@ export function XPDisplay({
       <span className={cn("font-bold", sizeClasses[size])}>
         {formatXP(xp)}
       </span>
-      <span className={cn("text-gray-500", sizeClasses[size])}>
+      <span className={cn("text-gray-500 dark:text-slate-400", sizeClasses[size])}>
         XP
       </span>
     </div>

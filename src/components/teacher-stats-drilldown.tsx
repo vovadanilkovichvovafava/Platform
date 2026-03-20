@@ -81,12 +81,12 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Все направления
           </Button>
-          <ChevronRight className="h-4 w-4 text-gray-400" />
+          <ChevronRight className="h-4 w-4 text-gray-400 dark:text-slate-500" />
           <Button variant="ghost" size="sm" onClick={() => setSelectedModule(null)}>
             {selectedTrail.title}
           </Button>
-          <ChevronRight className="h-4 w-4 text-gray-400" />
-          <span className="text-gray-600">{selectedModule.title}</span>
+          <ChevronRight className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+          <span className="text-gray-600 dark:text-slate-400">{selectedModule.title}</span>
         </div>
 
         <Card>
@@ -95,7 +95,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
               <div className="flex items-center gap-3">
                 {(() => {
                   const TypeIcon = typeIcons[selectedModule.type as keyof typeof typeIcons] || BookOpen
-                  return <TypeIcon className="h-5 w-5 text-gray-500" />
+                  return <TypeIcon className="h-5 w-5 text-gray-500 dark:text-slate-400" />
                 })()}
                 <span>{selectedModule.title}</span>
                 <Badge variant="outline">{typeLabels[selectedModule.type as keyof typeof typeLabels] || selectedModule.type}</Badge>
@@ -107,13 +107,13 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
           </CardHeader>
           <CardContent>
             {selectedModule.submissions.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Нет сданных работ по этому модулю</p>
+              <p className="text-gray-500 dark:text-slate-400 text-center py-8">Нет сданных работ по этому модулю</p>
             ) : (
               <div className="space-y-3">
                 {selectedModule.submissions.map((sub) => (
                   <div
                     key={sub.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                   >
                     <div className="flex items-center gap-4">
                       <Badge
@@ -141,15 +141,15 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                       <div>
                         <Link
                           href={`/teacher/students/${sub.user.id}`}
-                          className="font-medium text-gray-900 hover:text-blue-600"
+                          className="font-medium text-gray-900 dark:text-slate-100 hover:text-blue-600"
                         >
                           {sub.user.name}
                         </Link>
-                        <p className="text-xs text-gray-500">{sub.user.email}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">{sub.user.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-slate-400">
                         {new Date(sub.createdAt).toLocaleDateString("ru-RU", {
                           day: "numeric",
                           month: "short",
@@ -184,8 +184,8 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Все направления
           </Button>
-          <ChevronRight className="h-4 w-4 text-gray-400" />
-          <span className="text-gray-600">{selectedTrail.title}</span>
+          <ChevronRight className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+          <span className="text-gray-600 dark:text-slate-400">{selectedTrail.title}</span>
         </div>
 
         <Card>
@@ -213,15 +213,15 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                   <button
                     key={module.id}
                     onClick={() => setSelectedModule(module)}
-                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <TypeIcon className="h-5 w-5 text-gray-600" />
+                      <div className="p-2 bg-gray-100 dark:bg-slate-800 rounded-lg">
+                        <TypeIcon className="h-5 w-5 text-gray-600 dark:text-slate-400" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{module.title}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-medium text-gray-900 dark:text-slate-100">{module.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
                           {typeLabels[module.type as keyof typeof typeLabels]} • {module.points} XP
                         </p>
                       </div>
@@ -238,7 +238,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                           )}
                         </div>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                      <ChevronRight className="h-5 w-5 text-gray-400 dark:text-slate-500" />
                     </div>
                   </button>
                 )
@@ -255,8 +255,8 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
     <div className="space-y-4">
       {trails.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center text-gray-500">
-            <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+          <CardContent className="p-8 text-center text-gray-500 dark:text-slate-400">
+            <Users className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-slate-600" />
             <p>Нет данных для отображения</p>
           </CardContent>
         </Card>
@@ -267,7 +267,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center justify-between group cursor-pointer"
+                  className="w-full p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-left flex items-center justify-between group cursor-pointer"
                   style={{ background: `linear-gradient(135deg, ${trail.color}10 0%, transparent 100%)` }}
                 >
                 <div className="flex items-center gap-3 flex-1">
@@ -275,7 +275,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                     className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: trail.color }}
                   />
-                  <span className="font-semibold text-gray-900">{trail.title}</span>
+                  <span className="font-semibold text-gray-900 dark:text-slate-100">{trail.title}</span>
                   <div className="flex items-center gap-2 ml-auto">
                     <Badge variant="secondary">
                       {trail.modules.length} модулей
@@ -290,7 +290,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                     )}
                   </div>
                 </div>
-                <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-aria-expanded:rotate-180 ml-2 flex-shrink-0" />
+                <ChevronDown className="h-4 w-4 text-gray-500 dark:text-slate-400 transition-transform duration-200 group-aria-expanded:rotate-180 ml-2 flex-shrink-0" />
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
@@ -307,19 +307,19 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                     </Button>
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                       <p className="text-2xl font-bold text-green-600">{trail.approvedCount}</p>
                       <p className="text-xs text-green-700">Принято</p>
                     </div>
-                    <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                       <p className="text-2xl font-bold text-blue-600">{trail.pendingCount}</p>
                       <p className="text-xs text-blue-700">На проверке</p>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold text-gray-600">
+                    <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                      <p className="text-2xl font-bold text-gray-600 dark:text-slate-400">
                         {trail.totalSubmissions - trail.approvedCount - trail.pendingCount}
                       </p>
-                      <p className="text-xs text-gray-700">На доработку/провал</p>
+                      <p className="text-xs text-gray-700 dark:text-slate-300">На доработку/провал</p>
                     </div>
                   </div>
                 </div>

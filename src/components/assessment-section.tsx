@@ -289,7 +289,7 @@ export function AssessmentSection({
           <CardContent className="p-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
             <h3 className="font-semibold text-lg mb-2">Модуль завершён!</h3>
-            <p className="text-gray-600 text-sm mb-4">
+            <p className="text-gray-600 dark:text-slate-400 text-sm mb-4">
               Вы успешно прочитали материал
             </p>
             <Button asChild variant="outline" className="w-full">
@@ -305,7 +305,7 @@ export function AssessmentSection({
         <CardContent className="p-6 text-center">
           <BookOpen className="h-12 w-12 text-blue-500 mx-auto mb-4" />
           <h3 className="font-semibold text-lg mb-2">Теоретический материал</h3>
-          <p className="text-gray-500 mb-4">
+          <p className="text-gray-500 dark:text-slate-400 mb-4">
             Прочитайте материал слева и нажмите кнопку ниже, чтобы отметить модуль как завершённый
           </p>
           <Button
@@ -603,15 +603,15 @@ export function AssessmentSection({
           if (showResult && lastResult) {
             isDisabled = true
             if (lastResult.correctAnswer !== undefined && originalIdx === lastResult.correctAnswer) {
-              buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
+              buttonClass += " bg-green-100 dark:bg-green-950 border-green-500 border-2 text-green-700"
             } else if (originalIdx === selectedAnswer && !lastResult.isCorrect) {
-              buttonClass += " bg-red-100 border-red-500 border-2 text-red-700"
+              buttonClass += " bg-red-100 dark:bg-red-950 border-red-500 border-2 text-red-700"
             } else if (originalIdx === selectedAnswer && lastResult.isCorrect) {
-              buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
+              buttonClass += " bg-green-100 dark:bg-green-950 border-green-500 border-2 text-green-700"
             }
           } else if (selectedAnswer === originalIdx) {
             // Selected but not yet submitted - prominent highlight
-            buttonClass += " border-blue-600 border-2 bg-blue-100 ring-2 ring-blue-300 ring-offset-1"
+            buttonClass += " border-blue-600 border-2 bg-blue-100 dark:bg-blue-950 ring-2 ring-blue-300 ring-offset-1"
           }
 
           return (
@@ -671,7 +671,7 @@ export function AssessmentSection({
         <CardContent className="p-6 text-center">
           <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
           <h3 className="font-semibold text-lg mb-2">Оценка пройдена!</h3>
-          <p className="text-gray-600 text-sm mb-4">
+          <p className="text-gray-600 dark:text-slate-400 text-sm mb-4">
             Вы набрали {totalScore} XP
           </p>
           <div className="space-y-2">
@@ -681,7 +681,7 @@ export function AssessmentSection({
             {canReset && (
               <Button
                 variant="ghost"
-                className="w-full text-gray-500 hover:text-gray-700"
+                className="w-full text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
                 onClick={handleReset}
                 disabled={isResetting}
               >
@@ -708,7 +708,7 @@ export function AssessmentSection({
               <HelpCircle className="h-5 w-5" />
               Проверка знаний
             </CardTitle>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-slate-400">
               {answeredQuestions} / {totalQuestions} вопросов
             </div>
           </div>
@@ -723,7 +723,7 @@ export function AssessmentSection({
           <div className="flex gap-1 mb-6">
             {shuffledQuestions.map((q, idx) => {
               const attempt = attemptData[q.id]
-              let bgColor = "bg-gray-200"
+              let bgColor = "bg-gray-200 dark:bg-slate-700"
               if (attempt?.isCorrect) bgColor = "bg-green-500"
               else if (attempt?.attempts >= 3) bgColor = "bg-red-300"
               else if (idx === currentQuestion) bgColor = "bg-blue-500"
@@ -746,11 +746,11 @@ export function AssessmentSection({
           {/* Question */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-slate-400">
                 Вопрос {currentQuestion + 1} из {shuffledQuestions.length}
               </span>
               {!isQuestionFinished && (
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 dark:text-slate-400">
                   Попыток: {remainingAttempts} из 3
                 </span>
               )}
@@ -759,7 +759,7 @@ export function AssessmentSection({
 
             {/* Previously finished question (not current result) */}
             {isQuestionFinished && !showResult && (
-              <div className={`mb-4 p-3 rounded-lg ${existingAttempt?.isCorrect ? "bg-green-50" : "bg-red-50"}`}>
+              <div className={`mb-4 p-3 rounded-lg ${existingAttempt?.isCorrect ? "bg-green-50 dark:bg-green-950" : "bg-red-50 dark:bg-red-950"}`}>
                 <div className="flex items-center gap-2">
                   {existingAttempt?.isCorrect ? (
                     <>
@@ -792,7 +792,7 @@ export function AssessmentSection({
 
           {/* Result message */}
           {showResult && lastResult && (
-            <div className={`mb-4 p-4 rounded-lg ${lastResult.isCorrect ? "bg-green-50" : "bg-orange-50"}`}>
+            <div className={`mb-4 p-4 rounded-lg ${lastResult.isCorrect ? "bg-green-50 dark:bg-green-950" : "bg-orange-50 dark:bg-orange-950"}`}>
               <div className="flex items-center gap-2">
                 {lastResult.isCorrect ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -856,12 +856,12 @@ export function AssessmentSection({
         <CardContent className="p-6">
           <div className="space-y-4">
             {/* Progress */}
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600">Прогресс теста</span>
+                <span className="text-gray-600 dark:text-slate-400">Прогресс теста</span>
                 <span className="font-medium">{answeredQuestions}/{totalQuestions}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                 <div
                   className="bg-[#0176D3] h-2 rounded-full transition-all"
                   style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}

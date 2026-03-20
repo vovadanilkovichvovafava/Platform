@@ -80,7 +80,7 @@ export function TrailSearch({ trails, enrolledTrailIds, progressMap, initialSear
       {/* Search Input */}
       <div className="mb-6 max-w-md">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
           <Input
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
@@ -90,14 +90,14 @@ export function TrailSearch({ trails, enrolledTrailIds, progressMap, initialSear
           {search && (
             <button
               onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
             >
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
         {search && (
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
             Найдено: {filteredTrails.length} из {trails.length}
           </p>
         )}
@@ -117,7 +117,7 @@ export function TrailSearch({ trails, enrolledTrailIds, progressMap, initialSear
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 dark:text-slate-400">
           <Search className="h-12 w-12 mx-auto mb-4 opacity-30" />
           <p>Ничего не найдено по запросу &quot;{search}&quot;</p>
           <button

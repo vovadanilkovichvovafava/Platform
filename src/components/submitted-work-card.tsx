@@ -49,22 +49,22 @@ interface SubmittedWorkCardProps {
 const statusConfig = {
   PENDING: {
     label: "На проверке",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 dark:bg-blue-950 text-blue-700",
     icon: Clock,
   },
   APPROVED: {
     label: "Принято",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 dark:bg-green-950 text-green-700",
     icon: CheckCircle2,
   },
   REVISION: {
     label: "На доработку",
-    color: "bg-orange-100 text-orange-700",
+    color: "bg-orange-100 dark:bg-orange-950 text-orange-700",
     icon: AlertCircle,
   },
   FAILED: {
     label: "Провал",
-    color: "bg-red-100 text-red-700",
+    color: "bg-red-100 dark:bg-red-950 text-red-700",
     icon: XCircle,
   },
 }
@@ -184,10 +184,10 @@ export function SubmittedWorkCard({
   return (
     <div className="space-y-4">
       {/* Status */}
-      <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-600 mb-2">
+            <div className="text-sm font-medium text-gray-600 dark:text-slate-400 mb-2">
               Статус работы
             </div>
             <Badge className={`${status.color} border-0`}>
@@ -251,13 +251,13 @@ export function SubmittedWorkCard({
 
       {/* Error/Success messages */}
       {error && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950 rounded-lg">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="p-3 text-sm text-green-600 bg-green-50 rounded-lg">
+        <div className="p-3 text-sm text-green-600 bg-green-50 dark:bg-green-950 rounded-lg">
           {success}
         </div>
       )}
@@ -302,7 +302,7 @@ export function SubmittedWorkCard({
                 onChange={(e) => setFormData(prev => ({ ...prev, fileUrl: e.target.value }))}
                 disabled={isLoading}
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-slate-400">
                 Google Drive, Dropbox или другой файловый сервис
               </p>
             </div>
@@ -384,7 +384,7 @@ export function SubmittedWorkCard({
             </a>
           )}
           {submission.comment && (
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-gray-600 dark:text-slate-400 mt-2">
               {submission.comment}
             </p>
           )}
@@ -403,7 +403,7 @@ export function SubmittedWorkCard({
           {submission.review.comment && (
             <div>
               <div className="text-sm font-medium mb-1">Комментарий</div>
-              <p className="text-sm text-gray-600">{submission.review.comment}</p>
+              <p className="text-sm text-gray-600 dark:text-slate-400">{submission.review.comment}</p>
             </div>
           )}
         </div>

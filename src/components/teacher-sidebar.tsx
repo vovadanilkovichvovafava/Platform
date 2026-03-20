@@ -62,17 +62,17 @@ export function TeacherSidebar({ initialPendingCount }: TeacherSidebarProps) {
   }, [])
 
   return (
-    <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 pt-16 bg-white border-r">
+    <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 pt-16 bg-white dark:bg-slate-800 border-r">
       <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
         <div className="px-4 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
             {isHR ? "HR панель" : "Панель учителя"}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-slate-400">
             {isHR ? "Аналитика кандидатов" : "Управление обучением"}
           </p>
           {isHR && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-md">
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950 px-2 py-1 rounded-md">
               <Eye className="h-3 w-3" />
               Только просмотр
             </div>
@@ -83,7 +83,7 @@ export function TeacherSidebar({ initialPendingCount }: TeacherSidebarProps) {
           {/* Submissions — visible for all roles (HR = read-only) */}
           <Link
             href="/teacher"
-            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
           >
             <ClipboardList className="h-5 w-5" />
             <span className="flex-1">{isHR ? "Работы студентов" : "Работы на проверку"}</span>
@@ -95,14 +95,14 @@ export function TeacherSidebar({ initialPendingCount }: TeacherSidebarProps) {
           </Link>
           <Link
             href="/teacher/students"
-            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
           >
             <Users className="h-5 w-5" />
             {isHR ? "Кандидаты" : "Ученики"}
           </Link>
           <Link
             href="/teacher/stats"
-            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
           >
             <BarChart3 className="h-5 w-5" />
             Статистика
@@ -111,7 +111,7 @@ export function TeacherSidebar({ initialPendingCount }: TeacherSidebarProps) {
           {!isHR && (
             <Link
               href="/teacher/content"
-              className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+              className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
             >
               <BookOpen className="h-5 w-5" />
               Контент

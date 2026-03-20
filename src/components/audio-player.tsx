@@ -328,7 +328,7 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
         <source src={url} type={mimeType || undefined} />
       </audio>
 
-      <div className="bg-white border border-pink-200 rounded-xl p-4 space-y-3">
+      <div className="bg-white dark:bg-slate-800 border border-pink-200 dark:border-pink-800 rounded-xl p-4 space-y-3">
         {/* Controls row */}
         <div className="flex items-center gap-3">
           {/* Play/Pause button */}
@@ -358,7 +358,7 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex-shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-xs font-medium hover:bg-pink-100 transition-colors"
+                className="flex-shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-pink-50 dark:bg-pink-950 border border-pink-200 dark:border-pink-800 text-pink-700 text-xs font-medium hover:bg-pink-100 dark:hover:bg-pink-900 transition-colors"
                 title="Скорость воспроизведения"
               >
                 <Gauge className="h-3.5 w-3.5" />
@@ -405,11 +405,11 @@ export function AudioPlayer({ url, mimeType }: AudioPlayerProps) {
               step={0.01}
               value={isMuted ? 0 : volume}
               onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-              className="w-20 h-1.5 appearance-none rounded-full bg-pink-100 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-pink-500 [&::-webkit-slider-thumb]:hover:bg-pink-600 [&::-webkit-slider-thumb]:transition-colors [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-pink-500 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:hover:bg-pink-600"
+              className="w-20 h-1.5 appearance-none rounded-full bg-pink-100 dark:bg-pink-950 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-pink-500 [&::-webkit-slider-thumb]:hover:bg-pink-600 [&::-webkit-slider-thumb]:transition-colors [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-pink-500 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:hover:bg-pink-600"
               title={`Громкость: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
             />
           </div>
-          <div className="flex-1 flex items-center justify-between text-xs text-gray-500">
+          <div className="flex-1 flex items-center justify-between text-xs text-gray-500 dark:text-slate-400">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>

@@ -280,9 +280,9 @@ export default async function ModulePage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-6">
           <Breadcrumbs
             items={[
@@ -296,7 +296,7 @@ export default async function ModulePage({ params }: Props) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary" className="bg-gray-100">
+                <Badge variant="secondary" className="bg-gray-100 dark:bg-slate-800">
                   <TypeIcon className="h-3 w-3 mr-1" />
                   {typeLabels[courseModule.type]}
                 </Badge>
@@ -307,11 +307,11 @@ export default async function ModulePage({ params }: Props) {
                   </Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">{courseModule.title}</h1>
-              <p className="text-gray-600 mt-1">{courseModule.description}</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{courseModule.title}</h1>
+              <p className="text-gray-600 dark:text-slate-400 mt-1">{courseModule.description}</p>
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-slate-400">
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
                 {courseModule.duration}
@@ -344,8 +344,8 @@ export default async function ModulePage({ params }: Props) {
               courseModule.contentBlocks.map((block) => {
                 if (block.type === "VIDEO") {
                   return (
-                    <Card key={block.id} className="overflow-hidden border-blue-200">
-                      <div className="bg-blue-50 px-4 py-2 border-b border-blue-200 flex items-center gap-2">
+                    <Card key={block.id} className="overflow-hidden border-blue-200 dark:border-blue-800">
+                      <div className="bg-blue-50 dark:bg-blue-950 px-4 py-2 border-b border-blue-200 dark:border-blue-800 flex items-center gap-2">
                         <Video className="h-4 w-4 text-blue-600" />
                         <span className="text-sm font-medium text-blue-700">
                           {block.title || "Видео"}
@@ -422,7 +422,7 @@ export default async function ModulePage({ params }: Props) {
                       {block.content ? (
                         <MarkdownRenderer content={block.content} />
                       ) : (
-                        <p className="text-gray-500">Контент скоро появится</p>
+                        <p className="text-gray-500 dark:text-slate-400">Контент скоро появится</p>
                       )}
                     </CardContent>
                   </Card>
@@ -435,7 +435,7 @@ export default async function ModulePage({ params }: Props) {
                   {courseModule.content ? (
                     <MarkdownRenderer content={courseModule.content} />
                   ) : (
-                    <p className="text-gray-500">Контент модуля скоро появится</p>
+                    <p className="text-gray-500 dark:text-slate-400">Контент модуля скоро появится</p>
                   )}
                 </CardContent>
               </Card>
@@ -659,7 +659,7 @@ export default async function ModulePage({ params }: Props) {
         {/* CTA to next module when submission is PENDING (not yet reviewed) - FREE mode only */}
         {!isCompleted && submission?.status === "PENDING" && nextModule && courseModule.trail.allowSkipReview && (
           <div className="mt-8 flex flex-col items-center gap-4">
-            <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-200 max-w-md">
+            <div className="text-center p-4 bg-amber-50 dark:bg-amber-950 rounded-xl border border-amber-200 dark:border-amber-800 max-w-md">
               <p className="text-amber-700 text-sm">
                 Ваша работа отправлена на проверку. Вы можете продолжить обучение, не дожидаясь результата.
               </p>
@@ -680,7 +680,7 @@ export default async function ModulePage({ params }: Props) {
         {/* STRICT mode: show "waiting for review" message when submission is PENDING */}
         {!isCompleted && submission?.status === "PENDING" && !courseModule.trail.allowSkipReview && (
           <div className="mt-8 flex justify-center">
-            <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-200 max-w-md">
+            <div className="text-center p-4 bg-amber-50 dark:bg-amber-950 rounded-xl border border-amber-200 dark:border-amber-800 max-w-md">
               <p className="text-amber-700 text-sm">
                 Ваша работа отправлена на проверку. Переход к следующему модулю будет доступен после проверки преподавателем.
               </p>
@@ -691,7 +691,7 @@ export default async function ModulePage({ params }: Props) {
         {/* Trail completion message */}
         {isCompleted && !nextModule && (
           <div className="mt-8 text-center">
-            <div className="inline-flex flex-col items-center p-6 bg-green-50 rounded-xl border border-green-200">
+            <div className="inline-flex flex-col items-center p-6 bg-green-50 dark:bg-green-950 rounded-xl border border-green-200 dark:border-green-800">
               <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
               <h3 className="text-lg font-semibold text-green-800">Trail завершён!</h3>
               <p className="text-green-600 text-sm mt-1">

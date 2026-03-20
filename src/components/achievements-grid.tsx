@@ -157,7 +157,7 @@ function AchievementModal({
           {/* Close Button */}
           <button
             onClick={() => onOpenChange(false)}
-            className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-500 hover:text-gray-700 transition-all duration-200 shadow-sm hover:shadow"
+            className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-white/80 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 transition-all duration-200 shadow-sm hover:shadow"
           >
             <X className="w-5 h-5" />
           </button>
@@ -187,41 +187,41 @@ function AchievementModal({
                 className={`relative w-32 h-32 rounded-2xl flex items-center justify-center mb-5 achievement-stencil achievement-modal-shimmer ${
                   isEarned
                     ? `bg-gradient-to-br ${getRarityGradient(rarity)} shadow-xl ${getRarityGlowColor(rarity)}`
-                    : "bg-gray-100"
+                    : "bg-gray-100 dark:bg-slate-800"
                 }`}
               >
                 {/* Icon - doubled size */}
                 <Icon
                   icon={achievement.icon}
                   className={`w-20 h-20 ${
-                    isEarned ? getRarityIconColor(rarity) : "text-gray-400"
+                    isEarned ? getRarityIconColor(rarity) : "text-gray-400 dark:text-slate-500"
                   } transition-transform duration-300 ${isEarned ? "drop-shadow-lg" : ""}`}
                 />
 
                 {/* Lock Overlay for unearned */}
                 {!isEarned && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-2xl backdrop-blur-[1px]">
-                    <Lock className="h-10 w-10 text-gray-400" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-slate-800/70 rounded-2xl backdrop-blur-[1px]">
+                    <Lock className="h-10 w-10 text-gray-400 dark:text-slate-500" />
                   </div>
                 )}
               </div>
 
               {/* Achievement Name */}
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">
                 {achievement.name}
               </h3>
 
               {/* Rarity Badge with enhanced styling */}
               <Badge
                 className={`mb-4 px-4 py-1 text-sm font-medium ${
-                  isEarned ? achievement.color : "bg-gray-100 text-gray-500"
+                  isEarned ? achievement.color : "bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400"
                 }`}
               >
                 {getRarityLabel(rarity)}
               </Badge>
 
               {/* Description */}
-              <p className="text-gray-600 mb-5 text-base leading-relaxed">
+              <p className="text-gray-600 dark:text-slate-400 mb-5 text-base leading-relaxed">
                 {achievement.description}
               </p>
 
@@ -232,12 +232,12 @@ function AchievementModal({
                     rarity === "legendary"
                       ? "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700"
                       : rarity === "epic"
-                      ? "bg-purple-50 text-purple-700"
+                      ? "bg-purple-50 dark:bg-purple-950 text-purple-700"
                       : rarity === "rare"
-                      ? "bg-blue-50 text-blue-700"
+                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700"
                       : rarity === "uncommon"
-                      ? "bg-green-50 text-green-700"
-                      : "bg-gray-50 text-gray-700"
+                      ? "bg-green-50 dark:bg-green-950 text-green-700"
+                      : "bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-slate-300"
                   }`}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -250,7 +250,7 @@ function AchievementModal({
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-sm text-gray-400 bg-gray-50 px-4 py-2 rounded-full">
+                <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-900 px-4 py-2 rounded-full">
                   <Lock className="w-4 h-4" />
                   <span>Ещё не получено</span>
                 </div>
@@ -317,8 +317,8 @@ export function AchievementsGrid({
   if (achievements.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-gray-500">
-          <Award className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+        <CardContent className="py-8 text-center text-gray-500 dark:text-slate-400">
+          <Award className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-slate-600" />
           <p>Загрузка достижений...</p>
         </CardContent>
       </Card>
@@ -367,7 +367,7 @@ export function AchievementsGrid({
         <div
           className={`flex items-center justify-between mb-4 ${
             collapsible
-              ? "cursor-pointer select-none group hover:bg-gray-50 -mx-2 px-2 py-2 rounded-lg transition-colors"
+              ? "cursor-pointer select-none group hover:bg-gray-50 dark:hover:bg-slate-800 -mx-2 px-2 py-2 rounded-lg transition-colors"
               : ""
           }`}
           onClick={collapsible ? () => setIsExpanded(!isExpanded) : undefined}
@@ -377,11 +377,11 @@ export function AchievementsGrid({
               <Award className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
                 Достижения
                 {collapsible && (
                   <ChevronDown
-                    className={`h-5 w-5 text-gray-400 transition-transform duration-300 group-hover:text-gray-600 ${
+                    className={`h-5 w-5 text-gray-400 dark:text-slate-500 transition-transform duration-300 group-hover:text-gray-600 dark:group-hover:text-slate-400 ${
                       isExpanded ? "rotate-0" : "-rotate-90"
                     }`}
                   />
@@ -389,13 +389,13 @@ export function AchievementsGrid({
               </h2>
               {stats && (
                 <div className="flex items-center gap-2 mt-0.5">
-                  <div className="h-1.5 w-24 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-24 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-orange-400 to-amber-500 rounded-full transition-all duration-500"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">
                     {stats.count} из {stats.total} {pluralizeRu(stats.total, ["достижения", "достижений", "достижений"])}
                   </span>
                 </div>
@@ -439,7 +439,7 @@ export function AchievementsGrid({
                   className={`${compact ? "w-12 h-12 mb-2" : "w-[76px] h-[76px] mb-3"} mx-auto rounded-xl flex items-center justify-center transition-transform duration-200 hover:scale-110 achievement-stencil ${
                     achievement.earned
                       ? `${getRarityIconBg(achievement.rarity)} ${getRarityGlowColor(achievement.rarity)} shadow-lg`
-                      : "bg-gray-100"
+                      : "bg-gray-100 dark:bg-slate-800"
                   }`}
                 >
                   <Icon
@@ -447,35 +447,35 @@ export function AchievementsGrid({
                     className={`${compact ? "w-8 h-8" : "w-11 h-11"} ${
                       achievement.earned
                         ? getRarityIconColor(achievement.rarity)
-                        : "text-gray-400"
+                        : "text-gray-400 dark:text-slate-500"
                     }`}
                   />
                 </div>
-                <h3 className={`font-semibold text-gray-900 mb-1 ${
+                <h3 className={`font-semibold text-gray-900 dark:text-slate-100 mb-1 ${
                   compact ? "text-xs" : "text-sm"
                 }`}>
                   {achievement.name}
                 </h3>
                 {!compact && (
-                  <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-2 line-clamp-2">
                     {achievement.description}
                   </p>
                 )}
                 <Badge
                   className={`text-[10px] ${
-                    achievement.earned ? achievement.color : "bg-gray-100 text-gray-500"
+                    achievement.earned ? achievement.color : "bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400"
                   }`}
                 >
                   {getRarityLabel(achievement.rarity)}
                 </Badge>
                 {!compact && achievement.earned && achievement.earnedAt && (
-                  <p className="text-[10px] text-gray-400 mt-2">
+                  <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
                     {new Date(achievement.earnedAt).toLocaleDateString("ru-RU")}
                   </p>
                 )}
                 {!achievement.earned && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/50 transition-opacity duration-200">
-                    <Lock className="h-6 w-6 text-gray-400" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-800/50 transition-opacity duration-200">
+                    <Lock className="h-6 w-6 text-gray-400 dark:text-slate-500" />
                   </div>
                 )}
               </CardContent>
@@ -485,7 +485,7 @@ export function AchievementsGrid({
 
           {/* Pagination UI */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-slate-700">
               <Button
                 variant="outline"
                 size="sm"
@@ -499,7 +499,7 @@ export function AchievementsGrid({
               <div className="flex items-center gap-1">
                 {getPageNumbers().map((pageNum, idx) =>
                   pageNum === "ellipsis" ? (
-                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 dark:text-slate-500">
                       ...
                     </span>
                   ) : (
@@ -530,7 +530,7 @@ export function AchievementsGrid({
         </div>
 
         {compact && filteredAchievements.length === 0 && (
-          <p className="text-center text-gray-500 text-sm py-4">
+          <p className="text-center text-gray-500 dark:text-slate-400 text-sm py-4">
             Пока нет достижений
           </p>
         )}

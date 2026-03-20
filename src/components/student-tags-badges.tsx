@@ -81,12 +81,12 @@ export function StudentTagsBadges({
               e.stopPropagation()
               setShowOverflow(!showOverflow)
             }}
-            className="text-xs text-gray-500 hover:text-gray-700 px-1.5 py-0.5 rounded hover:bg-gray-100 transition-colors"
+            className="text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 px-1.5 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
           >
             ещё +{overflow.length}
           </button>
           {showOverflow && (
-            <div className="absolute z-30 top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-2 min-w-[140px] max-h-48 overflow-y-auto">
+            <div className="absolute z-30 top-full left-0 mt-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg shadow-lg p-2 min-w-[140px] max-h-48 overflow-y-auto">
               <div className="flex flex-col gap-1">
                 {overflow.map((tag) => (
                   <Badge

@@ -105,7 +105,7 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
         {/* No review exists — show trigger button */}
         {hasNoReview && !isRetrying && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-slate-400">
               AI-анализ ещё не проводился для этой работы.
             </p>
             <button
@@ -121,12 +121,12 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
         {/* Processing */}
         {isProcessing && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">AI анализирует работу…</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">AI анализирует работу…</p>
             <div className="flex gap-2">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-3 rounded bg-gray-200 animate-pulse"
+                  className="h-3 rounded bg-gray-200 dark:bg-slate-700 animate-pulse"
                   style={{ width: `${60 + i * 20}px` }}
                 />
               ))}
@@ -137,12 +137,12 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
         {/* Triggered from no-review state — show processing */}
         {hasNoReview && isRetrying && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">AI анализирует работу…</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">AI анализирует работу…</p>
             <div className="flex gap-2">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-3 rounded bg-gray-200 animate-pulse"
+                  className="h-3 rounded bg-gray-200 dark:bg-slate-700 animate-pulse"
                   style={{ width: `${60 + i * 20}px` }}
                 />
               ))}
@@ -180,7 +180,7 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
             {/* Coverage info + re-run button */}
             <div className="flex items-center justify-between pt-2 border-t">
               {review.coverage && (
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-gray-400 dark:text-slate-500">
                   Источники: {[
                     review.coverage.submissionTextUsed && "текст ответа",
                     review.coverage.fileUsed && "файл работы",
@@ -199,7 +199,7 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
               <button
                 onClick={() => triggerAnalysis(true)}
                 disabled={isRetrying}
-                className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 disabled:opacity-50"
+                className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 underline underline-offset-2 disabled:opacity-50"
               >
                 {isRetrying ? "Запускаю…" : "Перезапустить анализ"}
               </button>
@@ -219,19 +219,19 @@ function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; className: string }> = {
     pending: {
       label: "Ожидание",
-      className: "bg-gray-100 text-gray-600 border-0",
+      className: "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 border-0",
     },
     processing: {
       label: "Анализ…",
-      className: "bg-blue-100 text-blue-700 border-0",
+      className: "bg-blue-100 dark:bg-blue-950 text-blue-700 border-0",
     },
     completed: {
       label: "Готово",
-      className: "bg-green-100 text-green-700 border-0",
+      className: "bg-green-100 dark:bg-green-950 text-green-700 border-0",
     },
     failed: {
       label: "Ошибка",
-      className: "bg-red-100 text-red-700 border-0",
+      className: "bg-red-100 dark:bg-red-950 text-red-700 border-0",
     },
   }
   const c = config[status] ?? config.pending
@@ -242,8 +242,8 @@ function AnalysisSection({ analysis }: { analysis: AiReviewAnalysis }) {
   return (
     <div className="space-y-4">
       {/* Short Verdict */}
-      <div className="p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm font-medium text-blue-900">
+      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
           {analysis.shortVerdict}
         </p>
       </div>
@@ -292,7 +292,7 @@ function AnalysisSection({ analysis }: { analysis: AiReviewAnalysis }) {
 
       {/* Risk Flags */}
       {analysis.riskFlags.length > 0 && (
-        <div className="p-3 bg-yellow-50 rounded-lg">
+        <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
           <h4 className="text-sm font-medium text-yellow-800 mb-1">
             Риск-флаги
           </h4>
@@ -320,9 +320,9 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
     synthesis: "Синтез",
   }
   const difficultyColors: Record<string, string> = {
-    easy: "bg-green-100 text-green-700",
-    medium: "bg-yellow-100 text-yellow-700",
-    hard: "bg-red-100 text-red-700",
+    easy: "bg-green-100 dark:bg-green-950 text-green-700",
+    medium: "bg-yellow-100 dark:bg-yellow-950 text-yellow-700",
+    hard: "bg-red-100 dark:bg-red-950 text-red-700",
   }
   const sourceLabels: Record<string, string> = {
     submission: "работа",
@@ -343,23 +343,23 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
 
   return (
     <div>
-      <h4 className="text-sm font-medium text-gray-900 mb-3">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-100 mb-3">
         Вопросы для проверки ({questions.length})
       </h4>
       <div className="space-y-3">
         {questions.map((q, i) => (
           <div
             key={i}
-            className="p-3 bg-gray-50 rounded-lg border border-gray-100"
+            className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700"
           >
             <div className="flex items-start gap-2 mb-2">
-              <span className="text-sm font-medium text-gray-400 mt-0.5">
+              <span className="text-sm font-medium text-gray-400 dark:text-slate-500 mt-0.5">
                 {i + 1}.
               </span>
-              <p className="text-sm text-gray-900 flex-1">{q.question}</p>
+              <p className="text-sm text-gray-900 dark:text-slate-100 flex-1">{q.question}</p>
               <button
                 onClick={() => handleCopy(q.question, i)}
-                className="shrink-0 p-1 rounded hover:bg-gray-200 transition-colors text-gray-400 hover:text-gray-600"
+                className="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
                 aria-label={copiedIndex === i ? "Скопировано" : "Копировать вопрос"}
                 title={copiedIndex === i ? "Скопировано!" : "Копировать вопрос"}
               >
@@ -371,7 +371,7 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
               </button>
             </div>
             <div className="flex flex-wrap gap-1.5 ml-5">
-              <Badge className="text-xs bg-blue-100 text-blue-700 border-0">
+              <Badge className="text-xs bg-blue-100 dark:bg-blue-950 text-blue-700 border-0">
                 {typeLabels[q.type] ?? q.type}
               </Badge>
               <Badge
@@ -379,12 +379,12 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
               >
                 {q.difficulty}
               </Badge>
-              <Badge className="text-xs bg-purple-100 text-purple-700 border-0">
+              <Badge className="text-xs bg-purple-100 dark:bg-purple-950 text-purple-700 border-0">
                 {sourceLabels[q.source] ?? q.source}
               </Badge>
             </div>
             {q.rationale && (
-              <p className="text-xs text-gray-400 mt-1.5 ml-5 italic">
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5 ml-5 italic">
                 {q.rationale}
               </p>
             )}

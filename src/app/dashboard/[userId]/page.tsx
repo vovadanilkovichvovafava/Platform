@@ -25,10 +25,10 @@ import { StudentTagsBadges } from "@/components/student-tags-badges"
 import { isPrivileged, isHR } from "@/lib/admin-access"
 
 function getRank(xp: number) {
-  if (xp >= 1000) return { name: "Master", color: "text-purple-600", bg: "bg-purple-100" }
-  if (xp >= 500) return { name: "Expert", color: "text-blue-600", bg: "bg-blue-100" }
-  if (xp >= 200) return { name: "Intermediate", color: "text-green-600", bg: "bg-green-100" }
-  return { name: "Beginner", color: "text-gray-600", bg: "bg-gray-100" }
+  if (xp >= 1000) return { name: "Master", color: "text-purple-600", bg: "bg-purple-100 dark:bg-purple-950" }
+  if (xp >= 500) return { name: "Expert", color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-950" }
+  if (xp >= 200) return { name: "Intermediate", color: "text-green-600", bg: "bg-green-100 dark:bg-green-950" }
+  return { name: "Beginner", color: "text-gray-600 dark:text-slate-400", bg: "bg-gray-100 dark:bg-slate-800" }
 }
 
 function getInitials(name: string) {
@@ -195,9 +195,9 @@ export default async function PublicDashboardPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white py-8">
+      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 py-8">
         <div className="absolute inset-0 pointer-events-none opacity-50">
           <svg
             className="absolute bottom-0 left-0 w-full"
@@ -223,7 +223,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
           {FEATURE_FLAGS.LEADERBOARD_ENABLED ? (
             <Link
               href="/leaderboard"
-              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 mb-6"
             >
               <ArrowLeft className="h-4 w-4" />
               К рейтингу
@@ -231,7 +231,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
           ) : (
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 mb-6"
             >
               <ArrowLeft className="h-4 w-4" />
               Назад
@@ -268,7 +268,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                 )}
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Star className="h-5 w-5 text-yellow-500" />
                       <span className="text-sm font-medium">Total XP</span>
@@ -276,7 +276,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                     <span className="font-bold text-lg">{user.totalXP}</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-green-500" />
                       <span className="text-sm font-medium">Модулей пройдено</span>
@@ -289,7 +289,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                   {FEATURE_FLAGS.LEADERBOARD_ENABLED ? (
                     <Link
                       href="/leaderboard"
-                      className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg hover:bg-blue-100 transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         <Medal className="h-5 w-5 text-blue-500" />
@@ -300,7 +300,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                       </span>
                     </Link>
                   ) : (
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Medal className="h-5 w-5 text-blue-500" />
                         <span className="text-sm font-medium">Место в рейтинге</span>
@@ -311,7 +311,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Award className="h-5 w-5 text-orange-500" />
                       <span className="text-sm font-medium">Достижений</span>
@@ -322,7 +322,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-400 mt-6 text-center">
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-6 text-center">
                   На платформе с{" "}
                   {new Date(user.createdAt).toLocaleDateString("ru-RU", {
                     day: "numeric",
@@ -336,10 +336,10 @@ export default async function PublicDashboardPage({ params }: PageProps) {
             {/* Info Section */}
             <div className="flex-1 space-y-6">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
                   Профиль {user.name}
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-slate-400">
                   Достижения и статистика
                 </p>
               </div>
@@ -376,8 +376,8 @@ export default async function PublicDashboardPage({ params }: PageProps) {
           </section>
         ) : (
           <Card>
-            <CardContent className="py-12 text-center text-gray-500">
-              <Award className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+            <CardContent className="py-12 text-center text-gray-500 dark:text-slate-400">
+              <Award className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-slate-600" />
               <p>Пользователь ещё не получил достижений</p>
             </CardContent>
           </Card>

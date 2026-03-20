@@ -78,8 +78,8 @@ export function TrueFalseExercise({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h3 className="text-xl font-bold text-gray-900">{question}</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">{question}</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Определите, верно или неверно каждое утверждение
         </p>
       </div>
@@ -95,9 +95,9 @@ export function TrueFalseExercise({
               key={statement.id}
               className={cn(
                 "p-4 rounded-xl border-2 transition-all",
-                !showResult && "bg-white border-gray-200",
-                status === "correct" && "bg-green-50 border-green-400",
-                status === "wrong" && "bg-red-50 border-red-400"
+                !showResult && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700",
+                status === "correct" && "bg-green-50 dark:bg-green-950 border-green-400",
+                status === "wrong" && "bg-red-50 dark:bg-red-950 border-red-400"
               )}
             >
               <div className="flex items-start gap-4">
@@ -105,7 +105,7 @@ export function TrueFalseExercise({
                 <div
                   className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",
-                    !showResult && "bg-gray-100 text-gray-600",
+                    !showResult && "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400",
                     status === "correct" && "bg-green-500 text-white",
                     status === "wrong" && "bg-red-500 text-white"
                   )}
@@ -123,7 +123,7 @@ export function TrueFalseExercise({
                 <div className="flex-1 min-w-0">
                   <p className={cn(
                     "font-medium",
-                    !showResult && "text-gray-700",
+                    !showResult && "text-gray-700 dark:text-slate-300",
                     status === "correct" && "text-green-700",
                     status === "wrong" && "text-red-700"
                   )}>
@@ -153,13 +153,13 @@ export function TrueFalseExercise({
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-1.5",
                       // Default state
-                      userAnswer !== true && !showResult && "bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700",
+                      userAnswer !== true && !showResult && "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:bg-green-100 hover:text-green-700",
                       // Selected state
                       userAnswer === true && !showResult && "bg-green-500 text-white shadow-md",
                       // Result states
                       showResult && userAnswer === true && status === "correct" && "bg-green-500 text-white",
                       showResult && userAnswer === true && status === "wrong" && "bg-red-500 text-white",
-                      showResult && userAnswer !== true && "bg-gray-100 text-gray-400",
+                      showResult && userAnswer !== true && "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500",
                       // Disabled
                       (disabled || showResult) && "cursor-default"
                     )}
@@ -173,13 +173,13 @@ export function TrueFalseExercise({
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-1.5",
                       // Default state
-                      userAnswer !== false && !showResult && "bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700",
+                      userAnswer !== false && !showResult && "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:bg-red-100 hover:text-red-700",
                       // Selected state
                       userAnswer === false && !showResult && "bg-red-500 text-white shadow-md",
                       // Result states
                       showResult && userAnswer === false && status === "correct" && "bg-green-500 text-white",
                       showResult && userAnswer === false && status === "wrong" && "bg-red-500 text-white",
-                      showResult && userAnswer !== false && "bg-gray-100 text-gray-400",
+                      showResult && userAnswer !== false && "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500",
                       // Disabled
                       (disabled || showResult) && "cursor-default"
                     )}
@@ -204,7 +204,7 @@ export function TrueFalseExercise({
               key={statement.id}
               className={cn(
                 "w-8 h-2 rounded-full transition-all",
-                !showResult && !answered && "bg-gray-200",
+                !showResult && !answered && "bg-gray-200 dark:bg-slate-700",
                 !showResult && answered && "bg-blue-500",
                 status === "correct" && "bg-green-500",
                 status === "wrong" && "bg-red-500"
@@ -219,7 +219,7 @@ export function TrueFalseExercise({
         <div
           className={cn(
             "p-4 rounded-xl border-2 text-center",
-            isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+            isCorrect ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
           )}
         >
           <p className={cn("font-semibold text-lg", isCorrect ? "text-green-700" : "text-red-700")}>
@@ -241,7 +241,7 @@ export function TrueFalseExercise({
               "shadow-lg hover:shadow-xl hover:-translate-y-0.5",
               allAnswered && !disabled
                 ? "bg-[#0176D3] hover:bg-[#0161B3]"
-                : "bg-gray-300 cursor-not-allowed shadow-none"
+                : "bg-gray-300 dark:bg-slate-600 cursor-not-allowed shadow-none"
             )}
           >
             Проверить
@@ -251,7 +251,7 @@ export function TrueFalseExercise({
         {showResult && !isCorrect && (
           <button
             onClick={handleRetry}
-            className="px-8 py-3 rounded-xl font-semibold bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
+            className="px-8 py-3 rounded-xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Попробовать снова

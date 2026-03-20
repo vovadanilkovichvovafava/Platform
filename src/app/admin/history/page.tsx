@@ -39,10 +39,10 @@ interface AuditLog {
 }
 
 const ACTION_LABELS: Record<string, { label: string; color: string }> = {
-  CREATE: { label: "Создание", color: "bg-green-100 text-green-700" },
-  UPDATE: { label: "Изменение", color: "bg-blue-100 text-blue-700" },
-  DELETE: { label: "Удаление", color: "bg-red-100 text-red-700" },
-  REORDER: { label: "Сортировка", color: "bg-purple-100 text-purple-700" },
+  CREATE: { label: "Создание", color: "bg-green-100 dark:bg-green-950 text-green-700" },
+  UPDATE: { label: "Изменение", color: "bg-blue-100 dark:bg-blue-950 text-blue-700" },
+  DELETE: { label: "Удаление", color: "bg-red-100 dark:bg-red-950 text-red-700" },
+  REORDER: { label: "Сортировка", color: "bg-purple-100 dark:bg-purple-950 text-purple-700" },
 }
 
 const FILTER_DEFAULTS = { page: "1", perPage: "50" }
@@ -147,8 +147,8 @@ export default function AdminHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-6">
           <Breadcrumbs
             items={[
@@ -164,10 +164,10 @@ export default function AdminHistoryPage() {
                 <History className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                   История изменений
                 </h1>
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600 dark:text-slate-400 mt-1">
                   Аудит всех изменений контента
                 </p>
               </div>
@@ -210,22 +210,22 @@ export default function AdminHistoryPage() {
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+                <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
               </div>
             ) : logs.length === 0 ? (
-              <p className="text-gray-500 text-center py-12">Нет записей</p>
+              <p className="text-gray-500 dark:text-slate-400 text-center py-12">Нет записей</p>
             ) : (
               <div className="space-y-3">
                 {logs.map((log) => {
                   const actionInfo = ACTION_LABELS[log.action] || {
                     label: log.action,
-                    color: "bg-gray-100 text-gray-700",
+                    color: "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300",
                   }
 
                   return (
                     <div
                       key={log.id}
-                      className="flex items-start gap-3 p-4 rounded-lg border hover:bg-gray-50 transition-colors"
+                      className="flex items-start gap-3 p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -234,14 +234,14 @@ export default function AdminHistoryPage() {
                           >
                             {actionInfo.label}
                           </span>
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-gray-900 dark:text-slate-100">
                             {log.entityName}
                           </span>
-                          <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                          <span className="text-xs text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                             {log.entityType}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
                           <span>{log.userName}</span>
                           <span>•</span>
                           <span>{formatDate(log.createdAt)}</span>
@@ -264,7 +264,7 @@ export default function AdminHistoryPage() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm text-gray-600 px-4">
+                <span className="text-sm text-gray-600 dark:text-slate-400 px-4">
                   Страница {page} из {totalPages}
                 </span>
                 <Button

@@ -29,7 +29,7 @@ function CodeBlock({ code, language }: CodeBlockProps) {
           onClick={handleCopy}
           className={cn(
             "p-2 rounded-md transition-all",
-            "bg-gray-200 hover:bg-gray-300 text-gray-600 hover:text-gray-900",
+            "bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-slate-100",
             "opacity-0 group-hover:opacity-100 focus:opacity-100"
           )}
           title={copied ? "Скопировано!" : "Копировать код"}
@@ -43,11 +43,11 @@ function CodeBlock({ code, language }: CodeBlockProps) {
         </button>
       </div>
       {language && (
-        <div className="absolute left-3 top-0 -translate-y-1/2 px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">
+        <div className="absolute left-3 top-0 -translate-y-1/2 px-2 py-0.5 bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs rounded">
           {language}
         </div>
       )}
-      <pre className="bg-gray-100 text-black rounded-lg p-4 overflow-x-auto">
+      <pre className="bg-gray-100 dark:bg-slate-800 text-black dark:text-slate-200 rounded-lg p-4 overflow-x-auto">
         <code className="text-sm font-mono whitespace-pre">{code}</code>
       </pre>
     </div>
@@ -83,7 +83,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       parts.push(
         <code
           key={`inline-code-${keyIndex++}`}
-          className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-sm font-mono"
+          className="bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-1.5 py-0.5 rounded text-sm font-mono"
         >
           {match[1]}
         </code>
@@ -161,12 +161,12 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           "flex-shrink-0 w-4 h-4 mt-0.5 rounded border-2 flex items-center justify-center",
           checked
             ? "bg-green-500 border-green-500 text-white"
-            : "border-gray-300 bg-white"
+            : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800"
         )}
       >
         {checked && <Check className="h-3 w-3" />}
       </span>
-      <span className={checked ? "text-gray-500 line-through" : ""}>
+      <span className={checked ? "text-gray-500 dark:text-slate-400 line-through" : ""}>
         {parseInlineMarkdown(text)}
       </span>
     </li>
@@ -238,14 +238,14 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           }
 
           elements.push(
-            <div key={`table-wrapper-${tableStartIdx}`} className="my-3 overflow-x-auto rounded-lg border border-gray-200">
+            <div key={`table-wrapper-${tableStartIdx}`} className="my-3 overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-gray-50">
+                  <tr className="bg-gray-50 dark:bg-slate-900">
                     {headerCells.map((cell, cellIdx) => (
                       <th
                         key={`th-${tableStartIdx}-${cellIdx}`}
-                        className="px-4 py-2.5 text-left font-semibold text-gray-700 border-b border-gray-200"
+                        className="px-4 py-2.5 text-left font-semibold text-gray-700 dark:text-slate-300 border-b border-gray-200 dark:border-slate-700"
                       >
                         {parseInlineMarkdown(cell)}
                       </th>
@@ -256,12 +256,12 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
                   {bodyRows.map((row, rowIdx) => (
                     <tr
                       key={`tr-${tableStartIdx}-${rowIdx}`}
-                      className={rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}
+                      className={rowIdx % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-gray-50/50 dark:bg-slate-900/50"}
                     >
                       {row.map((cell, cellIdx) => (
                         <td
                           key={`td-${tableStartIdx}-${rowIdx}-${cellIdx}`}
-                          className="px-4 py-2 text-gray-600 border-b border-gray-100"
+                          className="px-4 py-2 text-gray-600 dark:text-slate-300 border-b border-gray-100 dark:border-slate-800"
                         >
                           {parseInlineMarkdown(cell)}
                         </td>
@@ -279,7 +279,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       // Horizontal rule ---
       if (line.trim() === "---" || line.trim() === "***" || line.trim() === "___") {
         elements.push(
-          <hr key={`hr-${i}`} className="my-3 border-t border-gray-300" />
+          <hr key={`hr-${i}`} className="my-3 border-t border-gray-300 dark:border-slate-600" />
         )
         i++
         continue

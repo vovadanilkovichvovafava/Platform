@@ -254,13 +254,13 @@ export default async function StudentDetailPage({ params }: Props) {
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarFallback className="bg-blue-100 text-blue-700 text-xl">
+                <AvatarFallback className="bg-blue-100 dark:bg-blue-950 text-blue-700 text-xl">
                   {getInitials(student.name)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-bold text-gray-900">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                     {student.name}
                   </h1>
                   <div className="flex items-center gap-2">
@@ -275,7 +275,7 @@ export default async function StudentDetailPage({ params }: Props) {
                     )}
                     <Link
                       href={`/dashboard/${student.id}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 rounded-lg transition-colors"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Дашборд
@@ -283,14 +283,14 @@ export default async function StudentDetailPage({ params }: Props) {
                     <ExportStatsButton studentId={student.id} studentName={student.name} />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-gray-500 mt-1">
+                <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 mt-1">
                   <Mail className="h-4 w-4" />
                   <span>{student.email}</span>
                   {student.telegramUsername && (
                     <span className="text-blue-500">{student.telegramUsername}</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-gray-500 mt-1">
+                <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 mt-1">
                   <Calendar className="h-4 w-4" />
                   <span>
                     Зарегистрирован{" "}
@@ -315,7 +315,7 @@ export default async function StudentDetailPage({ params }: Props) {
             <CardContent className="p-4 text-center">
               <Trophy className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
               <p className="text-2xl font-bold text-yellow-600">{calculatedXP}</p>
-              <p className="text-xs text-gray-500">из {totalMaxXP} XP</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">из {totalMaxXP} XP</p>
             </CardContent>
           </Card>
           <Card>
@@ -324,21 +324,21 @@ export default async function StudentDetailPage({ params }: Props) {
               <p className="text-2xl font-bold text-blue-600">
                 {student.moduleProgress.filter((p) => p.status === "COMPLETED").length}
               </p>
-              <p className="text-xs text-gray-500">модулей</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">модулей</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
               <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
               <p className="text-2xl font-bold text-green-600">{submissionStats.approved}</p>
-              <p className="text-xs text-gray-500">принято</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">принято</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
               <Clock className="h-8 w-8 text-orange-500 mx-auto mb-2" />
               <p className="text-2xl font-bold text-orange-600">{submissionStats.pending}</p>
-              <p className="text-xs text-gray-500">ожидает</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">ожидает</p>
             </CardContent>
           </Card>
         </div>
@@ -348,7 +348,7 @@ export default async function StudentDetailPage({ params }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left column: Trails & Progress */}
         <section className="lg:self-start">
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2 mb-4">
             <Target className="h-6 w-6 text-blue-600" />
             Trails и прогресс
           </h2>
@@ -372,7 +372,7 @@ export default async function StudentDetailPage({ params }: Props) {
         <div className="space-y-6">
           {/* Activity Section */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2 mb-4">
               <CalendarDays className="h-6 w-6 text-purple-600" />
               Активность за год
               <Badge variant="secondary" className="ml-2 text-sm">
@@ -388,25 +388,25 @@ export default async function StudentDetailPage({ params }: Props) {
                   </div>
                   {/* Activity Stats */}
                   <div className="flex-1 grid grid-cols-2 gap-3 content-start">
-                    <div className="p-3 bg-purple-50 rounded-lg">
+                    <div className="p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
                       <p className="text-2xl font-bold text-purple-700">
                         {student.activityDays.reduce((sum, d) => sum + d.actions, 0)}
                       </p>
                       <p className="text-xs text-purple-600">всего действий</p>
                     </div>
-                    <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                       <p className="text-2xl font-bold text-blue-700">
                         {student.moduleProgress.filter(p => p.status === "COMPLETED").length}
                       </p>
                       <p className="text-xs text-blue-600">модулей завершено</p>
                     </div>
-                    <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                       <p className="text-2xl font-bold text-green-700">
                         {student.submissions.filter(s => s.status === "APPROVED").length}
                       </p>
                       <p className="text-xs text-green-600">работ принято</p>
                     </div>
-                    <div className="p-3 bg-orange-50 rounded-lg">
+                    <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg">
                       <p className="text-2xl font-bold text-orange-700">
                         {student.submissions.filter(s => s.status === "PENDING").length}
                       </p>
@@ -414,9 +414,9 @@ export default async function StudentDetailPage({ params }: Props) {
                     </div>
                     {/* Recent Activity */}
                     {student.activityDays.length > 0 && (
-                      <div className="col-span-2 p-3 bg-gray-50 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-1">Последняя активность</p>
-                        <p className="text-sm font-medium text-gray-800">
+                      <div className="col-span-2 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Последняя активность</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-slate-200">
                           {new Date(student.activityDays[student.activityDays.length - 1].date).toLocaleDateString("ru-RU", {
                             day: "numeric",
                             month: "long",
@@ -433,7 +433,7 @@ export default async function StudentDetailPage({ params }: Props) {
 
           {/* Submissions History Section */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2 mb-4">
               <FileText className="h-6 w-6 text-orange-600" />
               История работ
               <Badge variant="secondary" className="ml-2 text-sm">
@@ -444,8 +444,8 @@ export default async function StudentDetailPage({ params }: Props) {
             {student.submissions.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">Нет отправленных работ</p>
+                  <FileText className="h-10 w-10 text-gray-300 dark:text-slate-600 mx-auto mb-2" />
+                  <p className="text-gray-500 dark:text-slate-400">Нет отправленных работ</p>
                 </CardContent>
               </Card>
             ) : (
@@ -455,17 +455,17 @@ export default async function StudentDetailPage({ params }: Props) {
                     <Link
                       key={submission.id}
                       href={`/teacher/reviews/${submission.id}`}
-                      className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                     >
                       {/* Status icon */}
                       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                         submission.status === "APPROVED"
-                          ? "bg-green-100"
+                          ? "bg-green-100 dark:bg-green-950"
                           : submission.status === "PENDING"
-                          ? "bg-blue-100"
+                          ? "bg-blue-100 dark:bg-blue-950"
                           : submission.status === "FAILED"
-                          ? "bg-red-100"
-                          : "bg-orange-100"
+                          ? "bg-red-100 dark:bg-red-950"
+                          : "bg-orange-100 dark:bg-orange-950"
                       }`}>
                         {submission.status === "APPROVED" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                         {submission.status === "PENDING" && <Clock className="h-4 w-4 text-blue-600" />}
@@ -475,8 +475,8 @@ export default async function StudentDetailPage({ params }: Props) {
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 text-sm truncate">{submission.module.title}</h4>
-                        <p className="text-xs text-gray-500">
+                        <h4 className="font-medium text-gray-900 dark:text-slate-100 text-sm truncate">{submission.module.title}</h4>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
                           {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
                             day: "numeric",
                             month: "short",
@@ -493,12 +493,12 @@ export default async function StudentDetailPage({ params }: Props) {
                       <Badge
                         className={`shrink-0 text-xs border-0 ${
                           submission.status === "APPROVED"
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-green-100 dark:bg-green-950 text-green-700"
                             : submission.status === "PENDING"
-                            ? "bg-blue-100 text-blue-700"
+                            ? "bg-blue-100 dark:bg-blue-950 text-blue-700"
                             : submission.status === "FAILED"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-orange-100 text-orange-700"
+                            ? "bg-red-100 dark:bg-red-950 text-red-700"
+                            : "bg-orange-100 dark:bg-orange-950 text-orange-700"
                         }`}
                       >
                         {submission.status === "APPROVED"
@@ -510,7 +510,7 @@ export default async function StudentDetailPage({ params }: Props) {
                           : "Доработка"}
                       </Badge>
 
-                      <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
+                      <ExternalLink className="h-4 w-4 text-gray-400 dark:text-slate-500 shrink-0" />
                     </Link>
                   ))}
                 </CardContent>

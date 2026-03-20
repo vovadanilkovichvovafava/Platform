@@ -374,11 +374,11 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
   // Edit mode UI - rendered via portal to escape header stacking context
   const editModal = isEditing && mounted ? createPortal(
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-10 sm:pt-20 px-2 sm:px-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="p-3 sm:p-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
                 {isCreatingNew ? "Новый пресет" : "Редактирование navbar"}
               </h3>
               {isCreatingNew && (
@@ -387,13 +387,13 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
                   placeholder="Название пресета..."
-                  className="mt-2 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  className="mt-2 w-full px-3 py-2 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg text-sm"
                   autoFocus
                 />
               )}
             </div>
-            <button onClick={handleCancelEdit} className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg ml-2 flex-shrink-0">
-              <X className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500" />
+            <button onClick={handleCancelEdit} className="p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg ml-2 flex-shrink-0">
+              <X className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 dark:text-slate-400" />
             </button>
           </div>
 
@@ -406,14 +406,14 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
-                className={`flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-slate-50 rounded-lg border transition-all ${
-                  dragOverIndex === index ? "border-orange-400 bg-orange-50" : "border-transparent"
+                className={`flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border transition-all ${
+                  dragOverIndex === index ? "border-orange-400 bg-orange-50 dark:bg-orange-950" : "border-transparent"
                 } ${draggedIndex === index ? "opacity-50" : ""}`}
               >
-                <GripVertical className="h-4 w-4 text-slate-400 cursor-grab flex-shrink-0" />
-                <NavIcon name={item.icon} className="h-4 w-4 text-slate-600 flex-shrink-0" />
-                <span className="flex-1 text-sm font-medium text-slate-700 truncate">{item.label}</span>
-                <span className="text-xs text-slate-400 hidden sm:block">{item.href}</span>
+                <GripVertical className="h-4 w-4 text-slate-400 dark:text-slate-500 cursor-grab flex-shrink-0" />
+                <NavIcon name={item.icon} className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{item.label}</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:block">{item.href}</span>
                 <button
                   onClick={() => handleDeleteItem(index)}
                   className="p-1 hover:bg-red-100 rounded text-red-500 flex-shrink-0"
@@ -424,33 +424,33 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
             ))}
 
             {editItems.length === 0 && (
-              <div className="text-center py-6 sm:py-8 text-slate-400 text-sm">
+              <div className="text-center py-6 sm:py-8 text-slate-400 dark:text-slate-500 text-sm">
                 Нет элементов. Добавьте из меню ниже.
               </div>
             )}
           </div>
 
           {/* Add button */}
-          <div className="p-3 sm:p-4 border-t border-slate-200" ref={addMenuRef}>
+          <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-700" ref={addMenuRef}>
             <div className="relative">
               <button
                 onClick={() => setShowAddMenu(!showAddMenu)}
-                className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-dashed border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 text-sm"
+                className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 text-sm"
               >
                 <Plus className="h-4 w-4" />
                 Добавить элемент
               </button>
 
               {showAddMenu && availableToAdd.length > 0 && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 sm:max-h-48 overflow-y-auto">
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 sm:max-h-48 overflow-y-auto">
                   {availableToAdd.map((item) => (
                     <button
                       key={item.href}
                       onClick={() => handleAddItem(item)}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-left"
                     >
-                      <NavIcon name={item.icon} className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                      <span className="text-sm text-slate-700 truncate">{item.label}</span>
+                      <NavIcon name={item.icon} className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                      <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{item.label}</span>
                     </button>
                   ))}
                 </div>
@@ -459,10 +459,10 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
           </div>
 
           {/* Footer */}
-          <div className="p-3 sm:p-4 border-t border-slate-200 flex items-center justify-end gap-2">
+          <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-2">
             <button
               onClick={handleCancelEdit}
-              className="px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
             >
               Отмена
             </button>
@@ -496,7 +496,7 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+          className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
         >
           <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           <span className="hidden sm:inline max-w-[80px] truncate">
@@ -506,26 +506,26 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 top-full mt-1 w-40 sm:w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+          <div className="absolute right-0 top-full mt-1 w-40 sm:w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50">
             {/* Default option */}
             <button
               onClick={() => handleSelectPreset("default")}
-              className={`w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm hover:bg-slate-50 ${
-                !activePresetId ? "text-orange-600 bg-orange-50" : "text-slate-700"
+              className={`w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 ${
+                !activePresetId ? "text-orange-600 bg-orange-50 dark:bg-orange-950" : "text-slate-700 dark:text-slate-300"
               }`}
             >
               <Check className={`h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 ${!activePresetId ? "opacity-100" : "opacity-0"}`} />
               <span className="truncate">По умолчанию</span>
             </button>
 
-            {presets.length > 0 && <div className="border-t border-slate-100" />}
+            {presets.length > 0 && <div className="border-t border-slate-100 dark:border-slate-700" />}
 
             {/* Custom presets */}
             {presets.map((preset) => (
               <div
                 key={preset.id}
-                className={`flex items-center hover:bg-slate-50 ${
-                  preset.isActive ? "text-orange-600 bg-orange-50" : "text-slate-700"
+                className={`flex items-center hover:bg-slate-50 dark:hover:bg-slate-700 ${
+                  preset.isActive ? "text-orange-600 bg-orange-50 dark:bg-orange-950" : "text-slate-700 dark:text-slate-300"
                 }`}
               >
                 <button
@@ -549,12 +549,12 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
               </div>
             ))}
 
-            <div className="border-t border-slate-100" />
+            <div className="border-t border-slate-100 dark:border-slate-700" />
 
             {/* Create new */}
             <button
               onClick={handleCreateNew}
-              className="w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-orange-600 hover:bg-orange-50"
+              className="w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
             >
               <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="truncate">Создать пресет</span>
@@ -566,7 +566,7 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
       {/* Edit button */}
       <button
         onClick={handleStartEdit}
-        className="p-1 sm:p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+        className="p-1 sm:p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
         title="Редактировать navbar"
       >
         <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

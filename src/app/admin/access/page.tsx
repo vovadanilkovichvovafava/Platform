@@ -81,8 +81,8 @@ function AccessPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-6">
           <Breadcrumbs
             items={[
@@ -93,10 +93,10 @@ function AccessPageContent() {
           />
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                 {getTabTitle()}
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 dark:text-slate-400 mt-1">
                 {getTabDescription()}
               </p>
             </div>
@@ -106,7 +106,7 @@ function AccessPageContent() {
 
       <div className="container mx-auto px-4 py-6">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <TabsList className="mb-6 bg-white border">
+          <TabsList className="mb-6 bg-white dark:bg-slate-800 border">
             <TabsTrigger value="teachers" className="gap-2">
               <Users className="h-4 w-4" />
               Учителя
@@ -128,7 +128,7 @@ function AccessPageContent() {
               <ShieldCheck className="h-4 w-4" />
               Доступ админов
               {!isAdmin && (
-                <Lock className="h-3 w-3 text-gray-400" />
+                <Lock className="h-3 w-3 text-gray-400 dark:text-slate-500" />
               )}
             </TabsTrigger>
           </TabsList>
@@ -157,8 +157,8 @@ function AccessPageContent() {
 export default function AccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
       </div>
     }>
       <AccessPageContent />

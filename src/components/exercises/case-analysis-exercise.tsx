@@ -115,8 +115,8 @@ export function CaseAnalysisExercise({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h3 className="text-xl font-bold text-gray-900">{question}</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">{question}</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Выберите ровно {correctCount} проблем в примере ниже
         </p>
       </div>
@@ -154,14 +154,14 @@ export function CaseAnalysisExercise({
                 "w-full p-4 rounded-xl border-2 text-left transition-all duration-200",
                 "flex items-start gap-4 group",
                 // Default state
-                !showResult && !isSelected && !atMaxLimit && "bg-white border-gray-200 hover:border-gray-300 hover:shadow-md",
-                !showResult && !isSelected && atMaxLimit && "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed",
+                !showResult && !isSelected && !atMaxLimit && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-md",
+                !showResult && !isSelected && atMaxLimit && "bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-700 opacity-50 cursor-not-allowed",
                 !showResult && isSelected && "bg-indigo-50 border-indigo-500 shadow-md",
                 // Result states
-                status === "correct" && "bg-green-50 border-green-500",
+                status === "correct" && "bg-green-50 dark:bg-green-950 border-green-500",
                 status === "missed" && "bg-amber-50 border-amber-500",
-                status === "wrong" && "bg-red-50 border-red-500",
-                status === "neutral" && "bg-white border-gray-200 opacity-60",
+                status === "wrong" && "bg-red-50 dark:bg-red-950 border-red-500",
+                status === "neutral" && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 opacity-60",
                 // Cursor
                 !disabled && !showResult && "cursor-pointer"
               )}
@@ -171,13 +171,13 @@ export function CaseAnalysisExercise({
                 className={cn(
                   "w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center mt-0.5 transition-all",
                   // Default
-                  !showResult && !isSelected && "border-gray-300 group-hover:border-gray-400",
+                  !showResult && !isSelected && "border-gray-300 dark:border-slate-600 group-hover:border-gray-400",
                   !showResult && isSelected && "border-indigo-500 bg-indigo-500",
                   // Result states
                   status === "correct" && "border-green-500 bg-green-500",
                   status === "missed" && "border-amber-500 bg-amber-500",
                   status === "wrong" && "border-red-500 bg-red-500",
-                  status === "neutral" && "border-gray-300"
+                  status === "neutral" && "border-gray-300 dark:border-slate-600"
                 )}
               >
                 {(isSelected || status === "missed") && !showResult && (
@@ -192,11 +192,11 @@ export function CaseAnalysisExercise({
                 <span
                   className={cn(
                     "font-medium block",
-                    !showResult && "text-gray-700",
+                    !showResult && "text-gray-700 dark:text-slate-300",
                     status === "correct" && "text-green-700",
                     status === "missed" && "text-amber-700",
                     status === "wrong" && "text-red-700",
-                    status === "neutral" && "text-gray-500"
+                    status === "neutral" && "text-gray-500 dark:text-slate-400"
                   )}
                 >
                   {option.text}
@@ -222,9 +222,9 @@ export function CaseAnalysisExercise({
                 <div
                   className={cn(
                     "flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold",
-                    status === "correct" && "bg-green-100 text-green-700",
+                    status === "correct" && "bg-green-100 dark:bg-green-950 text-green-700",
                     status === "missed" && "bg-amber-100 text-amber-700",
-                    status === "wrong" && "bg-red-100 text-red-700"
+                    status === "wrong" && "bg-red-100 dark:bg-red-950 text-red-700"
                   )}
                 >
                   {status === "correct" && "Верно"}
@@ -251,12 +251,12 @@ export function CaseAnalysisExercise({
                       ? "bg-green-500"
                       : "bg-red-500"
                     : "bg-indigo-500"
-                  : "bg-gray-300"
+                  : "bg-gray-300 dark:bg-slate-600"
               )}
             />
           ))}
         </div>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-gray-500 dark:text-slate-400">
           {selectedOptions.size} / {correctCount} выбрано
         </span>
       </div>
@@ -266,7 +266,7 @@ export function CaseAnalysisExercise({
         <div
           className={cn(
             "p-4 rounded-xl border-2 text-center",
-            isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+            isCorrect ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
           )}
         >
           <p className={cn("font-semibold text-lg", isCorrect ? "text-green-700" : "text-red-700")}>
@@ -288,7 +288,7 @@ export function CaseAnalysisExercise({
               "shadow-lg hover:shadow-xl hover:-translate-y-0.5",
               hasExactCount && !disabled
                 ? "bg-[#0176D3] hover:bg-[#0161B3]"
-                : "bg-gray-300 cursor-not-allowed shadow-none"
+                : "bg-gray-300 dark:bg-slate-600 cursor-not-allowed shadow-none"
             )}
           >
             Проверить
@@ -298,7 +298,7 @@ export function CaseAnalysisExercise({
         {showResult && !isCorrect && (
           <button
             onClick={handleRetry}
-            className="px-8 py-3 rounded-xl font-semibold bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
+            className="px-8 py-3 rounded-xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Попробовать снова

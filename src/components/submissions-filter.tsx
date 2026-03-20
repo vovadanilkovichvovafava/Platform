@@ -149,11 +149,11 @@ function getDaysWaiting(createdAt: string): number {
 }
 
 function getDaysWaitingLabel(days: number): { label: string; color: string } {
-  if (days === 0) return { label: "Сегодня", color: "bg-green-100 text-green-700" }
-  if (days === 1) return { label: "1 день", color: "bg-green-100 text-green-700" }
+  if (days === 0) return { label: "Сегодня", color: "bg-green-100 dark:bg-green-950 text-green-700" }
+  if (days === 1) return { label: "1 день", color: "bg-green-100 dark:bg-green-950 text-green-700" }
   if (days <= 3) return { label: `${days} дня`, color: "bg-yellow-100 text-yellow-700" }
-  if (days <= 7) return { label: `${days} дней`, color: "bg-orange-100 text-orange-700" }
-  return { label: `${days} дней`, color: "bg-red-100 text-red-700" }
+  if (days <= 7) return { label: `${days} дней`, color: "bg-orange-100 dark:bg-orange-950 text-orange-700" }
+  return { label: `${days} дней`, color: "bg-red-100 dark:bg-red-950 text-red-700" }
 }
 
 const FILTER_DEFAULTS = { trail: "all", status: "all", sort: "waiting", q: "", perPage: "10", page: "1" }
@@ -430,7 +430,7 @@ export function SubmissionsFilter({
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
               <Input
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
@@ -509,12 +509,12 @@ export function SubmissionsFilter({
           {sortedPending.length === 0 ? (
             <div className="text-center py-8">
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">
                 {pendingSubmissions.length === 0
                   ? "Все работы проверены!"
                   : "Нет работ по выбранным фильтрам"}
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-slate-400">
                 {pendingSubmissions.length === 0
                   ? "Новые работы появятся здесь автоматически"
                   : "Попробуйте изменить фильтры"}
@@ -529,12 +529,12 @@ export function SubmissionsFilter({
                 return (
                   <div
                     key={submission.id}
-                    className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
+                    className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 dark:bg-slate-900 rounded-lg"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
-                          <Badge variant="secondary" className="text-xs hover:bg-gray-200 cursor-pointer transition-colors">
+                          <Badge variant="secondary" className="text-xs hover:bg-gray-200 dark:hover:bg-slate-600 cursor-pointer transition-colors">
                             {submission.module.trail.title}
                           </Badge>
                         </Link>
@@ -546,7 +546,7 @@ export function SubmissionsFilter({
                           <AlertTriangle className="h-4 w-4 text-orange-500" />
                         )}
                       </div>
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-medium text-gray-900 dark:text-slate-100">
                         <Link
                           href={`/module/${submission.module.slug}`}
                           target="_blank"
@@ -555,7 +555,7 @@ export function SubmissionsFilter({
                           {submission.module.title}
                         </Link>
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-slate-400">
                         {submission.user.name} ({submission.user.email}){submission.user.telegramUsername && <button
                           onClick={(e) => {
                             e.preventDefault()
@@ -571,7 +571,7 @@ export function SubmissionsFilter({
                           {copiedTg === submission.user.telegramUsername ? "Скопировано" : submission.user.telegramUsername}
                         </button>}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
                         Отправлено{" "}
                         {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
                           day: "numeric",
@@ -583,7 +583,7 @@ export function SubmissionsFilter({
                       {/* Time tracking metrics (teacher only) */}
                       {submission.timeTracking && (
                         <div
-                          className="flex items-center gap-3 mt-1.5 text-xs text-gray-400"
+                          className="flex items-center gap-3 mt-1.5 text-xs text-gray-400 dark:text-slate-500"
                           title={buildTimeTooltip(submission.timeTracking)}
                         >
                           {submission.timeTracking.timeToFirstSubmitMs != null && (
@@ -612,7 +612,7 @@ export function SubmissionsFilter({
                             href={submission.githubUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                            className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 rounded"
                             title="GitHub"
                           >
                             <Github className="h-4 w-4" />
@@ -623,7 +623,7 @@ export function SubmissionsFilter({
                             href={submission.deployUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                            className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 rounded"
                             title="Деплой"
                           >
                             <Globe className="h-4 w-4" />
@@ -632,7 +632,7 @@ export function SubmissionsFilter({
                         <Link
                           href={`/module/${submission.module.slug}`}
                           target="_blank"
-                          className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                          className="p-2 text-gray-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950 rounded"
                           title="Задача модуля"
                         >
                           <BookOpen className="h-4 w-4" />
@@ -683,7 +683,7 @@ export function SubmissionsFilter({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm text-gray-600 px-4">
+              <span className="text-sm text-gray-600 dark:text-slate-400 px-4">
                 Страница {pendingSafePage} из {pendingTotalPages}
               </span>
               <Button
@@ -714,7 +714,7 @@ export function SubmissionsFilter({
         </CardHeader>
         <CardContent>
           {filteredReviewed.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-slate-400">
               {reviewedSubmissions.length === 0
                 ? "Пока нет проверенных работ"
                 : "Нет работ по выбранным фильтрам"}
@@ -724,22 +724,22 @@ export function SubmissionsFilter({
               {paginatedReviewed.map((submission) => (
                 <div
                   key={submission.id}
-                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
+                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 dark:bg-slate-900 rounded-lg"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
-                        <Badge variant="secondary" className="text-xs hover:bg-gray-200 cursor-pointer transition-colors">
+                        <Badge variant="secondary" className="text-xs hover:bg-gray-200 dark:hover:bg-slate-600 cursor-pointer transition-colors">
                           {submission.module.trail.title}
                         </Badge>
                       </Link>
                       <Badge
                         className={
                           submission.status === "APPROVED"
-                            ? "bg-green-100 text-green-700 border-0"
+                            ? "bg-green-100 dark:bg-green-950 text-green-700 border-0"
                             : submission.status === "FAILED"
-                            ? "bg-red-100 text-red-700 border-0"
-                            : "bg-orange-100 text-orange-700 border-0"
+                            ? "bg-red-100 dark:bg-red-950 text-red-700 border-0"
+                            : "bg-orange-100 dark:bg-orange-950 text-orange-700 border-0"
                         }
                       >
                         {submission.status === "APPROVED" ? (
@@ -760,7 +760,7 @@ export function SubmissionsFilter({
                         )}
                       </Badge>
                     </div>
-                    <h3 className="font-medium text-gray-900">
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">
                       <Link
                         href={`/module/${submission.module.slug}`}
                         target="_blank"
@@ -769,7 +769,7 @@ export function SubmissionsFilter({
                         {submission.module.title}
                       </Link>
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
                       {submission.user.name}{submission.user.telegramUsername && <button
                         onClick={(e) => {
                           e.preventDefault()
@@ -788,7 +788,7 @@ export function SubmissionsFilter({
                     {/* Time tracking metrics for reviewed submissions */}
                     {submission.timeTracking && (
                       <div
-                        className="flex items-center gap-3 mt-1 text-xs text-gray-400"
+                        className="flex items-center gap-3 mt-1 text-xs text-gray-400 dark:text-slate-500"
                         title={buildTimeTooltip(submission.timeTracking)}
                       >
                         {submission.timeTracking.timeToFirstSubmitMs != null && (
@@ -813,7 +813,7 @@ export function SubmissionsFilter({
                         <div className="text-2xl font-bold text-[#0176D3]">
                           {submission.review.score}/10
                         </div>
-                        <div className="text-xs text-gray-500">Оценка</div>
+                        <div className="text-xs text-gray-500 dark:text-slate-400">Оценка</div>
                       </div>
                     )}
 
@@ -823,7 +823,7 @@ export function SubmissionsFilter({
                           href={submission.githubUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                          className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 rounded"
                           title="GitHub"
                         >
                           <Github className="h-4 w-4" />
@@ -834,7 +834,7 @@ export function SubmissionsFilter({
                           href={submission.deployUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                          className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 rounded"
                           title="Деплой"
                         >
                           <Globe className="h-4 w-4" />
@@ -843,7 +843,7 @@ export function SubmissionsFilter({
                       <Link
                         href={`/module/${submission.module.slug}`}
                         target="_blank"
-                        className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                        className="p-2 text-gray-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950 rounded"
                         title="Задача модуля"
                       >
                         <BookOpen className="h-4 w-4" />
@@ -872,7 +872,7 @@ export function SubmissionsFilter({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm text-gray-600 px-4">
+              <span className="text-sm text-gray-600 dark:text-slate-400 px-4">
                 Страница {reviewedSafePage} из {reviewedTotalPages}
               </span>
               <Button

@@ -93,8 +93,8 @@ export default function TeacherAnalyticsPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
       </div>
     )
   }
@@ -108,7 +108,7 @@ export default function TeacherAnalyticsPage() {
     : 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="container mx-auto px-4 py-8 pb-24">
         <Breadcrumbs
           items={[
@@ -124,8 +124,8 @@ export default function TeacherAnalyticsPage() {
               <BarChart3 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Аналитика учителя</h1>
-              <p className="text-gray-500 text-sm">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Аналитика учителя</h1>
+              <p className="text-gray-500 dark:text-slate-400 text-sm">
                 Статистика по назначенным направлениям и ученикам
               </p>
             </div>
@@ -137,7 +137,7 @@ export default function TeacherAnalyticsPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700">
             <AlertTriangle className="h-5 w-5" />
             {error}
           </div>
@@ -148,12 +148,12 @@ export default function TeacherAnalyticsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-2 bg-blue-100 dark:bg-blue-950 rounded-lg">
                   <Users className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{totalEnrollments}</p>
-                  <p className="text-xs text-gray-500">Учеников</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Учеников</p>
                 </div>
               </div>
             </CardContent>
@@ -161,12 +161,12 @@ export default function TeacherAnalyticsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
+                <div className="p-2 bg-yellow-100 dark:bg-yellow-950 rounded-lg">
                   <Clock className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-yellow-600">{totalPending}</p>
-                  <p className="text-xs text-gray-500">На проверке</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">На проверке</p>
                 </div>
               </div>
             </CardContent>
@@ -174,12 +174,12 @@ export default function TeacherAnalyticsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-2 bg-green-100 dark:bg-green-950 rounded-lg">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-green-600">{totalApproved}</p>
-                  <p className="text-xs text-gray-500">Проверено</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Проверено</p>
                 </div>
               </div>
             </CardContent>
@@ -187,12 +187,12 @@ export default function TeacherAnalyticsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="p-2 bg-purple-100 dark:bg-purple-950 rounded-lg">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{avgCompletion}%</p>
-                  <p className="text-xs text-gray-500">Ср. прогресс</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Ср. прогресс</p>
                 </div>
               </div>
             </CardContent>
@@ -210,15 +210,15 @@ export default function TeacherAnalyticsPage() {
             </CardHeader>
             <CardContent>
               {trailStats.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Нет назначенных направлений</p>
+                <p className="text-gray-500 dark:text-slate-400 text-center py-8">Нет назначенных направлений</p>
               ) : (
                 <div className="space-y-4">
                   {trailStats.map((trail) => (
-                    <div key={trail.trailId} className="p-3 bg-gray-50 rounded-lg">
+                    <div key={trail.trailId} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <Link
                           href={`/trails/${trail.trailSlug}`}
-                          className="font-medium text-gray-900 hover:text-blue-600"
+                          className="font-medium text-gray-900 dark:text-slate-100 hover:text-blue-600"
                         >
                           {trail.trailTitle}
                         </Link>
@@ -242,7 +242,7 @@ export default function TeacherAnalyticsPage() {
                         </div>
                       </div>
                       <div className="mt-2">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-1">
                           <span>Завершённость</span>
                           <span>{trail.completionRate}%</span>
                         </div>
@@ -265,25 +265,25 @@ export default function TeacherAnalyticsPage() {
             </CardHeader>
             <CardContent>
               {studentProgress.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Нет учеников</p>
+                <p className="text-gray-500 dark:text-slate-400 text-center py-8">Нет учеников</p>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {studentProgress.slice(0, 20).map((student) => (
-                    <div key={student.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg">
+                    <div key={student.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg">
                       <div className="flex-1 min-w-0">
                         <Link
                           href={`/teacher/students/${student.id}`}
-                          className="font-medium text-gray-900 hover:text-blue-600 truncate block"
+                          className="font-medium text-gray-900 dark:text-slate-100 hover:text-blue-600 truncate block"
                         >
                           {student.name}
                         </Link>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                           <span>{student.modulesCompleted}/{student.totalModules} модулей</span>
                           {student.avgScore !== null && (
                             <Badge className={`text-xs border-0 ${
-                              student.avgScore >= 8 ? "bg-green-100 text-green-700" :
-                              student.avgScore >= 6 ? "bg-yellow-100 text-yellow-700" :
-                              "bg-red-100 text-red-700"
+                              student.avgScore >= 8 ? "bg-green-100 dark:bg-green-950 text-green-700" :
+                              student.avgScore >= 6 ? "bg-yellow-100 dark:bg-yellow-950 text-yellow-700" :
+                              "bg-red-100 dark:bg-red-950 text-red-700"
                             }`}>
                               {student.avgScore}/10
                             </Badge>
@@ -292,18 +292,18 @@ export default function TeacherAnalyticsPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {student.pendingSubmissions > 0 && (
-                          <Badge className="bg-yellow-100 text-yellow-700 border-0">
+                          <Badge className="bg-yellow-100 dark:bg-yellow-950 text-yellow-700 border-0">
                             <Clock className="h-3 w-3 mr-1" />
                             {student.pendingSubmissions}
                           </Badge>
                         )}
-                        <Badge className="bg-amber-100 text-amber-700 border-0">
+                        <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-700 border-0">
                           <Award className="h-3 w-3 mr-1" />
                           {student.totalXP}
                         </Badge>
                         <Link
                           href={`/teacher/students/${student.id}`}
-                          className="p-1 text-gray-400 hover:text-blue-600"
+                          className="p-1 text-gray-400 dark:text-slate-500 hover:text-blue-600"
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Link>

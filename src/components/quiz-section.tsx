@@ -117,7 +117,7 @@ export function QuizSection({ questions, attempts }: QuizSectionProps) {
             <HelpCircle className="h-5 w-5" />
             Проверка знаний
           </CardTitle>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-slate-400">
             {answeredCount} / {questions.length} вопросов
           </div>
         </div>
@@ -132,7 +132,7 @@ export function QuizSection({ questions, attempts }: QuizSectionProps) {
         <div className="flex gap-1 mb-6">
           {questions.map((q, idx) => {
             const attempt = attemptData[q.id]
-            let bgColor = "bg-gray-200"
+            let bgColor = "bg-gray-200 dark:bg-slate-700"
             if (attempt?.isCorrect) bgColor = "bg-green-500"
             else if (attempt?.attempts >= 3) bgColor = "bg-red-300"
             else if (idx === currentQuestion) bgColor = "bg-blue-500"
@@ -153,14 +153,14 @@ export function QuizSection({ questions, attempts }: QuizSectionProps) {
 
         {/* Question */}
         <div className="mb-6">
-          <div className="text-sm text-gray-500 mb-2">
+          <div className="text-sm text-gray-500 dark:text-slate-400 mb-2">
             Вопрос {currentQuestion + 1} из {questions.length}
           </div>
           <h3 className="text-lg font-medium mb-4">{question.question}</h3>
 
           {/* Previously answered */}
           {isAnswered && !result && (
-            <div className={`mb-4 p-3 rounded-lg ${existingAttempt.isCorrect ? "bg-green-50" : "bg-red-50"}`}>
+            <div className={`mb-4 p-3 rounded-lg ${existingAttempt.isCorrect ? "bg-green-50 dark:bg-green-950" : "bg-red-50 dark:bg-red-950"}`}>
               <div className="flex items-center gap-2">
                 {existingAttempt.isCorrect ? (
                   <>
@@ -194,14 +194,14 @@ export function QuizSection({ questions, attempts }: QuizSectionProps) {
 
               if (result) {
                 if (idx === result.correctAnswer) {
-                  buttonClass += " bg-green-100 border-green-500 text-green-700"
+                  buttonClass += " bg-green-100 dark:bg-green-950 border-green-500 text-green-700"
                 } else if (idx === selectedAnswer && !result.isCorrect) {
-                  buttonClass += " bg-red-100 border-red-500 text-red-700"
+                  buttonClass += " bg-red-100 dark:bg-red-950 border-red-500 text-red-700"
                 } else if (idx === selectedAnswer && result.isCorrect) {
-                  buttonClass += " bg-green-100 border-green-500 text-green-700"
+                  buttonClass += " bg-green-100 dark:bg-green-950 border-green-500 text-green-700"
                 }
               } else if (selectedAnswer === idx) {
-                buttonClass += " border-blue-500 bg-blue-50"
+                buttonClass += " border-blue-500 bg-blue-50 dark:bg-blue-950"
               }
 
               const isDisabled = isAnswered || isSubmitting || result !== null
@@ -224,7 +224,7 @@ export function QuizSection({ questions, attempts }: QuizSectionProps) {
 
         {/* Result message */}
         {result && (
-          <div className={`mb-4 p-4 rounded-lg ${result.isCorrect ? "bg-green-50" : "bg-orange-50"}`}>
+          <div className={`mb-4 p-4 rounded-lg ${result.isCorrect ? "bg-green-50 dark:bg-green-950" : "bg-orange-50 dark:bg-orange-950"}`}>
             <div className="flex items-center gap-2">
               {result.isCorrect ? (
                 <CheckCircle2 className="h-5 w-5 text-green-600" />

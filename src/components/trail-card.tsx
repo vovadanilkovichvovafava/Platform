@@ -58,7 +58,7 @@ export function TrailCard({ trail, progress = 0, enrolled = false, locked = fals
 
   return (
     <Link href={`/trails/${trail.slug}`}>
-      <div className="group h-full p-6 rounded-2xl bg-white border border-slate-200 hover:border-orange-300 hover:shadow-lg transition-all duration-300 cursor-pointer">
+      <div className="group h-full p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-lg transition-all duration-300 cursor-pointer">
         <div className="flex flex-col h-full">
           {/* Icon */}
           <div
@@ -73,7 +73,7 @@ export function TrailCard({ trail, progress = 0, enrolled = false, locked = fals
 
           {/* Title */}
           <div className="flex items-start gap-2 mb-2">
-            <h3 className="font-semibold text-lg text-slate-900 group-hover:text-orange-500 transition-colors">
+            <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100 group-hover:text-orange-500 transition-colors">
               {trail.title}
             </h3>
             {locked && (
@@ -82,12 +82,12 @@ export function TrailCard({ trail, progress = 0, enrolled = false, locked = fals
           </div>
 
           {/* Subtitle */}
-          <p className="text-sm text-slate-500 mb-4 line-clamp-2 flex-grow">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 flex-grow">
             {trail.subtitle}
           </p>
 
           {/* Meta */}
-          <div className="flex items-center gap-4 text-xs text-slate-400 mb-4">
+          <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500 mb-4">
             <span className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
               {trail.duration}
@@ -100,16 +100,16 @@ export function TrailCard({ trail, progress = 0, enrolled = false, locked = fals
 
           {/* Progress or CTA */}
           {enrolled ? (
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Прогресс
                 </span>
                 <span className="text-xs font-semibold" style={{ color: trail.color }}>
                   {progress}%
                 </span>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -120,7 +120,7 @@ export function TrailCard({ trail, progress = 0, enrolled = false, locked = fals
               </div>
             </div>
           ) : (
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
               <span className="inline-flex items-center gap-2 text-sm font-medium text-orange-500 group-hover:text-orange-600 transition-colors">
                 Начать обучение
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

@@ -35,12 +35,12 @@ function getActivityLevel(actions: number): number {
 
 function getActivityColor(level: number): string {
   switch (level) {
-    case 0: return "bg-gray-100"
+    case 0: return "bg-gray-100 dark:bg-slate-800"
     case 1: return "bg-green-200"
     case 2: return "bg-green-400"
     case 3: return "bg-green-500"
     case 4: return "bg-green-600"
-    default: return "bg-gray-100"
+    default: return "bg-gray-100 dark:bg-slate-800"
   }
 }
 
@@ -108,15 +108,15 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg border p-3 max-w-[280px] relative">
+    <div className="bg-white dark:bg-slate-800 rounded-lg border dark:border-slate-700 p-3 max-w-[280px] relative">
       {/* Popup for selected day */}
       {selectedDay && (
-        <div className="absolute inset-0 bg-white rounded-lg p-3 z-10">
+        <div className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg p-3 z-10">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold">
               {new Date(selectedDay.date).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
             </span>
-            <button onClick={() => setSelectedDay(null)} className="p-1 hover:bg-gray-100 rounded">
+            <button onClick={() => setSelectedDay(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -129,11 +129,11 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
                 `}>
                   {detail.type === "module" ? "М" : "Р"}
                 </span>
-                <span className="text-gray-700 leading-tight">{detail.title}</span>
+                <span className="text-gray-700 dark:text-slate-300 leading-tight">{detail.title}</span>
               </div>
             ))}
           </div>
-          <div className="mt-2 pt-2 border-t text-[9px] text-gray-400">
+          <div className="mt-2 pt-2 border-t dark:border-slate-700 text-[9px] text-gray-400 dark:text-slate-500">
             М — модуль • Р — работа
           </div>
         </div>
@@ -141,26 +141,26 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
 
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <button onClick={goToPrevMonth} className="p-1 hover:bg-gray-100 rounded transition-colors">
-          <ChevronLeft className="h-4 w-4 text-gray-600" />
+        <button onClick={goToPrevMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors">
+          <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-slate-400" />
         </button>
         <div className="text-center">
-          <button onClick={goToCurrentMonth} className="text-sm font-semibold text-gray-900 hover:text-purple-600 transition-colors">
+          <button onClick={goToCurrentMonth} className="text-sm font-semibold text-gray-900 dark:text-slate-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
             {MONTHS_RU[month]} {year}
           </button>
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[10px] text-gray-500 dark:text-slate-400">
             {monthlyActiveDays} дн. • {monthlyActions} действ.
           </p>
         </div>
-        <button onClick={goToNextMonth} className="p-1 hover:bg-gray-100 rounded transition-colors">
-          <ChevronRight className="h-4 w-4 text-gray-600" />
+        <button onClick={goToNextMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors">
+          <ChevronRight className="h-4 w-4 text-gray-600 dark:text-slate-400" />
         </button>
       </div>
 
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-0.5 mb-0.5">
         {WEEKDAYS_RU.map((day) => (
-          <div key={day} className="text-center text-[9px] text-gray-400 font-medium">
+          <div key={day} className="text-center text-[9px] text-gray-400 dark:text-slate-500 font-medium">
             {day}
           </div>
         ))}
@@ -185,7 +185,7 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
                 w-[34px] h-[34px] rounded flex items-center justify-center text-[10px]
                 ${getActivityColor(level)}
                 ${isToday ? "ring-1 ring-purple-500" : ""}
-                ${level > 0 ? "text-white font-medium" : "text-gray-400"}
+                ${level > 0 ? "text-white font-medium" : "text-gray-400 dark:text-slate-500"}
                 ${hasDetails ? "cursor-pointer hover:ring-2 hover:ring-purple-300" : "cursor-default"}
               `}
               title={hasDetails ? "Нажми чтобы посмотреть детали" : `${cell.actions} действий`}
@@ -197,7 +197,7 @@ export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-1 mt-2 text-[9px] text-gray-500">
+      <div className="flex items-center justify-center gap-1 mt-2 text-[9px] text-gray-500 dark:text-slate-400">
         <span>Мало</span>
         {[0, 1, 2, 3, 4].map(l => (
           <div key={l} className={`w-2 h-2 rounded-sm ${getActivityColor(l)}`} />
