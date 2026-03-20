@@ -1076,8 +1076,8 @@ export default function AdminInvitesPage() {
                 const usagePercent = Math.round((invite.usedCount / invite.maxUses) * 100)
 
                 return (
-                  <div key={invite.id} className={`p-4 hover:bg-slate-50 transition-colors ${
-                    !isActive ? "bg-slate-50/50" : ""
+                  <div key={invite.id} className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${
+                    !isActive ? "bg-slate-50/50 dark:bg-slate-800/50" : ""
                   }`}>
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -1090,7 +1090,7 @@ export default function AdminInvitesPage() {
 
                           {/* Status Badge */}
                           {isExpired ? (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400">
                               <Clock className="h-3 w-3" />
                               Истёк
                             </span>

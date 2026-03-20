@@ -78,8 +78,8 @@ export function TrueFalseExercise({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h3 className="text-xl font-bold text-gray-900">{question}</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">{question}</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Определите, верно или неверно каждое утверждение
         </p>
       </div>
@@ -95,9 +95,9 @@ export function TrueFalseExercise({
               key={statement.id}
               className={cn(
                 "p-4 rounded-xl border-2 transition-all",
-                !showResult && "bg-white border-gray-200",
-                status === "correct" && "bg-green-50 border-green-400",
-                status === "wrong" && "bg-red-50 border-red-400"
+                !showResult && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700",
+                status === "correct" && "bg-green-50 dark:bg-green-950 border-green-400",
+                status === "wrong" && "bg-red-50 dark:bg-red-950 border-red-400"
               )}
             >
               <div className="flex items-start gap-4">
@@ -105,7 +105,7 @@ export function TrueFalseExercise({
                 <div
                   className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",
-                    !showResult && "bg-gray-100 text-gray-600",
+                    !showResult && "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400",
                     status === "correct" && "bg-green-500 text-white",
                     status === "wrong" && "bg-red-500 text-white"
                   )}
@@ -123,7 +123,7 @@ export function TrueFalseExercise({
                 <div className="flex-1 min-w-0">
                   <p className={cn(
                     "font-medium",
-                    !showResult && "text-gray-700",
+                    !showResult && "text-gray-700 dark:text-slate-300",
                     status === "correct" && "text-green-700",
                     status === "wrong" && "text-red-700"
                   )}>

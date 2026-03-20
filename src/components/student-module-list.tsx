@@ -230,10 +230,10 @@ export function StudentModuleList({
               <CardContent className="p-0">
                 {/* Trail header with collapsible trigger */}
                 <CollapsibleTrigger asChild>
-                  <button className="w-full p-4 pb-2 hover:bg-gray-50 transition-colors rounded-t-lg text-left group">
+                  <button className="w-full p-4 pb-2 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors rounded-t-lg text-left group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="font-semibold text-gray-900">{enrollment.trail.title}</span>
+                        <span className="font-semibold text-gray-900 dark:text-slate-100">{enrollment.trail.title}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant="secondary" className="text-sm">

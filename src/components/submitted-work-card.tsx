@@ -403,7 +403,7 @@ export function SubmittedWorkCard({
           {submission.review.comment && (
             <div>
               <div className="text-sm font-medium mb-1">Комментарий</div>
-              <p className="text-sm text-gray-600">{submission.review.comment}</p>
+              <p className="text-sm text-gray-600 dark:text-slate-400">{submission.review.comment}</p>
             </div>
           )}
         </div>

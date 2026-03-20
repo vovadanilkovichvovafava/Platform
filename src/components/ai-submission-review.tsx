@@ -320,9 +320,9 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
     synthesis: "Синтез",
   }
   const difficultyColors: Record<string, string> = {
-    easy: "bg-green-100 text-green-700",
-    medium: "bg-yellow-100 text-yellow-700",
-    hard: "bg-red-100 text-red-700",
+    easy: "bg-green-100 dark:bg-green-950 text-green-700",
+    medium: "bg-yellow-100 dark:bg-yellow-950 text-yellow-700",
+    hard: "bg-red-100 dark:bg-red-950 text-red-700",
   }
   const sourceLabels: Record<string, string> = {
     submission: "работа",
@@ -371,7 +371,7 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
               </button>
             </div>
             <div className="flex flex-wrap gap-1.5 ml-5">
-              <Badge className="text-xs bg-blue-100 text-blue-700 border-0">
+              <Badge className="text-xs bg-blue-100 dark:bg-blue-950 text-blue-700 border-0">
                 {typeLabels[q.type] ?? q.type}
               </Badge>
               <Badge
@@ -379,7 +379,7 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
               >
                 {q.difficulty}
               </Badge>
-              <Badge className="text-xs bg-purple-100 text-purple-700 border-0">
+              <Badge className="text-xs bg-purple-100 dark:bg-purple-950 text-purple-700 border-0">
                 {sourceLabels[q.source] ?? q.source}
               </Badge>
             </div>

@@ -277,7 +277,7 @@ export function OrderingExercise({
               "shadow-lg hover:shadow-xl hover:-translate-y-0.5",
               !disabled
                 ? "bg-[#0176D3] hover:bg-[#0161B3]"
-                : "bg-gray-300 cursor-not-allowed shadow-none"
+                : "bg-gray-300 dark:bg-slate-600 cursor-not-allowed shadow-none"
             )}
           >
             Проверить
@@ -287,7 +287,7 @@ export function OrderingExercise({
         {showResult && !isCorrect && (
           <button
             onClick={handleRetry}
-            className="px-8 py-3 rounded-xl font-semibold bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
+            className="px-8 py-3 rounded-xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Попробовать снова
