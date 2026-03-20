@@ -495,11 +495,11 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
       {filteredStudents.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <Users className="h-12 w-12 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">
               {students.length === 0 ? "Пока нет учеников" : "Ничего не найдено"}
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-slate-400">
               {students.length === 0
                 ? "Ученики появятся после регистрации по инвайту"
                 : "Попробуйте изменить параметры поиска"}
@@ -548,13 +548,13 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                          <h3 className="font-semibold text-gray-900 dark:text-slate-100 text-sm flex items-center gap-2">
                             {student.name}
                             <Badge className={`text-xs font-normal ${statusColor} border-0`}>
                               {statusLabel}
                             </Badge>
                           </h3>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                             <span>{student.email}</span>
                             {student.telegramUsername && (
                               <button
@@ -629,7 +629,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                               {student._count.activityDays}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500">Актив.</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400">Актив.</p>
                         </div>
 
                         <div className="text-center">
@@ -639,7 +639,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                               {student.moduleProgress.length}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500">{pluralizeRu(student.moduleProgress.length, ["мод.", "мод.", "мод."])}</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400">{pluralizeRu(student.moduleProgress.length, ["мод.", "мод.", "мод."])}</p>
                         </div>
 
                         <div className="text-center">
@@ -647,7 +647,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             <span className="font-bold text-sm">{student.stats.approved}</span>
                           </div>
-                          <p className="text-xs text-gray-500">Принято</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400">Принято</p>
                         </div>
 
                         <div className="text-center">
@@ -655,7 +655,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                             <Clock className="h-3.5 w-3.5" />
                             <span className="font-bold text-sm">{student.stats.pending}</span>
                           </div>
-                          <p className="text-xs text-gray-500">Ожидает</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400">Ожидает</p>
                         </div>
                       </div>
                     </div>
@@ -666,7 +666,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-1.5">
                             <Trophy className="h-3.5 w-3.5 text-yellow-500" />
-                            <span className="text-xs font-medium text-gray-700">
+                            <span className="text-xs font-medium text-gray-700 dark:text-slate-300">
                               Прогресс XP
                             </span>
                           </div>
@@ -674,7 +674,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                             {student.totalXP} / {student.maxXP} XP
                           </span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all"
                             style={{
@@ -682,7 +682,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                             }}
                           />
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5 text-right">
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 text-right">
                           {Math.min(progressPercent, 100)}% завершено
                         </p>
                       </div>
@@ -693,10 +693,10 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                       <div
                         className={`mt-3 pt-3 ${student.maxXP > 0 ? "" : "border-t"}`}
                       >
-                        <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400 flex-wrap">
                           <FileText className="h-3.5 w-3.5" />
                           <span>Последняя работа:</span>
-                          <span className="font-medium text-gray-700">
+                          <span className="font-medium text-gray-700 dark:text-slate-300">
                             {lastSubmission.module.title}
                           </span>
                           <span>—</span>
@@ -738,7 +738,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
       {/* Pagination - hidden when total fits in one page */}
       {filteredStudents.length > perPage && (
         <div className="flex items-center justify-between mt-6">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-slate-400">
             Показано {(safePage - 1) * perPage + 1}–
             {Math.min(safePage * perPage, filteredStudents.length)} из{" "}
             {filteredStudents.length}

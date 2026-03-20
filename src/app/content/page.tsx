@@ -1340,7 +1340,7 @@ export default function UnifiedContentPage() {
                                       <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                           onClick={() => deleteModule(module.id, module.title)}
-                                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 rounded"
+                                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded"
                                           title="Удалить модуль"
                                         >
                                           <Trash2 className="h-4 w-4" />
@@ -1413,7 +1413,7 @@ export default function UnifiedContentPage() {
                                     <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button
                                         onClick={() => deleteModule(module.id, module.title)}
-                                        className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 rounded"
+                                        className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded"
                                         title="Удалить модуль"
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -1492,19 +1492,19 @@ export default function UnifiedContentPage() {
                       {/* Этапы парсинга */}
                       <div className="flex justify-between text-xs text-gray-500 dark:text-slate-400 mt-4">
                         <div className={`flex items-center gap-1 ${importProgress.current >= 5 ? "text-purple-600" : ""}`}>
-                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 5 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 5 ? "bg-purple-600" : "bg-gray-300 dark:bg-slate-600"}`} />
                           Анализ
                         </div>
                         <div className={`flex items-center gap-1 ${importProgress.current >= 10 ? "text-purple-600" : ""}`}>
-                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 10 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 10 ? "bg-purple-600" : "bg-gray-300 dark:bg-slate-600"}`} />
                           Метаданные
                         </div>
                         <div className={`flex items-center gap-1 ${importProgress.current >= 50 ? "text-purple-600" : ""}`}>
-                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 50 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 50 ? "bg-purple-600" : "bg-gray-300 dark:bg-slate-600"}`} />
                           Парсинг
                         </div>
                         <div className={`flex items-center gap-1 ${importProgress.current >= 95 ? "text-purple-600" : ""}`}>
-                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 95 ? "bg-purple-600" : "bg-gray-300"}`} />
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 95 ? "bg-purple-600" : "bg-gray-300 dark:bg-slate-600"}`} />
                           Финализация
                         </div>
                       </div>

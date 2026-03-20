@@ -1312,7 +1312,7 @@ export default function AdvancedAnalyticsPage() {
                             {trailGroup.trailTitle}
                           </span>
                           {isLocked ? (
-                            <Badge className="text-xs bg-gray-200 text-gray-500 dark:text-slate-400 border-0">
+                            <Badge className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400 border-0">
                               Требуется пароль
                             </Badge>
                           ) : (
@@ -1950,7 +1950,7 @@ export default function AdvancedAnalyticsPage() {
                           <span>Принято работ</span>
                           <span>{trail.approvalRate}% ({trail.approvedSubmissions}/{trail.submissionsCount})</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                           <div
                             className="bg-green-500 h-2 rounded-full transition-all"
                             style={{ width: `${trail.approvalRate}%` }}
@@ -2660,7 +2660,7 @@ export default function AdvancedAnalyticsPage() {
                   <span className="text-gray-600 dark:text-slate-400">Сложный (&lt;6)</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-gray-300"></div>
+                  <div className="w-3 h-3 rounded bg-gray-300 dark:bg-slate-600"></div>
                   <span className="text-gray-600 dark:text-slate-400">Нет данных</span>
                 </div>
               </div>

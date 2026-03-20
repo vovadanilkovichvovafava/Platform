@@ -45,9 +45,9 @@ export function SubmissionsChart({ stats, showTitle = true }: SubmissionsChartPr
       value: approved,
       percentage: approvedPct,
       color: "bg-green-500",
-      hoverColor: "hover:bg-green-100",
+      hoverColor: "hover:bg-green-100 dark:hover:bg-green-900",
       textColor: "text-green-600",
-      bgColor: "bg-green-50",
+      bgColor: "bg-green-50 dark:bg-green-950",
       ringColor: "ring-green-200",
       icon: FileCheck,
     },
@@ -56,9 +56,9 @@ export function SubmissionsChart({ stats, showTitle = true }: SubmissionsChartPr
       value: pending,
       percentage: pendingPct,
       color: "bg-amber-500",
-      hoverColor: "hover:bg-amber-100",
+      hoverColor: "hover:bg-amber-100 dark:hover:bg-amber-900",
       textColor: "text-amber-600",
-      bgColor: "bg-amber-50",
+      bgColor: "bg-amber-50 dark:bg-amber-950",
       ringColor: "ring-amber-200",
       icon: FileClock,
     },
@@ -67,9 +67,9 @@ export function SubmissionsChart({ stats, showTitle = true }: SubmissionsChartPr
       value: revision,
       percentage: revisionPct,
       color: "bg-blue-500",
-      hoverColor: "hover:bg-blue-100",
+      hoverColor: "hover:bg-blue-100 dark:hover:bg-blue-900",
       textColor: "text-blue-600",
-      bgColor: "bg-blue-50",
+      bgColor: "bg-blue-50 dark:bg-blue-950",
       ringColor: "ring-blue-200",
       icon: FileEdit,
     },
@@ -78,9 +78,9 @@ export function SubmissionsChart({ stats, showTitle = true }: SubmissionsChartPr
       value: failed,
       percentage: failedPct,
       color: "bg-red-500",
-      hoverColor: "hover:bg-red-100",
+      hoverColor: "hover:bg-red-100 dark:hover:bg-red-900",
       textColor: "text-red-600",
-      bgColor: "bg-red-50",
+      bgColor: "bg-red-50 dark:bg-red-950",
       ringColor: "ring-red-200",
       icon: FileX,
     },
@@ -95,24 +95,24 @@ export function SubmissionsChart({ stats, showTitle = true }: SubmissionsChartPr
               <BarChart3 className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Статистика работ</h3>
-              <p className="text-sm text-gray-500">
-                Всего отправлено: <span className="font-medium text-gray-700">{total}</span>
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100">Статистика работ</h3>
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                Всего отправлено: <span className="font-medium text-gray-700 dark:text-slate-300">{total}</span>
               </p>
             </div>
           </div>
         )}
 
         {total === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <FileClock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+          <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+            <FileClock className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-slate-600" />
             <p>Работы ещё не отправлялись</p>
           </div>
         ) : (
           <>
             {/* Progress bar visualization with hover effect */}
             <div className="mb-6 group">
-              <div className="h-5 rounded-full overflow-hidden bg-gray-100 flex shadow-inner relative">
+              <div className="h-5 rounded-full overflow-hidden bg-gray-100 dark:bg-slate-800 flex shadow-inner relative">
                 {statItems.map((item, index) => {
                   if (item.percentage === 0) return null
                   const isHovered = hoveredIndex === index
@@ -142,7 +142,7 @@ export function SubmissionsChart({ stats, showTitle = true }: SubmissionsChartPr
                 })}
               </div>
               {/* Percentage labels below the bar */}
-              <div className="flex justify-between mt-2 text-xs text-gray-400">
+              <div className="flex justify-between mt-2 text-xs text-gray-400 dark:text-slate-500">
                 <span>0%</span>
                 <span>50%</span>
                 <span>100%</span>
@@ -176,7 +176,7 @@ export function SubmissionsChart({ stats, showTitle = true }: SubmissionsChartPr
                     >
                       {item.value}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-slate-400">
                       ({item.percentage}%)
                     </span>
                   </div>

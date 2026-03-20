@@ -197,7 +197,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white py-8">
+      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 py-8">
         <div className="absolute inset-0 pointer-events-none opacity-50">
           <svg
             className="absolute bottom-0 left-0 w-full"

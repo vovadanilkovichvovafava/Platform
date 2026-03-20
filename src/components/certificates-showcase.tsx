@@ -55,8 +55,8 @@ export function CertificatesShowcase({
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <Award className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">Сертификаты ещё не получены</p>
+          <Award className="h-12 w-12 mx-auto text-gray-300 dark:text-slate-600 mb-3" />
+          <p className="text-gray-500 dark:text-slate-400">Сертификаты ещё не получены</p>
         </CardContent>
       </Card>
     )
@@ -72,8 +72,8 @@ export function CertificatesShowcase({
                 <Award className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Сертификаты</h3>
-                <p className="text-sm text-gray-500">
+                <h3 className="font-semibold text-gray-900 dark:text-slate-100">Сертификаты</h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
                   {certificates.length} {pluralizeRu(certificates.length, ["сертификат", "сертификата", "сертификатов"])}
                 </p>
               </div>
@@ -105,7 +105,7 @@ export function CertificatesShowcase({
                   <p className="font-medium text-sm truncate group-hover:text-amber-800 transition-colors">
                     {cert.trail.title}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     {new Date(cert.issuedAt).toLocaleDateString("ru-RU")}
                   </p>
                 </div>
@@ -144,7 +144,7 @@ export function CertificatesShowcase({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 truncate group-hover:text-amber-800 transition-colors">
+                      <h4 className="font-semibold text-gray-900 dark:text-slate-100 truncate group-hover:text-amber-800 transition-colors">
                         {cert.trail.title}
                       </h4>
 
@@ -156,7 +156,7 @@ export function CertificatesShowcase({
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-slate-400">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {new Date(cert.issuedAt).toLocaleDateString("ru-RU")}

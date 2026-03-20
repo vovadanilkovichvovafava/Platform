@@ -872,7 +872,7 @@ export function SubmissionsFilter({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm text-gray-600 px-4">
+              <span className="text-sm text-gray-600 dark:text-slate-400 px-4">
                 Страница {reviewedSafePage} из {reviewedTotalPages}
               </span>
               <Button

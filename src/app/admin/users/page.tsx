@@ -725,7 +725,7 @@ function AdminUsersPageContent() {
                         <button
                           onClick={() => grantRandomAchievement(user.id, user.name)}
                           disabled={grantingAchievementId === user.id}
-                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors disabled:opacity-50"
+                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950 rounded-lg transition-colors disabled:opacity-50"
                           title="Выдать случайное достижение"
                         >
                           {grantingAchievementId === user.id ? (
@@ -740,7 +740,7 @@ function AdminUsersPageContent() {
                           <button
                             onClick={() => deleteUser(user.id, user.name)}
                             disabled={isDeleting}
-                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors disabled:opacity-50"
                             title="Удалить пользователя"
                           >
                             <Trash2 className="h-4 w-4" />
