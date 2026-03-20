@@ -251,13 +251,13 @@ export function SubmittedWorkCard({
 
       {/* Error/Success messages */}
       {error && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950 rounded-lg">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="p-3 text-sm text-green-600 bg-green-50 rounded-lg">
+        <div className="p-3 text-sm text-green-600 bg-green-50 dark:bg-green-950 rounded-lg">
           {success}
         </div>
       )}
@@ -302,7 +302,7 @@ export function SubmittedWorkCard({
                 onChange={(e) => setFormData(prev => ({ ...prev, fileUrl: e.target.value }))}
                 disabled={isLoading}
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-slate-400">
                 Google Drive, Dropbox или другой файловый сервис
               </p>
             </div>
@@ -384,7 +384,7 @@ export function SubmittedWorkCard({
             </a>
           )}
           {submission.comment && (
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-gray-600 dark:text-slate-400 mt-2">
               {submission.comment}
             </p>
           )}

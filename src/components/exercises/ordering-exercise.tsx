@@ -164,7 +164,7 @@ export function OrderingExercise({
                   className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",
                     "transition-all duration-200",
-                    !showResult && "bg-gray-100 text-gray-600",
+                    !showResult && "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400",
                     status === "correct" && "bg-green-500 text-white",
                     status === "wrong" && "bg-red-500 text-white"
                   )}
@@ -182,7 +182,7 @@ export function OrderingExercise({
                 <span
                   className={cn(
                     "flex-1 font-medium",
-                    !showResult && "text-gray-700",
+                    !showResult && "text-gray-700 dark:text-slate-300",
                     status === "correct" && "text-green-700",
                     status === "wrong" && "text-red-700"
                   )}
@@ -199,8 +199,8 @@ export function OrderingExercise({
                       className={cn(
                         "p-1.5 rounded-lg transition-all",
                         index === 0
-                          ? "text-gray-300 cursor-not-allowed"
-                          : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                          ? "text-gray-300 dark:text-slate-600 cursor-not-allowed"
+                          : "text-gray-400 dark:text-slate-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700"
                       )}
                     >
                       <ChevronUp className="w-4 h-4" />
@@ -211,8 +211,8 @@ export function OrderingExercise({
                       className={cn(
                         "p-1.5 rounded-lg transition-all",
                         index === items.length - 1
-                          ? "text-gray-300 cursor-not-allowed"
-                          : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                          ? "text-gray-300 dark:text-slate-600 cursor-not-allowed"
+                          : "text-gray-400 dark:text-slate-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700"
                       )}
                     >
                       <ChevronDown className="w-4 h-4" />
@@ -222,7 +222,7 @@ export function OrderingExercise({
 
                 {/* Show correct position if wrong */}
                 {status === "wrong" && (
-                  <div className="text-xs text-red-500 font-medium bg-red-100 px-2 py-1 rounded-full">
+                  <div className="text-xs text-red-500 font-medium bg-red-100 dark:bg-red-950 px-2 py-1 rounded-full">
                     → {correctOrder.indexOf(item.id) + 1}
                   </div>
                 )}
@@ -241,7 +241,7 @@ export function OrderingExercise({
               key={item.id}
               className={cn(
                 "w-8 h-2 rounded-full transition-all",
-                !showResult && "bg-gray-200",
+                !showResult && "bg-gray-200 dark:bg-slate-700",
                 status === "correct" && "bg-green-500",
                 status === "wrong" && "bg-red-500"
               )}
@@ -255,7 +255,7 @@ export function OrderingExercise({
         <div
           className={cn(
             "p-4 rounded-xl border-2 text-center",
-            isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+            isCorrect ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
           )}
         >
           <p className={cn("font-semibold text-lg", isCorrect ? "text-green-700" : "text-red-700")}>

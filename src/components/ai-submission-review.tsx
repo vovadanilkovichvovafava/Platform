@@ -353,13 +353,13 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
             className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700"
           >
             <div className="flex items-start gap-2 mb-2">
-              <span className="text-sm font-medium text-gray-400 mt-0.5">
+              <span className="text-sm font-medium text-gray-400 dark:text-slate-500 mt-0.5">
                 {i + 1}.
               </span>
-              <p className="text-sm text-gray-900 flex-1">{q.question}</p>
+              <p className="text-sm text-gray-900 dark:text-slate-100 flex-1">{q.question}</p>
               <button
                 onClick={() => handleCopy(q.question, i)}
-                className="shrink-0 p-1 rounded hover:bg-gray-200 transition-colors text-gray-400 hover:text-gray-600"
+                className="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
                 aria-label={copiedIndex === i ? "Скопировано" : "Копировать вопрос"}
                 title={copiedIndex === i ? "Скопировано!" : "Копировать вопрос"}
               >

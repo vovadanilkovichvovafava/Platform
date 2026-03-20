@@ -201,7 +201,7 @@ export function StudentModuleList({
   if (enrollments.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6 text-center text-gray-500">
+        <CardContent className="p-6 text-center text-gray-500 dark:text-slate-400">
           Студент не записан ни на один trail
         </CardContent>
       </Card>
