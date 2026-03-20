@@ -286,7 +286,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
     <div className="space-y-4">
       {/* Upload error */}
       {uploadError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-start gap-2">
           <X className="h-4 w-4 text-red-500 mt-0.5 shrink-0 cursor-pointer" onClick={() => setUploadError(null)} />
           <p className="text-sm text-red-600">{uploadError}</p>
         </div>
@@ -318,7 +318,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
               className={`flex items-center gap-2 px-3 py-2 ${config.bgColor} rounded-t-lg border-b ${config.borderColor} ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}`}
             >
               {!readOnly && (
-                <GripVertical className="h-4 w-4 text-gray-400 shrink-0" />
+                <GripVertical className="h-4 w-4 text-gray-400 dark:text-slate-500 shrink-0" />
               )}
               {!readOnly ? (
                 <DropdownMenu>
@@ -331,7 +331,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                       <span className={`text-sm font-medium ${config.color}`}>
                         {config.label}
                       </span>
-                      <ChevronDown className="h-3 w-3 text-gray-400" />
+                      <ChevronDown className="h-3 w-3 text-gray-400 dark:text-slate-500" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-40">
@@ -362,7 +362,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                 </div>
               )}
               {block.title && (
-                <span className="text-xs text-gray-500 truncate">
+                <span className="text-xs text-gray-500 dark:text-slate-400 truncate">
                   — {block.title}
                 </span>
               )}
@@ -403,7 +403,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
             <div className="p-3 space-y-3">
               {/* Title (for all block types) */}
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
+                <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                   Заголовок блока (необязательно)
                 </label>
                 <Input
@@ -419,7 +419,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
               {(block.type === "VIDEO" || block.type === "AUDIO") && (
                 <>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">
+                    <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                       Файл {block.type === "VIDEO" ? "видео" : "аудио"}
                     </label>
 
@@ -430,7 +430,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                           <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{block.fileName || "Загруженный файл"}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-slate-400">
                               {block.fileSize ? formatFileSize(block.fileSize) : ""}{" "}
                               {block.mimeType ? `• ${block.mimeType}` : ""}
                             </p>
@@ -474,18 +474,18 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                         onClick={() => !readOnly && fileInputRefs.current[index]?.click()}
                         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                           readOnly
-                            ? "border-gray-200 bg-gray-50 cursor-default"
-                            : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50"
+                            ? "border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 cursor-default"
+                            : "border-gray-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50/50"
                         }`}
                       >
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm text-gray-600">
+                        <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400 dark:text-slate-500" />
+                        <p className="text-sm text-gray-600 dark:text-slate-300">
                           Перетащите {block.type === "VIDEO" ? "видеофайл" : "аудиофайл"} сюда
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
                           или нажмите для выбора файла
                         </p>
-                        <p className="text-xs text-gray-400 mt-2">
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">
                           {block.type === "VIDEO"
                             ? `Форматы: ${VIDEO_EXTENSIONS.join(", ")} • Макс. 500 МБ`
                             : `Форматы: ${AUDIO_EXTENSIONS.join(", ")} • Макс. 100 МБ`
@@ -503,7 +503,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">
+                    <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                       Описание (Markdown)
                     </label>
                     <textarea
@@ -520,7 +520,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
               {/* TEXT specific fields */}
               {block.type === "TEXT" && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
+                  <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                     Контент (Markdown)
                   </label>
                   <textarea
@@ -530,7 +530,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                     placeholder="Markdown контент..."
                     disabled={readOnly}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                     Поддерживается Markdown: # заголовки, **жирный**, - списки
                   </p>
                 </div>
@@ -542,7 +542,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
 
       {/* Empty state */}
       {blocks.length === 0 && (
-        <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
+        <div className="text-center py-8 text-gray-400 dark:text-slate-500 border-2 border-dashed rounded-lg">
           <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">Нет блоков контента</p>
           <p className="text-xs">Добавьте видео, аудио или текстовый блок</p>
@@ -552,7 +552,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
       {/* Add block buttons */}
       {!readOnly && (
         <div className="flex items-center gap-2 pt-2">
-          <span className="text-xs text-gray-500">Добавить блок:</span>
+          <span className="text-xs text-gray-500 dark:text-slate-400">Добавить блок:</span>
           <Button
             size="sm"
             variant="outline"
@@ -575,7 +575,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
             size="sm"
             variant="outline"
             onClick={() => addBlock("TEXT")}
-            className="text-gray-600 border-gray-200 hover:bg-gray-50"
+            className="text-gray-600 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
           >
             <FileText className="h-4 w-4 mr-1" />
             Текст

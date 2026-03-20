@@ -380,15 +380,15 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
       </div>
     )
   }
 
   if (!module) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 mb-4">{error || "Модуль не найден"}</p>
           <Link href={backUrl}>
@@ -406,26 +406,26 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
   const isProject = moduleType === "PROJECT"
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
                 href={backUrl}
-                className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+                className="inline-flex items-center text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Назад
               </Link>
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
-                  <TypeIcon className="h-4 w-4 text-gray-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700">
+                  <TypeIcon className="h-4 w-4 text-gray-600 dark:text-slate-300" />
                 </div>
                 <div>
-                  <h1 className="font-semibold text-gray-900">{module.title}</h1>
-                  <p className="text-xs text-gray-500">{module.trail.title}</p>
+                  <h1 className="font-semibold text-gray-900 dark:text-slate-100">{module.title}</h1>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{module.trail.title}</p>
                 </div>
               </div>
             </div>
@@ -469,7 +469,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 block mb-1">
                     Название
                   </label>
                   <Input
@@ -479,7 +479,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 block mb-1">
                     Описание
                   </label>
                   <Input
@@ -490,7 +490,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                 </div>
                 {/* Тип модуля */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 block mb-2">
                     Тип модуля
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -504,17 +504,17 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                           className={`p-3 rounded-lg border text-center transition-colors ${
                             moduleType === type
                               ? "border-blue-500 bg-blue-50"
-                              : "border-gray-200 hover:bg-gray-50"
+                              : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
                           }`}
                         >
                           <Icon
                             className={`h-5 w-5 mx-auto mb-1 ${
-                              moduleType === type ? "text-blue-600" : "text-gray-500"
+                              moduleType === type ? "text-blue-600" : "text-gray-500 dark:text-slate-400"
                             }`}
                           />
                           <span
                             className={`text-xs font-medium ${
-                              moduleType === type ? "text-blue-700" : "text-gray-600"
+                              moduleType === type ? "text-blue-700" : "text-gray-600 dark:text-slate-300"
                             }`}
                           >
                             {typeLabels[type]}
@@ -528,7 +528,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                 {/* Уровень и Баллы */}
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-300 block mb-1">
                       Уровень
                     </label>
                     <select
@@ -543,7 +543,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-300 block mb-1">
                       Баллы (XP)
                     </label>
                     <Input
@@ -560,7 +560,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                     )}
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-300 block mb-1">
                       Длительность
                     </label>
                     <Input
@@ -648,14 +648,14 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                         <ChevronDown className="h-3 w-3 ml-1" />
                       </Button>
                       {showTypeSelector && (
-                        <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-20 py-1 min-w-[200px]">
+                        <div className="absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg shadow-lg z-20 py-1 min-w-[200px]">
                           {(Object.entries(questionTypeLabels) as [QuestionType, { label: string; icon: typeof CircleDot }][]).map(([type, { label, icon: Icon }]) => (
                             <button
                               key={type}
                               onClick={() => addQuestion(type)}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2"
                             >
-                              <Icon className="h-4 w-4 text-gray-500" />
+                              <Icon className="h-4 w-4 text-gray-500 dark:text-slate-400" />
                               {label}
                             </button>
                           ))}
@@ -666,7 +666,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {questions.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-4">
+                    <p className="text-sm text-gray-500 dark:text-slate-400 text-center py-4">
                       Нет вопросов
                     </p>
                   ) : (
@@ -676,17 +676,17 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                         className="p-4 border rounded-lg space-y-3"
                       >
                         <div className="flex items-start gap-2">
-                          <GripVertical className="h-5 w-5 text-gray-400 mt-2 shrink-0" />
+                          <GripVertical className="h-5 w-5 text-gray-400 dark:text-slate-500 mt-2 shrink-0" />
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-700">
+                                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">
                                   Вопрос {qIndex + 1}
                                 </span>
                                 {(() => {
                                   const QTypeIcon = questionTypeLabels[q.type].icon
                                   return (
-                                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                                    <span className="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1">
                                       <QTypeIcon className="h-3 w-3" />
                                       {questionTypeLabels[q.type].label}
                                     </span>
@@ -732,7 +732,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                                   className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
                                     q.correctAnswer === oIndex
                                       ? "border-green-500 bg-green-500 text-white"
-                                      : "border-gray-300"
+                                      : "border-gray-300 dark:border-slate-600"
                                   }`}
                                 >
                                   {q.correctAnswer === oIndex && (
@@ -749,7 +749,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                                 />
                               </div>
                             ))}
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-slate-400">
                               Нажмите на кружок чтобы отметить правильный ответ
                             </p>
                           </div>
@@ -834,7 +834,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                                 </Button>
                               </div>
                             </div>
-                            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded overflow-hidden">
+                            <div className="text-xs text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-900 p-2 rounded overflow-hidden">
                               <p className="font-medium mb-2">Связи (левый → правый):</p>
                               <div className="space-y-2">
                                 {(q.data as MatchingData).leftItems.map((leftItem, idx) => (
@@ -842,8 +842,8 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                                     <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                                       {idx + 1}
                                     </span>
-                                    <span className="break-words min-w-0 text-gray-700">{leftItem.text || `Л${idx + 1}`}</span>
-                                    <span className="text-gray-400 px-1">→</span>
+                                    <span className="break-words min-w-0 text-gray-700 dark:text-slate-300">{leftItem.text || `Л${idx + 1}`}</span>
+                                    <span className="text-gray-400 dark:text-slate-500 px-1">→</span>
                                     <select
                                       value={(q.data as MatchingData).correctPairs[leftItem.id] || ""}
                                       onChange={(e) => {
@@ -852,7 +852,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                                           correctPairs: { ...data.correctPairs, [leftItem.id]: e.target.value }
                                         })
                                       }}
-                                      className="text-xs border rounded px-1 py-0.5 min-w-0 w-full bg-white"
+                                      className="text-xs border rounded px-1 py-0.5 min-w-0 w-full bg-white dark:bg-slate-800 dark:border-slate-600"
                                     >
                                       <option value="">Выберите</option>
                                       {(q.data as MatchingData).rightItems.map((rightItem, rIdx) => (
@@ -871,12 +871,12 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                         {/* ORDERING Editor */}
                         {q.type === "ORDERING" && q.data && "correctOrder" in q.data && (
                           <div className="ml-7 space-y-2">
-                            <p className="text-xs text-gray-500 mb-2">
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">
                               Введите элементы в правильном порядке (сверху вниз)
                             </p>
                             {(q.data as OrderingData).items.map((item, idx) => (
                               <div key={item.id} className="flex items-center gap-2">
-                                <span className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
+                                <span className="w-6 h-6 rounded bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-slate-300">
                                   {idx + 1}
                                 </span>
                                 <Input
@@ -914,7 +914,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                         {q.type === "CASE_ANALYSIS" && q.data && "caseContent" in q.data && (
                           <div className="ml-7 space-y-3">
                             <div>
-                              <label className="text-xs font-medium text-gray-600 block mb-1">
+                              <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                                 Название кейса
                               </label>
                               <Input
@@ -927,7 +927,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                               />
                             </div>
                             <div>
-                              <label className="text-xs font-medium text-gray-600 block mb-1">
+                              <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                                 Описание кейса (Markdown)
                               </label>
                               <textarea
@@ -941,7 +941,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                               />
                             </div>
                             <div>
-                              <label className="text-xs font-medium text-gray-600 block mb-1">
+                              <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                                 Варианты ответов
                               </label>
                               {(q.data as CaseAnalysisData).options.map((opt, idx) => (
@@ -958,7 +958,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                                       className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
                                         opt.isCorrect
                                           ? "border-green-500 bg-green-500 text-white"
-                                          : "border-gray-300"
+                                          : "border-gray-300 dark:border-slate-600"
                                       }`}
                                     >
                                       {opt.isCorrect && <Check className="h-3 w-3" />}
@@ -1004,7 +1004,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                               </Button>
                             </div>
                             <div>
-                              <label className="text-xs font-medium text-gray-600 block mb-1">
+                              <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                                 Минимум правильных для успеха
                               </label>
                               <Input
@@ -1023,7 +1023,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                         {/* TRUE_FALSE Editor */}
                         {q.type === "TRUE_FALSE" && q.data && "statements" in q.data && (
                           <div className="ml-7 space-y-3">
-                            <p className="text-xs text-gray-500 mb-2">
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">
                               Добавьте утверждения и отметьте, какие из них верные
                             </p>
                             {(q.data as TrueFalseData).statements.map((stmt, idx) => (
@@ -1107,7 +1107,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                         {q.type === "FILL_BLANK" && q.data && "blanks" in q.data && (
                           <div className="ml-7 space-y-3">
                             <div>
-                              <label className="text-xs font-medium text-gray-600 block mb-1">
+                              <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-1">
                                 Текст с пропусками (используйте {`{{1}}`}, {`{{2}}`} и т.д.)
                               </label>
                               <textarea
@@ -1121,13 +1121,13 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                               />
                             </div>
                             <div>
-                              <label className="text-xs font-medium text-gray-600 block mb-2">
+                              <label className="text-xs font-medium text-gray-600 dark:text-slate-300 block mb-2">
                                 Пропуски и варианты ответов
                               </label>
                               {(q.data as FillBlankData).blanks.map((blank, idx) => (
                                 <div key={blank.id} className="border rounded p-2 mb-2 space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium text-gray-500 shrink-0">
+                                    <span className="text-xs font-medium text-gray-500 dark:text-slate-400 shrink-0">
                                       Пропуск {`{{${blank.id}}}`}
                                     </span>
                                     <Input
@@ -1223,12 +1223,12 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
               {module.prevModule ? (
                 <Link
                   href={`/content/modules/${module.prevModule.id}`}
-                  className="flex items-center gap-2 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors flex-1 max-w-md"
+                  className="flex items-center gap-2 p-3 rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors flex-1 max-w-md"
                 >
-                  <ChevronLeft className="h-5 w-5 text-gray-400 shrink-0" />
+                  <ChevronLeft className="h-5 w-5 text-gray-400 dark:text-slate-500 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs text-gray-500">Предыдущий модуль</p>
-                    <p className="text-sm font-medium text-gray-900 truncate">{module.prevModule.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Предыдущий модуль</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{module.prevModule.title}</p>
                   </div>
                 </Link>
               ) : (
@@ -1238,13 +1238,13 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
               {module.nextModule && (
                 <Link
                   href={`/content/modules/${module.nextModule.id}`}
-                  className="flex items-center gap-2 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors flex-1 max-w-md text-right justify-end"
+                  className="flex items-center gap-2 p-3 rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors flex-1 max-w-md text-right justify-end"
                 >
                   <div className="min-w-0">
-                    <p className="text-xs text-gray-500">Следующий модуль</p>
-                    <p className="text-sm font-medium text-gray-900 truncate">{module.nextModule.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Следующий модуль</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{module.nextModule.title}</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400 shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-gray-400 dark:text-slate-500 shrink-0" />
                 </Link>
               )}
             </div>
