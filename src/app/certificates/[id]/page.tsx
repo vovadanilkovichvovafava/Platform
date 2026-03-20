@@ -81,7 +81,7 @@ export default async function CertificatePage({ params }: Props) {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 py-8 print:bg-white print:py-0">
       <div className="container mx-auto px-4 max-w-3xl">
         {/* Certificate */}
-        <Card className="overflow-hidden shadow-2xl print:shadow-none border-4 border-amber-200">
+        <Card className="overflow-hidden shadow-2xl print:shadow-none border-4 border-amber-200 dark:border-amber-800">
           {/* Decorative top border */}
           <div
             className="h-4"
@@ -92,10 +92,10 @@ export default async function CertificatePage({ params }: Props) {
             {/* Header */}
             <div className="mb-8">
               <Award className="h-16 w-16 mx-auto text-amber-500 mb-4" />
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-2">
                 Сертификат
               </h1>
-              <p className="text-gray-500 text-lg">
+              <p className="text-gray-500 dark:text-slate-400 text-lg">
                 об успешном прохождении курса
               </p>
             </div>
@@ -117,20 +117,20 @@ export default async function CertificatePage({ params }: Props) {
 
             {/* Recipient */}
             <div className="mb-8">
-              <p className="text-gray-500 mb-2">Настоящим подтверждается, что</p>
+              <p className="text-gray-500 dark:text-slate-400 mb-2">Настоящим подтверждается, что</p>
               <div className="flex items-center justify-center gap-2">
-                <User className="h-6 w-6 text-gray-400" />
-                <p className="text-3xl font-bold text-gray-900">
+                <User className="h-6 w-6 text-gray-400 dark:text-slate-500" />
+                <p className="text-3xl font-bold text-gray-900 dark:text-slate-100">
                   {certificate.user.name}
                 </p>
               </div>
-              <p className="text-gray-500 mt-2">
+              <p className="text-gray-500 dark:text-slate-400 mt-2">
                 успешно завершил(а) обучение по данному направлению
               </p>
             </div>
 
             {/* Details */}
-            <div className="flex justify-center gap-8 mb-8 text-gray-600">
+            <div className="flex justify-center gap-8 mb-8 text-gray-600 dark:text-slate-400">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 <span>
@@ -148,13 +148,13 @@ export default async function CertificatePage({ params }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="border-t-2 border-dashed border-gray-200 pt-6">
-              <div className="flex justify-between items-end text-sm text-gray-500">
+            <div className="border-t-2 border-dashed border-gray-200 dark:border-slate-700 pt-6">
+              <div className="flex justify-between items-end text-sm text-gray-500 dark:text-slate-400">
                 <div>
                   <p className="font-mono">{certificate.code}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-700">R&D Academy</p>
+                  <p className="font-semibold text-gray-700 dark:text-slate-300">R&D Academy</p>
                   <p>Промсвязьбанк</p>
                 </div>
               </div>
@@ -169,7 +169,7 @@ export default async function CertificatePage({ params }: Props) {
         </Card>
 
         {/* Print instructions (hidden when printing) */}
-        <p className="text-center text-gray-500 mt-6 text-sm print:hidden">
+        <p className="text-center text-gray-500 dark:text-slate-400 mt-6 text-sm print:hidden">
           Нажмите Ctrl+P (Cmd+P на Mac) чтобы распечатать или сохранить как PDF
         </p>
       </div>

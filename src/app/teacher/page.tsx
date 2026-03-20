@@ -186,10 +186,10 @@ export default async function TeacherDashboard({
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">
           Добро пожаловать!
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-slate-400">
           Управляйте проверкой работ и отслеживайте прогресс учеников
         </p>
       </div>
@@ -199,12 +199,12 @@ export default async function TeacherDashboard({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
+              <div className="p-3 bg-blue-100 dark:bg-blue-950 rounded-xl">
                 <Clock className="h-6 w-6 text-blue-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{pendingCount}</div>
-                <div className="text-sm text-gray-500">На проверке</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">На проверке</div>
               </div>
             </div>
           </CardContent>
@@ -213,12 +213,12 @@ export default async function TeacherDashboard({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-xl">
+              <div className="p-3 bg-green-100 dark:bg-green-950 rounded-xl">
                 <CheckCircle2 className="h-6 w-6 text-green-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{approvedCount}</div>
-                <div className="text-sm text-gray-500">Принято</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">Принято</div>
               </div>
             </div>
           </CardContent>
@@ -227,12 +227,12 @@ export default async function TeacherDashboard({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 rounded-xl">
+              <div className="p-3 bg-orange-100 dark:bg-orange-950 rounded-xl">
                 <AlertCircle className="h-6 w-6 text-orange-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{revisionCount}</div>
-                <div className="text-sm text-gray-500">На доработку</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">На доработку</div>
               </div>
             </div>
           </CardContent>
@@ -241,12 +241,12 @@ export default async function TeacherDashboard({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-xl">
+              <div className="p-3 bg-red-100 dark:bg-red-950 rounded-xl">
                 <XCircle className="h-6 w-6 text-red-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{failedCount}</div>
-                <div className="text-sm text-gray-500">Провал</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">Провал</div>
               </div>
             </div>
           </CardContent>

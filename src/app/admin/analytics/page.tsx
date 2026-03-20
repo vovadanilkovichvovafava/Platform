@@ -846,7 +846,7 @@ export default function AdvancedAnalyticsPage() {
 
   // Get sort icon for column header
   const getSortIcon = (column: string) => {
-    if (studentSortColumn !== column) return <ArrowUpDown className="h-3 w-3 text-gray-300" />
+    if (studentSortColumn !== column) return <ArrowUpDown className="h-3 w-3 text-gray-300 dark:text-slate-600" />
     if (studentSortDirection === "asc") return <ArrowUp className="h-3 w-3 text-indigo-600" />
     return <ArrowDown className="h-3 w-3 text-indigo-600" />
   }
@@ -889,22 +889,22 @@ export default function AdvancedAnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
       </div>
     )
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Ошибка загрузки данных</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <p className="text-gray-500 dark:text-slate-400">Ошибка загрузки данных</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="container mx-auto px-4 py-8 pb-24">
         <Breadcrumbs
           items={[
@@ -920,8 +920,8 @@ export default function AdvancedAnalyticsPage() {
               <BarChart3 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Продвинутая аналитика</h1>
-              <p className="text-gray-500 text-sm">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Продвинутая аналитика</h1>
+              <p className="text-gray-500 dark:text-slate-400 text-sm">
                 Риск отсева, воронка, drop-off, тренды
               </p>
             </div>
@@ -940,7 +940,7 @@ export default function AdvancedAnalyticsPage() {
               onClick={() => setShowMethodology(!showMethodology)}
               variant="outline"
               size="sm"
-              className={showMethodology ? "bg-purple-50 border-purple-200" : ""}
+              className={showMethodology ? "bg-purple-50 border-purple-200 dark:border-purple-800" : ""}
             >
               <Info className="h-4 w-4 mr-2" />
               Методология
@@ -953,20 +953,20 @@ export default function AdvancedAnalyticsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border p-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border p-4 mb-6">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Фильтры:</span>
+              <Filter className="h-4 w-4 text-gray-500 dark:text-slate-400" />
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Фильтры:</span>
             </div>
 
             {/* Trail Filter */}
             <div className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-gray-400" />
+              <Layers className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               <select
                 value={trailFilter}
                 onChange={(e) => handleTrailFilterChange(e.target.value)}
-                className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="text-sm border rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="all">Все направления</option>
                 {data?.filters?.trails.map((trail) => (
@@ -979,11 +979,11 @@ export default function AdvancedAnalyticsPage() {
 
             {/* Period Filter */}
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-400" />
+              <Calendar className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               <select
                 value={periodFilter}
                 onChange={(e) => handlePeriodFilterChange(e.target.value)}
-                className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="text-sm border rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="7">Последние 7 дней</option>
                 <option value="14">Последние 14 дней</option>
@@ -995,11 +995,11 @@ export default function AdvancedAnalyticsPage() {
 
             {/* Completion Status Filter */}
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-gray-400" />
+              <CheckCircle className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               <select
                 value={completionFilter}
                 onChange={(e) => handleCompletionFilterChange(e.target.value)}
-                className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="text-sm border rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="all">Все статусы</option>
                 <option value="in_progress">В процессе</option>
@@ -1012,7 +1012,7 @@ export default function AdvancedAnalyticsPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleResetFilters}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
               >
                 <XCircle className="h-4 w-4 mr-1" />
                 Сбросить
@@ -1022,10 +1022,10 @@ export default function AdvancedAnalyticsPage() {
         </div>
 
         {/* Table of Contents */}
-        <div className="bg-white rounded-lg border p-3 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border p-3 mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <List className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Оглавление</span>
+            <List className="h-4 w-4 text-gray-500 dark:text-slate-400" />
+            <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Оглавление</span>
           </div>
           <nav className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-1 text-xs">
             <a href="#section-students" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Развитие студентов</a>
@@ -1033,10 +1033,10 @@ export default function AdvancedAnalyticsPage() {
             <a href="#section-churn" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Риск отсева</a>
             <a href="#section-funnel" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Воронка конверсии</a>
             <a href="#section-difficulty" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Сложность модулей</a>
-            <a href="#section-students-by-trail" className="text-gray-500 hover:text-indigo-600 hover:underline truncate pl-2">↳ По направлениям</a>
-            <a href="#section-student-detail" className="text-gray-500 hover:text-indigo-600 hover:underline truncate pl-2">↳ Анализ студента</a>
-            <a href="#section-trail-progress" className="text-gray-500 hover:text-indigo-600 hover:underline truncate pl-2">↳ Прогресс трейлов</a>
-            <a href="#section-top-students" className="text-gray-500 hover:text-indigo-600 hover:underline truncate pl-2">↳ Лидеры</a>
+            <a href="#section-students-by-trail" className="text-gray-500 dark:text-slate-400 hover:text-indigo-600 hover:underline truncate pl-2">↳ По направлениям</a>
+            <a href="#section-student-detail" className="text-gray-500 dark:text-slate-400 hover:text-indigo-600 hover:underline truncate pl-2">↳ Анализ студента</a>
+            <a href="#section-trail-progress" className="text-gray-500 dark:text-slate-400 hover:text-indigo-600 hover:underline truncate pl-2">↳ Прогресс трейлов</a>
+            <a href="#section-top-students" className="text-gray-500 dark:text-slate-400 hover:text-indigo-600 hover:underline truncate pl-2">↳ Лидеры</a>
             <a href="#section-dropoff" className="text-indigo-600 hover:text-indigo-800 hover:underline truncate">Drop-off анализ</a>
           </nav>
         </div>
@@ -1050,7 +1050,7 @@ export default function AdvancedAnalyticsPage() {
                   <HelpCircle className="h-5 w-5" />
                   Как читать аналитику
                 </CardTitle>
-                <button onClick={() => setShowGuide(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded">
+                <button onClick={() => setShowGuide(false)} className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 rounded">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -1103,7 +1103,7 @@ export default function AdvancedAnalyticsPage() {
 
         {/* Блок методологии сбора данных */}
         {showMethodology && (
-          <Card className="mb-8 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <Card className="mb-8 border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-indigo-50">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg text-purple-900">
                 <Database className="h-5 w-5" />
@@ -1138,7 +1138,7 @@ export default function AdvancedAnalyticsPage() {
                   </ul>
                 </div>
               </div>
-              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="h-4 w-4 text-yellow-600" />
                   <span className="font-medium text-yellow-800">Ограничения</span>
@@ -1158,8 +1158,8 @@ export default function AdvancedAnalyticsPage() {
         <div id="section-students" className="mb-8 scroll-mt-4">
           <div className="flex items-center gap-2 mb-4">
             <Trophy className="h-5 w-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-gray-900">Развитие студентов</h2>
-            <span className="text-xs text-gray-500">— Статистика прогресса и достижений</span>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Развитие студентов</h2>
+            <span className="text-xs text-gray-500 dark:text-slate-400">— Статистика прогресса и достижений</span>
           </div>
 
           {/* Students by Trail - Collapsible Sections */}
@@ -1172,12 +1172,12 @@ export default function AdvancedAnalyticsPage() {
                     Студенты по направлениям
                   </CardTitle>
                   {sectionsExpanded.studentsByTrail ? (
-                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                    <ChevronUp className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   )}
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-slate-400">
                   Детальный прогресс студентов по каждому trail — оценки, работы, завершённость модулей
                 </p>
               </CardHeader>
@@ -1185,7 +1185,7 @@ export default function AdvancedAnalyticsPage() {
                 {/* Search and Filters */}
                 <div className="space-y-3">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
                     <input
                       type="text"
                       value={studentSearch}
@@ -1195,7 +1195,7 @@ export default function AdvancedAnalyticsPage() {
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <ListFilter className="h-4 w-4 text-gray-400" />
+                    <ListFilter className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                     <TagFilterDropdown
                       tags={allTagsForFilter}
                       selectedTagIds={analyticsTagFilter}
@@ -1204,7 +1204,7 @@ export default function AdvancedAnalyticsPage() {
                     <select
                       value={submissionFilter}
                       onChange={(e) => handleSubmissionFilterChange(e.target.value)}
-                      className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="text-sm border rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="all">Все работы</option>
                       <option value="no_submissions">Не сдали ни одной работы</option>
@@ -1216,7 +1216,7 @@ export default function AdvancedAnalyticsPage() {
                     <select
                       value={trailStatusFilter}
                       onChange={(e) => handleTrailStatusFilterChange(e.target.value)}
-                      className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="text-sm border rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="all">Все статусы</option>
                       <option value="NOT_ADMITTED">Отклонен</option>
@@ -1228,7 +1228,7 @@ export default function AdvancedAnalyticsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={handleResetStudentFilters}
-                        className="text-gray-500 hover:text-gray-700 text-xs"
+                        className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 text-xs"
                       >
                         <XCircle className="h-3 w-3 mr-1" />
                         Сбросить фильтры и сортировку
@@ -1238,10 +1238,10 @@ export default function AdvancedAnalyticsPage() {
                 </div>
 
                 {/* Legend for module type indicators */}
-                <div className="flex items-center gap-4 text-xs text-gray-500 px-1 py-2 border-b border-gray-100">
-                  <span className="font-medium text-gray-600">Легенда модулей:</span>
+                <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-slate-400 px-1 py-2 border-b border-gray-100 dark:border-slate-700">
+                  <span className="font-medium text-gray-600 dark:text-slate-400">Легенда модулей:</span>
                   <div className="flex items-center gap-1">
-                    <span className="font-medium text-gray-400">Т</span>
+                    <span className="font-medium text-gray-400 dark:text-slate-500">Т</span>
                     <span>— Теория</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -1252,16 +1252,16 @@ export default function AdvancedAnalyticsPage() {
                     <span className="font-medium text-purple-500">Пр</span>
                     <span>— Проект</span>
                   </div>
-                  <div className="flex items-center gap-1 ml-2 border-l border-gray-200 pl-3">
+                  <div className="flex items-center gap-1 ml-2 border-l border-gray-200 dark:border-slate-700 pl-3">
                     <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-green-500" />
                     <span>Завершён</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-yellow-100 border-2 border-yellow-400" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-100 dark:bg-yellow-950 border-2 border-yellow-400" />
                     <span>В процессе</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-white border-2 border-gray-300" />
+                    <div className="w-3 h-3 rounded-full bg-white dark:bg-slate-800 border-2 border-gray-300" />
                     <span>Не начат</span>
                   </div>
                 </div>
@@ -1299,20 +1299,20 @@ export default function AdvancedAnalyticsPage() {
                         }
                         className={`w-full flex items-center justify-between p-3 transition-colors ${
                           isLocked
-                            ? "bg-gray-100 cursor-not-allowed"
+                            ? "bg-gray-100 dark:bg-slate-800 cursor-not-allowed"
                             : "bg-indigo-50 hover:bg-indigo-100 cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          {isLocked && <Lock className="h-4 w-4 text-gray-400" />}
+                          {isLocked && <Lock className="h-4 w-4 text-gray-400 dark:text-slate-500" />}
                           {trailGroup.isPasswordProtected && !isLocked && (
                             <Lock className="h-3.5 w-3.5 text-indigo-400" />
                           )}
-                          <span className={`font-medium ${isLocked ? "text-gray-500" : "text-indigo-900"}`}>
+                          <span className={`font-medium ${isLocked ? "text-gray-500 dark:text-slate-400" : "text-indigo-900"}`}>
                             {trailGroup.trailTitle}
                           </span>
                           {isLocked ? (
-                            <Badge className="text-xs bg-gray-200 text-gray-500 border-0">
+                            <Badge className="text-xs bg-gray-200 text-gray-500 dark:text-slate-400 border-0">
                               Требуется пароль
                             </Badge>
                           ) : (
@@ -1330,7 +1330,7 @@ export default function AdvancedAnalyticsPage() {
                                 if (accepted > 0) parts.push(`${accepted} прин.`)
                                 if (parts.length > 0) {
                                   return (
-                                    <span className="text-[10px] text-gray-500">
+                                    <span className="text-[10px] text-gray-500 dark:text-slate-400">
                                       ({parts.join(", ")})
                                     </span>
                                   )
@@ -1350,8 +1350,8 @@ export default function AdvancedAnalyticsPage() {
                       </button>
 
                       {isLocked && expandedStudentTrail === trailGroup.trailId && (
-                        <div className="p-4 text-center text-gray-500 text-sm bg-gray-50">
-                          <Lock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                        <div className="p-4 text-center text-gray-500 dark:text-slate-400 text-sm bg-gray-50 dark:bg-slate-900">
+                          <Lock className="h-8 w-8 mx-auto mb-2 text-gray-300 dark:text-slate-600" />
                           <p>Этот трейл защищён паролем. Введите пароль на странице трейла для доступа к данным.</p>
                           <Link
                             href={`/trails/${trailGroup.trailSlug}`}
@@ -1366,12 +1366,12 @@ export default function AdvancedAnalyticsPage() {
                       {!isLocked && expandedStudentTrail === trailGroup.trailId && (
                         <div className="max-h-96 overflow-y-auto">
                           {filteredStudents.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500 text-sm">
+                            <div className="p-4 text-center text-gray-500 dark:text-slate-400 text-sm">
                               Нет студентов на этом направлении
                             </div>
                           ) : (
                             <table className="w-full text-sm">
-                              <thead className="bg-gray-50 sticky top-0">
+                              <thead className="bg-gray-50 dark:bg-slate-900 sticky top-0">
                                 <tr className="border-b text-left">
                                   <th className="py-2 px-3 font-medium">
                                     <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
@@ -1419,19 +1419,19 @@ export default function AdvancedAnalyticsPage() {
                                 {filteredStudents.map((student) => (
                                   <tr
                                     key={student.id}
-                                    className="border-b hover:bg-gray-50 transition-colors"
+                                    className="border-b hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                                   >
                                     <td className="py-2 px-3">
                                       <Link
                                         href={`/dashboard/${student.id}`}
                                         target="_blank"
-                                        className="font-medium text-gray-900 hover:text-indigo-600 transition-colors flex items-center gap-1"
+                                        className="font-medium text-gray-900 dark:text-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1"
                                       >
                                         <User className="h-3 w-3" />
                                         {student.name}
                                       </Link>
                                       {student.telegramUsername && (
-                                        <p className="text-xs text-gray-400">{student.telegramUsername}</p>
+                                        <p className="text-xs text-gray-400 dark:text-slate-500">{student.telegramUsername}</p>
                                       )}
                                       {studentTagsMap[student.id]?.length > 0 && (
                                         <div className="mt-0.5">
@@ -1440,7 +1440,7 @@ export default function AdvancedAnalyticsPage() {
                                       )}
                                     </td>
                                     <td className="py-2 px-3 text-center">
-                                      <span className="text-xs text-gray-600">{formatDate(student.dateStart)}</span>
+                                      <span className="text-xs text-gray-600 dark:text-slate-400">{formatDate(student.dateStart)}</span>
                                     </td>
                                     <td className="py-2 px-3">
                                       {student.modules && student.modules.length > 0 ? (
@@ -1462,8 +1462,8 @@ export default function AdvancedAnalyticsPage() {
                                                     isCompleted
                                                       ? "bg-green-500 border-green-500"
                                                       : isInProgress
-                                                      ? "bg-yellow-100 border-yellow-400"
-                                                      : "bg-white border-gray-300"
+                                                      ? "bg-yellow-100 dark:bg-yellow-950 border-yellow-400"
+                                                      : "bg-white dark:bg-slate-800 border-gray-300"
                                                   } ${hasSubmission ? "cursor-pointer hover:scale-125 hover:shadow-md" : ""}`}
                                                   title={`${mod.title} — ${
                                                     isCompleted ? "Завершён" : isInProgress ? "В процессе" : "Не начат"
@@ -1477,7 +1477,7 @@ export default function AdvancedAnalyticsPage() {
                                                   )}
                                                 </div>
                                                 <span className={`text-[8px] leading-tight mt-0.5 font-medium ${
-                                                  modType === "PRACTICE" ? "text-blue-500" : modType === "PROJECT" ? "text-purple-500" : "text-gray-400"
+                                                  modType === "PRACTICE" ? "text-blue-500" : modType === "PROJECT" ? "text-purple-500" : "text-gray-400 dark:text-slate-500"
                                                 }`}>
                                                   {typeLabel}
                                                 </span>
@@ -1497,7 +1497,7 @@ export default function AdvancedAnalyticsPage() {
                                             }
                                             return circleEl
                                           })}
-                                          <span className="text-xs text-gray-400 ml-1 whitespace-nowrap">
+                                          <span className="text-xs text-gray-400 dark:text-slate-500 ml-1 whitespace-nowrap">
                                             {student.modulesCompleted}/{student.totalModules}
                                           </span>
                                         </div>
@@ -1507,7 +1507,7 @@ export default function AdvancedAnalyticsPage() {
                                             value={student.completionPercent}
                                             className="h-2 w-16"
                                           />
-                                          <span className="text-xs text-gray-600 whitespace-nowrap">
+                                          <span className="text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">
                                             {student.modulesCompleted}/{student.totalModules}
                                           </span>
                                         </div>
@@ -1515,57 +1515,57 @@ export default function AdvancedAnalyticsPage() {
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       {student.dateEnd ? (
-                                        <Badge className="text-xs bg-green-100 text-green-700 border-0">
+                                        <Badge className="text-xs bg-green-100 dark:bg-green-950 text-green-700 border-0">
                                           {formatDate(student.dateEnd)}
                                         </Badge>
                                       ) : (
-                                        <span className="text-xs text-gray-400">—</span>
+                                        <span className="text-xs text-gray-400 dark:text-slate-500">—</span>
                                       )}
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       <div className="flex items-center justify-center gap-1">
                                         <span className="text-green-600">{student.submissions.approved}</span>
-                                        <span className="text-gray-300">/</span>
+                                        <span className="text-gray-300 dark:text-slate-600">/</span>
                                         <span className="text-yellow-600">{student.submissions.pending}</span>
-                                        <span className="text-gray-300">/</span>
+                                        <span className="text-gray-300 dark:text-slate-600">/</span>
                                         <span className="text-orange-600">{student.submissions.revision}</span>
                                       </div>
-                                      <p className="text-xs text-gray-400">прин/ожид/дораб</p>
+                                      <p className="text-xs text-gray-400 dark:text-slate-500">прин/ожид/дораб</p>
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       {student.avgScore !== null ? (
                                         <Badge
                                           className={`text-xs border-0 ${
                                             student.avgScore >= 8
-                                              ? "bg-green-100 text-green-700"
+                                              ? "bg-green-100 dark:bg-green-950 text-green-700"
                                               : student.avgScore >= 6
-                                              ? "bg-yellow-100 text-yellow-700"
-                                              : "bg-red-100 text-red-700"
+                                              ? "bg-yellow-100 dark:bg-yellow-950 text-yellow-700"
+                                              : "bg-red-100 dark:bg-red-950 text-red-700"
                                           }`}
                                         >
                                           {student.avgScore}/10
                                         </Badge>
                                       ) : (
-                                        <span className="text-gray-400">—</span>
+                                        <span className="text-gray-400 dark:text-slate-500">—</span>
                                       )}
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       {(() => {
                                         const st = student.trailStatus || "LEARNING"
                                         if (st === "NOT_ADMITTED") {
-                                          return <Badge className="text-xs bg-red-100 text-red-700 border-0">Отклонен</Badge>
+                                          return <Badge className="text-xs bg-red-100 dark:bg-red-950 text-red-700 border-0">Отклонен</Badge>
                                         }
                                         if (st === "ACCEPTED") {
-                                          return <Badge className="text-xs bg-green-100 text-green-700 border-0">Принят</Badge>
+                                          return <Badge className="text-xs bg-green-100 dark:bg-green-950 text-green-700 border-0">Принят</Badge>
                                         }
-                                        return <Badge className="text-xs bg-blue-100 text-blue-700 border-0">Обучается</Badge>
+                                        return <Badge className="text-xs bg-blue-100 dark:bg-blue-950 text-blue-700 border-0">Обучается</Badge>
                                       })()}
                                     </td>
                                     <td className="py-2 px-3">
                                       <Link
                                         href={`/dashboard/${student.id}`}
                                         target="_blank"
-                                        className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                                        className="p-1 text-gray-400 dark:text-slate-500 hover:text-indigo-600 transition-colors"
                                       >
                                         <ExternalLink className="h-4 w-4" />
                                       </Link>
@@ -1594,12 +1594,12 @@ export default function AdvancedAnalyticsPage() {
                     Детальный анализ студента
                   </CardTitle>
                   {sectionsExpanded.studentAnalytics ? (
-                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                    <ChevronUp className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   )}
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-slate-400">
                   Выберите студента для просмотра прогресса, оценок и точек drop-off
                 </p>
               </CardHeader>
@@ -1611,22 +1611,22 @@ export default function AdvancedAnalyticsPage() {
                       className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:border-cyan-400 transition-colors"
                       onClick={() => setShowStudentDropdown(!showStudentDropdown)}
                     >
-                      <Search className="h-4 w-4 text-gray-400" />
+                      <Search className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                       {selectedStudentData ? (
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{selectedStudentData.name}</span>
+                          <span className="font-medium text-gray-900 dark:text-slate-100">{selectedStudentData.name}</span>
                           {selectedStudentData.telegramUsername && (
-                            <span className="text-xs text-gray-400">{selectedStudentData.telegramUsername}</span>
+                            <span className="text-xs text-gray-400 dark:text-slate-500">{selectedStudentData.telegramUsername}</span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-500">Выберите студента...</span>
+                        <span className="text-gray-500 dark:text-slate-400">Выберите студента...</span>
                       )}
-                      <ChevronDown className="h-4 w-4 text-gray-400 ml-auto" />
+                      <ChevronDown className="h-4 w-4 text-gray-400 dark:text-slate-500 ml-auto" />
                     </div>
 
                     {showStudentDropdown && (
-                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-hidden">
+                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border rounded-lg shadow-lg max-h-64 overflow-hidden">
                         <div className="p-2 border-b">
                           <input
                             type="text"
@@ -1639,7 +1639,7 @@ export default function AdvancedAnalyticsPage() {
                         </div>
                         <div className="max-h-48 overflow-y-auto">
                           {filteredStudentsForDropdown.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500 text-sm">
+                            <div className="p-4 text-center text-gray-500 dark:text-slate-400 text-sm">
                               Студенты не найдены
                             </div>
                           ) : (
@@ -1650,12 +1650,12 @@ export default function AdvancedAnalyticsPage() {
                                 className="w-full flex items-center justify-between px-4 py-2 hover:bg-cyan-50 transition-colors text-left"
                               >
                                 <div>
-                                  <span className="font-medium text-gray-900">{student.name}</span>
+                                  <span className="font-medium text-gray-900 dark:text-slate-100">{student.name}</span>
                                   {student.telegramUsername && (
-                                    <p className="text-xs text-gray-400">{student.telegramUsername}</p>
+                                    <p className="text-xs text-gray-400 dark:text-slate-500">{student.telegramUsername}</p>
                                   )}
                                 </div>
-                                <span className="text-xs text-gray-500">{student.trails.length} направлений</span>
+                                <span className="text-xs text-gray-500 dark:text-slate-400">{student.trails.length} направлений</span>
                               </button>
                             ))
                           )}
@@ -1721,31 +1721,31 @@ export default function AdvancedAnalyticsPage() {
 
                       {/* Trail Progress Breakdown */}
                       <div className="space-y-3">
-                        <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2">
                           <Layers className="h-4 w-4" />
                           Прогресс по направлениям
                         </h4>
                         {selectedStudentData.trailProgress.map((trail) => (
-                          <div key={trail.trailId} className="p-3 bg-gray-50 rounded-lg">
+                          <div key={trail.trailId} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <Link
                                   href={`/trails/${trail.trailSlug}`}
                                   target="_blank"
-                                  className="font-medium text-gray-900 hover:text-cyan-700 hover:underline"
+                                  className="font-medium text-gray-900 dark:text-slate-100 hover:text-cyan-700 hover:underline"
                                 >
                                   {trail.trailTitle}
                                 </Link>
-                                <ExternalLink className="h-3 w-3 text-gray-400" />
+                                <ExternalLink className="h-3 w-3 text-gray-400 dark:text-slate-500" />
                               </div>
                               <div className="flex items-center gap-2">
                                 {trail.avgScore !== null && (
                                   <Badge className={`text-xs border-0 ${
                                     trail.avgScore >= 8
-                                      ? "bg-green-100 text-green-700"
+                                      ? "bg-green-100 dark:bg-green-950 text-green-700"
                                       : trail.avgScore >= 6
-                                      ? "bg-yellow-100 text-yellow-700"
-                                      : "bg-red-100 text-red-700"
+                                      ? "bg-yellow-100 dark:bg-yellow-950 text-yellow-700"
+                                      : "bg-red-100 dark:bg-red-950 text-red-700"
                                   }`}>
                                     {trail.avgScore}/10
                                   </Badge>
@@ -1755,31 +1755,31 @@ export default function AdvancedAnalyticsPage() {
                             {/* Date Start / Progress / Date End row */}
                             <div className="grid grid-cols-3 gap-2 mb-2 text-xs">
                               <div>
-                                <span className="text-gray-400">Старт: </span>
-                                <span className="text-gray-700 font-medium">{formatDate(trail.dateStart)}</span>
+                                <span className="text-gray-400 dark:text-slate-500">Старт: </span>
+                                <span className="text-gray-700 dark:text-slate-300 font-medium">{formatDate(trail.dateStart)}</span>
                               </div>
                               <div className="text-center">
-                                <span className="text-gray-400">Прогресс: </span>
-                                <span className="text-gray-700 font-medium">
+                                <span className="text-gray-400 dark:text-slate-500">Прогресс: </span>
+                                <span className="text-gray-700 dark:text-slate-300 font-medium">
                                   {trail.modulesCompleted}/{trail.totalModules} ({trail.completionPercent}%)
                                 </span>
                               </div>
                               <div className="text-right">
-                                <span className="text-gray-400">Завершение: </span>
+                                <span className="text-gray-400 dark:text-slate-500">Завершение: </span>
                                 {trail.dateEnd ? (
                                   <span className="text-green-700 font-medium">{formatDate(trail.dateEnd)}</span>
                                 ) : (
-                                  <span className="text-gray-400">—</span>
+                                  <span className="text-gray-400 dark:text-slate-500">—</span>
                                 )}
                               </div>
                             </div>
                             <div className="flex items-center gap-3 mb-2">
                               <Progress value={trail.completionPercent} className="h-2 flex-1" />
-                              <span className="text-xs text-gray-600 whitespace-nowrap">
+                              <span className="text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">
                                 {trail.modulesCompleted}/{trail.totalModules} модулей
                               </span>
                             </div>
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-slate-400">
                               <span className="flex items-center gap-1">
                                 <CheckCircle className="h-3 w-3 text-green-500" />
                                 {trail.submissions?.approved || 0} принято
@@ -1801,7 +1801,7 @@ export default function AdvancedAnalyticsPage() {
                       {(selectedStudentData.strongModules.length > 0 || selectedStudentData.weakModules.length > 0) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {selectedStudentData.strongModules.length > 0 && (
-                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
                               <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
                                 <TrendingUp className="h-4 w-4" />
                                 Сильные модули
@@ -1814,7 +1814,7 @@ export default function AdvancedAnalyticsPage() {
                             </div>
                           )}
                           {selectedStudentData.weakModules.length > 0 && (
-                            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <div className="p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
                               <div className="flex items-center gap-2 text-orange-700 font-medium mb-2">
                                 <AlertTriangle className="h-4 w-4" />
                                 Сложные модули (узкие места)
@@ -1832,7 +1832,7 @@ export default function AdvancedAnalyticsPage() {
                       {/* AI Analysis Section */}
                       <div className="mt-4 pt-4 border-t">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2">
                             <Sparkles className="h-4 w-4 text-purple-500" />
                             AI-анализ прогресса
                           </h4>
@@ -1857,29 +1857,29 @@ export default function AdvancedAnalyticsPage() {
                         </div>
 
                         {aiAnalysis.error && (
-                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                          <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
                             <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
                             <span className="text-sm text-red-700">{aiAnalysis.error}</span>
                           </div>
                         )}
 
                         {aiAnalysis.analysis && (
-                          <div className="relative p-4 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
+                          <div className="relative p-4 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 dark:border-purple-800 rounded-lg">
                             <button
                               onClick={() => setAiAnalysis({ analysis: "", studentName: "", loading: false, error: null })}
-                              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 rounded z-10"
+                              className="absolute top-2 right-2 p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 rounded z-10"
                             >
                               <X className="h-4 w-4" />
                             </button>
                             <MarkdownRenderer
                               content={aiAnalysis.analysis}
-                              className="text-sm text-gray-700"
+                              className="text-sm text-gray-700 dark:text-slate-300"
                             />
                           </div>
                         )}
 
                         {!aiAnalysis.analysis && !aiAnalysis.error && !aiAnalysis.loading && (
-                          <p className="text-sm text-gray-500 text-center py-4">
+                          <p className="text-sm text-gray-500 dark:text-slate-400 text-center py-4">
                             Нажмите &quot;Запросить анализ&quot; для получения AI-рекомендаций по улучшению прогресса студента
                           </p>
                         )}
@@ -1888,8 +1888,8 @@ export default function AdvancedAnalyticsPage() {
                   )}
 
                   {!selectedStudentData && !loadingStudentDetail && (
-                    <div className="text-center py-8 text-gray-500">
-                      <User className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+                      <User className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-slate-600" />
                       <p className="text-sm">Выберите студента для просмотра детальной аналитики</p>
                     </div>
                   )}
@@ -1909,25 +1909,25 @@ export default function AdvancedAnalyticsPage() {
                       Прогресс по направлениям
                     </CardTitle>
                     {sectionsExpanded.trailProgress ? (
-                      <ChevronUp className="h-4 w-4 text-gray-400" />
+                      <ChevronUp className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                      <ChevronDown className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">Завершённость и качество работ по каждому trail</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Завершённость и качество работ по каждому trail</p>
                 </CardHeader>
                 {sectionsExpanded.trailProgress && <CardContent className="space-y-4">
                   {data.trailProgress.map((trail) => (
-                    <div key={trail.id} className="p-3 bg-gray-50 rounded-lg">
+                    <div key={trail.id} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-sm text-gray-900">{trail.title}</span>
+                        <span className="font-medium text-sm text-gray-900 dark:text-slate-100">{trail.title}</span>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             <Users className="h-3 w-3 mr-1" />
                             {trail.enrollments}
                           </Badge>
                           {trail.certificates > 0 && (
-                            <Badge className="text-xs bg-amber-100 text-amber-700 border-0">
+                            <Badge className="text-xs bg-amber-100 dark:bg-amber-950 text-amber-700 border-0">
                               <Award className="h-3 w-3 mr-1" />
                               {trail.certificates}
                             </Badge>
@@ -1937,7 +1937,7 @@ export default function AdvancedAnalyticsPage() {
 
                       {/* Completion Progress */}
                       <div className="mb-2">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-1">
                           <span>Завершённость модулей</span>
                           <span>{trail.completionRate}%</span>
                         </div>
@@ -1946,7 +1946,7 @@ export default function AdvancedAnalyticsPage() {
 
                       {/* Approval Rate */}
                       <div>
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-1">
                           <span>Принято работ</span>
                           <span>{trail.approvalRate}% ({trail.approvedSubmissions}/{trail.submissionsCount})</span>
                         </div>
@@ -1973,12 +1973,12 @@ export default function AdvancedAnalyticsPage() {
                       Распределение оценок
                     </CardTitle>
                     {sectionsExpanded.scoreDistribution ? (
-                      <ChevronUp className="h-4 w-4 text-gray-400" />
+                      <ChevronUp className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                      <ChevronDown className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     Всего оценено работ: {data.scoreDistribution.total}
                     {data.scoreDistribution.avgScore && (
                       <> • Средняя: <span className="font-medium text-blue-600">{data.scoreDistribution.avgScore}/10</span></>
@@ -2004,7 +2004,7 @@ export default function AdvancedAnalyticsPage() {
                           {data.scoreDistribution.excellent} ({Math.round((data.scoreDistribution.excellent / data.scoreDistribution.total) * 100)}%)
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-4">
+                      <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-4">
                         <div
                           className="bg-green-500 h-4 rounded-full transition-all"
                           style={{ width: `${(data.scoreDistribution.excellent / data.scoreDistribution.total) * 100}%` }}
@@ -2023,7 +2023,7 @@ export default function AdvancedAnalyticsPage() {
                           {data.scoreDistribution.good} ({Math.round((data.scoreDistribution.good / data.scoreDistribution.total) * 100)}%)
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-4">
+                      <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-4">
                         <div
                           className="bg-blue-500 h-4 rounded-full transition-all"
                           style={{ width: `${(data.scoreDistribution.good / data.scoreDistribution.total) * 100}%` }}
@@ -2042,7 +2042,7 @@ export default function AdvancedAnalyticsPage() {
                           {data.scoreDistribution.average} ({Math.round((data.scoreDistribution.average / data.scoreDistribution.total) * 100)}%)
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-4">
+                      <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-4">
                         <div
                           className="bg-yellow-500 h-4 rounded-full transition-all"
                           style={{ width: `${(data.scoreDistribution.average / data.scoreDistribution.total) * 100}%` }}
@@ -2061,7 +2061,7 @@ export default function AdvancedAnalyticsPage() {
                           {data.scoreDistribution.poor} ({Math.round((data.scoreDistribution.poor / data.scoreDistribution.total) * 100)}%)
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-4">
+                      <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-4">
                         <div
                           className="bg-red-500 h-4 rounded-full transition-all"
                           style={{ width: `${(data.scoreDistribution.poor / data.scoreDistribution.total) * 100}%` }}
@@ -2084,12 +2084,12 @@ export default function AdvancedAnalyticsPage() {
                     Лидеры платформы
                   </CardTitle>
                   {sectionsExpanded.topStudents ? (
-                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                    <ChevronUp className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   )}
                 </div>
-                <p className="text-xs text-gray-500">Топ-10 студентов по XP и достижениям</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Топ-10 студентов по XP и достижениям</p>
               </CardHeader>
               {sectionsExpanded.topStudents && <CardContent>
                 <div className="overflow-x-auto">
@@ -2127,14 +2127,14 @@ export default function AdvancedAnalyticsPage() {
                     <tbody>
                       {data.topStudents.map((student, index) => (
                         <tr key={student.id} className="border-b hover:bg-purple-50 transition-colors group">
-                          <td className="py-2 text-gray-500">
+                          <td className="py-2 text-gray-500 dark:text-slate-400">
                             {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
                           </td>
                           <td className="py-2">
                             <Link
                               href={`/dashboard/${student.id}`}
                               target="_blank"
-                              className="flex items-center gap-2 font-medium text-gray-900 hover:text-purple-700 transition-colors"
+                              className="flex items-center gap-2 font-medium text-gray-900 dark:text-slate-100 hover:text-purple-700 transition-colors"
                             >
                               <span className="group-hover:underline">{student.name}</span>
                               <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500" />
@@ -2154,11 +2154,11 @@ export default function AdvancedAnalyticsPage() {
                           </td>
                           <td className="py-2 text-center">
                             {student.certificates > 0 ? (
-                              <Badge className="text-xs bg-amber-100 text-amber-700 border-0">
+                              <Badge className="text-xs bg-amber-100 dark:bg-amber-950 text-amber-700 border-0">
                                 {student.certificates}
                               </Badge>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="text-gray-400 dark:text-slate-500">—</span>
                             )}
                           </td>
                         </tr>
@@ -2174,22 +2174,22 @@ export default function AdvancedAnalyticsPage() {
         {/* Summary Cards with explanations */}
         <div id="section-summary" className="mb-8 scroll-mt-4">
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-sm font-medium text-gray-700">{ANALYTICS_INFO.summary.title}</h2>
-            <span className="text-xs text-gray-500">— {ANALYTICS_INFO.summary.description}</span>
+            <h2 className="text-sm font-medium text-gray-700 dark:text-slate-300">{ANALYTICS_INFO.summary.title}</h2>
+            <span className="text-xs text-gray-500 dark:text-slate-400">— {ANALYTICS_INFO.summary.description}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="group relative">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-950 rounded-lg">
                     <Users className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="flex-1">
                     <p className="text-2xl font-bold">{data.summary.totalStudents}</p>
-                    <p className="text-xs text-gray-500">Всего студентов</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Всего студентов</p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                    <HelpCircle className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   </div>
                 </div>
                 <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
@@ -2200,15 +2200,15 @@ export default function AdvancedAnalyticsPage() {
             <Card className="group relative">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
+                  <div className="p-2 bg-red-100 dark:bg-red-950 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-red-600" />
                   </div>
                   <div className="flex-1">
                     <p className="text-2xl font-bold text-red-600">{data.summary.atRiskStudents}</p>
-                    <p className="text-xs text-gray-500">Риск отсева</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Риск отсева</p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                    <HelpCircle className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   </div>
                 </div>
                 <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
@@ -2219,15 +2219,15 @@ export default function AdvancedAnalyticsPage() {
             <Card className="group relative">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
+                  <div className="p-2 bg-green-100 dark:bg-green-950 rounded-lg">
                     <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
                   <div className="flex-1">
                     <p className="text-2xl font-bold text-green-600">{data.summary.conversionRate}%</p>
-                    <p className="text-xs text-gray-500">Конверсия</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Конверсия</p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                    <HelpCircle className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   </div>
                 </div>
                 <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
@@ -2238,15 +2238,15 @@ export default function AdvancedAnalyticsPage() {
             <Card className="group relative">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-950 rounded-lg">
                     <Activity className="h-5 w-5 text-purple-600" />
                   </div>
                   <div className="flex-1">
                     <p className="text-2xl font-bold">{data.summary.avgDailyActiveUsers}</p>
-                    <p className="text-xs text-gray-500">Сред. DAU</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Сред. DAU</p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                    <HelpCircle className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   </div>
                 </div>
                 <div className="hidden group-hover:block absolute z-10 top-full left-0 right-0 mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
@@ -2265,19 +2265,19 @@ export default function AdvancedAnalyticsPage() {
                 <TrendingDown className="h-5 w-5 text-red-500" />
                 {ANALYTICS_INFO.churnRisk.title}
               </CardTitle>
-              <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.churnRisk.description}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{ANALYTICS_INFO.churnRisk.description}</p>
             </CardHeader>
             <CardContent>
               {/* Краткое пояснение методологии */}
-              <div className="mb-4 p-2 bg-gray-50 rounded-lg text-xs text-gray-600 flex items-start gap-2">
-                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
+              <div className="mb-4 p-2 bg-gray-50 dark:bg-slate-900 rounded-lg text-xs text-gray-600 dark:text-slate-400 flex items-start gap-2">
+                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 dark:text-slate-500 shrink-0" />
                 <span>{ANALYTICS_INFO.churnRisk.methodology}</span>
               </div>
               {/* High Risk */}
               <div className="mb-4">
                 <button
                   onClick={() => setExpandedRisk(expandedRisk === "high" ? null : "high")}
-                  className="w-full flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-950 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Badge className="bg-red-500">Высокий</Badge>
@@ -2293,15 +2293,15 @@ export default function AdvancedAnalyticsPage() {
                 {expandedRisk === "high" && data.churnRisk.high.length > 0 && (
                   <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
                     {data.churnRisk.high.map((student) => (
-                      <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-red-200 transition-colors">
+                      <div key={student.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border hover:border-red-200 transition-colors">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm text-gray-900">{student.name}</p>
+                            <p className="font-medium text-sm text-gray-900 dark:text-slate-100">{student.name}</p>
                             {studentTagsMap[student.id]?.length > 0 && (
                               <StudentTagsBadges tags={studentTagsMap[student.id]} maxVisible={2} />
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                             <span className="truncate">{student.email}</span>
                             {student.telegramUsername && (
                               <button
@@ -2314,11 +2314,11 @@ export default function AdvancedAnalyticsPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge className="text-xs bg-red-100 text-red-700 border-0">
+                            <Badge className="text-xs bg-red-100 dark:bg-red-950 text-red-700 border-0">
                               {student.daysSinceActive} дней
                             </Badge>
                             {student.modulesCompleted !== undefined && (
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-gray-400 dark:text-slate-500">
                                 {student.modulesCompleted} модулей
                               </span>
                             )}
@@ -2328,7 +2328,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка копирования email */}
                           <button
                             onClick={() => copyEmail(student.email, student.name)}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             title="Копировать email"
                           >
                             {copiedEmail === student.email ? (
@@ -2340,7 +2340,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка mailto */}
                           <button
                             onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Написать письмо"
                           >
                             <Mail className="h-4 w-4" />
@@ -2348,7 +2348,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка исключения (заглушка) */}
                           <button
                             onClick={() => handleExcludeStudent(student)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Исключить студента"
                           >
                             <UserX className="h-4 w-4" />
@@ -2364,7 +2364,7 @@ export default function AdvancedAnalyticsPage() {
               <div className="mb-4">
                 <button
                   onClick={() => setExpandedRisk(expandedRisk === "medium" ? null : "medium")}
-                  className="w-full flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Badge className="bg-yellow-500">Средний</Badge>
@@ -2380,10 +2380,10 @@ export default function AdvancedAnalyticsPage() {
                 {expandedRisk === "medium" && data.churnRisk.medium.length > 0 && (
                   <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
                     {data.churnRisk.medium.map((student) => (
-                      <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-yellow-200 transition-colors">
+                      <div key={student.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border hover:border-yellow-200 transition-colors">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900">{student.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <p className="font-medium text-sm text-gray-900 dark:text-slate-100">{student.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                             <span className="truncate">{student.email}</span>
                             {student.telegramUsername && (
                               <button
@@ -2396,11 +2396,11 @@ export default function AdvancedAnalyticsPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge className="text-xs bg-yellow-100 text-yellow-700 border-0">
+                            <Badge className="text-xs bg-yellow-100 dark:bg-yellow-950 text-yellow-700 border-0">
                               {student.daysSinceActive} дней
                             </Badge>
                             {student.modulesCompleted !== undefined && (
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-gray-400 dark:text-slate-500">
                                 {student.modulesCompleted} модулей
                               </span>
                             )}
@@ -2410,7 +2410,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка копирования email */}
                           <button
                             onClick={() => copyEmail(student.email, student.name)}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             title="Копировать email"
                           >
                             {copiedEmail === student.email ? (
@@ -2422,7 +2422,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка mailto */}
                           <button
                             onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Написать письмо"
                           >
                             <Mail className="h-4 w-4" />
@@ -2430,7 +2430,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка исключения (заглушка) */}
                           <button
                             onClick={() => handleExcludeStudent(student)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Исключить студента"
                           >
                             <UserX className="h-4 w-4" />
@@ -2446,7 +2446,7 @@ export default function AdvancedAnalyticsPage() {
               <div className="mb-4">
                 <button
                   onClick={() => setExpandedRisk(expandedRisk === "low" ? null : "low")}
-                  className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Badge className="bg-green-500">Низкий</Badge>
@@ -2462,13 +2462,13 @@ export default function AdvancedAnalyticsPage() {
                 {expandedRisk === "low" && (
                   <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
                     {data.churnRisk.low.length === 0 ? (
-                      <p className="text-gray-500 text-sm text-center py-4">Нет активных студентов</p>
+                      <p className="text-gray-500 dark:text-slate-400 text-sm text-center py-4">Нет активных студентов</p>
                     ) : (
                       data.churnRisk.low.map((student) => (
-                        <div key={student.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-green-200 transition-colors">
+                        <div key={student.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border hover:border-green-200 transition-colors">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-gray-900">{student.name}</p>
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <p className="font-medium text-sm text-gray-900 dark:text-slate-100">{student.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                               <span className="truncate">{student.email}</span>
                               {student.telegramUsername && (
                                 <button
@@ -2481,11 +2481,11 @@ export default function AdvancedAnalyticsPage() {
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge className="text-xs bg-green-100 text-green-700 border-0">
+                              <Badge className="text-xs bg-green-100 dark:bg-green-950 text-green-700 border-0">
                                 {student.daysSinceActive === 0 ? "Сегодня" : `${student.daysSinceActive} д. назад`}
                               </Badge>
                               {student.modulesCompleted !== undefined && (
-                                <span className="text-xs text-gray-400">
+                                <span className="text-xs text-gray-400 dark:text-slate-500">
                                   {student.modulesCompleted} модулей
                                 </span>
                               )}
@@ -2500,7 +2500,7 @@ export default function AdvancedAnalyticsPage() {
                             {/* Кнопка копирования email */}
                             <button
                               onClick={() => copyEmail(student.email, student.name)}
-                              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                               title="Копировать email"
                             >
                               {copiedEmail === student.email ? (
@@ -2512,7 +2512,7 @@ export default function AdvancedAnalyticsPage() {
                             {/* Кнопка mailto */}
                             <button
                               onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="Написать письмо"
                             >
                               <Mail className="h-4 w-4" />
@@ -2522,7 +2522,7 @@ export default function AdvancedAnalyticsPage() {
                       ))
                     )}
                     {data.churnRisk.lowCount > 30 && (
-                      <p className="text-xs text-gray-500 text-center py-2">
+                      <p className="text-xs text-gray-500 dark:text-slate-400 text-center py-2">
                         Показаны 30 из {data.churnRisk.lowCount} активных студентов
                       </p>
                     )}
@@ -2539,12 +2539,12 @@ export default function AdvancedAnalyticsPage() {
                 <TrendingUp className="h-5 w-5 text-blue-500" />
                 {ANALYTICS_INFO.funnel.title}
               </CardTitle>
-              <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.funnel.description}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{ANALYTICS_INFO.funnel.description}</p>
             </CardHeader>
             <CardContent>
               {/* Краткое пояснение */}
-              <div className="mb-4 p-2 bg-gray-50 rounded-lg text-xs text-gray-600 flex items-start gap-2">
-                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
+              <div className="mb-4 p-2 bg-gray-50 dark:bg-slate-900 rounded-lg text-xs text-gray-600 dark:text-slate-400 flex items-start gap-2">
+                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 dark:text-slate-500 shrink-0" />
                 <span>{ANALYTICS_INFO.funnel.methodology}</span>
               </div>
               <div className="space-y-3">
@@ -2561,18 +2561,18 @@ export default function AdvancedAnalyticsPage() {
                           <span className="text-sm font-medium">{stage.stage}</span>
                           {stageHint && (
                             <div className="relative">
-                              <HelpCircle className="h-3 w-3 text-gray-400 cursor-help" />
+                              <HelpCircle className="h-3 w-3 text-gray-400 dark:text-slate-500 cursor-help" />
                               <div className="hidden group-hover:block absolute z-10 left-0 top-full mt-1 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
                                 {stageHint}
                               </div>
                             </div>
                           )}
                         </div>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-slate-400">
                           {stage.count} ({stage.percent}%)
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-6 overflow-hidden">
+                      <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-6 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${
                             index === 0
@@ -2589,13 +2589,13 @@ export default function AdvancedAnalyticsPage() {
                           {(() => {
                             const nextStage = data.funnel[index + 1]
                             if (stage.count === 0 || nextStage.count === 0) {
-                              return <span className="text-xs text-gray-400">—</span>
+                              return <span className="text-xs text-gray-400 dark:text-slate-500">—</span>
                             }
                             const conversionRate = Math.round((nextStage.count / stage.count) * 100)
                             const isAnomalous = conversionRate > 100
 
                             return (
-                              <span className={`text-xs ${isAnomalous ? "text-orange-500" : "text-gray-400"}`}>
+                              <span className={`text-xs ${isAnomalous ? "text-orange-500" : "text-gray-400 dark:text-slate-500"}`}>
                                 {isAnomalous ? (
                                   <span className="flex items-center justify-center gap-1 relative">
                                     <AlertTriangle className="h-3 w-3" />
@@ -2632,36 +2632,36 @@ export default function AdvancedAnalyticsPage() {
                 {ANALYTICS_INFO.difficulty.title}
               </CardTitle>
               {sectionsExpanded.difficulty ? (
-                <ChevronUp className="h-5 w-5 text-gray-400" />
+                <ChevronUp className="h-5 w-5 text-gray-400 dark:text-slate-500" />
               ) : (
-                <ChevronDown className="h-5 w-5 text-gray-400" />
+                <ChevronDown className="h-5 w-5 text-gray-400 dark:text-slate-500" />
               )}
             </div>
-            <p className="text-xs text-gray-500 mt-1">{ANALYTICS_INFO.difficulty.description}</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{ANALYTICS_INFO.difficulty.description}</p>
           </CardHeader>
           {sectionsExpanded.difficulty && <CardContent>
             {/* Методология */}
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-start gap-2 text-xs text-gray-600 mb-2">
-                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
+            <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+              <div className="flex items-start gap-2 text-xs text-gray-600 dark:text-slate-400 mb-2">
+                <Info className="h-3.5 w-3.5 mt-0.5 text-gray-400 dark:text-slate-500 shrink-0" />
                 <span>{ANALYTICS_INFO.difficulty.methodology}</span>
               </div>
               <div className="flex flex-wrap gap-3 text-xs">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded bg-green-500"></div>
-                  <span className="text-gray-600">Лёгкий (8+)</span>
+                  <span className="text-gray-600 dark:text-slate-400">Лёгкий (8+)</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded bg-yellow-500"></div>
-                  <span className="text-gray-600">Средний (6-8)</span>
+                  <span className="text-gray-600 dark:text-slate-400">Средний (6-8)</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded bg-red-500"></div>
-                  <span className="text-gray-600">Сложный (&lt;6)</span>
+                  <span className="text-gray-600 dark:text-slate-400">Сложный (&lt;6)</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded bg-gray-300"></div>
-                  <span className="text-gray-600">Нет данных</span>
+                  <span className="text-gray-600 dark:text-slate-400">Нет данных</span>
                 </div>
               </div>
             </div>
@@ -2675,7 +2675,7 @@ export default function AdvancedAnalyticsPage() {
                     <th className="py-2 font-medium text-center">
                       <div className="flex items-center justify-center gap-1 group relative">
                         Завершили
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
+                        <HelpCircle className="h-3 w-3 text-gray-400 dark:text-slate-500" />
                         <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
                           Количество студентов, завершивших модуль
                         </span>
@@ -2684,7 +2684,7 @@ export default function AdvancedAnalyticsPage() {
                     <th className="py-2 font-medium text-center">
                       <div className="flex items-center justify-center gap-1 group relative">
                         Работ
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
+                        <HelpCircle className="h-3 w-3 text-gray-400 dark:text-slate-500" />
                         <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
                           Общее количество отправленных работ
                         </span>
@@ -2693,7 +2693,7 @@ export default function AdvancedAnalyticsPage() {
                     <th className="py-2 font-medium text-center">
                       <div className="flex items-center justify-center gap-1 group relative">
                         Ср. оценка
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
+                        <HelpCircle className="h-3 w-3 text-gray-400 dark:text-slate-500" />
                         <span className="hidden group-hover:block absolute z-10 top-full mt-1 p-1.5 bg-gray-900 text-white text-xs rounded whitespace-nowrap">
                           Средний балл проверенных работ
                         </span>
@@ -2705,10 +2705,10 @@ export default function AdvancedAnalyticsPage() {
                 </thead>
                 <tbody>
                   {data.difficultyAnalysis.slice(0, 15).map((module) => (
-                    <tr key={module.id} className="border-b hover:bg-gray-50 transition-colors group">
+                    <tr key={module.id} className="border-b hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors group">
                       <td className="py-2">
                         <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">{module.title}</span>
+                          <span className="font-medium text-gray-900 dark:text-slate-100">{module.title}</span>
                           {module.trailTitle && (
                             <Link
                               href={`/trails/${module.trailSlug}`}
@@ -2738,15 +2738,15 @@ export default function AdvancedAnalyticsPage() {
                             {module.avgScore}/10
                           </span>
                         ) : (
-                          <span className="text-gray-400">—</span>
+                          <span className="text-gray-400 dark:text-slate-500">—</span>
                         )}
                       </td>
                       <td className="py-2 text-center">
                         <Badge className={`text-xs border-0 ${
-                          module.difficulty === "hard" ? "bg-red-100 text-red-700" :
-                          module.difficulty === "medium" ? "bg-yellow-100 text-yellow-700" :
-                          module.difficulty === "easy" ? "bg-green-100 text-green-700" :
-                          "bg-gray-100 text-gray-500"
+                          module.difficulty === "hard" ? "bg-red-100 dark:bg-red-950 text-red-700" :
+                          module.difficulty === "medium" ? "bg-yellow-100 dark:bg-yellow-950 text-yellow-700" :
+                          module.difficulty === "easy" ? "bg-green-100 dark:bg-green-950 text-green-700" :
+                          "bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400"
                         }`}>
                           {module.difficulty === "hard" ? "Сложный" :
                            module.difficulty === "medium" ? "Средний" :
@@ -2757,7 +2757,7 @@ export default function AdvancedAnalyticsPage() {
                         <Link
                           href={`/module/${module.slug}`}
                           target="_blank"
-                          className="p-1 text-gray-400 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1 text-gray-400 dark:text-slate-500 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Link>
@@ -2767,7 +2767,7 @@ export default function AdvancedAnalyticsPage() {
                 </tbody>
               </table>
               {data.difficultyAnalysis.length > 15 && (
-                <p className="text-xs text-gray-500 mt-3 text-center">
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-3 text-center">
                   Показаны первые 15 модулей (всего: {data.difficultyAnalysis.length})
                 </p>
               )}
@@ -2783,13 +2783,13 @@ export default function AdvancedAnalyticsPage() {
               className="flex items-center gap-2 mb-4 cursor-pointer w-full"
             >
               <Zap className="h-5 w-5 text-orange-500" />
-              <h2 className="text-lg font-semibold text-gray-900">Анализ Drop-off по модулям</h2>
-              <span className="text-xs text-gray-500">— Где студенты останавливаются</span>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Анализ Drop-off по модулям</h2>
+              <span className="text-xs text-gray-500 dark:text-slate-400">— Где студенты останавливаются</span>
               <div className="ml-auto">
                 {sectionsExpanded.dropoffSection ? (
-                  <ChevronUp className="h-5 w-5 text-gray-400" />
+                  <ChevronUp className="h-5 w-5 text-gray-400 dark:text-slate-500" />
                 ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                  <ChevronDown className="h-5 w-5 text-gray-400 dark:text-slate-500" />
                 )}
               </div>
             </button>
@@ -2809,7 +2809,7 @@ export default function AdvancedAnalyticsPage() {
                           {trail.totalEnrolled} записались
                         </Badge>
                         {trail.modules.some(m => m.isBottleneck) && (
-                          <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
+                          <Badge className="text-xs bg-orange-100 dark:bg-orange-950 text-orange-700 border-0">
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             {trail.modules.filter(m => m.isBottleneck).length} узких мест
                           </Badge>
@@ -2826,9 +2826,9 @@ export default function AdvancedAnalyticsPage() {
                         </Link>
                         <button onClick={() => setExpandedDropoff(expandedDropoff === trail.trailId ? null : trail.trailId)} className="cursor-pointer">
                           {expandedDropoff === trail.trailId ? (
-                            <ChevronUp className="h-5 w-5 text-gray-400" />
+                            <ChevronUp className="h-5 w-5 text-gray-400 dark:text-slate-500" />
                           ) : (
-                            <ChevronDown className="h-5 w-5 text-gray-400" />
+                            <ChevronDown className="h-5 w-5 text-gray-400 dark:text-slate-500" />
                           )}
                         </button>
                       </div>
@@ -2838,8 +2838,8 @@ export default function AdvancedAnalyticsPage() {
                   {expandedDropoff === trail.trailId && (
                     <CardContent className="pt-0">
                       {/* Visual funnel */}
-                      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                      <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400 mb-2">
                           <Info className="h-3.5 w-3.5" />
                           <span>Визуализация: ширина блока = % завершивших</span>
                         </div>
@@ -2864,7 +2864,7 @@ export default function AdvancedAnalyticsPage() {
                                 title={`${module.title}: ${module.completionRate}%`}
                               />
                               {index < trail.modules.length - 1 && (
-                                <ArrowRight className="h-4 w-4 text-gray-300 mx-0.5" />
+                                <ArrowRight className="h-4 w-4 text-gray-300 dark:text-slate-600 mx-0.5" />
                               )}
                             </div>
                           ))}
@@ -2891,22 +2891,22 @@ export default function AdvancedAnalyticsPage() {
                             {trail.modules.map((module, index) => (
                               <tr
                                 key={module.id}
-                                className={`border-b hover:bg-gray-50 transition-colors group ${
-                                  module.isBottleneck ? "bg-orange-50" : ""
+                                className={`border-b hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors group ${
+                                  module.isBottleneck ? "bg-orange-50 dark:bg-orange-950" : ""
                                 }`}
                               >
-                                <td className="py-2 text-gray-500">{index + 1}</td>
+                                <td className="py-2 text-gray-500 dark:text-slate-400">{index + 1}</td>
                                 <td className="py-2">
                                   <div className="flex items-center gap-2">
                                     <Link
                                       href={`/module/${module.slug}`}
                                       target="_blank"
-                                      className="font-medium text-gray-900 hover:text-purple-700 hover:underline"
+                                      className="font-medium text-gray-900 dark:text-slate-100 hover:text-purple-700 hover:underline"
                                     >
                                       {module.title}
                                     </Link>
                                     {module.isBottleneck && (
-                                      <Badge className="text-xs bg-orange-100 text-orange-700 border-0">
+                                      <Badge className="text-xs bg-orange-100 dark:bg-orange-950 text-orange-700 border-0">
                                         Узкое место
                                       </Badge>
                                     )}
@@ -2939,22 +2939,22 @@ export default function AdvancedAnalyticsPage() {
                                     <span className={`text-xs font-medium ${
                                       module.dropRate > 30 ? "text-red-600" :
                                       module.dropRate > 15 ? "text-yellow-600" :
-                                      "text-gray-500"
+                                      "text-gray-500 dark:text-slate-400"
                                     }`}>
                                       -{module.dropRate}%
                                     </span>
                                   ) : (
-                                    <span className="text-gray-400">—</span>
+                                    <span className="text-gray-400 dark:text-slate-500">—</span>
                                   )}
                                 </td>
-                                <td className="py-2 text-center text-gray-500">
+                                <td className="py-2 text-center text-gray-500 dark:text-slate-400">
                                   {module.avgTimeDays > 0 ? `${module.avgTimeDays} д.` : "—"}
                                 </td>
                                 <td className="py-2">
                                   <Link
                                     href={`/module/${module.slug}`}
                                     target="_blank"
-                                    className="p-1 text-gray-400 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                                    className="p-1 text-gray-400 dark:text-slate-500 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
                                   >
                                     <ExternalLink className="h-4 w-4" />
                                   </Link>
@@ -2967,7 +2967,7 @@ export default function AdvancedAnalyticsPage() {
 
                       {/* Summary insights */}
                       {trail.modules.some(m => m.isBottleneck) && (
-                        <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                        <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
                           <div className="flex items-center gap-2 text-orange-700 font-medium mb-2">
                             <AlertTriangle className="h-4 w-4" />
                             Обнаружены узкие места

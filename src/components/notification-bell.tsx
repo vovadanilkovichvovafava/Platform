@@ -190,14 +190,14 @@ export function NotificationBell() {
       key={notification.id}
       onClick={() => handleNotificationClick(notification)}
       className={`p-3 border-b last:border-0 cursor-pointer transition-colors ${
-        notification.isRead ? "bg-white" : "bg-orange-50"
-      } hover:bg-gray-50`}
+        notification.isRead ? "bg-white dark:bg-slate-800" : "bg-orange-50 dark:bg-orange-950"
+      } hover:bg-gray-50 dark:hover:bg-slate-800`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           {!compact && (
             <div className="flex items-center gap-2">
-              <h4 className={`text-sm ${notification.isRead ? "text-gray-700" : "font-semibold text-gray-900"}`}>
+              <h4 className={`text-sm ${notification.isRead ? "text-gray-700 dark:text-slate-300" : "font-semibold text-gray-900 dark:text-slate-100"}`}>
                 {notification.title}
               </h4>
               {!notification.isRead && (
@@ -205,10 +205,10 @@ export function NotificationBell() {
               )}
             </div>
           )}
-          <p className={`text-xs text-gray-500 ${compact ? "" : "mt-0.5"} line-clamp-2`}>
+          <p className={`text-xs text-gray-500 dark:text-slate-400 ${compact ? "" : "mt-0.5"} line-clamp-2`}>
             {notification.message}
           </p>
-          <p className="text-[10px] text-gray-400 mt-1">
+          <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">
             {formatTime(notification.createdAt)}
           </p>
         </div>
@@ -218,7 +218,7 @@ export function NotificationBell() {
               e.stopPropagation()
               markAsRead(notification.id)
             }}
-            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+            className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
             title="Отметить как прочитанное"
           >
             <X className="h-3 w-3" />
@@ -234,8 +234,8 @@ export function NotificationBell() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-10 w-10 hover:bg-slate-100">
-          <Bell className="h-5 w-5 text-slate-600" />
+        <Button variant="ghost" size="icon" className="relative h-10 w-10 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -243,9 +243,9 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 p-0 bg-white" align="end">
+      <DropdownMenuContent className="w-80 p-0 bg-white dark:bg-slate-800" align="end">
         <div className="flex items-center justify-between p-3 border-b">
-          <h3 className="font-semibold text-gray-900">Уведомления</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-slate-100">Уведомления</h3>
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
@@ -260,7 +260,7 @@ export function NotificationBell() {
 
         <div className="max-h-[400px] overflow-y-auto">
           {isEmpty ? (
-            <div className="p-6 text-center text-gray-500">
+            <div className="p-6 text-center text-gray-500 dark:text-slate-400">
               <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Нет уведомлений</p>
             </div>
@@ -269,9 +269,9 @@ export function NotificationBell() {
               {/* Trail-grouped SUBMISSION_PENDING (unread) */}
               {trailGroups.map((group) => (
                 <div key={group.title}>
-                  <div className="px-3 py-1.5 bg-slate-50 border-b flex items-center gap-2">
-                    <ClipboardList className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    <span className="text-xs font-medium text-slate-600 truncate">
+                  <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b flex items-center gap-2">
+                    <ClipboardList className="h-3 w-3 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate">
                       {group.title}
                     </span>
                     <span className="text-[10px] text-orange-500 font-medium ml-auto flex-shrink-0">
@@ -284,8 +284,8 @@ export function NotificationBell() {
 
               {/* Separator between trail groups and other notifications */}
               {hasTrailGroups && otherNotifications.length > 0 && (
-                <div className="px-3 py-1 bg-slate-50 border-b">
-                  <span className="text-[10px] text-slate-400 font-medium">Другие</span>
+                <div className="px-3 py-1 bg-slate-50 dark:bg-slate-900 border-b">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Другие</span>
                 </div>
               )}
 

@@ -921,23 +921,23 @@ export default function AdminContentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <p className="text-red-500">{error}</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-6">
           <Breadcrumbs
             items={[
@@ -948,10 +948,10 @@ export default function AdminContentPage() {
           />
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                 Управление контентом
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 dark:text-slate-400 mt-1">
                 Редактирование теории, вопросов и проектов
               </p>
             </div>
@@ -1004,7 +1004,7 @@ export default function AdminContentPage() {
 
         {/* Bulk actions bar */}
         {selectedModules.size > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-blue-700 font-medium">
                 Выбрано: {selectedModules.size} модулей
@@ -1039,7 +1039,7 @@ export default function AdminContentPage() {
           {trails.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <p className="text-gray-500 mb-4">Нет trails</p>
+                <p className="text-gray-500 dark:text-slate-400 mb-4">Нет trails</p>
                 <Button onClick={() => setShowTrailModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Создать первый Trail
@@ -1069,32 +1069,32 @@ export default function AdminContentPage() {
                             <Badge variant="secondary">Скрыт</Badge>
                           )}
                           {trail.teacherVisibility === "ALL_TEACHERS" && (
-                            <Badge className="bg-blue-100 text-blue-700 border-0">
+                            <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 border-0">
                               <Users className="h-3 w-3 mr-1" />
                               Все учителя
                             </Badge>
                           )}
                           {trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0 && (
-                            <Badge className="bg-purple-100 text-purple-700 border-0">
+                            <Badge className="bg-purple-100 dark:bg-purple-950 text-purple-700 border-0">
                               <Users className="h-3 w-3 mr-1" />
                               {trail.teachers[0].teacher.name}
                             </Badge>
                           )}
                           {trail.isPasswordProtected && (
-                            <Badge className="bg-amber-100 text-amber-700 border-0">
+                            <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-700 border-0">
                               <Lock className="h-3 w-3 mr-1" />
                               Пароль
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500">{trail.subtitle}</p>
+                        <p className="text-sm text-gray-500 dark:text-slate-400">{trail.subtitle}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-slate-400">
                           {trail.modules.length} модулей
                         </span>
                         {isTrailLocked(trail) && (
-                          <Badge className="bg-amber-100 text-amber-700 border-amber-300 border">
+                          <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-700 border-amber-300 border">
                             <Lock className="h-3 w-3 mr-1" />
                             Заблокирован
                           </Badge>
@@ -1158,15 +1158,15 @@ export default function AdminContentPage() {
                         >
                           <Lock className="h-7 w-7 text-amber-500" />
                         </div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">
+                        <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                           Требуется пароль
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
                           Нажмите для ввода пароля и просмотра содержимого
                         </p>
                       </div>
                     ) : trail.modules.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-gray-500 dark:text-slate-400">
                         <p className="mb-3">Нет модулей</p>
                         <Button
                           size="sm"
@@ -1182,7 +1182,7 @@ export default function AdminContentPage() {
                         {/* Assessment Modules */}
                         {assessmentModules.length > 0 && (
                           <div className="mb-6">
-                            <h3 className="text-sm font-medium text-gray-700 mb-3">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">
                               Оценка знаний
                             </h3>
                             <div className="space-y-2">
@@ -1197,13 +1197,13 @@ export default function AdminContentPage() {
                                     onDragOver={(e) => handleDragOver(e, module.id)}
                                     onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, module.id, trail.id)}
-                                    className={`group flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
+                                    className={`group flex items-center gap-3 p-3 rounded-lg border bg-white dark:bg-slate-800 transition-colors ${
                                       draggedModule === module.id ? "opacity-50" : ""
                                     } ${
-                                      dragOverModule === module.id ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
+                                      dragOverModule === module.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "hover:bg-gray-50 dark:hover:bg-slate-800"
                                     }`}
                                   >
-                                    <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600">
+                                    <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600">
                                       <GripVertical className="h-4 w-4" />
                                     </div>
                                     <Checkbox
@@ -1211,28 +1211,28 @@ export default function AdminContentPage() {
                                       onCheckedChange={() => toggleModuleSelection(module.id)}
                                     />
                                     <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 shrink-0">
-                                        <TypeIcon className="h-5 w-5 text-gray-600" />
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-800 shrink-0">
+                                        <TypeIcon className="h-5 w-5 text-gray-600 dark:text-slate-400" />
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                          <span className="font-medium text-gray-900 truncate">
+                                          <span className="font-medium text-gray-900 dark:text-slate-100 truncate">
                                             {module.title}
                                           </span>
                                           <Badge variant="outline" className="text-xs shrink-0">
                                             {typeLabels[module.type]}
                                           </Badge>
                                           {moduleAnalytics && (
-                                            <Badge className="text-xs shrink-0 bg-green-100 text-green-700 border-0">
+                                            <Badge className="text-xs shrink-0 bg-green-100 dark:bg-green-950 text-green-700 border-0">
                                               {moduleAnalytics.completedCount} прошли
                                             </Badge>
                                           )}
                                         </div>
-                                        <p className="text-sm text-gray-500 truncate">
+                                        <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
                                           {module.description}
                                         </p>
                                       </div>
-                                      <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
+                                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-slate-400 shrink-0">
                                         <div className="flex items-center gap-1">
                                           <HelpCircle className="h-4 w-4" />
                                           {module._count.questions}
@@ -1247,7 +1247,7 @@ export default function AdminContentPage() {
                                     <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button
                                         onClick={() => deleteModule(module.id, module.title)}
-                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                        className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 rounded"
                                         title="Удалить модуль"
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -1263,7 +1263,7 @@ export default function AdminContentPage() {
                         {/* Project Modules */}
                         {projectModules.length > 0 && (
                           <div>
-                            <h3 className="text-sm font-medium text-gray-700 mb-3">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">
                               Проекты
                             </h3>
                             <div className="space-y-2">
@@ -1277,13 +1277,13 @@ export default function AdminContentPage() {
                                     onDragOver={(e) => handleDragOver(e, module.id)}
                                     onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, module.id, trail.id)}
-                                    className={`group flex items-center gap-3 p-3 rounded-lg border bg-white transition-colors ${
+                                    className={`group flex items-center gap-3 p-3 rounded-lg border bg-white dark:bg-slate-800 transition-colors ${
                                       draggedModule === module.id ? "opacity-50" : ""
                                     } ${
-                                      dragOverModule === module.id ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
+                                      dragOverModule === module.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "hover:bg-gray-50 dark:hover:bg-slate-800"
                                     }`}
                                   >
-                                    <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600">
+                                    <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600">
                                       <GripVertical className="h-4 w-4" />
                                     </div>
                                     <Checkbox
@@ -1291,28 +1291,28 @@ export default function AdminContentPage() {
                                       onCheckedChange={() => toggleModuleSelection(module.id)}
                                     />
                                     <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 shrink-0">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950 shrink-0">
                                         <FolderGit2 className="h-5 w-5 text-blue-600" />
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                          <span className="font-medium text-gray-900 truncate">
+                                          <span className="font-medium text-gray-900 dark:text-slate-100 truncate">
                                             {module.title}
                                           </span>
-                                          <Badge className="bg-blue-100 text-blue-700 border-0 text-xs shrink-0">
+                                          <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 border-0 text-xs shrink-0">
                                             {module.level}
                                           </Badge>
                                           {moduleAnalytics && (
-                                            <Badge className="text-xs shrink-0 bg-green-100 text-green-700 border-0">
+                                            <Badge className="text-xs shrink-0 bg-green-100 dark:bg-green-950 text-green-700 border-0">
                                               {moduleAnalytics.completedCount} прошли
                                             </Badge>
                                           )}
                                         </div>
-                                        <p className="text-sm text-gray-500 truncate">
+                                        <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
                                           {module.description}
                                         </p>
                                       </div>
-                                      <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
+                                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-slate-400 shrink-0">
                                         {moduleAnalytics?.avgScore && (
                                           <span className="text-blue-600">{moduleAnalytics.avgScore}/10</span>
                                         )}
@@ -1324,7 +1324,7 @@ export default function AdminContentPage() {
                                     <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button
                                         onClick={() => deleteModule(module.id, module.title)}
-                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                        className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 rounded"
                                         title="Удалить модуль"
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -1369,7 +1369,7 @@ export default function AdminContentPage() {
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-purple-500" />
@@ -1377,7 +1377,7 @@ export default function AdminContentPage() {
               </h2>
               <button
                 onClick={resetImportModal}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-slate-500 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1386,7 +1386,7 @@ export default function AdminContentPage() {
             <div className="p-6 overflow-y-auto flex-1">
               {/* Ошибка парсинга или состояние регенерации */}
               {(parseError || regenerating) && (
-                <div className={`p-4 rounded-lg mb-4 ${regenerating ? "bg-purple-50 border border-purple-200" : "bg-red-50 border border-red-200"}`}>
+                <div className={`p-4 rounded-lg mb-4 ${regenerating ? "bg-purple-50 border border-purple-200 dark:border-purple-800" : "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800"}`}>
                   <div className="flex items-start gap-2">
                     {regenerating ? (
                       <RefreshCw className="h-5 w-5 text-purple-600 mt-0.5 animate-spin" />
@@ -1418,7 +1418,7 @@ export default function AdminContentPage() {
                                 disabled={regenerating}
                                 className={useNeuralParser
                                   ? "text-purple-700 border-purple-300 hover:bg-purple-50"
-                                  : "text-gray-600 border-gray-300 hover:bg-gray-50"}
+                                  : "text-gray-600 dark:text-slate-400 border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"}
                               >
                                 {useNeuralParser ? (
                                   <Sparkles className="h-4 w-4 mr-2" />
@@ -1438,7 +1438,7 @@ export default function AdminContentPage() {
                                   setParseError(null)
                                   setUploadedFile(null)
                                 }}
-                                className="text-gray-500 hover:text-gray-700"
+                                className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
                               >
                                 Загрузить другой файл
                               </Button>
@@ -1457,7 +1457,7 @@ export default function AdminContentPage() {
                   {/* Загрузка файла или прогресс парсинга */}
                   {importing && importProgress ? (
                     // Показываем прогресс-бар во время парсинга
-                    <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                    <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="relative">
                           <RefreshCw className="h-8 w-8 text-purple-600 animate-spin" />
@@ -1481,7 +1481,7 @@ export default function AdminContentPage() {
                       <Progress value={importProgress.current} className="h-3 mb-3" />
 
                       {/* Этапы парсинга */}
-                      <div className="flex justify-between text-xs text-gray-500 mt-4">
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-slate-400 mt-4">
                         <div className={`flex items-center gap-1 ${importProgress.current >= 5 ? "text-purple-600" : ""}`}>
                           <div className={`w-2 h-2 rounded-full ${importProgress.current >= 5 ? "bg-purple-600" : "bg-gray-300"}`} />
                           Анализ
@@ -1500,13 +1500,13 @@ export default function AdminContentPage() {
                         </div>
                       </div>
 
-                      <p className="text-xs text-gray-400 mt-4 text-center">
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-4 text-center">
                         Большие файлы могут обрабатываться несколько минут
                       </p>
                     </div>
                   ) : (
                     // Обычная зона drag&drop
-                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                       <div className="flex flex-col items-center justify-center">
                         {importing ? (
                           <>
@@ -1515,10 +1515,10 @@ export default function AdminContentPage() {
                           </>
                         ) : (
                           <>
-                            <Upload className="h-12 w-12 text-gray-400 mb-3" />
-                            <p className="text-lg text-gray-600 font-medium">Выберите файл для импорта</p>
-                            <p className="text-sm text-gray-400 mt-1">.txt, .md, .json, .xml, .pdf, .doc, .docx</p>
-                            <p className="text-xs text-gray-400 mt-3">
+                            <Upload className="h-12 w-12 text-gray-400 dark:text-slate-500 mb-3" />
+                            <p className="text-lg text-gray-600 dark:text-slate-400 font-medium">Выберите файл для импорта</p>
+                            <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">.txt, .md, .json, .xml, .pdf, .doc, .docx</p>
+                            <p className="text-xs text-gray-400 dark:text-slate-500 mt-3">
                               PDF/DOC/DOCX лучше распознаются с AI-парсером
                             </p>
                           </>
@@ -1535,11 +1535,11 @@ export default function AdminContentPage() {
                   )}
 
                   {/* Переключатель режима парсера */}
-                  <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+                  <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Sparkles className={`h-4 w-4 ${useNeuralParser ? "text-purple-500" : "text-gray-400"}`} />
-                        <span className="text-sm font-medium text-gray-700">Использовать нейросеть</span>
+                        <Sparkles className={`h-4 w-4 ${useNeuralParser ? "text-purple-500" : "text-gray-400 dark:text-slate-500"}`} />
+                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Использовать нейросеть</span>
                         <InfoHint hint={adminHelpHints.content.neuralParser.shortHint} side="right" />
                       </div>
                       <Switch
@@ -1548,7 +1548,7 @@ export default function AdminContentPage() {
                         disabled={importing}
                       />
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
                       {useNeuralParser
                         ? "AI-парсер лучше распознаёт сложную структуру документов"
                         : "Кодовый парсер быстрее, но может пропустить детали"}
@@ -1556,12 +1556,12 @@ export default function AdminContentPage() {
 
                     {/* AI статус (показываем только если нейросеть включена) */}
                     {useNeuralParser && (
-                      <div className="pt-2 border-t border-gray-200">
+                      <div className="pt-2 border-t border-gray-200 dark:border-slate-700">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">Статус AI:</span>
+                          <span className="text-xs text-gray-500 dark:text-slate-400">Статус AI:</span>
                           <div className="flex items-center gap-2">
                             {aiStatus.checking ? (
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <span className="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1">
                                 <RefreshCw className="h-3 w-3 animate-spin" />
                                 Проверка...
                               </span>
@@ -1602,7 +1602,7 @@ export default function AdminContentPage() {
                         </div>
                         {/* Отображение ошибки AI */}
                         {aiStatus.error && !aiStatus.checking && (
-                          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-start gap-2">
+                          <div className="mt-2 p-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 flex items-start gap-2">
                             <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                             <span>{aiStatus.error}</span>
                           </div>
@@ -1611,8 +1611,8 @@ export default function AdminContentPage() {
                         {aiTestResult.message && (
                           <div className={`mt-2 p-3 rounded border ${
                             aiTestResult.success
-                              ? "bg-green-50 border-green-200"
-                              : "bg-red-50 border-red-200"
+                              ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
+                              : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
                           }`}>
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
@@ -1630,7 +1630,7 @@ export default function AdminContentPage() {
                               </div>
                               <button
                                 onClick={() => setAiTestResult({ testing: false })}
-                                className="text-gray-400 hover:text-gray-600 ml-2"
+                                className="text-gray-400 dark:text-slate-500 hover:text-gray-600 ml-2"
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -1647,7 +1647,7 @@ export default function AdminContentPage() {
               {parsedData && parsedData.trails.length > 0 && (
                 <div className="space-y-6">
                   {/* Информация о парсинге с выпадающим списком критериев */}
-                  <div className="bg-green-50 border border-green-200 rounded-lg overflow-hidden">
+                  <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg overflow-hidden">
                     <div
                       className="flex items-center gap-3 p-3 cursor-pointer hover:bg-green-100/50 transition-colors"
                       onClick={() => parsedData.confidenceDetails && setShowConfidenceDetails(!showConfidenceDetails)}
@@ -1683,7 +1683,7 @@ export default function AdminContentPage() {
 
                     {/* Выпадающий список критериев уверенности */}
                     {showConfidenceDetails && parsedData.confidenceDetails && (
-                      <div className="border-t border-green-200 p-3 bg-green-50/50">
+                      <div className="border-t border-green-200 dark:border-green-800 p-3 bg-green-50/50">
                         <div className="flex items-center gap-2 mb-3 text-sm text-green-700">
                           <Info className="h-4 w-4" />
                           <span className="font-medium">Критерии оценки структуры</span>
@@ -1695,30 +1695,30 @@ export default function AdminContentPage() {
                               className={`p-2 rounded-lg border ${
                                 criterion.met
                                   ? 'bg-green-100/50 border-green-300'
-                                  : 'bg-gray-50 border-gray-200'
+                                  : 'bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-700'
                               }`}
                             >
                               <div className="flex items-center justify-between mb-1">
                                 <span className={`text-sm font-medium ${
-                                  criterion.met ? 'text-green-700' : 'text-gray-600'
+                                  criterion.met ? 'text-green-700' : 'text-gray-600 dark:text-slate-400'
                                 }`}>
                                   {criterion.name}
                                 </span>
                                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                                   criterion.met
                                     ? 'bg-green-200 text-green-700'
-                                    : 'bg-gray-200 text-gray-600'
+                                    : 'bg-gray-200 text-gray-600 dark:text-slate-400'
                                 }`}>
                                   +{criterion.score}/{criterion.maxScore}
                                 </span>
                               </div>
-                              <p className="text-xs text-gray-600">
+                              <p className="text-xs text-gray-600 dark:text-slate-400">
                                 {criterion.description}
                               </p>
                             </div>
                           ))}
                         </div>
-                        <div className="mt-3 pt-3 border-t border-green-200 flex items-center justify-between text-sm">
+                        <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-800 flex items-center justify-between text-sm">
                           <span className="text-green-700">Итоговая оценка</span>
                           <span className="font-bold text-green-700">
                             {parsedData.confidenceDetails.totalScore} из {parsedData.confidenceDetails.maxPossibleScore} баллов
@@ -1730,7 +1730,7 @@ export default function AdminContentPage() {
 
                   {/* Предупреждения */}
                   {parsedData.warnings && parsedData.warnings.length > 0 && (
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                       <div className="flex items-center gap-2 text-yellow-700 font-medium mb-2">
                         <AlertTriangle className="h-4 w-4" />
                         Предупреждения
@@ -1753,9 +1753,9 @@ export default function AdminContentPage() {
                         >
                           <span className="text-2xl">{trail.icon || "📚"}</span>
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{trail.title}</h3>
+                            <h3 className="font-semibold text-gray-900 dark:text-slate-100">{trail.title}</h3>
                             {trail.subtitle && (
-                              <p className="text-sm text-gray-600">{trail.subtitle}</p>
+                              <p className="text-sm text-gray-600 dark:text-slate-400">{trail.subtitle}</p>
                             )}
                           </div>
                           <Badge variant="outline">
@@ -1767,13 +1767,13 @@ export default function AdminContentPage() {
                           {trail.modules.map((module, moduleIndex) => {
                             const TypeIcon = typeIcons[module.type] || BookOpen
                             return (
-                              <div key={moduleIndex} className="p-3 flex items-center gap-3 bg-white">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
-                                  <TypeIcon className="h-4 w-4 text-gray-600" />
+                              <div key={moduleIndex} className="p-3 flex items-center gap-3 bg-white dark:bg-slate-800">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-800">
+                                  <TypeIcon className="h-4 w-4 text-gray-600 dark:text-slate-400" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900 truncate">
+                                    <span className="font-medium text-gray-900 dark:text-slate-100 truncate">
                                       {module.title}
                                     </span>
                                     <Badge variant="outline" className="text-xs shrink-0">
@@ -1781,10 +1781,10 @@ export default function AdminContentPage() {
                                     </Badge>
                                   </div>
                                   {module.description && (
-                                    <p className="text-xs text-gray-500 truncate">{module.description}</p>
+                                    <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{module.description}</p>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0">
+                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400 shrink-0">
                                   {module.questions.length > 0 && (
                                     <span className="flex items-center gap-1">
                                       <HelpCircle className="h-3 w-3" />
@@ -1804,7 +1804,7 @@ export default function AdminContentPage() {
               )}
             </div>
 
-            <div className="p-6 border-t bg-gray-50">
+            <div className="p-6 border-t bg-gray-50 dark:bg-slate-900">
               {parsedData ? (
                 <div className="flex gap-3">
                   <Button
@@ -1834,7 +1834,7 @@ export default function AdminContentPage() {
                       variant="outline"
                       onClick={handleRegenerate}
                       disabled={regenerating || saving}
-                      className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                      className="text-gray-600 dark:text-slate-400 border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
                     >
                       {regenerating ? (
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -1874,7 +1874,7 @@ export default function AdminContentPage() {
       {/* Analytics Modal */}
       {showAnalytics && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
@@ -1882,7 +1882,7 @@ export default function AdminContentPage() {
               </h2>
               <button
                 onClick={() => setShowAnalytics(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-slate-500 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1890,7 +1890,7 @@ export default function AdminContentPage() {
 
             <div className="p-6 overflow-y-auto flex-1">
               {analytics.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Нет данных</p>
+                <p className="text-gray-500 dark:text-slate-400 text-center py-8">Нет данных</p>
               ) : (
                 <div className="space-y-4">
                   <table className="w-full text-sm">
@@ -1910,10 +1910,10 @@ export default function AdminContentPage() {
                           <td className="text-center py-2">
                             <span className={`px-2 py-0.5 rounded text-xs ${
                               item.completionRate >= 70
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-green-100 dark:bg-green-950 text-green-700"
                                 : item.completionRate >= 40
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-700"
+                                ? "bg-yellow-100 dark:bg-yellow-950 text-yellow-700"
+                                : "bg-red-100 dark:bg-red-950 text-red-700"
                             }`}>
                               {item.completionRate}%
                             </span>
@@ -1922,7 +1922,7 @@ export default function AdminContentPage() {
                             {item.avgScore !== null ? (
                               <span className="text-blue-600 font-medium">{item.avgScore}/10</span>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="text-gray-400 dark:text-slate-500">—</span>
                             )}
                           </td>
                         </tr>
@@ -1933,7 +1933,7 @@ export default function AdminContentPage() {
               )}
             </div>
 
-            <div className="p-6 border-t bg-gray-50">
+            <div className="p-6 border-t bg-gray-50 dark:bg-slate-900">
               <Button variant="outline" onClick={() => setShowAnalytics(false)} className="w-full">
                 Закрыть
               </Button>
@@ -1945,7 +1945,7 @@ export default function AdminContentPage() {
       {/* History Modal */}
       {showHistory && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <History className="h-5 w-5" />
@@ -1953,7 +1953,7 @@ export default function AdminContentPage() {
               </h2>
               <button
                 onClick={() => setShowHistory(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-slate-500 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1961,17 +1961,17 @@ export default function AdminContentPage() {
 
             <div className="p-6 overflow-y-auto flex-1">
               {auditLogs.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Нет записей</p>
+                <p className="text-gray-500 dark:text-slate-400 text-center py-8">Нет записей</p>
               ) : (
                 <div className="space-y-3">
                   {auditLogs.map((log) => {
                     const actionLabels: Record<string, { label: string; color: string }> = {
-                      CREATE: { label: "Создание", color: "bg-green-100 text-green-700" },
-                      UPDATE: { label: "Изменение", color: "bg-blue-100 text-blue-700" },
-                      DELETE: { label: "Удаление", color: "bg-red-100 text-red-700" },
-                      REORDER: { label: "Сортировка", color: "bg-purple-100 text-purple-700" },
+                      CREATE: { label: "Создание", color: "bg-green-100 dark:bg-green-950 text-green-700" },
+                      UPDATE: { label: "Изменение", color: "bg-blue-100 dark:bg-blue-950 text-blue-700" },
+                      DELETE: { label: "Удаление", color: "bg-red-100 dark:bg-red-950 text-red-700" },
+                      REORDER: { label: "Сортировка", color: "bg-purple-100 dark:bg-purple-950 text-purple-700" },
                     }
-                    const actionInfo = actionLabels[log.action] || { label: log.action, color: "bg-gray-100 text-gray-700" }
+                    const actionInfo = actionLabels[log.action] || { label: log.action, color: "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300" }
 
                     return (
                       <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg border">
@@ -1981,9 +1981,9 @@ export default function AdminContentPage() {
                               {actionInfo.label}
                             </span>
                             <span className="text-sm font-medium">{log.entityName}</span>
-                            <span className="text-xs text-gray-400">{log.entityType}</span>
+                            <span className="text-xs text-gray-400 dark:text-slate-500">{log.entityType}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                             <span>{log.userName}</span>
                             <span>•</span>
                             <span>
@@ -2004,7 +2004,7 @@ export default function AdminContentPage() {
               )}
             </div>
 
-            <div className="p-6 border-t bg-gray-50">
+            <div className="p-6 border-t bg-gray-50 dark:bg-slate-900">
               <Button variant="outline" onClick={() => setShowHistory(false)} className="w-full">
                 Закрыть
               </Button>

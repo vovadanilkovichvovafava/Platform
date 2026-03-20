@@ -61,7 +61,7 @@ export default function CertificatesPage() {
       case "Junior": return "bg-green-100 text-green-700"
       case "Middle": return "bg-orange-100 text-orange-700"
       case "Senior": return "bg-yellow-100 text-yellow-700"
-      default: return "bg-gray-100 text-gray-700"
+      default: return "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300"
     }
   }
 
@@ -87,8 +87,8 @@ export default function CertificatesPage() {
       <div className="flex items-center gap-3 mb-8">
         <Award className="h-8 w-8 text-orange-500" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Мои сертификаты</h1>
-          <p className="text-gray-500 text-sm">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Мои сертификаты</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm">
             Сертификаты выдаются за прохождение trails
           </p>
         </div>
@@ -97,11 +97,11 @@ export default function CertificatesPage() {
       {certificates.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Award className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h2 className="text-lg font-medium text-gray-700 mb-2">
+            <Award className="h-16 w-16 mx-auto text-gray-300 dark:text-slate-600 mb-4" />
+            <h2 className="text-lg font-medium text-gray-700 dark:text-slate-300 mb-2">
               Пока нет сертификатов
             </h2>
-            <p className="text-gray-500 mb-4">
+            <p className="text-gray-500 dark:text-slate-400 mb-4">
               Завершите все модули в trail, чтобы получить сертификат
             </p>
             <Button asChild variant="outline">
@@ -140,7 +140,7 @@ export default function CertificatesPage() {
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">
                           {cert.trail.title}
                         </h3>
                         <Badge className={`mt-2 ${getLevelColor(cert.level)}`}>
@@ -149,7 +149,7 @@ export default function CertificatesPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-gray-500">
+                    <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-gray-500 dark:text-slate-400">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         {new Date(cert.issuedAt).toLocaleDateString("ru-RU", {
@@ -162,7 +162,7 @@ export default function CertificatesPage() {
                         <Trophy className="h-4 w-4" />
                         {cert.totalXP} XP
                       </div>
-                      <div className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                      <div className="font-mono text-xs bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">
                         {cert.code}
                       </div>
                     </div>

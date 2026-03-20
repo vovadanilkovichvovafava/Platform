@@ -151,13 +151,13 @@ export default async function TrailsPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-4">
             Trails
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl">
+          <p className="text-lg text-gray-600 dark:text-slate-400 max-w-2xl">
             Выберите направление обучения и начните свой путь к мастерству
           </p>
         </div>

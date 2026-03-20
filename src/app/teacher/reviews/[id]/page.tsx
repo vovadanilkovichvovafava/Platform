@@ -158,7 +158,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
       <NotificationSyncTrigger />
       <Link
         href={backHref}
-        className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
+        className="inline-flex items-center text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 mb-6"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
         Назад к списку
@@ -179,10 +179,10 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                 <Badge
                   className={
                     submission.status === "PENDING"
-                      ? "bg-blue-100 text-blue-700 border-0"
+                      ? "bg-blue-100 dark:bg-blue-950 text-blue-700 border-0"
                       : submission.status === "APPROVED"
-                      ? "bg-green-100 text-green-700 border-0"
-                      : "bg-orange-100 text-orange-700 border-0"
+                      ? "bg-green-100 dark:bg-green-950 text-green-700 border-0"
+                      : "bg-orange-100 dark:bg-orange-950 text-orange-700 border-0"
                   }
                 >
                   <Clock className="h-3 w-3 mr-1" />
@@ -204,7 +204,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">{submission.module.description}</p>
+              <p className="text-gray-600 dark:text-slate-400">{submission.module.description}</p>
 
               {/* Links */}
               <div className="flex flex-wrap gap-4 mt-4">
@@ -257,11 +257,11 @@ export default async function ReviewPage({ params, searchParams }: Props) {
 
               {/* Student Comment */}
               {submission.comment && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                <div className="mt-6 p-4 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                     Комментарий ученика
                   </h4>
-                  <p className="text-gray-600">{submission.comment}</p>
+                  <p className="text-gray-600 dark:text-slate-400">{submission.comment}</p>
                 </div>
               )}
             </CardContent>
@@ -311,11 +311,11 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                   <div className="text-4xl font-bold text-[#0176D3]">
                     {submission.review.score}/10
                   </div>
-                  <div className="text-gray-500">Общая оценка</div>
+                  <div className="text-gray-500 dark:text-slate-400">Общая оценка</div>
                 </div>
 
                 {submission.review.strengths && (
-                  <div className="p-4 bg-green-50 rounded-lg">
+                  <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg">
                     <h4 className="font-medium text-green-700 mb-2">
                       Сильные стороны
                     </h4>
@@ -324,7 +324,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                 )}
 
                 {submission.review.improvements && (
-                  <div className="p-4 bg-orange-50 rounded-lg">
+                  <div className="p-4 bg-orange-50 dark:bg-orange-950 rounded-lg">
                     <h4 className="font-medium text-orange-700 mb-2">
                       Что улучшить
                     </h4>
@@ -335,11 +335,11 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                 )}
 
                 {submission.review.comment && (
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium text-gray-700 mb-2">
+                  <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                    <h4 className="font-medium text-gray-700 dark:text-slate-300 mb-2">
                       Комментарий
                     </h4>
-                    <p className="text-gray-600">{submission.review.comment}</p>
+                    <p className="text-gray-600 dark:text-slate-400">{submission.review.comment}</p>
                   </div>
                 )}
               </CardContent>
@@ -378,7 +378,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                   >
                     {submission.user.name}
                   </Link>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-slate-400">
                     {submission.user.email}
                   </div>
                 </div>
@@ -386,13 +386,13 @@ export default async function ReviewPage({ params, searchParams }: Props) {
 
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Total XP</span>
+                  <span className="text-gray-500 dark:text-slate-400">Total XP</span>
                   <span className="font-medium">{submission.user.totalXP}</span>
                 </div>
               </div>
 
               <div className="mt-4 pt-4 border-t">
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mb-2">
                   <Calendar className="h-4 w-4" />
                   Дата отправки
                 </div>
@@ -414,33 +414,33 @@ export default async function ReviewPage({ params, searchParams }: Props) {
             <CardContent className="space-y-3 text-sm">
               {moduleStartedAt && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Старт модуля</span>
+                  <span className="text-gray-500 dark:text-slate-400">Старт модуля</span>
                   <span className="font-medium">
                     <LocalDate date={moduleStartedAt.toISOString()} format="short" />
                   </span>
                 </div>
               )}
               <div className="flex items-center justify-between">
-                <span className="text-gray-500">До первой отправки</span>
+                <span className="text-gray-500 dark:text-slate-400">До первой отправки</span>
                 <span className="font-medium">{fmtDuration(timeToFirstSubmitMs)}</span>
               </div>
               {submission.editCount > 0 && (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-500 inline-flex items-center gap-1">
+                    <span className="text-gray-500 dark:text-slate-400 inline-flex items-center gap-1">
                       <Pencil className="h-3 w-3" />
                       Правок
                     </span>
                     <span className="font-medium">{submission.editCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Время редактирования</span>
+                    <span className="text-gray-500 dark:text-slate-400">Время редактирования</span>
                     <span className="font-medium">{fmtDuration(totalEditTimeMs)}</span>
                   </div>
                 </>
               )}
               <div className="flex items-center justify-between">
-                <span className="text-gray-500">Последнее обновление</span>
+                <span className="text-gray-500 dark:text-slate-400">Последнее обновление</span>
                 <span className="font-medium">
                   <LocalDate date={(submission.lastEditedAt ?? submission.createdAt).toISOString()} format="short" />
                 </span>

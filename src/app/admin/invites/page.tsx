@@ -51,11 +51,11 @@ const ROLE_OPTIONS = [
 
 // Role badge styles
 const ROLE_BADGE_STYLES: Record<string, string> = {
-  STUDENT: "bg-slate-100 text-slate-700",
-  TEACHER: "bg-blue-100 text-blue-700",
-  HR: "bg-amber-100 text-amber-700",
-  CO_ADMIN: "bg-purple-100 text-purple-700",
-  ADMIN: "bg-red-100 text-red-700",
+  STUDENT: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
+  TEACHER: "bg-blue-100 dark:bg-blue-950 text-blue-700",
+  HR: "bg-amber-100 dark:bg-amber-950 text-amber-700",
+  CO_ADMIN: "bg-purple-100 dark:bg-purple-950 text-purple-700",
+  ADMIN: "bg-red-100 dark:bg-red-950 text-red-700",
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -482,7 +482,7 @@ export default function AdminInvitesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -490,15 +490,15 @@ export default function AdminInvitesPage() {
               <Ticket className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Управление приглашениями</h1>
-              <p className="text-slate-500 text-sm">Создавайте и управляйте кодами приглашений</p>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Управление приглашениями</h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">Создавайте и управляйте кодами приглашений</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {session.user.role !== "HR" && (
               <Link
                 href="/admin/users"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
               >
                 <Users className="h-4 w-4" />
                 Пользователи
@@ -507,7 +507,7 @@ export default function AdminInvitesPage() {
             {session.user.role !== "HR" && (
               <Link
                 href="/admin/content"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
               >
                 <FileText className="h-4 w-4" />
                 Контент
@@ -515,7 +515,7 @@ export default function AdminInvitesPage() {
             )}
             <Link
               href="/admin/analytics"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
             >
               <BarChart3 className="h-4 w-4" />
               Аналитика
@@ -526,37 +526,37 @@ export default function AdminInvitesPage() {
         {/* Statistics */}
         {invites.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <div className="text-2xl font-bold text-slate-900">{invites.length}</div>
-              <div className="text-xs text-slate-500">Всего кодов</div>
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{invites.length}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Всего кодов</div>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
               <div className="text-2xl font-bold text-green-600">
                 {invites.filter(i => {
                   const isExpired = i.expiresAt && new Date(i.expiresAt) < new Date()
                   return !isExpired && i.usedCount < i.maxUses
                 }).length}
               </div>
-              <div className="text-xs text-slate-500">Активных</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Активных</div>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
               <div className="text-2xl font-bold text-blue-600">
                 {invites.reduce((sum, i) => sum + i.usedCount, 0)}
               </div>
-              <div className="text-xs text-slate-500">Использовано</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Использовано</div>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <div className="text-2xl font-bold text-slate-400">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+              <div className="text-2xl font-bold text-slate-400 dark:text-slate-500">
                 {invites.filter(i => i.usedCount >= i.maxUses).length}
               </div>
-              <div className="text-xs text-slate-500">Исчерпано</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Исчерпано</div>
             </div>
           </div>
         )}
 
         {/* Create New Invite */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Создать приглашение</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 mb-8">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Создать приглашение</h2>
           <form onSubmit={createInvite} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -672,7 +672,7 @@ export default function AdminInvitesPage() {
                   id="role"
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-2 pr-8 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 pr-8 text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 >
                   {ROLE_OPTIONS.filter((opt) => {
                     // CO_ADMIN can only create STUDENT and TEACHER invites
@@ -694,9 +694,9 @@ export default function AdminInvitesPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Роль, которая будет назначена пользователю при регистрации
               </p>
             </div>
@@ -709,33 +709,33 @@ export default function AdminInvitesPage() {
                   <button
                     type="button"
                     onClick={() => setIsTrailDropdownOpen(!isTrailDropdownOpen)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   >
                     <span className="flex items-center gap-2">
-                      <Map className="h-4 w-4 text-slate-400" />
+                      <Map className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                       {selectedTrailIds.length === 0
                         ? "Выберите трейлы..."
                         : `Выбрано: ${selectedTrailIds.length}`}
                     </span>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isTrailDropdownOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`h-4 w-4 text-slate-400 dark:text-slate-500 transition-transform ${isTrailDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
 
                   {isTrailDropdownOpen && (
-                    <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-auto">
                       {availableTrails.map((trail) => {
                         const isSelected = selectedTrailIds.includes(trail.id)
                         return (
                           <label
                             key={trail.id}
                             className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                              isSelected ? "bg-orange-50" : "hover:bg-slate-50"
+                              isSelected ? "bg-orange-50 dark:bg-orange-950" : "hover:bg-slate-50"
                             }`}
                           >
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => toggleTrailSelection(trail.id)}
                             />
-                            <span className="text-sm text-slate-700 truncate">{trail.title}</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{trail.title}</span>
                           </label>
                         )
                       })}
@@ -752,7 +752,7 @@ export default function AdminInvitesPage() {
                       return (
                         <span
                           key={trailId}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-md text-xs"
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-950 text-orange-700 rounded-md text-xs"
                         >
                           {trail.title}
                           <button
@@ -768,7 +768,7 @@ export default function AdminInvitesPage() {
                   </div>
                 )}
 
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Студент получит доступ к выбранным трейлам при регистрации по приглашению
                 </p>
               </div>
@@ -786,23 +786,23 @@ export default function AdminInvitesPage() {
                     setEditingTagId(null)
                     setConfirmDeleteTagId(null)
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 >
                   <span className="flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-slate-400" />
+                    <Tag className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                     {selectedTagIds.length === 0
                       ? "Выберите теги..."
                       : `Выбрано: ${selectedTagIds.length}`}
                   </span>
-                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isTagDropdownOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`h-4 w-4 text-slate-400 dark:text-slate-500 transition-transform ${isTagDropdownOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isTagDropdownOpen && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-80 overflow-auto">
+                  <div className="absolute z-10 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-80 overflow-auto">
                     {/* Search */}
-                    <div className="p-2 border-b sticky top-0 bg-white z-10">
+                    <div className="p-2 border-b sticky top-0 bg-white dark:bg-slate-800 z-10">
                       <div className="relative">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 dark:text-slate-500" />
                         <input
                           type="text"
                           value={tagSearch}
@@ -828,7 +828,7 @@ export default function AdminInvitesPage() {
                       return (
                         <>
                           {filtered.length === 0 && !showCreate ? (
-                            <div className="p-3 text-gray-500 text-xs text-center">
+                            <div className="p-3 text-gray-500 dark:text-slate-400 text-xs text-center">
                               {tagSearch ? "Не найдено" : "Нет тегов"}
                             </div>
                           ) : (
@@ -836,7 +836,7 @@ export default function AdminInvitesPage() {
                               // Edit mode
                               if (editingTagId === tag.id) {
                                 return (
-                                  <div key={tag.id} className="px-3 py-2 border-b last:border-b-0 bg-gray-50">
+                                  <div key={tag.id} className="px-3 py-2 border-b last:border-b-0 bg-gray-50 dark:bg-slate-900">
                                     <input
                                       type="text"
                                       value={editTagName}
@@ -875,7 +875,7 @@ export default function AdminInvitesPage() {
                                       <button
                                         type="button"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancelEditTag() }}
-                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300"
                                       >
                                         <X className="h-3 w-3" /> Отмена
                                       </button>
@@ -887,7 +887,7 @@ export default function AdminInvitesPage() {
                               // Confirm delete mode
                               if (confirmDeleteTagId === tag.id) {
                                 return (
-                                  <div key={tag.id} className="px-3 py-2 border-b last:border-b-0 bg-red-50">
+                                  <div key={tag.id} className="px-3 py-2 border-b last:border-b-0 bg-red-50 dark:bg-red-950">
                                     <p className="text-xs text-red-700 mb-1.5">
                                       Удалить тег &laquo;{tag.name}&raquo;? Он будет убран у всех студентов.
                                     </p>
@@ -902,7 +902,7 @@ export default function AdminInvitesPage() {
                                       <button
                                         type="button"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteTagId(null) }}
-                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300"
                                       >
                                         Отмена
                                       </button>
@@ -917,7 +917,7 @@ export default function AdminInvitesPage() {
                                 <div
                                   key={tag.id}
                                   className={`flex items-center gap-2 px-3 py-2 border-b last:border-b-0 transition-colors ${
-                                    isSelected ? "bg-orange-50" : "hover:bg-slate-50"
+                                    isSelected ? "bg-orange-50 dark:bg-orange-950" : "hover:bg-slate-50"
                                   }`}
                                 >
                                   <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
@@ -928,13 +928,13 @@ export default function AdminInvitesPage() {
                                     <span className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${
                                       COLOR_OPTIONS.find((c) => c.value === tag.color)?.dot || "bg-gray-400"
                                     }`} />
-                                    <span className="text-sm text-slate-700 truncate">{tag.name}</span>
+                                    <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{tag.name}</span>
                                   </label>
                                   <div className="flex items-center gap-0.5 shrink-0">
                                     <button
                                       type="button"
                                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditTag(tag) }}
-                                      className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                                      className="p-1 rounded hover:bg-gray-200 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                                       title="Редактировать тег"
                                     >
                                       <Pencil className="h-3 w-3" />
@@ -942,7 +942,7 @@ export default function AdminInvitesPage() {
                                     <button
                                       type="button"
                                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteTagId(tag.id); setEditingTagId(null) }}
-                                      className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500"
+                                      className="p-1 rounded hover:bg-red-100 text-gray-400 dark:text-slate-500 hover:text-red-500"
                                       title="Удалить тег"
                                     >
                                       <Trash2 className="h-3 w-3" />
@@ -957,7 +957,7 @@ export default function AdminInvitesPage() {
                           {showCreate && (
                             <div className="border-t">
                               <div className="px-3 py-2">
-                                <p className="text-xs text-gray-500 mb-1.5">Создать новый тег:</p>
+                                <p className="text-xs text-gray-500 dark:text-slate-400 mb-1.5">Создать новый тег:</p>
                                 <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                                   {COLOR_OPTIONS.map((c) => (
                                     <button
@@ -1021,7 +1021,7 @@ export default function AdminInvitesPage() {
                 </div>
               )}
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Студент получит выбранные теги при регистрации по приглашению
               </p>
             </div>
@@ -1038,18 +1038,18 @@ export default function AdminInvitesPage() {
         </div>
 
         {/* Invites List */}
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Все приглашения ({invites.length})</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Все приглашения ({invites.length})</h2>
 
             {/* Cleanup Period Selector */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Авто-удаление:</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Авто-удаление:</span>
               <div className="relative">
                 <select
                   value={cleanupPeriod}
                   onChange={(e) => handleCleanupPeriodChange(e.target.value)}
-                  className="appearance-none bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 pr-8 text-sm text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="appearance-none bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 pr-8 text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   title="Исчерпанные приглашения старше этого периода удаляются автоматически"
                 >
                   {CLEANUP_PERIOD_OPTIONS.map((option) => (
@@ -1058,13 +1058,13 @@ export default function AdminInvitesPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
               </div>
             </div>
           </div>
 
           {invites.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
               Приглашений пока нет
             </div>
           ) : (
@@ -1083,24 +1083,24 @@ export default function AdminInvitesPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 flex-wrap">
                           <code className={`px-3 py-1 rounded-lg font-mono text-sm font-semibold ${
-                            isActive ? "bg-slate-100 text-slate-900" : "bg-slate-200 text-slate-500"
+                            isActive ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100" : "bg-slate-200 text-slate-500 dark:text-slate-400"
                           }`}>
                             {invite.code}
                           </code>
 
                           {/* Status Badge */}
                           {isExpired ? (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400">
                               <Clock className="h-3 w-3" />
                               Истёк
                             </span>
                           ) : isExhausted ? (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-600">
                               <Ban className="h-3 w-3" />
                               Исчерпан
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-600">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-950 text-green-600">
                               <CheckCircle className="h-3 w-3" />
                               Активен
                             </span>
@@ -1119,7 +1119,7 @@ export default function AdminInvitesPage() {
                               />
                             </div>
                             <span className={`text-xs font-medium ${
-                              isExhausted ? "text-red-600" : "text-slate-600"
+                              isExhausted ? "text-red-600" : "text-slate-600 dark:text-slate-400"
                             }`}>
                               {invite.usedCount}/{invite.maxUses}
                             </span>
@@ -1133,7 +1133,7 @@ export default function AdminInvitesPage() {
                           )}
 
                           {invite.email && (
-                            <span className="text-xs text-slate-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full">
                               🔒 {invite.email}
                             </span>
                           )}
@@ -1142,11 +1142,11 @@ export default function AdminInvitesPage() {
                         {/* Selected Trails Display */}
                         {invite.selectedTrails && invite.selectedTrails.length > 0 && (
                           <div className="mt-2 flex items-center gap-2 flex-wrap">
-                            <Map className="h-3 w-3 text-slate-400" />
+                            <Map className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                             {invite.selectedTrails.map((trail) => (
                               <span
                                 key={trail.id}
-                                className="text-xs px-2 py-0.5 bg-orange-50 text-orange-700 rounded-md"
+                                className="text-xs px-2 py-0.5 bg-orange-50 dark:bg-orange-950 text-orange-700 rounded-md"
                               >
                                 {trail.title}
                               </span>
@@ -1157,7 +1157,7 @@ export default function AdminInvitesPage() {
                         {/* Selected Tags Display */}
                         {invite.selectedTags && invite.selectedTags.length > 0 && (
                           <div className="mt-1 flex items-center gap-2 flex-wrap">
-                            <Tag className="h-3 w-3 text-slate-400" />
+                            <Tag className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                             {invite.selectedTags.map((tag) => (
                               <span
                                 key={tag.id}
@@ -1169,11 +1169,11 @@ export default function AdminInvitesPage() {
                           </div>
                         )}
 
-                        <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                        <div className="mt-2 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
                           <span>Создан {new Date(invite.createdAt).toLocaleDateString("ru")}</span>
                           {invite.expiresAt && (
                             <span className={`flex items-center gap-1 ${
-                              isExpired ? "text-red-500" : "text-slate-400"
+                              isExpired ? "text-red-500" : "text-slate-400 dark:text-slate-500"
                             }`}>
                               <Clock className="h-3 w-3" />
                               {isExpired ? "Истёк" : "Истекает"} {new Date(invite.expiresAt).toLocaleDateString("ru")}
@@ -1189,7 +1189,7 @@ export default function AdminInvitesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => copyInviteLink(invite.code, invite.id)}
-                          className="text-slate-600"
+                          className="text-slate-600 dark:text-slate-400"
                           disabled={!isActive}
                           title={isActive ? "Копировать ссылку" : "Код неактивен"}
                         >

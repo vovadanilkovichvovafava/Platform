@@ -67,27 +67,27 @@ interface User {
 const roleConfig: Record<UserRole, { label: string; color: string; icon: typeof Shield }> = {
   STUDENT: {
     label: "Студент",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 dark:bg-blue-950 text-blue-700",
     icon: GraduationCap,
   },
   TEACHER: {
     label: "Учитель",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 dark:bg-green-950 text-green-700",
     icon: BookOpen,
   },
   HR: {
     label: "HR",
-    color: "bg-amber-100 text-amber-700",
+    color: "bg-amber-100 dark:bg-amber-950 text-amber-700",
     icon: Users,
   },
   CO_ADMIN: {
     label: "Со-админ",
-    color: "bg-purple-100 text-purple-700",
+    color: "bg-purple-100 dark:bg-purple-950 text-purple-700",
     icon: Shield,
   },
   ADMIN: {
     label: "Админ",
-    color: "bg-red-100 text-red-700",
+    color: "bg-red-100 dark:bg-red-950 text-red-700",
     icon: ShieldCheck,
   },
 }
@@ -487,15 +487,15 @@ function AdminUsersPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-6">
           <Breadcrumbs
             items={[
@@ -510,10 +510,10 @@ function AdminUsersPageContent() {
                 <Users className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                   Управление пользователями
                 </h1>
-                <p className="text-gray-600 text-sm">
+                <p className="text-gray-600 dark:text-slate-400 text-sm">
                   {users.length} пользователей • {teachers.length} учителей
                 </p>
               </div>
@@ -528,57 +528,57 @@ function AdminUsersPageContent() {
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-950 text-red-600 rounded-lg">
             {error}
           </div>
         )}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="p-2 bg-blue-100 dark:bg-blue-950 rounded-lg">
                 <GraduationCap className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{students.length}</p>
-                <p className="text-sm text-gray-500">Студентов</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Студентов</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-2 bg-green-100 dark:bg-green-950 rounded-lg">
                 <BookOpen className="h-5 w-5 text-green-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{teachers.length}</p>
-                <p className="text-sm text-gray-500">Учителей</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Учителей</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
+              <div className="p-2 bg-purple-100 dark:bg-purple-950 rounded-lg">
                 <Shield className="h-5 w-5 text-purple-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{admins.length}</p>
-                <p className="text-sm text-gray-500">Админов</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Админов</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Users List */}
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <div className="p-4 border-b bg-gray-50">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border overflow-hidden">
+          <div className="p-4 border-b bg-gray-50 dark:bg-slate-900">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
               <h2 className="font-semibold">Все пользователи</h2>
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
                   <input
                     type="text"
                     placeholder="Поиск по имени, email или тегу..."
@@ -589,7 +589,7 @@ function AdminUsersPageContent() {
                   {searchQuery && (
                     <button
                       onClick={() => handleSearchChange("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -599,7 +599,7 @@ function AdminUsersPageContent() {
                 <select
                   value={roleFilter}
                   onChange={(e) => handleRoleFilterChange(e.target.value)}
-                  className="px-3 py-1.5 border rounded-lg text-sm bg-white"
+                  className="px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800"
                 >
                   <option value="ALL">Все роли</option>
                   <option value="STUDENT">Студенты</option>
@@ -617,7 +617,7 @@ function AdminUsersPageContent() {
                 <select
                   value={String(perPage)}
                   onChange={(e) => handlePerPageChange(e.target.value)}
-                  className="px-3 py-1.5 border rounded-lg text-sm bg-white"
+                  className="px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800"
                 >
                   {PER_PAGE_OPTIONS.map((option) => (
                     <option key={option} value={String(option)}>
@@ -629,14 +629,14 @@ function AdminUsersPageContent() {
             </div>
             {/* Results count */}
             {(searchQuery || roleFilter !== "ALL" || tagFilter.length > 0) && (
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">
                 Найдено: {filteredUsers.length} из {users.length}
               </p>
             )}
           </div>
 
           {filteredUsers.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-gray-500 dark:text-slate-400">
               {users.length === 0 ? "Нет пользователей" : "Никого не найдено"}
             </div>
           ) : (
@@ -648,7 +648,7 @@ function AdminUsersPageContent() {
                 const isDeleting = deletingId === user.id
 
                 return (
-                  <div key={user.id} className="p-4 hover:bg-gray-50">
+                  <div key={user.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${config.color.replace('text-', 'bg-').replace('700', '100')}`}>
@@ -661,7 +661,7 @@ function AdminUsersPageContent() {
                               {config.label}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-500">{user.email}</p>
+                          <p className="text-sm text-gray-500 dark:text-slate-400">{user.email}</p>
                           {/* Student tags */}
                           {user.role === "STUDENT" && getStudentTags(user.id).length > 0 && (
                             <div className="mt-1">
@@ -676,7 +676,7 @@ function AdminUsersPageContent() {
                       </div>
 
                       <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
                           <div className="flex items-center gap-1 text-purple-600" title="Активных дней">
                             <CalendarDays className="h-4 w-4" />
                             <span className="font-medium">{user._count.activityDays}</span>
@@ -690,7 +690,7 @@ function AdminUsersPageContent() {
                         {/* Role selector */}
                         {/* CO_ADMIN cannot change roles of ADMIN/CO_ADMIN users */}
                         {!isAdmin && (user.role === "ADMIN" || user.role === "CO_ADMIN") ? (
-                          <span className="px-3 py-1.5 text-sm text-gray-500">
+                          <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-slate-400">
                             {roleConfig[user.role].label}
                           </span>
                         ) : (
@@ -698,7 +698,7 @@ function AdminUsersPageContent() {
                             value={user.role}
                             onChange={(e) => updateRole(user.id, e.target.value as UserRole)}
                             disabled={isUpdating || isDeleting}
-                            className="px-3 py-1.5 border rounded-lg text-sm bg-white disabled:opacity-50"
+                            className="px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800 disabled:opacity-50"
                           >
                             <option value="STUDENT">Студент</option>
                             <option value="TEACHER">Учитель</option>
@@ -725,7 +725,7 @@ function AdminUsersPageContent() {
                         <button
                           onClick={() => grantRandomAchievement(user.id, user.name)}
                           disabled={grantingAchievementId === user.id}
-                          className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors disabled:opacity-50"
+                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors disabled:opacity-50"
                           title="Выдать случайное достижение"
                         >
                           {grantingAchievementId === user.id ? (
@@ -740,7 +740,7 @@ function AdminUsersPageContent() {
                           <button
                             onClick={() => deleteUser(user.id, user.name)}
                             disabled={isDeleting}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                             title="Удалить пользователя"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -765,7 +765,7 @@ function AdminUsersPageContent() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm text-gray-600 px-4">
+              <span className="text-sm text-gray-600 dark:text-slate-400 px-4">
                 Страница {safePage} из {totalPages}
               </span>
               <Button
@@ -781,7 +781,7 @@ function AdminUsersPageContent() {
         </div>
 
         {/* Help text */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
           <h3 className="font-medium text-blue-900 mb-2">Как это работает:</h3>
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• <strong>Студент</strong> — может проходить тесты и сдавать проекты</li>
@@ -799,8 +799,8 @@ export default function AdminUsersPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
         </div>
       }
     >

@@ -171,7 +171,7 @@ export default async function TrailPage({ params }: Props) {
   // IMPORTANT: modules are NOT loaded yet — no data leak
   if (needsPasswordUnlock) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
         <TrailPasswordForm
           trailId={trail.id}
           trailTitle={trail.title}
@@ -393,7 +393,7 @@ export default async function TrailPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header */}
       <div
         className="relative py-12"
@@ -415,10 +415,10 @@ export default async function TrailPage({ params }: Props) {
             <div className="flex-1">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
                     {trail.title}
                   </h1>
-                  <p className="text-lg text-gray-600 mb-4">{trail.subtitle}</p>
+                  <p className="text-lg text-gray-600 dark:text-slate-400 mb-4">{trail.subtitle}</p>
                 </div>
                 {/* Admin/Teacher edit button */}
                 {isPrivileged && (
@@ -441,11 +441,11 @@ export default async function TrailPage({ params }: Props) {
                   />
                 )}
               </div>
-              <p className="text-gray-600 mb-6 max-w-2xl">
+              <p className="text-gray-600 dark:text-slate-400 mb-6 max-w-2xl">
                 {trail.description}
               </p>
 
-              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-slate-400">
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   {trail.duration}
@@ -469,14 +469,14 @@ export default async function TrailPage({ params }: Props) {
               {isEnrolled ? (
                 <Card className="md:w-64">
                   <CardContent className="p-4">
-                    <div className="text-sm font-medium text-gray-600 mb-2">
+                    <div className="text-sm font-medium text-gray-600 dark:text-slate-400 mb-2">
                       Прогресс оценки
                     </div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl font-bold text-[#2E844A]">
                         {progressPercent}%
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-slate-400">
                         {assessmentCompletedCount}/{assessmentModules.length}
                       </span>
                     </div>

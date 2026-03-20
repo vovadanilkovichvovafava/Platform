@@ -258,9 +258,9 @@ export default async function DashboardPage({
   const availableTrails = trailsWithProgress.filter((t) => !t.enrolled)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Hero Section with Mountains */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white py-8">
+      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white dark:from-blue-950 dark:to-slate-800 py-8">
         <div className="absolute inset-0 pointer-events-none opacity-50">
           <svg
             className="absolute bottom-0 left-0 w-full"
@@ -298,13 +298,13 @@ export default async function DashboardPage({
                       <Badge className={`${levelInfo.current.bgColor} ${levelInfo.current.color} border-0`}>
                         {levelInfo.current.icon} {levelInfo.current.name}
                       </Badge>
-                      <span className="text-xs text-gray-400">Ур. {levelInfo.current.level}</span>
+                      <span className="text-xs text-gray-400 dark:text-slate-500">Ур. {levelInfo.current.level}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Star className="h-5 w-5 text-yellow-500" />
                       <span className="text-sm font-medium">Total XP</span>
@@ -312,7 +312,7 @@ export default async function DashboardPage({
                     <span className="font-bold text-lg">{user.totalXP}</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-green-500" />
                       <span className="text-sm font-medium">Модулей пройдено</span>
@@ -325,7 +325,7 @@ export default async function DashboardPage({
                   {FEATURE_FLAGS.LEADERBOARD_ENABLED ? (
                     <Link
                       href="/leaderboard"
-                      className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         <Medal className="h-5 w-5 text-blue-500" />
@@ -336,7 +336,7 @@ export default async function DashboardPage({
                       </span>
                     </Link>
                   ) : (
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Medal className="h-5 w-5 text-blue-500" />
                         <span className="text-sm font-medium">Место в рейтинге</span>
@@ -353,7 +353,7 @@ export default async function DashboardPage({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-purple-500" />
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium text-gray-700 dark:text-slate-300">
                         {levelInfo.isMaxLevel
                           ? "Максимальный уровень!"
                           : `До ${levelInfo.next?.name}`}
@@ -368,7 +368,7 @@ export default async function DashboardPage({
                     className="h-2"
                   />
                   <div className="flex justify-between mt-1">
-                    <span className="text-xs text-gray-500">{levelInfo.current.name}</span>
+                    <span className="text-xs text-gray-500 dark:text-slate-400">{levelInfo.current.name}</span>
                     {!levelInfo.isMaxLevel && levelInfo.next && (
                       <span className="text-xs text-purple-600 font-medium">
                         ещё {levelInfo.xpToNext} XP
@@ -382,16 +382,16 @@ export default async function DashboardPage({
             {/* Info Section */}
             <div className="flex-1 space-y-6">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
                   Добро пожаловать, {user.name.split(" ")[0]}!
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-slate-400">
                   Продолжайте обучение и развивайте свои навыки
                 </p>
               </div>
 
               {pendingSubmissions.length > 0 && (
-                <Card className="bg-orange-50 border-orange-200">
+                <Card className="bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 text-orange-700 mb-2">
                       <Clock className="h-4 w-4" />
@@ -430,9 +430,9 @@ export default async function DashboardPage({
               ) : (
                 <Card>
                   <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
-                    <GraduationCap className="h-12 w-12 text-gray-300 mb-3" />
-                    <h3 className="font-semibold text-gray-900 mb-1">Сертификаты</h3>
-                    <p className="text-sm text-gray-500">
+                    <GraduationCap className="h-12 w-12 text-gray-300 dark:text-slate-600 mb-3" />
+                    <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-1">Сертификаты</h3>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
                       Завершите trail, чтобы получить сертификат
                     </p>
                   </CardContent>
@@ -467,10 +467,10 @@ export default async function DashboardPage({
                   <GraduationCap className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">
                     Мои trails
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
                     {enrolledTrails.length} {pluralizeRu(enrolledTrails.length, ["активный курс", "активных курса", "активных курсов"])}
                   </p>
                 </div>
@@ -503,10 +503,10 @@ export default async function DashboardPage({
                 <Compass className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">
                   Доступные trails
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-slate-400">
                   {availableTrails.length} {pluralizeRu(availableTrails.length, ["курс", "курса", "курсов"])} для изучения
                 </p>
               </div>
@@ -521,11 +521,11 @@ export default async function DashboardPage({
 
         {enrolledTrails.length === 0 && availableTrails.length === 0 && (
           <div className="text-center py-12">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <BookOpen className="h-12 w-12 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">
               Trails пока не добавлены
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-slate-400">
               Скоро здесь появятся курсы для обучения
             </p>
           </div>
