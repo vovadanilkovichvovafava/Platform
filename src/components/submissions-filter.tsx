@@ -509,12 +509,12 @@ export function SubmissionsFilter({
           {sortedPending.length === 0 ? (
             <div className="text-center py-8">
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">
                 {pendingSubmissions.length === 0
                   ? "Все работы проверены!"
                   : "Нет работ по выбранным фильтрам"}
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-slate-400">
                 {pendingSubmissions.length === 0
                   ? "Новые работы появятся здесь автоматически"
                   : "Попробуйте изменить фильтры"}
@@ -529,12 +529,12 @@ export function SubmissionsFilter({
                 return (
                   <div
                     key={submission.id}
-                    className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
+                    className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 dark:bg-slate-900 rounded-lg"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
-                          <Badge variant="secondary" className="text-xs hover:bg-gray-200 cursor-pointer transition-colors">
+                          <Badge variant="secondary" className="text-xs hover:bg-gray-200 dark:hover:bg-slate-600 cursor-pointer transition-colors">
                             {submission.module.trail.title}
                           </Badge>
                         </Link>
@@ -546,7 +546,7 @@ export function SubmissionsFilter({
                           <AlertTriangle className="h-4 w-4 text-orange-500" />
                         )}
                       </div>
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-medium text-gray-900 dark:text-slate-100">
                         <Link
                           href={`/module/${submission.module.slug}`}
                           target="_blank"
@@ -555,7 +555,7 @@ export function SubmissionsFilter({
                           {submission.module.title}
                         </Link>
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-slate-400">
                         {submission.user.name} ({submission.user.email}){submission.user.telegramUsername && <button
                           onClick={(e) => {
                             e.preventDefault()
@@ -571,7 +571,7 @@ export function SubmissionsFilter({
                           {copiedTg === submission.user.telegramUsername ? "Скопировано" : submission.user.telegramUsername}
                         </button>}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
                         Отправлено{" "}
                         {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
                           day: "numeric",
@@ -583,7 +583,7 @@ export function SubmissionsFilter({
                       {/* Time tracking metrics (teacher only) */}
                       {submission.timeTracking && (
                         <div
-                          className="flex items-center gap-3 mt-1.5 text-xs text-gray-400"
+                          className="flex items-center gap-3 mt-1.5 text-xs text-gray-400 dark:text-slate-500"
                           title={buildTimeTooltip(submission.timeTracking)}
                         >
                           {submission.timeTracking.timeToFirstSubmitMs != null && (

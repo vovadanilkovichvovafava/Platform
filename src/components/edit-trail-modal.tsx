@@ -329,7 +329,7 @@ export function EditTrailModal({
               </div>
               {mode === "create" ? "Создать Trail" : "Редактировать Trail"}
             </CardTitle>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -382,14 +382,14 @@ export function EditTrailModal({
           </div>
 
           {/* Progression mode */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-blue-600" />
               <div>
                 <span className="text-sm font-medium">
                   {form.allowSkipReview ? "Свободный режим" : "Строгий режим"}
                 </span>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-slate-400">
                   {form.allowSkipReview
                     ? "Ученик может идти дальше после сдачи работы, не дожидаясь проверки"
                     : "Переход к следующему модулю только после проверки предыдущего"}
@@ -414,17 +414,17 @@ export function EditTrailModal({
                   className={`p-3 rounded-lg border text-center transition-colors ${
                     form.icon === value
                       ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:bg-gray-50"
+                      : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   <IconComponent
                     className={`h-5 w-5 mx-auto mb-1 ${
-                      form.icon === value ? "text-blue-600" : "text-gray-500"
+                      form.icon === value ? "text-blue-600" : "text-gray-500 dark:text-slate-400"
                     }`}
                   />
                   <span
                     className={`text-xs ${
-                      form.icon === value ? "text-blue-700" : "text-gray-600"
+                      form.icon === value ? "text-blue-700" : "text-gray-600 dark:text-slate-400"
                     }`}
                   >
                     {label}
@@ -446,7 +446,7 @@ export function EditTrailModal({
                   title={label}
                   className={`h-10 rounded-lg border-2 transition-all ${
                     form.color === value
-                      ? "border-gray-900 scale-110"
+                      ? "border-gray-900 dark:border-slate-100 scale-110"
                       : "border-transparent hover:scale-105"
                   }`}
                   style={{ backgroundColor: value }}
@@ -459,18 +459,18 @@ export function EditTrailModal({
           {mode === "create" ? (
             <>
               {/* Published toggle */}
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                 <div className="flex items-center gap-2">
                   {form.isPublished ? (
                     <Eye className="h-4 w-4 text-green-600" />
                   ) : (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   )}
                   <div>
                     <span className="text-sm font-medium">
                       {form.isPublished ? "Опубликован" : "Черновик"}
                     </span>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
                       {form.isPublished
                         ? "Trail доступен на платформе"
                         : "Trail скрыт от всех (черновик)"}
@@ -531,7 +531,7 @@ export function EditTrailModal({
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                         >
                           {showPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -562,7 +562,7 @@ export function EditTrailModal({
                         <button
                           type="button"
                           onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                         >
                           {showPasswordConfirm ? (
                             <EyeOff className="h-4 w-4" />

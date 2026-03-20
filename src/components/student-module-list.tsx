@@ -261,10 +261,10 @@ export function StudentModuleList({
 
                 {/* Status buttons row */}
                 {canSetStatus && (
-                  <div className="px-4 py-2 border-t border-gray-100 flex items-center gap-2">
-                    <span className="text-xs text-gray-500 mr-1">Статус:</span>
+                  <div className="px-4 py-2 border-t border-gray-100 dark:border-slate-700 flex items-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-slate-400 mr-1">Статус:</span>
                     {isStatusLoading ? (
-                      <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
+                      <RefreshCw className="h-4 w-4 text-gray-400 dark:text-slate-500 animate-spin" />
                     ) : (
                       (Object.keys(STATUS_CONFIG) as TrailStatusKey[]).map((statusKey) => {
                         const config = STATUS_CONFIG[statusKey]
@@ -307,7 +307,7 @@ export function StudentModuleList({
                                 : "bg-green-50 hover:bg-green-100"
                               : isInProgress
                               ? "bg-blue-50 hover:bg-blue-100"
-                              : "bg-gray-50 hover:bg-gray-100"
+                              : "bg-gray-50 dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-700"
                           }`}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -320,7 +320,7 @@ export function StudentModuleList({
                             ) : isInProgress ? (
                               <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
                             ) : (
-                              <XCircle className="h-5 w-5 text-gray-300 flex-shrink-0" />
+                              <XCircle className="h-5 w-5 text-gray-300 dark:text-slate-600 flex-shrink-0" />
                             )}
                             <div className="flex-1 min-w-0">
                               <span
@@ -331,7 +331,7 @@ export function StudentModuleList({
                                       : "text-green-700"
                                     : isInProgress
                                     ? "text-blue-700"
-                                    : "text-gray-600"
+                                    : "text-gray-600 dark:text-slate-400"
                                 }`}
                               >
                                 {module.title}
@@ -344,12 +344,12 @@ export function StudentModuleList({
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-sm text-gray-500 font-medium">{module.points} XP</span>
+                            <span className="text-sm text-gray-500 dark:text-slate-400 font-medium">{module.points} XP</span>
 
                             {/* Skip/Revert button - hidden for HR */}
                             {canSkipModules && (
                               isLoading ? (
-                                <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
+                                <RefreshCw className="h-4 w-4 text-gray-400 dark:text-slate-500 animate-spin" />
                               ) : isSkipped ? (
                                 <Button
                                   variant="ghost"
@@ -364,7 +364,7 @@ export function StudentModuleList({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100"
+                                  className="h-8 px-3 text-xs opacity-0 group-hover:opacity-100 text-gray-600 dark:text-slate-400 hover:text-purple-600 hover:bg-purple-100"
                                   onClick={() => skipModule(module.id, module.title)}
                                 >
                                   <SkipForward className="h-3 w-3 mr-1" />

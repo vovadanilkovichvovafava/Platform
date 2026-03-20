@@ -728,7 +728,7 @@ export default function AdminInvitesPage() {
                           <label
                             key={trail.id}
                             className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                              isSelected ? "bg-orange-50 dark:bg-orange-950" : "hover:bg-slate-50"
+                              isSelected ? "bg-orange-50 dark:bg-orange-950" : "hover:bg-slate-50 dark:hover:bg-slate-800"
                             }`}
                           >
                             <Checkbox
@@ -875,7 +875,7 @@ export default function AdminInvitesPage() {
                                       <button
                                         type="button"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancelEditTag() }}
-                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300"
+                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
                                       >
                                         <X className="h-3 w-3" /> Отмена
                                       </button>
@@ -902,7 +902,7 @@ export default function AdminInvitesPage() {
                                       <button
                                         type="button"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteTagId(null) }}
-                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300"
+                                        className="flex items-center gap-0.5 px-2 py-0.5 text-xs bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded hover:bg-gray-300 dark:hover:bg-slate-600"
                                       >
                                         Отмена
                                       </button>
@@ -917,7 +917,7 @@ export default function AdminInvitesPage() {
                                 <div
                                   key={tag.id}
                                   className={`flex items-center gap-2 px-3 py-2 border-b last:border-b-0 transition-colors ${
-                                    isSelected ? "bg-orange-50 dark:bg-orange-950" : "hover:bg-slate-50"
+                                    isSelected ? "bg-orange-50 dark:bg-orange-950" : "hover:bg-slate-50 dark:hover:bg-slate-800"
                                   }`}
                                 >
                                   <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
@@ -934,7 +934,7 @@ export default function AdminInvitesPage() {
                                     <button
                                       type="button"
                                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditTag(tag) }}
-                                      className="p-1 rounded hover:bg-gray-200 text-gray-400 dark:text-slate-500 hover:text-gray-600"
+                                      className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                                       title="Редактировать тег"
                                     >
                                       <Pencil className="h-3 w-3" />
@@ -942,7 +942,7 @@ export default function AdminInvitesPage() {
                                     <button
                                       type="button"
                                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteTagId(tag.id); setEditingTagId(null) }}
-                                      className="p-1 rounded hover:bg-red-100 text-gray-400 dark:text-slate-500 hover:text-red-500"
+                                      className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950 text-gray-400 dark:text-slate-500 hover:text-red-500"
                                       title="Удалить тег"
                                     >
                                       <Trash2 className="h-3 w-3" />
@@ -1049,7 +1049,7 @@ export default function AdminInvitesPage() {
                 <select
                   value={cleanupPeriod}
                   onChange={(e) => handleCleanupPeriodChange(e.target.value)}
-                  className="appearance-none bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 pr-8 text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="appearance-none bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 pr-8 text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   title="Исчерпанные приглашения старше этого периода удаляются автоматически"
                 >
                   {CLEANUP_PERIOD_OPTIONS.map((option) => (
@@ -1203,7 +1203,7 @@ export default function AdminInvitesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => deleteInvite(invite.id)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
