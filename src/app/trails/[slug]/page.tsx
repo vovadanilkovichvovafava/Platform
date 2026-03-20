@@ -628,7 +628,7 @@ export default async function TrailPage({ params }: Props) {
             </p>
 
             {!allAssessmentsCompleted && (
-              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3">
+              <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-900 rounded-lg flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-orange-500" />
                 <span className="text-orange-700">
                   Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданию
@@ -680,7 +680,7 @@ export default async function TrailPage({ params }: Props) {
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Badge className="bg-blue-100 text-blue-700 border-0">
+                            <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 border-0">
                               <FolderGit2 className="h-3 w-3 mr-1" />
                               Проект
                             </Badge>
@@ -691,7 +691,7 @@ export default async function TrailPage({ params }: Props) {
                             )}
                           </div>
                           {isProjectCompleted && (
-                            <Badge className="bg-green-100 text-green-700 border-0">
+                            <Badge className="bg-green-100 dark:bg-green-950 text-green-700 border-0">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Сдано
                             </Badge>
@@ -700,8 +700,8 @@ export default async function TrailPage({ params }: Props) {
                         <CardTitle className="text-lg">{project.title}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-500 mb-4">{project.description}</p>
-                        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">{project.description}</p>
+                        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-slate-400 mb-4">
                           <span>{project.duration}</span>
                           <span className="font-medium">{project.points} XP</span>
                         </div>
@@ -734,17 +734,17 @@ export default async function TrailPage({ params }: Props) {
         {/* Certificate Section */}
         {isEnrolled && allModulesCompleted && (
           <div className="mt-12">
-            <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+            <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-200 dark:border-amber-800">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-center gap-6">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
                     <Award className="h-8 w-8 text-amber-600" />
                   </div>
                   <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">
                       {hasCertificate ? "Сертификат получен!" : "Trail завершён!"}
                     </h3>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-slate-400">
                       {hasCertificate
                         ? "Вы уже получили сертификат за этот trail"
                         : "Поздравляем! Вы прошли все модули и можете получить сертификат"

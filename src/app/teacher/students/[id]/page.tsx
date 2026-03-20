@@ -388,7 +388,7 @@ export default async function StudentDetailPage({ params }: Props) {
                   </div>
                   {/* Activity Stats */}
                   <div className="flex-1 grid grid-cols-2 gap-3 content-start">
-                    <div className="p-3 bg-purple-50 rounded-lg">
+                    <div className="p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
                       <p className="text-2xl font-bold text-purple-700">
                         {student.activityDays.reduce((sum, d) => sum + d.actions, 0)}
                       </p>
@@ -416,7 +416,7 @@ export default async function StudentDetailPage({ params }: Props) {
                     {student.activityDays.length > 0 && (
                       <div className="col-span-2 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                         <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Последняя активность</p>
-                        <p className="text-sm font-medium text-gray-800">
+                        <p className="text-sm font-medium text-gray-800 dark:text-slate-200">
                           {new Date(student.activityDays[student.activityDays.length - 1].date).toLocaleDateString("ru-RU", {
                             day: "numeric",
                             month: "long",

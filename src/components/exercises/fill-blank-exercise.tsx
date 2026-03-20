@@ -129,19 +129,19 @@ export function FillBlankExercise({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h3 className="text-xl font-bold text-gray-900">{question}</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">{question}</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Заполните пропуски, выбрав правильные варианты
         </p>
       </div>
 
       {/* Text with blanks */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-6">
         <div className="text-lg leading-relaxed flex flex-wrap items-baseline gap-1">
           {textParts.map((part, index) => {
             if (part.type === "text") {
               return (
-                <span key={index} className="text-gray-700">
+                <span key={index} className="text-gray-700 dark:text-slate-300">
                   {part.content}
                 </span>
               )

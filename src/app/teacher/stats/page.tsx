@@ -428,7 +428,7 @@ export default async function TeacherStatsPage() {
                           idx === 0
                             ? "bg-yellow-400 text-yellow-900"
                             : idx === 1
-                            ? "bg-gray-300 text-gray-700 dark:text-slate-300"
+                            ? "bg-gray-300 dark:bg-slate-600 text-gray-700 dark:text-slate-300"
                             : idx === 2
                             ? "bg-orange-300 text-orange-800"
                             : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400"

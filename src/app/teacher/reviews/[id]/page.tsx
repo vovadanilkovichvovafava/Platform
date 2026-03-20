@@ -172,7 +172,7 @@ export default async function ReviewPage({ params, searchParams }: Props) {
             <CardHeader>
               <div className="flex items-center gap-2 mb-2">
                 <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
-                  <Badge variant="secondary" className="hover:bg-gray-200 cursor-pointer transition-colors">
+                  <Badge variant="secondary" className="hover:bg-gray-200 dark:hover:bg-slate-700 cursor-pointer transition-colors">
                     {submission.module.trail.title}
                   </Badge>
                 </Link>

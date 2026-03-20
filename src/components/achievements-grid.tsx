@@ -485,7 +485,7 @@ export function AchievementsGrid({
 
           {/* Pagination UI */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-slate-700">
               <Button
                 variant="outline"
                 size="sm"
@@ -499,7 +499,7 @@ export function AchievementsGrid({
               <div className="flex items-center gap-1">
                 {getPageNumbers().map((pageNum, idx) =>
                   pageNum === "ellipsis" ? (
-                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 dark:text-slate-500">
                       ...
                     </span>
                   ) : (
@@ -530,7 +530,7 @@ export function AchievementsGrid({
         </div>
 
         {compact && filteredAchievements.length === 0 && (
-          <p className="text-center text-gray-500 text-sm py-4">
+          <p className="text-center text-gray-500 dark:text-slate-400 text-sm py-4">
             Пока нет достижений
           </p>
         )}

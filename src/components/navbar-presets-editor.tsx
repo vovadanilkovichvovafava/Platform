@@ -410,10 +410,10 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
                   dragOverIndex === index ? "border-orange-400 bg-orange-50 dark:bg-orange-950" : "border-transparent"
                 } ${draggedIndex === index ? "opacity-50" : ""}`}
               >
-                <GripVertical className="h-4 w-4 text-slate-400 cursor-grab flex-shrink-0" />
-                <NavIcon name={item.icon} className="h-4 w-4 text-slate-600 flex-shrink-0" />
-                <span className="flex-1 text-sm font-medium text-slate-700 truncate">{item.label}</span>
-                <span className="text-xs text-slate-400 hidden sm:block">{item.href}</span>
+                <GripVertical className="h-4 w-4 text-slate-400 dark:text-slate-500 cursor-grab flex-shrink-0" />
+                <NavIcon name={item.icon} className="h-4 w-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
+                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{item.label}</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:block">{item.href}</span>
                 <button
                   onClick={() => handleDeleteItem(index)}
                   className="p-1 hover:bg-red-100 rounded text-red-500 flex-shrink-0"
@@ -424,33 +424,33 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
             ))}
 
             {editItems.length === 0 && (
-              <div className="text-center py-6 sm:py-8 text-slate-400 text-sm">
+              <div className="text-center py-6 sm:py-8 text-slate-400 dark:text-slate-500 text-sm">
                 Нет элементов. Добавьте из меню ниже.
               </div>
             )}
           </div>
 
           {/* Add button */}
-          <div className="p-3 sm:p-4 border-t border-slate-200" ref={addMenuRef}>
+          <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-700" ref={addMenuRef}>
             <div className="relative">
               <button
                 onClick={() => setShowAddMenu(!showAddMenu)}
-                className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-dashed border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 text-sm"
+                className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 text-sm"
               >
                 <Plus className="h-4 w-4" />
                 Добавить элемент
               </button>
 
               {showAddMenu && availableToAdd.length > 0 && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 sm:max-h-48 overflow-y-auto">
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 sm:max-h-48 overflow-y-auto">
                   {availableToAdd.map((item) => (
                     <button
                       key={item.href}
                       onClick={() => handleAddItem(item)}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-left"
                     >
-                      <NavIcon name={item.icon} className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                      <span className="text-sm text-slate-700 truncate">{item.label}</span>
+                      <NavIcon name={item.icon} className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                      <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{item.label}</span>
                     </button>
                   ))}
                 </div>
@@ -459,10 +459,10 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
           </div>
 
           {/* Footer */}
-          <div className="p-3 sm:p-4 border-t border-slate-200 flex items-center justify-end gap-2">
+          <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-2">
             <button
               onClick={handleCancelEdit}
-              className="px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
             >
               Отмена
             </button>
@@ -496,7 +496,7 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+          className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
         >
           <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           <span className="hidden sm:inline max-w-[80px] truncate">

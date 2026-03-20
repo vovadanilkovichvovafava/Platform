@@ -39,8 +39,8 @@ export function Breadcrumbs({ items, className, showHome = true }: BreadcrumbsPr
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-1 hover:text-gray-700 transition-colors",
-                    isFirst && showHome && "text-gray-400"
+                    "flex items-center gap-1 hover:text-gray-700 dark:hover:text-slate-300 transition-colors",
+                    isFirst && showHome && "text-gray-400 dark:text-slate-500"
                   )}
                 >
                   {isFirst && showHome && <Home className="h-4 w-4" />}
@@ -50,7 +50,7 @@ export function Breadcrumbs({ items, className, showHome = true }: BreadcrumbsPr
                 <span
                   className={cn(
                     "flex items-center gap-1",
-                    isLast ? "text-gray-900 font-medium" : "text-gray-500"
+                    isLast ? "text-gray-900 dark:text-slate-100 font-medium" : "text-gray-500 dark:text-slate-400"
                   )}
                 >
                   {isFirst && showHome && <Home className="h-4 w-4" />}

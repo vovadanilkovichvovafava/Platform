@@ -105,7 +105,7 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
         {/* No review exists — show trigger button */}
         {hasNoReview && !isRetrying && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-slate-400">
               AI-анализ ещё не проводился для этой работы.
             </p>
             <button
@@ -121,12 +121,12 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
         {/* Processing */}
         {isProcessing && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">AI анализирует работу…</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">AI анализирует работу…</p>
             <div className="flex gap-2">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-3 rounded bg-gray-200 animate-pulse"
+                  className="h-3 rounded bg-gray-200 dark:bg-slate-700 animate-pulse"
                   style={{ width: `${60 + i * 20}px` }}
                 />
               ))}
@@ -137,12 +137,12 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
         {/* Triggered from no-review state — show processing */}
         {hasNoReview && isRetrying && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">AI анализирует работу…</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">AI анализирует работу…</p>
             <div className="flex gap-2">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-3 rounded bg-gray-200 animate-pulse"
+                  className="h-3 rounded bg-gray-200 dark:bg-slate-700 animate-pulse"
                   style={{ width: `${60 + i * 20}px` }}
                 />
               ))}
@@ -180,7 +180,7 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
             {/* Coverage info + re-run button */}
             <div className="flex items-center justify-between pt-2 border-t">
               {review.coverage && (
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-gray-400 dark:text-slate-500">
                   Источники: {[
                     review.coverage.submissionTextUsed && "текст ответа",
                     review.coverage.fileUsed && "файл работы",

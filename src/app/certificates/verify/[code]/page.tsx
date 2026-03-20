@@ -168,7 +168,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-gray-500 text-sm mb-4">
+          <p className="text-gray-500 dark:text-slate-400 text-sm mb-4">
             Этот сертификат выдан платформой R&D Academy
           </p>
           <Button asChild variant="outline">
