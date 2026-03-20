@@ -1600,7 +1600,7 @@ export default function UnifiedContentPage() {
                                 onClick={handleRegenerate}
                                 disabled={regenerating}
                                 className={useNeuralParser
-                                  ? "text-purple-700 border-purple-300 hover:bg-purple-50"
+                                  ? "text-purple-700 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950"
                                   : "text-gray-600 dark:text-slate-400 border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"}
                               >
                                 {useNeuralParser ? (
@@ -1810,7 +1810,7 @@ export default function UnifiedContentPage() {
                       variant="outline"
                       onClick={handleRegenerate}
                       disabled={regenerating || saving}
-                      className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                      className="text-purple-700 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950"
                     >
                       {regenerating ? (
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
