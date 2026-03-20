@@ -199,7 +199,7 @@ export function AiSubmissionReview({ submissionId, initialData }: Props) {
               <button
                 onClick={() => triggerAnalysis(true)}
                 disabled={isRetrying}
-                className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 disabled:opacity-50"
+                className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 underline underline-offset-2 disabled:opacity-50"
               >
                 {isRetrying ? "Запускаю…" : "Перезапустить анализ"}
               </button>
@@ -219,19 +219,19 @@ function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; className: string }> = {
     pending: {
       label: "Ожидание",
-      className: "bg-gray-100 text-gray-600 border-0",
+      className: "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 border-0",
     },
     processing: {
       label: "Анализ…",
-      className: "bg-blue-100 text-blue-700 border-0",
+      className: "bg-blue-100 dark:bg-blue-950 text-blue-700 border-0",
     },
     completed: {
       label: "Готово",
-      className: "bg-green-100 text-green-700 border-0",
+      className: "bg-green-100 dark:bg-green-950 text-green-700 border-0",
     },
     failed: {
       label: "Ошибка",
-      className: "bg-red-100 text-red-700 border-0",
+      className: "bg-red-100 dark:bg-red-950 text-red-700 border-0",
     },
   }
   const c = config[status] ?? config.pending
@@ -242,8 +242,8 @@ function AnalysisSection({ analysis }: { analysis: AiReviewAnalysis }) {
   return (
     <div className="space-y-4">
       {/* Short Verdict */}
-      <div className="p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm font-medium text-blue-900">
+      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
           {analysis.shortVerdict}
         </p>
       </div>

@@ -344,7 +344,7 @@ export default function TeacherContentPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                           onClick={() => deleteTrail(trail.id, trail.title)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -382,7 +382,7 @@ export default function TeacherContentPage() {
                                     <Edit className="h-3.5 w-3.5" />
                                   </Button>
                                 </Link>
-                                <div className="w-px h-5 bg-gray-200 mx-1" />
+                                <div className="w-px h-5 bg-gray-200 dark:bg-slate-700 mx-1" />
                                 <Button
                                   variant="ghost-destructive"
                                   size="sm"
@@ -462,7 +462,7 @@ export default function TeacherContentPage() {
                     onChange={(e) =>
                       setTrailForm({ ...trailForm, icon: e.target.value })
                     }
-                    className="w-full p-2 border rounded-lg"
+                    className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800"
                   >
                     <option value="Code">Code</option>
                     <option value="Target">Target</option>

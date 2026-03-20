@@ -506,19 +506,19 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 top-full mt-1 w-40 sm:w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+          <div className="absolute right-0 top-full mt-1 w-40 sm:w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50">
             {/* Default option */}
             <button
               onClick={() => handleSelectPreset("default")}
-              className={`w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm hover:bg-slate-50 ${
-                !activePresetId ? "text-orange-600 bg-orange-50" : "text-slate-700"
+              className={`w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 ${
+                !activePresetId ? "text-orange-600 bg-orange-50 dark:bg-orange-950" : "text-slate-700 dark:text-slate-300"
               }`}
             >
               <Check className={`h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 ${!activePresetId ? "opacity-100" : "opacity-0"}`} />
               <span className="truncate">По умолчанию</span>
             </button>
 
-            {presets.length > 0 && <div className="border-t border-slate-100" />}
+            {presets.length > 0 && <div className="border-t border-slate-100 dark:border-slate-700" />}
 
             {/* Custom presets */}
             {presets.map((preset) => (
@@ -549,7 +549,7 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
               </div>
             ))}
 
-            <div className="border-t border-slate-100" />
+            <div className="border-t border-slate-100 dark:border-slate-700" />
 
             {/* Create new */}
             <button

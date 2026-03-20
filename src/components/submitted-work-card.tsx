@@ -49,22 +49,22 @@ interface SubmittedWorkCardProps {
 const statusConfig = {
   PENDING: {
     label: "На проверке",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 dark:bg-blue-950 text-blue-700",
     icon: Clock,
   },
   APPROVED: {
     label: "Принято",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 dark:bg-green-950 text-green-700",
     icon: CheckCircle2,
   },
   REVISION: {
     label: "На доработку",
-    color: "bg-orange-100 text-orange-700",
+    color: "bg-orange-100 dark:bg-orange-950 text-orange-700",
     icon: AlertCircle,
   },
   FAILED: {
     label: "Провал",
-    color: "bg-red-100 text-red-700",
+    color: "bg-red-100 dark:bg-red-950 text-red-700",
     icon: XCircle,
   },
 }

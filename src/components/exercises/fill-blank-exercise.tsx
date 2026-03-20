@@ -164,12 +164,12 @@ export function FillBlankExercise({
                   className={cn(
                     "inline-flex items-center gap-1 px-3 py-1 rounded-lg border-2 font-medium transition-all min-w-[120px] justify-between",
                     // Default state - empty
-                    !userAnswer && !showResult && "bg-white border-dashed border-gray-300 text-gray-400 hover:border-blue-400",
+                    !userAnswer && !showResult && "bg-white dark:bg-slate-800 border-dashed border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500 hover:border-blue-400",
                     // Filled state
                     userAnswer && !showResult && "bg-blue-50 border-blue-400 text-blue-700",
                     // Result states
-                    status === "correct" && "bg-green-100 border-green-500 text-green-700",
-                    status === "wrong" && "bg-red-100 border-red-500 text-red-700",
+                    status === "correct" && "bg-green-100 dark:bg-green-950 border-green-500 text-green-700",
+                    status === "wrong" && "bg-red-100 dark:bg-red-950 border-red-500 text-red-700",
                     // Disabled
                     (disabled || showResult) && "cursor-default"
                   )}
@@ -184,7 +184,7 @@ export function FillBlankExercise({
 
                 {/* Dropdown */}
                 {isOpen && !showResult && (
-                  <div className="absolute z-10 top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-full">
+                  <div className="absolute z-10 top-full left-0 mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 py-1 min-w-full">
                     {blank.options.map((option, optIdx) => (
                       <button
                         key={optIdx}
@@ -222,7 +222,7 @@ export function FillBlankExercise({
               key={blank.id}
               className={cn(
                 "w-8 h-2 rounded-full transition-all",
-                !showResult && !filled && "bg-gray-200",
+                !showResult && !filled && "bg-gray-200 dark:bg-slate-700",
                 !showResult && filled && "bg-blue-500",
                 status === "correct" && "bg-green-500",
                 status === "wrong" && "bg-red-500"
@@ -237,7 +237,7 @@ export function FillBlankExercise({
         <div
           className={cn(
             "p-4 rounded-xl border-2 text-center",
-            isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+            isCorrect ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
           )}
         >
           <p className={cn("font-semibold text-lg", isCorrect ? "text-green-700" : "text-red-700")}>
@@ -259,7 +259,7 @@ export function FillBlankExercise({
               "shadow-lg hover:shadow-xl hover:-translate-y-0.5",
               allFilled && !disabled
                 ? "bg-[#0176D3] hover:bg-[#0161B3]"
-                : "bg-gray-300 cursor-not-allowed shadow-none"
+                : "bg-gray-300 dark:bg-slate-600 cursor-not-allowed shadow-none"
             )}
           >
             Проверить
@@ -269,7 +269,7 @@ export function FillBlankExercise({
         {showResult && !isCorrect && (
           <button
             onClick={handleRetry}
-            className="px-8 py-3 rounded-xl font-semibold bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
+            className="px-8 py-3 rounded-xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Попробовать снова
