@@ -1146,7 +1146,7 @@ export default function AdminInvitesPage() {
                             {invite.selectedTrails.map((trail) => (
                               <span
                                 key={trail.id}
-                                className="text-xs px-2 py-0.5 bg-orange-50 dark:bg-orange-950 text-orange-700 rounded-md"
+                                className="text-xs px-2 py-0.5 bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300 rounded-md"
                               >
                                 {trail.title}
                               </span>

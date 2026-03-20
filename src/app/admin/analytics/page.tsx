@@ -1308,7 +1308,7 @@ export default function AdvancedAnalyticsPage() {
                           {trailGroup.isPasswordProtected && !isLocked && (
                             <Lock className="h-3.5 w-3.5 text-indigo-400" />
                           )}
-                          <span className={`font-medium ${isLocked ? "text-gray-500 dark:text-slate-400" : "text-indigo-900"}`}>
+                          <span className={`font-medium ${isLocked ? "text-gray-500 dark:text-slate-400" : "text-indigo-900 dark:text-indigo-100"}`}>
                             {trailGroup.trailTitle}
                           </span>
                           {isLocked ? (
