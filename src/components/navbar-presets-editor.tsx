@@ -374,11 +374,11 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
   // Edit mode UI - rendered via portal to escape header stacking context
   const editModal = isEditing && mounted ? createPortal(
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-10 sm:pt-20 px-2 sm:px-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="p-3 sm:p-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
                 {isCreatingNew ? "Новый пресет" : "Редактирование navbar"}
               </h3>
               {isCreatingNew && (
@@ -387,13 +387,13 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
                   placeholder="Название пресета..."
-                  className="mt-2 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  className="mt-2 w-full px-3 py-2 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg text-sm"
                   autoFocus
                 />
               )}
             </div>
-            <button onClick={handleCancelEdit} className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg ml-2 flex-shrink-0">
-              <X className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500" />
+            <button onClick={handleCancelEdit} className="p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg ml-2 flex-shrink-0">
+              <X className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 dark:text-slate-400" />
             </button>
           </div>
 
@@ -406,8 +406,8 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
-                className={`flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-slate-50 rounded-lg border transition-all ${
-                  dragOverIndex === index ? "border-orange-400 bg-orange-50" : "border-transparent"
+                className={`flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border transition-all ${
+                  dragOverIndex === index ? "border-orange-400 bg-orange-50 dark:bg-orange-950" : "border-transparent"
                 } ${draggedIndex === index ? "opacity-50" : ""}`}
               >
                 <GripVertical className="h-4 w-4 text-slate-400 cursor-grab flex-shrink-0" />

@@ -62,16 +62,16 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           />
 
           {/* Dialog */}
-          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+          <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
             <div className="p-6">
               <div className="flex items-start gap-4">
                 <div
                   className={`p-2 rounded-full ${
                     state.variant === "danger"
-                      ? "bg-red-100"
+                      ? "bg-red-100 dark:bg-red-900"
                       : state.variant === "warning"
-                      ? "bg-yellow-100"
-                      : "bg-blue-100"
+                      ? "bg-yellow-100 dark:bg-yellow-900"
+                      : "bg-blue-100 dark:bg-blue-900"
                   }`}
                 >
                   {state.variant === "danger" ? (
@@ -89,21 +89,21 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
                     {state.title}
                   </h3>
-                  <p className="mt-2 text-sm text-gray-600">{state.message}</p>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">{state.message}</p>
                 </div>
                 <button
                   onClick={handleCancel}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900 rounded-b-xl flex justify-end gap-3">
               <Button variant="outline" onClick={handleCancel}>
                 {state.cancelText || "Отмена"}
               </Button>

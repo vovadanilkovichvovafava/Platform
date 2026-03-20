@@ -23,7 +23,7 @@ export function Breadcrumbs({ items, className, showHome = true }: BreadcrumbsPr
   return (
     <nav
       aria-label="Breadcrumb"
-      className={cn("flex items-center text-sm text-gray-500", className)}
+      className={cn("flex items-center text-sm text-gray-500 dark:text-slate-400", className)}
     >
       <ol className="flex items-center gap-1">
         {allItems.map((item, index) => {
@@ -33,7 +33,7 @@ export function Breadcrumbs({ items, className, showHome = true }: BreadcrumbsPr
           return (
             <li key={index} className="flex items-center">
               {index > 0 && (
-                <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
+                <ChevronRight className="h-4 w-4 mx-1 text-gray-400 dark:text-slate-500" />
               )}
               {item.href && !isLast ? (
                 <Link

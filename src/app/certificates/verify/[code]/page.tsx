@@ -52,7 +52,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
       case "Senior":
         return "bg-yellow-100 text-yellow-700"
       default:
-        return "bg-gray-100 text-gray-700"
+        return "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300"
     }
   }
 
@@ -78,7 +78,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
             <CheckCircle2 className="h-5 w-5" />
             <span className="font-medium">Сертификат подтверждён</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
             Верификация сертификата
           </h1>
         </div>
@@ -111,23 +111,23 @@ export default async function VerifyCertificatePage({ params }: Props) {
               <Badge className={`mb-3 ${getLevelColor(certificate.level)}`}>
                 {certificate.level} Level
               </Badge>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">
                 {certificate.trail.title}
               </h2>
-              <p className="text-gray-500 text-sm max-w-md mx-auto">
+              <p className="text-gray-500 dark:text-slate-400 text-sm max-w-md mx-auto">
                 {certificate.trail.description}
               </p>
             </div>
 
             {/* Recipient */}
-            <div className="bg-gray-50 rounded-xl p-4 mb-6">
+            <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 mb-6">
               <div className="flex items-center justify-center gap-3">
-                <User className="h-5 w-5 text-gray-400" />
+                <User className="h-5 w-5 text-gray-400 dark:text-slate-500" />
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wide">
                     Выдан
                   </p>
-                  <p className="font-semibold text-gray-900">
+                  <p className="font-semibold text-gray-900 dark:text-slate-100">
                     {certificate.user.name}
                   </p>
                 </div>
@@ -136,10 +136,10 @@ export default async function VerifyCertificatePage({ params }: Props) {
 
             {/* Details Grid */}
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <Calendar className="h-5 w-5 mx-auto text-gray-400 mb-1" />
-                <p className="text-xs text-gray-500">Дата выдачи</p>
-                <p className="font-medium text-gray-900">
+              <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-3 text-center">
+                <Calendar className="h-5 w-5 mx-auto text-gray-400 dark:text-slate-500 mb-1" />
+                <p className="text-xs text-gray-500 dark:text-slate-400">Дата выдачи</p>
+                <p className="font-medium text-gray-900 dark:text-slate-100">
                   {new Date(certificate.issuedAt).toLocaleDateString("ru-RU", {
                     day: "numeric",
                     month: "long",
@@ -147,18 +147,18 @@ export default async function VerifyCertificatePage({ params }: Props) {
                   })}
                 </p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-3 text-center">
                 <Trophy className="h-5 w-5 mx-auto text-yellow-500 mb-1" />
-                <p className="text-xs text-gray-500">XP на момент выдачи</p>
-                <p className="font-medium text-gray-900">{certificate.totalXP} XP</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">XP на момент выдачи</p>
+                <p className="font-medium text-gray-900 dark:text-slate-100">{certificate.totalXP} XP</p>
               </div>
             </div>
 
             {/* Certificate Code */}
             <div className="border-t pt-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Код сертификата:</span>
-                <code className="bg-gray-100 px-3 py-1 rounded font-mono text-gray-700">
+                <span className="text-gray-500 dark:text-slate-400">Код сертификата:</span>
+                <code className="bg-gray-100 dark:bg-slate-800 px-3 py-1 rounded font-mono text-gray-700 dark:text-slate-300">
                   {certificate.code}
                 </code>
               </div>

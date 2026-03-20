@@ -389,13 +389,13 @@ export function AchievementsGrid({
               </h2>
               {stats && (
                 <div className="flex items-center gap-2 mt-0.5">
-                  <div className="h-1.5 w-24 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-24 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-orange-400 to-amber-500 rounded-full transition-all duration-500"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">
                     {stats.count} из {stats.total} {pluralizeRu(stats.total, ["достижения", "достижений", "достижений"])}
                   </span>
                 </div>
@@ -439,7 +439,7 @@ export function AchievementsGrid({
                   className={`${compact ? "w-12 h-12 mb-2" : "w-[76px] h-[76px] mb-3"} mx-auto rounded-xl flex items-center justify-center transition-transform duration-200 hover:scale-110 achievement-stencil ${
                     achievement.earned
                       ? `${getRarityIconBg(achievement.rarity)} ${getRarityGlowColor(achievement.rarity)} shadow-lg`
-                      : "bg-gray-100"
+                      : "bg-gray-100 dark:bg-slate-800"
                   }`}
                 >
                   <Icon
@@ -447,35 +447,35 @@ export function AchievementsGrid({
                     className={`${compact ? "w-8 h-8" : "w-11 h-11"} ${
                       achievement.earned
                         ? getRarityIconColor(achievement.rarity)
-                        : "text-gray-400"
+                        : "text-gray-400 dark:text-slate-500"
                     }`}
                   />
                 </div>
-                <h3 className={`font-semibold text-gray-900 mb-1 ${
+                <h3 className={`font-semibold text-gray-900 dark:text-slate-100 mb-1 ${
                   compact ? "text-xs" : "text-sm"
                 }`}>
                   {achievement.name}
                 </h3>
                 {!compact && (
-                  <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-2 line-clamp-2">
                     {achievement.description}
                   </p>
                 )}
                 <Badge
                   className={`text-[10px] ${
-                    achievement.earned ? achievement.color : "bg-gray-100 text-gray-500"
+                    achievement.earned ? achievement.color : "bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400"
                   }`}
                 >
                   {getRarityLabel(achievement.rarity)}
                 </Badge>
                 {!compact && achievement.earned && achievement.earnedAt && (
-                  <p className="text-[10px] text-gray-400 mt-2">
+                  <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
                     {new Date(achievement.earnedAt).toLocaleDateString("ru-RU")}
                   </p>
                 )}
                 {!achievement.earned && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/50 transition-opacity duration-200">
-                    <Lock className="h-6 w-6 text-gray-400" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-800/50 transition-opacity duration-200">
+                    <Lock className="h-6 w-6 text-gray-400 dark:text-slate-500" />
                   </div>
                 )}
               </CardContent>

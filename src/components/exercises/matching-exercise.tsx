@@ -102,20 +102,20 @@ export function MatchingExercise({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h3 className="text-lg font-bold text-gray-900">{question}</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">{question}</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Выберите задачу слева, затем ответ справа
         </p>
       </div>
 
       {/* Main matching area - simple table-like layout */}
-      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+      <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 space-y-3">
         {/* Column headers */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="text-center text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
             {leftLabel}
           </div>
-          <div className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="text-center text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
             {rightLabel}
           </div>
         </div>
@@ -140,7 +140,7 @@ export function MatchingExercise({
                 className={cn(
                   "w-full p-3 rounded-lg text-left text-sm font-medium transition-all",
                   "border-2 overflow-hidden",
-                  !isMatched && !isSelected && "bg-white border-gray-200 hover:border-blue-300",
+                  !isMatched && !isSelected && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-300",
                   isSelected && "bg-blue-50 border-blue-500 shadow-md",
                   isMatched && !showResult && colors && `bg-white ${colors.border}`,
                   isPairCorrect && "bg-green-50 border-green-500",
@@ -156,7 +156,7 @@ export function MatchingExercise({
                     isPairCorrect ? "bg-green-500 text-white" :
                     isPairWrong ? "bg-red-500 text-white" :
                     isMatched && colors ? colors.bg + " text-white" :
-                    "bg-gray-200 text-gray-600"
+                    "bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
                   )}>
                     {index + 1}
                   </span>
@@ -173,10 +173,10 @@ export function MatchingExercise({
               <div
                 className={cn(
                   "w-full p-3 rounded-lg text-sm font-medium transition-all border-2 min-h-[44px] overflow-hidden",
-                  isMatched && !showResult && colors && `bg-white ${colors.border}`,
-                  isPairCorrect && "bg-green-50 border-green-500",
-                  isPairWrong && "bg-red-50 border-red-500",
-                  !isMatched && "bg-gray-100 border-gray-200 border-dashed"
+                  isMatched && !showResult && colors && `bg-white dark:bg-slate-800 ${colors.border}`,
+                  isPairCorrect && "bg-green-50 dark:bg-green-950 border-green-500",
+                  isPairWrong && "bg-red-50 dark:bg-red-950 border-red-500",
+                  !isMatched && "bg-gray-100 dark:bg-slate-800 border-gray-200 dark:border-slate-700 border-dashed"
                 )}
               >
                 {matchedText ? (
@@ -189,7 +189,7 @@ export function MatchingExercise({
                     <span className="leading-tight break-words overflow-wrap-anywhere min-w-0">{matchedText}</span>
                   </div>
                 ) : (
-                  <span className="text-gray-400">—</span>
+                  <span className="text-gray-400 dark:text-slate-500">—</span>
                 )}
               </div>
             </div>
@@ -197,10 +197,10 @@ export function MatchingExercise({
         })}
 
         {/* Divider */}
-        <div className="border-t border-gray-200 my-4" />
+        <div className="border-t border-gray-200 dark:border-slate-700 my-4" />
 
         {/* Right items to choose from */}
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+        <div className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
           Варианты ответов (можно использовать несколько раз)
         </div>
         <div className="flex flex-wrap gap-2">
@@ -219,14 +219,14 @@ export function MatchingExercise({
                 className={cn(
                   "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border-2 relative",
                   "max-w-full break-words text-left flex items-start gap-2",
-                  !canClick && "bg-white border-gray-200 text-gray-700",
-                  canClick && "bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer shadow-sm hover:shadow",
+                  !canClick && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300",
+                  canClick && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 cursor-pointer shadow-sm hover:shadow",
                   (disabled || showResult) && "cursor-default"
                 )}
               >
                 <span className={cn(
                   "flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold",
-                  canClick ? "bg-blue-100 text-blue-600" : "bg-gray-200 text-gray-600"
+                  canClick ? "bg-blue-100 text-blue-600" : "bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
                 )}>
                   {index + 1}
                 </span>
@@ -256,12 +256,12 @@ export function MatchingExercise({
                       ? "bg-green-500"
                       : "bg-red-500"
                     : PAIR_COLORS[idx % PAIR_COLORS.length].bg
-                  : "bg-gray-300"
+                  : "bg-gray-300 dark:bg-slate-600"
               )}
             />
           ))}
         </div>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-gray-500 dark:text-slate-400">
           {Object.keys(matches).length} / {leftItems.length}
         </span>
       </div>
@@ -270,7 +270,7 @@ export function MatchingExercise({
       {showResult && (
         <div className={cn(
           "p-4 rounded-xl text-center",
-          isCorrect ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+          isCorrect ? "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800"
         )}>
           <p className={cn("font-semibold", isCorrect ? "text-green-700" : "text-red-700")}>
             {isCorrect ? "Отлично! Все пары верны!" : "Есть ошибки. Попробуйте снова."}
@@ -288,7 +288,7 @@ export function MatchingExercise({
               "px-8 py-3 rounded-xl font-semibold text-white transition-all",
               allMatched && !disabled
                 ? "bg-blue-500 hover:bg-blue-600 shadow-lg"
-                : "bg-gray-300 cursor-not-allowed"
+                : "bg-gray-300 dark:bg-slate-600 cursor-not-allowed"
             )}
           >
             Проверить
@@ -296,7 +296,7 @@ export function MatchingExercise({
         ) : !isCorrect && (
           <button
             onClick={handleRetry}
-            className="px-8 py-3 rounded-xl font-semibold bg-white border-2 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+            className="px-8 py-3 rounded-xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Ещё раз
