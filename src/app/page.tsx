@@ -151,14 +151,14 @@ export default async function HomePage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 shadow-lg">
+            <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-lg transition-all">
               <div className="flex items-center gap-4 mb-3">
                 <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-950 flex items-center justify-center">
                   <span className="text-2xl">🔥</span>
                 </div>
                 <div>
                   <h4 className="text-slate-900 dark:text-slate-100 font-semibold">Middle</h4>
-                  <p className="text-orange-500 text-sm font-medium">Точка входа</p>
+                  <p className="text-orange-500 dark:text-orange-400 text-sm font-medium">Точка входа</p>
                 </div>
               </div>
               <p className="text-slate-500 dark:text-slate-400 text-sm">
