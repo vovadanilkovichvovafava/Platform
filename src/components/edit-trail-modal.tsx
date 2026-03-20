@@ -645,14 +645,14 @@ export function EditTrailModal({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
               </div>
 
               {/* Teacher selection for SPECIFIC visibility */}
               {form.teacherVisibility === "SPECIFIC" && (
                 <div className="relative">
                   {loadingTeachers ? (
-                    <div className="flex items-center gap-2 p-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-2 p-2 text-sm text-gray-500 dark:text-slate-400">
                       <RefreshCw className="h-4 w-4 animate-spin" />
                       Загрузка учителей...
                     </div>
@@ -674,7 +674,7 @@ export function EditTrailModal({
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
                     </>
                   )}
                 </div>

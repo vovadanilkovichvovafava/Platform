@@ -612,7 +612,7 @@ export function SubmissionsFilter({
                             href={submission.githubUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                            className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 rounded"
                             title="GitHub"
                           >
                             <Github className="h-4 w-4" />
@@ -623,7 +623,7 @@ export function SubmissionsFilter({
                             href={submission.deployUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                            className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 rounded"
                             title="Деплой"
                           >
                             <Globe className="h-4 w-4" />
@@ -632,7 +632,7 @@ export function SubmissionsFilter({
                         <Link
                           href={`/module/${submission.module.slug}`}
                           target="_blank"
-                          className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                          className="p-2 text-gray-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950 rounded"
                           title="Задача модуля"
                         >
                           <BookOpen className="h-4 w-4" />

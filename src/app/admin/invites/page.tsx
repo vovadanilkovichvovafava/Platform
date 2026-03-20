@@ -672,7 +672,7 @@ export default function AdminInvitesPage() {
                   id="role"
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 pr-8 text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 pr-8 text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 >
                   {ROLE_OPTIONS.filter((opt) => {
                     // CO_ADMIN can only create STUDENT and TEACHER invites
@@ -709,7 +709,7 @@ export default function AdminInvitesPage() {
                   <button
                     type="button"
                     onClick={() => setIsTrailDropdownOpen(!isTrailDropdownOpen)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   >
                     <span className="flex items-center gap-2">
                       <Map className="h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -786,7 +786,7 @@ export default function AdminInvitesPage() {
                     setEditingTagId(null)
                     setConfirmDeleteTagId(null)
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 >
                   <span className="flex items-center gap-2">
                     <Tag className="h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -1179,7 +1179,7 @@ export default function AdminInvitesPage() {
                               {isExpired ? "Истёк" : "Истекает"} {new Date(invite.expiresAt).toLocaleDateString("ru")}
                             </span>
                           )}
-                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-300 dark:text-slate-600">•</span>
                           <span>от {invite.createdBy.name}</span>
                         </div>
                       </div>

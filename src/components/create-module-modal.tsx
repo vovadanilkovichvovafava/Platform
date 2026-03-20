@@ -108,7 +108,7 @@ export function CreateModuleModal({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Добавить модуль</CardTitle>
-            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+            <button onClick={handleClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600">
               <X className="h-5 w-5" />
             </button>
           </div>
