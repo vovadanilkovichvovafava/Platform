@@ -149,11 +149,11 @@ function getDaysWaiting(createdAt: string): number {
 }
 
 function getDaysWaitingLabel(days: number): { label: string; color: string } {
-  if (days === 0) return { label: "Сегодня", color: "bg-green-100 text-green-700" }
-  if (days === 1) return { label: "1 день", color: "bg-green-100 text-green-700" }
+  if (days === 0) return { label: "Сегодня", color: "bg-green-100 dark:bg-green-950 text-green-700" }
+  if (days === 1) return { label: "1 день", color: "bg-green-100 dark:bg-green-950 text-green-700" }
   if (days <= 3) return { label: `${days} дня`, color: "bg-yellow-100 text-yellow-700" }
-  if (days <= 7) return { label: `${days} дней`, color: "bg-orange-100 text-orange-700" }
-  return { label: `${days} дней`, color: "bg-red-100 text-red-700" }
+  if (days <= 7) return { label: `${days} дней`, color: "bg-orange-100 dark:bg-orange-950 text-orange-700" }
+  return { label: `${days} дней`, color: "bg-red-100 dark:bg-red-950 text-red-700" }
 }
 
 const FILTER_DEFAULTS = { trail: "all", status: "all", sort: "waiting", q: "", perPage: "10", page: "1" }
@@ -430,7 +430,7 @@ export function SubmissionsFilter({
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
               <Input
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}

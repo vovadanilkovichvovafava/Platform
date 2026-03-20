@@ -239,19 +239,19 @@ export function StudentModuleList({
                         <Badge variant="secondary" className="text-sm">
                           {completedModules.length}/{trailModules.length}
                         </Badge>
-                        <span className="text-sm text-gray-500">{trailProgress}%</span>
-                        <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-aria-expanded:rotate-180" />
+                        <span className="text-sm text-gray-500 dark:text-slate-400">{trailProgress}%</span>
+                        <ChevronDown className="h-4 w-4 text-gray-500 dark:text-slate-400 transition-transform duration-200 group-aria-expanded:rotate-180" />
                       </div>
                     </div>
                     {/* Progress bar */}
                     <div className="mt-3">
-                      <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-2">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-300"
                           style={{ width: `${trailProgress}%` }}
                         />
                       </div>
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 mt-1">
                         <span>{completedModules.reduce((s, m) => s + m.points, 0)} XP заработано</span>
                         <span>{trailMaxXP} XP максимум</span>
                       </div>

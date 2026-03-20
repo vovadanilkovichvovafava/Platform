@@ -153,13 +153,13 @@ export function TrueFalseExercise({
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-1.5",
                       // Default state
-                      userAnswer !== true && !showResult && "bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700",
+                      userAnswer !== true && !showResult && "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:bg-green-100 hover:text-green-700",
                       // Selected state
                       userAnswer === true && !showResult && "bg-green-500 text-white shadow-md",
                       // Result states
                       showResult && userAnswer === true && status === "correct" && "bg-green-500 text-white",
                       showResult && userAnswer === true && status === "wrong" && "bg-red-500 text-white",
-                      showResult && userAnswer !== true && "bg-gray-100 text-gray-400",
+                      showResult && userAnswer !== true && "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500",
                       // Disabled
                       (disabled || showResult) && "cursor-default"
                     )}
@@ -173,13 +173,13 @@ export function TrueFalseExercise({
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-1.5",
                       // Default state
-                      userAnswer !== false && !showResult && "bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700",
+                      userAnswer !== false && !showResult && "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:bg-red-100 hover:text-red-700",
                       // Selected state
                       userAnswer === false && !showResult && "bg-red-500 text-white shadow-md",
                       // Result states
                       showResult && userAnswer === false && status === "correct" && "bg-green-500 text-white",
                       showResult && userAnswer === false && status === "wrong" && "bg-red-500 text-white",
-                      showResult && userAnswer !== false && "bg-gray-100 text-gray-400",
+                      showResult && userAnswer !== false && "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500",
                       // Disabled
                       (disabled || showResult) && "cursor-default"
                     )}
@@ -204,7 +204,7 @@ export function TrueFalseExercise({
               key={statement.id}
               className={cn(
                 "w-8 h-2 rounded-full transition-all",
-                !showResult && !answered && "bg-gray-200",
+                !showResult && !answered && "bg-gray-200 dark:bg-slate-700",
                 !showResult && answered && "bg-blue-500",
                 status === "correct" && "bg-green-500",
                 status === "wrong" && "bg-red-500"
@@ -219,7 +219,7 @@ export function TrueFalseExercise({
         <div
           className={cn(
             "p-4 rounded-xl border-2 text-center",
-            isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+            isCorrect ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
           )}
         >
           <p className={cn("font-semibold text-lg", isCorrect ? "text-green-700" : "text-red-700")}>

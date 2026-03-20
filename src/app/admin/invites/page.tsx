@@ -1083,7 +1083,7 @@ export default function AdminInvitesPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 flex-wrap">
                           <code className={`px-3 py-1 rounded-lg font-mono text-sm font-semibold ${
-                            isActive ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100" : "bg-slate-200 text-slate-500 dark:text-slate-400"
+                            isActive ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
                           }`}>
                             {invite.code}
                           </code>
@@ -1108,7 +1108,7 @@ export default function AdminInvitesPage() {
 
                           {/* Usage Progress */}
                           <div className="flex items-center gap-2">
-                            <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="w-20 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full transition-all ${
                                   isExhausted ? "bg-red-500" :

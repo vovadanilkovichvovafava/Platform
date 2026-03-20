@@ -384,7 +384,7 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
               </Badge>
             </div>
             {q.rationale && (
-              <p className="text-xs text-gray-400 mt-1.5 ml-5 italic">
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5 ml-5 italic">
                 {q.rationale}
               </p>
             )}
