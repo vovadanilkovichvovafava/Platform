@@ -292,7 +292,7 @@ function AnalysisSection({ analysis }: { analysis: AiReviewAnalysis }) {
 
       {/* Risk Flags */}
       {analysis.riskFlags.length > 0 && (
-        <div className="p-3 bg-yellow-50 rounded-lg">
+        <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
           <h4 className="text-sm font-medium text-yellow-800 mb-1">
             Риск-флаги
           </h4>
@@ -343,14 +343,14 @@ function QuestionsSection({ questions }: { questions: AiReviewQuestion[] }) {
 
   return (
     <div>
-      <h4 className="text-sm font-medium text-gray-900 mb-3">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-100 mb-3">
         Вопросы для проверки ({questions.length})
       </h4>
       <div className="space-y-3">
         {questions.map((q, i) => (
           <div
             key={i}
-            className="p-3 bg-gray-50 rounded-lg border border-gray-100"
+            className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700"
           >
             <div className="flex items-start gap-2 mb-2">
               <span className="text-sm font-medium text-gray-400 mt-0.5">

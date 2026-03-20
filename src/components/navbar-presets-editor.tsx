@@ -524,8 +524,8 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
             {presets.map((preset) => (
               <div
                 key={preset.id}
-                className={`flex items-center hover:bg-slate-50 ${
-                  preset.isActive ? "text-orange-600 bg-orange-50" : "text-slate-700"
+                className={`flex items-center hover:bg-slate-50 dark:hover:bg-slate-700 ${
+                  preset.isActive ? "text-orange-600 bg-orange-50 dark:bg-orange-950" : "text-slate-700 dark:text-slate-300"
                 }`}
               >
                 <button
@@ -554,7 +554,7 @@ export function NavbarPresetsEditor({ userRole, currentItems, onItemsChange }: P
             {/* Create new */}
             <button
               onClick={handleCreateNew}
-              className="w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-orange-600 hover:bg-orange-50"
+              className="w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
             >
               <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="truncate">Создать пресет</span>

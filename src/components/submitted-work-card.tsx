@@ -184,10 +184,10 @@ export function SubmittedWorkCard({
   return (
     <div className="space-y-4">
       {/* Status */}
-      <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-600 mb-2">
+            <div className="text-sm font-medium text-gray-600 dark:text-slate-400 mb-2">
               Статус работы
             </div>
             <Badge className={`${status.color} border-0`}>

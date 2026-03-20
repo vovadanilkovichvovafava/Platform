@@ -113,14 +113,14 @@ export function OrderingExercise({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h3 className="text-xl font-bold text-gray-900">{question}</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">{question}</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Перетащите элементы или используйте стрелки, чтобы расставить их в правильном порядке
         </p>
       </div>
 
       {/* Ordering area */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-6">
         <div className="space-y-2">
           {items.map((item, index) => {
             const status = getPositionStatus(item, index)
@@ -138,23 +138,23 @@ export function OrderingExercise({
                 onDragEnd={handleDragEnd}
                 className={cn(
                   "flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200",
-                  "bg-white shadow-sm",
+                  "bg-white dark:bg-slate-800 shadow-sm",
                   // Default state
-                  !showResult && !isDragging && !isDragOver && "border-gray-200 hover:border-gray-300 hover:shadow-md",
+                  !showResult && !isDragging && !isDragOver && "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-md",
                   // Dragging state
                   isDragging && "opacity-50 scale-95 border-indigo-300",
                   // Drag over state
                   isDragOver && "border-indigo-500 bg-indigo-50 scale-[1.02] shadow-lg",
                   // Result states
-                  status === "correct" && "border-green-500 bg-green-50",
-                  status === "wrong" && "border-red-500 bg-red-50",
+                  status === "correct" && "border-green-500 bg-green-50 dark:bg-green-950",
+                  status === "wrong" && "border-red-500 bg-red-50 dark:bg-red-950",
                   // Cursor
                   !disabled && !showResult && "cursor-grab active:cursor-grabbing"
                 )}
               >
                 {/* Drag handle */}
                 {!showResult && (
-                  <div className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <div className="text-gray-400 dark:text-slate-500 hover:text-gray-600 transition-colors">
                     <GripVertical className="w-5 h-5" />
                   </div>
                 )}
