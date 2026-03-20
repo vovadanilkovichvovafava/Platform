@@ -315,11 +315,11 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                       <p className="text-2xl font-bold text-blue-600">{trail.pendingCount}</p>
                       <p className="text-xs text-blue-700">На проверке</p>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold text-gray-600">
+                    <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                      <p className="text-2xl font-bold text-gray-600 dark:text-slate-400">
                         {trail.totalSubmissions - trail.approvedCount - trail.pendingCount}
                       </p>
-                      <p className="text-xs text-gray-700">На доработку/провал</p>
+                      <p className="text-xs text-gray-700 dark:text-slate-300">На доработку/провал</p>
                     </div>
                   </div>
                 </div>
