@@ -119,11 +119,11 @@ export function AdminTrailPasswordModal({
             <ShieldCheck className="h-7 w-7" style={{ color: trailColor }} />
           </div>
           <CardTitle className="text-lg">Верификация доступа</CardTitle>
-          <p className="text-sm text-gray-500 mt-1">{trailTitle}</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{trailTitle}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-sm text-gray-600 text-center">
+            <p className="text-sm text-gray-600 dark:text-slate-400 text-center">
               Этот trail защищён паролем. Для просмотра и редактирования введите пароль.
             </p>
 
@@ -163,7 +163,7 @@ export function AdminTrailPasswordModal({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                   disabled={loading}
                 >
                   {showPassword ? (
@@ -209,7 +209,7 @@ export function AdminTrailPasswordModal({
               </Button>
             </div>
 
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-gray-500 dark:text-slate-400 text-center">
               Доступ действителен в течение сессии (4 часа).
             </p>
           </form>

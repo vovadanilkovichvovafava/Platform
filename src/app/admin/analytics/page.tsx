@@ -1300,7 +1300,7 @@ export default function AdvancedAnalyticsPage() {
                         className={`w-full flex items-center justify-between p-3 transition-colors ${
                           isLocked
                             ? "bg-gray-100 dark:bg-slate-800 cursor-not-allowed"
-                            : "bg-indigo-50 hover:bg-indigo-100 cursor-pointer"
+                            : "bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 dark:hover:bg-indigo-900 cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -1647,7 +1647,7 @@ export default function AdvancedAnalyticsPage() {
                               <button
                                 key={student.id}
                                 onClick={() => selectStudentForAnalytics(student.id)}
-                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-cyan-50 transition-colors text-left"
+                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-cyan-50 dark:hover:bg-cyan-950 transition-colors text-left"
                               >
                                 <div>
                                   <span className="font-medium text-gray-900 dark:text-slate-100">{student.name}</span>
@@ -2126,7 +2126,7 @@ export default function AdvancedAnalyticsPage() {
                     </thead>
                     <tbody>
                       {data.topStudents.map((student, index) => (
-                        <tr key={student.id} className="border-b hover:bg-purple-50 transition-colors group">
+                        <tr key={student.id} className="border-b hover:bg-purple-50 dark:hover:bg-purple-950 transition-colors group">
                           <td className="py-2 text-gray-500 dark:text-slate-400">
                             {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
                           </td>
@@ -2277,7 +2277,7 @@ export default function AdvancedAnalyticsPage() {
               <div className="mb-4">
                 <button
                   onClick={() => setExpandedRisk(expandedRisk === "high" ? null : "high")}
-                  className="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-950 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-950 rounded-lg hover:bg-red-100 dark:hover:bg-red-900 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Badge className="bg-red-500">Высокий</Badge>
@@ -2340,7 +2340,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка mailto */}
                           <button
                             onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors"
                             title="Написать письмо"
                           >
                             <Mail className="h-4 w-4" />
@@ -2348,7 +2348,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка исключения (заглушка) */}
                           <button
                             onClick={() => handleExcludeStudent(student)}
-                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
                             title="Исключить студента"
                           >
                             <UserX className="h-4 w-4" />
@@ -2364,7 +2364,7 @@ export default function AdvancedAnalyticsPage() {
               <div className="mb-4">
                 <button
                   onClick={() => setExpandedRisk(expandedRisk === "medium" ? null : "medium")}
-                  className="w-full flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Badge className="bg-yellow-500">Средний</Badge>
@@ -2422,7 +2422,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка mailto */}
                           <button
                             onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors"
                             title="Написать письмо"
                           >
                             <Mail className="h-4 w-4" />
@@ -2430,7 +2430,7 @@ export default function AdvancedAnalyticsPage() {
                           {/* Кнопка исключения (заглушка) */}
                           <button
                             onClick={() => handleExcludeStudent(student)}
-                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
                             title="Исключить студента"
                           >
                             <UserX className="h-4 w-4" />
@@ -2446,7 +2446,7 @@ export default function AdvancedAnalyticsPage() {
               <div className="mb-4">
                 <button
                   onClick={() => setExpandedRisk(expandedRisk === "low" ? null : "low")}
-                  className="w-full flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg hover:bg-green-100 dark:hover:bg-green-900 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Badge className="bg-green-500">Низкий</Badge>
@@ -2512,7 +2512,7 @@ export default function AdvancedAnalyticsPage() {
                             {/* Кнопка mailto */}
                             <button
                               onClick={() => openMailto(student.email, student.name, student.daysSinceActive)}
-                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors"
                               title="Написать письмо"
                             >
                               <Mail className="h-4 w-4" />
@@ -2819,7 +2819,7 @@ export default function AdvancedAnalyticsPage() {
                         <Link
                           href={`/trails/${trail.trailSlug}`}
                           target="_blank"
-                          className="p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 rounded transition-colors"
+                          className="p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950 rounded transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <ExternalLink className="h-4 w-4" />

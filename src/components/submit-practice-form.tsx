@@ -59,7 +59,7 @@ export function SubmitPracticeForm({ moduleId }: SubmitPracticeFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950 rounded-lg">
           {error}
         </div>
       )}
@@ -91,7 +91,7 @@ export function SubmitPracticeForm({ moduleId }: SubmitPracticeFormProps) {
           disabled={isLoading}
           required
         />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-slate-400">
           Google Drive, Dropbox, или другой файловый сервис
         </p>
       </div>

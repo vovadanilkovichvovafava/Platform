@@ -50,7 +50,7 @@ export function ModuleStartGate({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4">
       <Card className="max-w-md w-full">
         <CardContent className="p-8">
           <div className="text-center">
@@ -59,11 +59,11 @@ export function ModuleStartGate({
                 <Timer className="h-7 w-7 text-amber-600" />
               </div>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">
               Начало модуля
             </h2>
-            <p className="text-gray-700 font-medium mb-4">{moduleTitle}</p>
-            <p className="text-gray-500 text-sm mb-6">
+            <p className="text-gray-700 dark:text-slate-300 font-medium mb-4">{moduleTitle}</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">
               При открытии модуля запустится таймер времени выполнения.
               Убедитесь, что вы готовы приступить к работе.
             </p>
@@ -77,7 +77,7 @@ export function ModuleStartGate({
             />
             <label
               htmlFor="gateSkip"
-              className="text-sm text-gray-500 cursor-pointer select-none"
+              className="text-sm text-gray-500 dark:text-slate-400 cursor-pointer select-none"
             >
               Убрать это сообщение для всех последующих модулей
             </label>

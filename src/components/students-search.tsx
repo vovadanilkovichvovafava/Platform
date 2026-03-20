@@ -426,7 +426,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
               <Input
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
@@ -484,7 +484,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
             </div>
           </div>
           {(search || trailFilter !== "all") && (
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
               Найдено: {filteredStudents.length} из {students.length}
             </p>
           )}

@@ -100,11 +100,11 @@ export function TrailPasswordForm({
             <Lock className="h-8 w-8" style={{ color: trailColor }} />
           </div>
           <CardTitle className="text-xl">Защищённый Trail</CardTitle>
-          <p className="text-gray-500 mt-2">{trailTitle}</p>
+          <p className="text-gray-500 dark:text-slate-400 mt-2">{trailTitle}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-sm text-gray-600 text-center">
+            <p className="text-sm text-gray-600 dark:text-slate-400 text-center">
               Этот трейл защищён паролем. Введите пароль для получения доступа.
             </p>
 
@@ -144,7 +144,7 @@ export function TrailPasswordForm({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600"
                   disabled={loading}
                 >
                   {showPassword ? (
@@ -179,7 +179,7 @@ export function TrailPasswordForm({
               )}
             </Button>
 
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-gray-500 dark:text-slate-400 text-center">
               Если у вас нет пароля, обратитесь к создателю трейла или администратору.
             </p>
           </form>

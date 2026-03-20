@@ -152,17 +152,17 @@ export function CreateModuleModal({
                     className={`p-3 rounded-lg border text-center transition-colors ${
                       form.type === type
                         ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:bg-gray-50"
+                        : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
                     }`}
                   >
                     <TypeIcon
                       className={`h-5 w-5 mx-auto mb-1 ${
-                        form.type === type ? "text-blue-600" : "text-gray-500"
+                        form.type === type ? "text-blue-600" : "text-gray-500 dark:text-slate-400"
                       }`}
                     />
                     <span
                       className={`text-xs font-medium ${
-                        form.type === type ? "text-blue-700" : "text-gray-600"
+                        form.type === type ? "text-blue-700" : "text-gray-600 dark:text-slate-400"
                       }`}
                     >
                       {typeLabels[type]}

@@ -66,7 +66,7 @@ export function ModuleWarningModal({
             </div>
             <DialogTitle className="text-lg">Начало модуля</DialogTitle>
           </div>
-          <DialogDescription className="text-sm text-gray-600 pt-2">
+          <DialogDescription className="text-sm text-gray-600 dark:text-slate-400 pt-2">
             При открытии модуля запустится таймер времени выполнения.
             Убедитесь, что вы готовы приступить к работе.
           </DialogDescription>
@@ -80,7 +80,7 @@ export function ModuleWarningModal({
           />
           <label
             htmlFor="dontShowAgain"
-            className="text-sm text-gray-500 cursor-pointer select-none"
+            className="text-sm text-gray-500 dark:text-slate-400 cursor-pointer select-none"
           >
             Убрать это сообщение для всех последующих модулей
           </label>
