@@ -324,6 +324,7 @@ model Submission {
   id        String   @id @default(cuid())
   githubUrl String?
   deployUrl String?
+  demoUrl   String?
   comment   String?
   fileUrl   String?
   status    String   @default("PENDING") // PENDING, APPROVED, REVISION, FAILED

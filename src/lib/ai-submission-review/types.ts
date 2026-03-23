@@ -51,10 +51,11 @@ export interface AiReviewResult {
 export interface SubmissionContext {
   /** Student's comment / answer text */
   submissionText: string | null
-  /** URL to file/github/deploy */
+  /** URL to file/github/deploy/demo */
   fileUrl: string | null
   githubUrl: string | null
   deployUrl: string | null
+  demoUrl: string | null
   /** Module context */
   moduleTitle: string
   moduleDescription: string

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Upload, Github, Globe } from "lucide-react"
+import { Loader2, Upload, Github, Globe, Play } from "lucide-react"
 
 interface SubmitProjectFormProps {
   moduleId: string
@@ -27,6 +27,7 @@ export function SubmitProjectForm({ moduleId }: SubmitProjectFormProps) {
       moduleId,
       githubUrl: formData.get("githubUrl") as string,
       deployUrl: formData.get("deployUrl") as string,
+      demoUrl: formData.get("demoUrl") as string,
       comment: formData.get("comment") as string,
     }
 
@@ -82,6 +83,20 @@ export function SubmitProjectForm({ moduleId }: SubmitProjectFormProps) {
           name="deployUrl"
           type="url"
           placeholder="https://your-app.vercel.app"
+          disabled={isLoading}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="demoUrl" className="flex items-center gap-2">
+          <Play className="h-4 w-4" />
+          Ссылка на демо
+        </Label>
+        <Input
+          id="demoUrl"
+          name="demoUrl"
+          type="url"
+          placeholder="https://www.loom.com/share/..."
           disabled={isLoading}
         />
       </div>

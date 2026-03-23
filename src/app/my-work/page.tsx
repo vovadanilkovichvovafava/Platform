@@ -17,6 +17,7 @@ import {
   Github,
   Globe,
   FileText,
+  Play,
 } from "lucide-react"
 import { NotificationSyncTrigger } from "@/components/notification-sync-trigger"
 
@@ -174,6 +175,18 @@ export default async function MyWorkPage() {
                           >
                             <Globe className="h-4 w-4 mr-1" />
                             Деплой
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </a>
+                        )}
+                        {submission.demoUrl && (
+                          <a
+                            href={submission.demoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-100"
+                          >
+                            <Play className="h-4 w-4 mr-1" />
+                            Демо
                             <ExternalLink className="h-3 w-3 ml-1" />
                           </a>
                         )}

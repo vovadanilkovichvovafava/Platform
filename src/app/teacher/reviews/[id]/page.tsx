@@ -19,6 +19,7 @@ import {
   FileText,
   Timer,
   Pencil,
+  Play,
 } from "lucide-react"
 import { ReviewForm } from "@/components/review-form"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -229,6 +230,18 @@ export default async function ReviewPage({ params, searchParams }: Props) {
                   >
                     <Globe className="h-4 w-4" />
                     Деплой
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                {submission.demoUrl && (
+                  <a
+                    href={submission.demoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    <Play className="h-4 w-4" />
+                    Демо
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
