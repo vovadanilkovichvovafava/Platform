@@ -18,6 +18,8 @@ import {
   Globe,
   FileText,
   Play,
+  Pencil,
+  Eye,
 } from "lucide-react"
 import { NotificationSyncTrigger } from "@/components/notification-sync-trigger"
 
@@ -146,6 +148,13 @@ export default async function MyWorkPage() {
                           )}
                         </p>
 
+                        {submission.status === "PENDING" && (
+                          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
+                            <Clock className="h-3 w-3 shrink-0" />
+                            Сдано, ожидает проверки
+                          </p>
+                        )}
+
                         {submission.comment && (
                           <p className="text-sm text-gray-600 dark:text-slate-400 mt-2 line-clamp-2">
                             {submission.comment}
@@ -191,6 +200,24 @@ export default async function MyWorkPage() {
                           </a>
                         )}
                       </div>
+
+                      {submission.status === "PENDING" && (
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/module/${submission.module.slug}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Посмотреть проект
+                          </Link>
+                        </Button>
+                      )}
+
+                      {submission.status === "REVISION" && (
+                        <Button asChild size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">
+                          <Link href={`/module/${submission.module.slug}`}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Доработать
+                          </Link>
+                        </Button>
+                      )}
 
                       {submission.review && (
                         <div className="text-center px-6 py-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
