@@ -24,6 +24,15 @@ const updateSubmissionSchema = z.object({
     )
     .optional()
     .or(z.literal("")),
+  demoUrl: z
+    .string()
+    .url()
+    .refine(
+      (url) => url.startsWith("https://"),
+      "Ссылка на демо должна использовать HTTPS"
+    )
+    .optional()
+    .or(z.literal("")),
   fileUrl: z
     .string()
     .url("Некорректная ссылка на файл")
@@ -163,6 +172,7 @@ export async function PATCH(
       data: {
         githubUrl: data.githubUrl || null,
         deployUrl: data.deployUrl || null,
+        demoUrl: data.demoUrl || null,
         fileUrl: data.fileUrl || null,
         comment: data.comment || null,
         editCount: { increment: 1 },

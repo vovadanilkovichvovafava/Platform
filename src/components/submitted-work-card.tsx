@@ -18,6 +18,7 @@ import {
   AlertCircle,
   XCircle,
   Bell,
+  Play,
 } from "lucide-react"
 
 interface Review {
@@ -31,6 +32,7 @@ interface Submission {
   id: string
   githubUrl: string | null
   deployUrl: string | null
+  demoUrl: string | null
   fileUrl: string | null
   comment: string | null
   status: string
@@ -86,6 +88,7 @@ export function SubmittedWorkCard({
   const [formData, setFormData] = useState({
     githubUrl: submission.githubUrl || "",
     deployUrl: submission.deployUrl || "",
+    demoUrl: submission.demoUrl || "",
     fileUrl: submission.fileUrl || "",
     comment: submission.comment || "",
   })
@@ -138,6 +141,7 @@ export function SubmittedWorkCard({
       setFormData({
         githubUrl: submission.githubUrl || "",
         deployUrl: submission.deployUrl || "",
+        demoUrl: submission.demoUrl || "",
         fileUrl: submission.fileUrl || "",
         comment: submission.comment || "",
       })
@@ -290,6 +294,18 @@ export function SubmittedWorkCard({
                   disabled={isLoading}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="demoUrl">Ссылка на демо</Label>
+                <Input
+                  id="demoUrl"
+                  type="url"
+                  placeholder="https://www.loom.com/share/..."
+                  value={formData.demoUrl}
+                  onChange={(e) => setFormData(prev => ({ ...prev, demoUrl: e.target.value }))}
+                  disabled={isLoading}
+                />
+              </div>
             </>
           ) : (
             <div className="space-y-2">
@@ -369,7 +385,18 @@ export function SubmittedWorkCard({
               className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
             >
               <ExternalLink className="h-4 w-4" />
-              Демо / Деплой
+              Деплой
+            </a>
+          )}
+          {submission.demoUrl && (
+            <a
+              href={submission.demoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-emerald-600 hover:underline"
+            >
+              <Play className="h-4 w-4" />
+              Демо
             </a>
           )}
           {submission.fileUrl && (

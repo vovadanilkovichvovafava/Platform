@@ -31,6 +31,7 @@ export async function collectSubmissionContext(
       fileUrl: true,
       githubUrl: true,
       deployUrl: true,
+      demoUrl: true,
       module: {
         select: {
           title: true,
@@ -82,7 +83,7 @@ export async function collectSubmissionContext(
   const trailUsed = !!(trail.title && trail.description)
 
   if (!submissionTextUsed) notes.push("Студент не оставил текстовый комментарий")
-  if (!fileUrlUsed && !submission.githubUrl && !submission.deployUrl) {
+  if (!fileUrlUsed && !submission.githubUrl && !submission.deployUrl && !submission.demoUrl) {
     notes.push("Нет ссылок на файл, GitHub или деплой")
   }
   if (!mod.content) notes.push("Контент модуля пуст")
@@ -92,6 +93,7 @@ export async function collectSubmissionContext(
     fileUrl: submission.fileUrl,
     githubUrl: submission.githubUrl,
     deployUrl: submission.deployUrl,
+    demoUrl: submission.demoUrl,
     moduleTitle: mod.title,
     moduleDescription: mod.description,
     moduleType: mod.type,

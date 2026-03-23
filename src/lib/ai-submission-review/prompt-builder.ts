@@ -205,6 +205,7 @@ export function buildUserPrompt(ctx: SubmissionContext): string {
   const links: string[] = []
   if (ctx.githubUrl) links.push(`GitHub: ${ctx.githubUrl}`)
   if (ctx.deployUrl) links.push(`Деплой: ${ctx.deployUrl}`)
+  if (ctx.demoUrl) links.push(`Демо: ${ctx.demoUrl}`)
   if (ctx.fileUrl) links.push(`Файл работы: ${ctx.fileUrl}`)
 
   if (links.length > 0) {
@@ -225,7 +226,7 @@ export function buildUserPrompt(ctx: SubmissionContext): string {
   }
 
   // Context limitation warning
-  const hasOnlyLinks = !ctx.submissionText && (ctx.githubUrl || ctx.deployUrl || ctx.fileUrl)
+  const hasOnlyLinks = !ctx.submissionText && (ctx.githubUrl || ctx.deployUrl || ctx.demoUrl || ctx.fileUrl)
   if (hasOnlyLinks) {
     sections.push(`\n<context_warning>`)
     sections.push(`Работа студента представлена только ссылками. Ты НЕ можешь видеть содержимое по ссылкам.`)
