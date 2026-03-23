@@ -746,11 +746,11 @@ export default async function TrailPage({ params }: Props) {
                             href={`/module/${project.slug}`}
                             moduleSlug={project.slug}
                             moduleId={project.id}
-                            skipWarning={skipModuleWarning || isProjectCompleted || projectHasPending || projectHasRevision}
-                            variant={isProjectCompleted ? "outline" : projectHasRevision ? "default" : "default"}
-                            className={`w-full ${projectHasRevision ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                            skipWarning={skipModuleWarning || isProjectCompleted || projectHasPending || projectHasRevision || projectHasFailed}
+                            variant={isProjectCompleted ? "outline" : projectHasPending ? "outline" : "default"}
+                            className={`w-full ${projectHasRevision ? "bg-orange-500 hover:bg-orange-600" : projectHasFailed ? "bg-red-500 hover:bg-red-600" : ""}`}
                           >
-                            {isProjectCompleted ? "Просмотреть" : projectHasPending ? "Посмотреть проект" : projectHasRevision ? "Доработать" : "Начать задание"}
+                            {isProjectCompleted ? "Просмотреть" : projectHasPending ? "Посмотреть" : projectHasRevision ? "Доработать" : projectHasFailed ? "Перейти на проект" : "Начать задание"}
                           </ModuleButton>
                         ) : (
                           <Button disabled className="w-full" variant="outline">
