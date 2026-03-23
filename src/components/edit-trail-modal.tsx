@@ -113,7 +113,7 @@ export function EditTrailModal({
     isPublished: false,
     isRestricted: true, // Restricted by default (secure)
     allowSkipReview: true, // Default: students can proceed without waiting for review
-    projectAutoNavigate: false, // Default: no auto-redirect after project submission
+    projectAutoNavigate: true, // Default: auto-redirect to next module after project submission
     teacherVisibility: "ADMIN_ONLY",
     assignedTeacherId: null,
     isPasswordProtected: false,
@@ -175,7 +175,7 @@ export function EditTrailModal({
         isPublished: false,
         isRestricted: true, // Restricted by default (secure)
         allowSkipReview: true, // Default: students can proceed without waiting for review
-        projectAutoNavigate: false, // Default: no auto-redirect after project submission
+        projectAutoNavigate: true, // Default: auto-redirect to next module after project submission
         teacherVisibility: "ADMIN_ONLY",
         assignedTeacherId: null,
         isPasswordProtected: false,

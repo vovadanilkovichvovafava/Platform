@@ -35,7 +35,7 @@ const trailSchema = z.object({
   duration: z.string().default(""),
   isPublished: z.boolean().default(true),
   allowSkipReview: z.boolean().default(true), // true = students can proceed without waiting for review
-  projectAutoNavigate: z.boolean().default(false), // true = auto-redirect to next module after project submission
+  projectAutoNavigate: z.boolean().default(true), // true = auto-redirect to next module after project submission
   // Password protection fields
   isPasswordProtected: z.boolean().default(false),
   password: z.string().optional(), // Plaintext password, will be hashed
