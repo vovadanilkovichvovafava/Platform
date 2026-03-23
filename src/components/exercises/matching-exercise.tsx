@@ -141,7 +141,7 @@ export function MatchingExercise({
                   "w-full p-3 rounded-lg text-left text-sm font-medium transition-all",
                   "border-2 overflow-hidden",
                   !isMatched && !isSelected && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-300",
-                  isSelected && "bg-blue-50 border-blue-500 shadow-md",
+                  isSelected && "bg-blue-50 dark:bg-blue-950 border-blue-500 dark:border-blue-400 shadow-md",
                   isMatched && !showResult && colors && `bg-white ${colors.border}`,
                   isPairCorrect && "bg-green-50 border-green-500",
                   isPairWrong && "bg-red-50 border-red-500",
@@ -220,7 +220,7 @@ export function MatchingExercise({
                   "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border-2 relative",
                   "max-w-full break-words text-left flex items-start gap-2",
                   !canClick && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300",
-                  canClick && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 cursor-pointer shadow-sm hover:shadow",
+                  canClick && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 cursor-pointer shadow-sm hover:shadow",
                   (disabled || showResult) && "cursor-default"
                 )}
               >

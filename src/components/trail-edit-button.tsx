@@ -25,7 +25,7 @@ export function TrailEditButton({ trail, variant = "default" }: TrailEditButtonP
       <>
         <button
           onClick={() => setShowModal(true)}
-          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors"
           title="Редактировать trail"
         >
           <Pencil className="h-4 w-4" />

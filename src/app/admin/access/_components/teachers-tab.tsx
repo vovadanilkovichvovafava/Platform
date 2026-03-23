@@ -419,7 +419,7 @@ export function TeachersTab() {
                         onDragEnd={handleDragEnd}
                         className={`flex items-center gap-3 p-3 rounded-lg border bg-white cursor-grab active:cursor-grabbing transition-all ${
                           draggedTeacher?.id === teacher.id
-                            ? "opacity-50 border-blue-400 bg-blue-50"
+                            ? "opacity-50 border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-950"
                             : "hover:border-blue-300 hover:shadow-sm"
                         }`}
                       >
@@ -490,8 +490,8 @@ export function TeachersTab() {
                         onDrop={(e) => handleDrop(e, trail.id)}
                         className={`p-4 rounded-lg border-2 transition-all ${
                           isDragOver
-                            ? "border-blue-500 bg-blue-50 border-dashed"
-                            : "border-gray-200 hover:border-gray-300"
+                            ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950 border-dashed"
+                            : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-3">

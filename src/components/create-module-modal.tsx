@@ -151,7 +151,7 @@ export function CreateModuleModal({
                     onClick={() => setForm({ ...form, type })}
                     className={`p-3 rounded-lg border text-center transition-colors ${
                       form.type === type
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950"
                         : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
                     }`}
                   >
