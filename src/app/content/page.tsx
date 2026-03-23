@@ -42,6 +42,7 @@ import {
   Info,
   Pencil,
   FileCheck,
+  Copy,
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
@@ -710,6 +711,26 @@ export default function UnifiedContentPage() {
     }
   }
 
+  const duplicateTrail = async (trailId: string, title: string) => {
+    try {
+      const res = await fetch(`/api/admin/trails/${trailId}/duplicate`, {
+        method: "POST",
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to duplicate")
+      }
+      const data = await res.json()
+      fetchData()
+      showToast(`Trail "${data.title}" создан`, "success")
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Ошибка при дублировании trail",
+        "error"
+      )
+    }
+  }
+
   // Drag and drop handlers
   const handleDragStart = (moduleId: string) => {
     setDraggedModule(moduleId)
@@ -1216,6 +1237,17 @@ export default function UnifiedContentPage() {
                             title="Экспорт trail"
                           >
                             <Download className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => guardTrailAction(trail, () => duplicateTrail(trail.id, trail.title))}
+                            title="Дублировать trail"
+                            className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <Copy className="h-4 w-4" />
                           </Button>
                         )}
                         {isAdmin && (
