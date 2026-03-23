@@ -166,7 +166,7 @@ export function FillBlankExercise({
                     // Default state - empty
                     !userAnswer && !showResult && "bg-white dark:bg-slate-800 border-dashed border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500 hover:border-blue-400",
                     // Filled state
-                    userAnswer && !showResult && "bg-blue-50 border-blue-400 text-blue-700",
+                    userAnswer && !showResult && "bg-blue-50 dark:bg-blue-950 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300",
                     // Result states
                     status === "correct" && "bg-green-100 dark:bg-green-950 border-green-500 text-green-700",
                     status === "wrong" && "bg-red-100 dark:bg-red-950 border-red-500 text-red-700",
@@ -190,7 +190,7 @@ export function FillBlankExercise({
                         key={optIdx}
                         onClick={() => setAnswer(blankId, option)}
                         className={cn(
-                          "w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors",
+                          "w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors",
                           userAnswer === option && "bg-blue-100 text-blue-700"
                         )}
                       >

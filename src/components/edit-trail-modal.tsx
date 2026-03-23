@@ -413,7 +413,7 @@ export function EditTrailModal({
                   onClick={() => setForm({ ...form, icon: value })}
                   className={`p-3 rounded-lg border text-center transition-colors ${
                     form.icon === value
-                      ? "border-blue-500 bg-blue-50"
+                      ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950"
                       : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
                   }`}
                 >
@@ -602,16 +602,16 @@ export function EditTrailModal({
             </>
           ) : (
             /* Edit mode: link to Access Management tab */
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-100 dark:border-blue-800">
               <div className="flex items-center gap-2 mb-1">
-                <Lock className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Настройки доступа</span>
+                <Lock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-200">Настройки доступа</span>
               </div>
-              <p className="text-xs text-blue-700">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
                 Публикация, видимость и защита паролем управляются в{" "}
                 <a
                   href="/admin/access?tab=trail-settings"
-                  className="underline font-medium hover:text-blue-900"
+                  className="underline font-medium hover:text-blue-900 dark:hover:text-blue-100"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -623,10 +623,10 @@ export function EditTrailModal({
 
           {/* Teacher Visibility - Admin only */}
           {isAdmin && (
-            <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="space-y-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-100 dark:border-blue-800">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Видимость для учителей</span>
+                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-200">Видимость для учителей</span>
               </div>
 
               <div className="relative">

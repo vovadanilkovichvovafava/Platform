@@ -306,7 +306,7 @@ export function StudentModuleList({
                                 ? "bg-purple-50 hover:bg-purple-100"
                                 : "bg-green-50 hover:bg-green-100"
                               : isInProgress
-                              ? "bg-blue-50 hover:bg-blue-100"
+                              ? "bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900"
                               : "bg-gray-50 dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-700"
                           }`}
                         >

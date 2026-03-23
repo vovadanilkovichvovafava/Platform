@@ -40,9 +40,9 @@ const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v"]
 const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac", ".wma", ".opus"]
 
 const blockTypeConfig: Record<ContentBlockType, { label: string; icon: typeof Video; color: string; bgColor: string; borderColor: string }> = {
-  VIDEO: { label: "Видео", icon: Video, color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
-  AUDIO: { label: "Аудио", icon: Music, color: "text-pink-600", bgColor: "bg-pink-50", borderColor: "border-pink-200" },
-  TEXT: { label: "Текст", icon: FileText, color: "text-gray-600", bgColor: "bg-gray-50", borderColor: "border-gray-200" },
+  VIDEO: { label: "Видео", icon: Video, color: "text-blue-600", bgColor: "bg-blue-50 dark:bg-blue-950", borderColor: "border-blue-200 dark:border-blue-800" },
+  AUDIO: { label: "Аудио", icon: Music, color: "text-pink-600", bgColor: "bg-pink-50 dark:bg-pink-950", borderColor: "border-pink-200 dark:border-pink-800" },
+  TEXT: { label: "Текст", icon: FileText, color: "text-gray-600", bgColor: "bg-gray-50 dark:bg-slate-900", borderColor: "border-gray-200 dark:border-slate-700" },
 }
 
 function formatFileSize(bytes: number): string {
@@ -461,7 +461,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                       </div>
                     ) : isUploading ? (
                       /* Upload in progress */
-                      <div className="border-2 border-dashed rounded-lg p-8 text-center border-blue-300 bg-blue-50">
+                      <div className="border-2 border-dashed rounded-lg p-8 text-center border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950">
                         <Loader2 className="h-8 w-8 mx-auto mb-2 text-blue-500 animate-spin" />
                         <p className="text-sm text-blue-600 font-medium">Загрузка файла...</p>
                         <p className="text-xs text-blue-500 mt-1">Это может занять некоторое время</p>
@@ -475,7 +475,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
                         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                           readOnly
                             ? "border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 cursor-default"
-                            : "border-gray-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50/50"
+                            : "border-gray-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/50"
                         }`}
                       >
                         <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400 dark:text-slate-500" />
@@ -557,7 +557,7 @@ export function ContentBlocksEditor({ blocks, onChange, readOnly = false }: Cont
             size="sm"
             variant="outline"
             onClick={() => addBlock("VIDEO")}
-            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="text-blue-600 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950"
           >
             <Video className="h-4 w-4 mr-1" />
             Видео

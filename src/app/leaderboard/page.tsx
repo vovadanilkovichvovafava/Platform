@@ -328,7 +328,7 @@ export default function LeaderboardPage() {
                     key={entry.id}
                     href={`/dashboard/${entry.id}`}
                     className={`flex items-center gap-4 p-4 ${getRankStyle(entry.rank)} ${
-                      isCurrentUser ? "ring-2 ring-blue-400 ring-inset bg-blue-50/50" : ""
+                      isCurrentUser ? "ring-2 ring-blue-400 ring-inset bg-blue-50/50 dark:bg-blue-950/50" : ""
                     } hover:bg-gray-50/80 dark:hover:bg-slate-700/80 transition-all duration-200 cursor-pointer group ${
                       animateIn ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
                     }`}

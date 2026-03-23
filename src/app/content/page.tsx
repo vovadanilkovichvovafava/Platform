@@ -1224,7 +1224,7 @@ export default function UnifiedContentPage() {
                             variant="ghost"
                             onClick={() => openEditTrailModal(trail)}
                             title="Редактировать trail"
-                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>

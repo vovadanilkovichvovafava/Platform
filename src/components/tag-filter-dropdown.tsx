@@ -55,7 +55,7 @@ export function TagFilterDropdown({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors ${
-          selectedCount > 0 ? "border-blue-300 bg-blue-50 text-blue-700" : ""
+          selectedCount > 0 ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300" : ""
         }`}
       >
         <Tag className="h-3.5 w-3.5" />
@@ -94,7 +94,7 @@ export function TagFilterDropdown({
                     toggleTag(tag.id)
                   }}
                   className={`w-full text-left px-3 py-2 text-xs border-b last:border-b-0 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-slate-800 ${
-                    isSelected ? "bg-blue-50" : ""
+                    isSelected ? "bg-blue-50 dark:bg-blue-950" : ""
                   }`}
                 >
                   <input

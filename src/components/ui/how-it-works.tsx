@@ -18,8 +18,8 @@ interface HowItWorksProps {
 export function HowItWorks({ legend, className }: HowItWorksProps) {
   return (
     <Collapsible className={className}>
-      <div className="rounded-lg border border-blue-200 bg-blue-50/60">
-        <CollapsibleTrigger className="gap-3 px-4 py-3 text-sm font-medium text-blue-800 hover:bg-blue-100/50 rounded-lg transition-colors">
+      <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-950/60">
+        <CollapsibleTrigger className="gap-3 px-4 py-3 text-sm font-medium text-blue-800 dark:text-blue-200 hover:bg-blue-100/50 dark:hover:bg-blue-900/50 rounded-lg transition-colors">
           <span className="flex items-center gap-2">
             <HelpCircle className="h-4 w-4 text-blue-600 shrink-0" />
             {legend.heading}

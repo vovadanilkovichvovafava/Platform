@@ -289,7 +289,7 @@ export default async function PublicDashboardPage({ params }: PageProps) {
                   {FEATURE_FLAGS.LEADERBOARD_ENABLED ? (
                     <Link
                       href="/leaderboard"
-                      className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg hover:bg-blue-100 transition-colors"
+                      className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         <Medal className="h-5 w-5 text-blue-500" />

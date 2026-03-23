@@ -312,8 +312,8 @@ export function AdminAccessTab() {
                             key={trail.id}
                             className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                               isSelected
-                                ? "bg-blue-50 border-blue-300"
-                                : "hover:bg-gray-50"
+                                ? "bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700"
+                                : "hover:bg-gray-50 dark:hover:bg-slate-800"
                             }`}
                           >
                             <Checkbox

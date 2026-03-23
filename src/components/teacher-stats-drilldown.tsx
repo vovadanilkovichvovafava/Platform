@@ -300,7 +300,7 @@ export function TeacherStatsDrilldown({ trails }: TeacherStatsDrilldownProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedTrail(trail)}
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                      className="text-blue-600 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950 hover:border-blue-300 dark:hover:border-blue-700"
                     >
                       <Users className="h-4 w-4 mr-2" />
                       Статистика по студентам
