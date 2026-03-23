@@ -229,7 +229,8 @@ export default async function ModulePage({ params }: Props) {
 
   // Auto-redirect: if PROJECT module already has a PENDING submission and there's a next module,
   // redirect students to the next module automatically (teachers/admins can still view)
-  if (isProject && submission?.status === "PENDING" && nextModule && !isPrivileged) {
+  // Only when projectAutoNavigate is enabled for this trail
+  if (isProject && courseModule.trail.projectAutoNavigate && submission?.status === "PENDING" && nextModule && !isPrivileged) {
     redirect(`/module/${nextModule.slug}`)
   }
 
@@ -497,6 +498,7 @@ export default async function ModulePage({ params }: Props) {
                           <SubmitProjectForm
                             moduleId={courseModule.id}
                             nextModuleSlug={nextModule?.slug}
+                            autoNavigate={courseModule.trail.projectAutoNavigate}
                           />
                         </div>
                       )}
@@ -505,6 +507,7 @@ export default async function ModulePage({ params }: Props) {
                     <SubmitProjectForm
                       moduleId={courseModule.id}
                       nextModuleSlug={nextModule?.slug}
+                      autoNavigate={courseModule.trail.projectAutoNavigate}
                     />
                   )}
                 </CardContent>

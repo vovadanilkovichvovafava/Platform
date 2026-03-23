@@ -24,6 +24,7 @@ import {
   Lock,
   KeyRound,
   BookOpen,
+  FolderGit2,
 } from "lucide-react"
 
 const iconOptions = [
@@ -57,6 +58,7 @@ export interface TrailFormData {
   isPublished: boolean
   isRestricted?: boolean // true = hidden/assigned only, false = public to all students
   allowSkipReview?: boolean // true = students can proceed without waiting for review
+  projectAutoNavigate?: boolean // true = auto-redirect to next module after project submission
   teacherVisibility?: string
   assignedTeacherId?: string | null
   // Password protection
@@ -111,6 +113,7 @@ export function EditTrailModal({
     isPublished: false,
     isRestricted: true, // Restricted by default (secure)
     allowSkipReview: true, // Default: students can proceed without waiting for review
+    projectAutoNavigate: false, // Default: no auto-redirect after project submission
     teacherVisibility: "ADMIN_ONLY",
     assignedTeacherId: null,
     isPasswordProtected: false,
@@ -172,6 +175,7 @@ export function EditTrailModal({
         isPublished: false,
         isRestricted: true, // Restricted by default (secure)
         allowSkipReview: true, // Default: students can proceed without waiting for review
+        projectAutoNavigate: false, // Default: no auto-redirect after project submission
         teacherVisibility: "ADMIN_ONLY",
         assignedTeacherId: null,
         isPasswordProtected: false,
@@ -194,6 +198,7 @@ export function EditTrailModal({
         isPublished: trail.isPublished,
         isRestricted: trail.isRestricted ?? true,
         allowSkipReview: trail.allowSkipReview ?? true,
+        projectAutoNavigate: trail.projectAutoNavigate ?? false,
         teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
         assignedTeacherId: trail.assignedTeacherId || null,
         isPasswordProtected: trail.isPasswordProtected || false,
@@ -248,6 +253,7 @@ export function EditTrailModal({
 
       // Include progression mode in both create and edit
       payload.allowSkipReview = form.allowSkipReview
+      payload.projectAutoNavigate = form.projectAutoNavigate
 
       if (mode === "create") {
         // Include access settings only in create mode
@@ -399,6 +405,27 @@ export function EditTrailModal({
             <Switch
               checked={form.allowSkipReview ?? true}
               onCheckedChange={(checked) => setForm({ ...form, allowSkipReview: checked })}
+            />
+          </div>
+
+          {/* Project auto-navigate */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+            <div className="flex items-center gap-2">
+              <FolderGit2 className="h-4 w-4 text-orange-600" />
+              <div>
+                <span className="text-sm font-medium">
+                  {form.projectAutoNavigate ? "Авто-переход после сдачи проекта" : "Ручной переход после сдачи проекта"}
+                </span>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  {form.projectAutoNavigate
+                    ? "После сдачи проекта ученик автоматически переходит к следующему модулю"
+                    : "После сдачи проекта ученик остаётся на странице проекта"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={form.projectAutoNavigate ?? false}
+              onCheckedChange={(checked) => setForm({ ...form, projectAutoNavigate: checked })}
             />
           </div>
 

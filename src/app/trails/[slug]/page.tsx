@@ -72,6 +72,7 @@ export default async function TrailPage({ params }: Props) {
       passwordHint: true,
       createdById: true,
       allowSkipReview: true,
+      projectAutoNavigate: true,
     },
   })
 
@@ -434,6 +435,7 @@ export default async function TrailPage({ params }: Props) {
                       isPublished: trail.isPublished,
                       isRestricted: trail.isRestricted,
                       allowSkipReview: trail.allowSkipReview,
+                      projectAutoNavigate: trail.projectAutoNavigate,
                       isPasswordProtected: trail.isPasswordProtected,
                       passwordHint: trail.passwordHint,
                       createdById: trail.createdById,

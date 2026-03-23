@@ -135,6 +135,7 @@ model Trail {
   passwordHint        String?  // Optional hint for password
   createdById         String?  // Creator/owner of the trail (always has access)
   allowSkipReview     Boolean  @default(true) // If true, students can proceed to next module after submission without waiting for review
+  projectAutoNavigate Boolean  @default(false) // If true, auto-redirect to next module after project submission
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
