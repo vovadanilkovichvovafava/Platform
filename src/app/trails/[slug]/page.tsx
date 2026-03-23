@@ -22,6 +22,7 @@ import {
   FolderGit2,
   LucideIcon,
   AlertCircle,
+  XCircle,
   Award,
   Pencil,
 } from "lucide-react"
@@ -196,6 +197,8 @@ export default async function TrailPage({ params }: Props) {
 
   // Map to track which modules have pending submissions (for instant progress unlock)
   const modulesWithPendingSubmission = new Set<string>()
+  // Map to track submission status per module (PENDING, REVISION, FAILED)
+  const moduleSubmissionStatus = new Map<string, string>()
 
   if (session) {
     const enrollment = await prisma.enrollment.findUnique({
@@ -219,17 +222,20 @@ export default async function TrailPage({ params }: Props) {
         moduleProgressMap[p.moduleId] = p.status
       })
 
-      // Fetch submissions to check for PENDING status (allows instant progress to next module)
+      // Fetch submissions to check for statuses (PENDING, REVISION, FAILED)
       const submissions = await prisma.submission.findMany({
         where: {
           userId: session.user.id,
           moduleId: { in: trailModulesData.map((m) => m.id) },
-          status: "PENDING",
+          status: { in: ["PENDING", "REVISION", "FAILED"] },
         },
-        select: { moduleId: true },
+        select: { moduleId: true, status: true },
       })
       submissions.forEach((s) => {
-        modulesWithPendingSubmission.add(s.moduleId)
+        moduleSubmissionStatus.set(s.moduleId, s.status)
+        if (s.status === "PENDING") {
+          modulesWithPendingSubmission.add(s.moduleId)
+        }
       })
 
       // Get task progress for project levels
@@ -536,8 +542,11 @@ export default async function TrailPage({ params }: Props) {
                 }
               }
 
-              // Check if this module has a pending submission (for UI indicator)
+              // Check submission status for UI indicators
               const hasPendingSubmission = modulesWithPendingSubmission.has(module.id)
+              const submissionStatus = moduleSubmissionStatus.get(module.id)
+              const hasRevision = submissionStatus === "REVISION"
+              const hasFailed = submissionStatus === "FAILED"
 
               return (
                 <Card
@@ -571,12 +580,16 @@ export default async function TrailPage({ params }: Props) {
                       <div className="flex items-center gap-4 p-4">
                         <ModuleLink href={`/module/${module.slug}`} moduleSlug={module.slug} moduleId={module.id} skipWarning={skipModuleWarning || isCompleted} className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                            isCompleted ? "bg-green-100 dark:bg-green-950" : hasPendingSubmission ? "bg-amber-100 dark:bg-amber-950" : isInProgress ? "bg-blue-100 dark:bg-blue-950" : "bg-gray-100 dark:bg-slate-800"
+                            isCompleted ? "bg-green-100 dark:bg-green-950" : hasPendingSubmission ? "bg-amber-100 dark:bg-amber-950" : hasRevision ? "bg-orange-100 dark:bg-orange-950" : hasFailed ? "bg-red-100 dark:bg-red-950" : isInProgress ? "bg-blue-100 dark:bg-blue-950" : "bg-gray-100 dark:bg-slate-800"
                           }`}>
                             {isCompleted ? (
                               <CheckCircle2 className="h-6 w-6 text-green-600" />
                             ) : hasPendingSubmission ? (
                               <Clock className="h-6 w-6 text-amber-600" />
+                            ) : hasRevision ? (
+                              <AlertCircle className="h-6 w-6 text-orange-600" />
+                            ) : hasFailed ? (
+                              <XCircle className="h-6 w-6 text-red-600" />
                             ) : isInProgress ? (
                               <PlayCircle className="h-6 w-6 text-blue-600" />
                             ) : (
@@ -589,6 +602,16 @@ export default async function TrailPage({ params }: Props) {
                               {hasPendingSubmission && (
                                 <Badge className="bg-amber-100 text-amber-700 border-0 text-xs shrink-0">
                                   На проверке
+                                </Badge>
+                              )}
+                              {hasRevision && (
+                                <Badge className="bg-orange-100 text-orange-700 border-0 text-xs shrink-0">
+                                  На доработку
+                                </Badge>
+                              )}
+                              {hasFailed && (
+                                <Badge className="bg-red-100 text-red-700 border-0 text-xs shrink-0">
+                                  Не сдано
                                 </Badge>
                               )}
                             </div>
@@ -662,6 +685,10 @@ export default async function TrailPage({ params }: Props) {
                 return projectsToShow.map(({ project, status }) => {
                   const isProjectCompleted = status === "PASSED" || moduleProgressMap[project.id] === "COMPLETED"
                   const isPending = status === "PENDING" && !isProjectCompleted
+                  const projectSubmissionStatus = moduleSubmissionStatus.get(project.id)
+                  const projectHasPending = projectSubmissionStatus === "PENDING"
+                  const projectHasRevision = projectSubmissionStatus === "REVISION"
+                  const projectHasFailed = projectSubmissionStatus === "FAILED"
 
                   return (
                     <Card
@@ -687,6 +714,24 @@ export default async function TrailPage({ params }: Props) {
                               Сдано
                             </Badge>
                           )}
+                          {!isProjectCompleted && projectHasPending && (
+                            <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-700 border-0">
+                              <Clock className="h-3 w-3 mr-1" />
+                              На проверке
+                            </Badge>
+                          )}
+                          {!isProjectCompleted && projectHasRevision && (
+                            <Badge className="bg-orange-100 dark:bg-orange-950 text-orange-700 border-0">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              На доработку
+                            </Badge>
+                          )}
+                          {!isProjectCompleted && projectHasFailed && (
+                            <Badge className="bg-red-100 dark:bg-red-950 text-red-700 border-0">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Не сдано
+                            </Badge>
+                          )}
                         </div>
                         <CardTitle className="text-lg">{project.title}</CardTitle>
                       </CardHeader>
@@ -701,11 +746,11 @@ export default async function TrailPage({ params }: Props) {
                             href={`/module/${project.slug}`}
                             moduleSlug={project.slug}
                             moduleId={project.id}
-                            skipWarning={skipModuleWarning || isProjectCompleted}
-                            variant={isProjectCompleted ? "outline" : "default"}
-                            className="w-full"
+                            skipWarning={skipModuleWarning || isProjectCompleted || projectHasPending || projectHasRevision}
+                            variant={isProjectCompleted ? "outline" : projectHasRevision ? "default" : "default"}
+                            className={`w-full ${projectHasRevision ? "bg-orange-500 hover:bg-orange-600" : ""}`}
                           >
-                            {isProjectCompleted ? "Просмотреть" : "Начать задание"}
+                            {isProjectCompleted ? "Просмотреть" : projectHasPending ? "Посмотреть проект" : projectHasRevision ? "Доработать" : "Начать задание"}
                           </ModuleButton>
                         ) : (
                           <Button disabled className="w-full" variant="outline">
