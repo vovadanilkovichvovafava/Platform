@@ -10,9 +10,10 @@ import { Loader2, Upload, Github, Globe, Play } from "lucide-react"
 
 interface SubmitProjectFormProps {
   moduleId: string
+  nextModuleSlug?: string | null
 }
 
-export function SubmitProjectForm({ moduleId }: SubmitProjectFormProps) {
+export function SubmitProjectForm({ moduleId, nextModuleSlug }: SubmitProjectFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +44,11 @@ export function SubmitProjectForm({ moduleId }: SubmitProjectFormProps) {
         throw new Error(result.error || "Ошибка при отправке")
       }
 
-      router.refresh()
+      if (nextModuleSlug) {
+        router.push(`/module/${nextModuleSlug}`)
+      } else {
+        router.refresh()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при отправке")
     } finally {

@@ -227,6 +227,12 @@ export default async function ModulePage({ params }: Props) {
   const currentIndex = trailModules.findIndex((m) => m.id === courseModule.id)
   const nextModule = currentIndex < trailModules.length - 1 ? trailModules[currentIndex + 1] : null
 
+  // Auto-redirect: if PROJECT module already has a PENDING submission and there's a next module,
+  // redirect students to the next module automatically (teachers/admins can still view)
+  if (isProject && submission?.status === "PENDING" && nextModule && !isPrivileged) {
+    redirect(`/module/${nextModule.slug}`)
+  }
+
   // Server-side gate: block module content for students who haven't confirmed start
   // This catches direct URL access that client-side modals can't intercept
   const needsStartConfirmation =
@@ -490,6 +496,7 @@ export default async function ModulePage({ params }: Props) {
                         <div className="mt-4 pt-4 border-t">
                           <SubmitProjectForm
                             moduleId={courseModule.id}
+                            nextModuleSlug={nextModule?.slug}
                           />
                         </div>
                       )}
@@ -497,6 +504,7 @@ export default async function ModulePage({ params }: Props) {
                   ) : (
                     <SubmitProjectForm
                       moduleId={courseModule.id}
+                      nextModuleSlug={nextModule?.slug}
                     />
                   )}
                 </CardContent>

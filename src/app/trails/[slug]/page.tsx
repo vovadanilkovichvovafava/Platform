@@ -643,28 +643,17 @@ export default async function TrailPage({ params }: Props) {
                 const levelOrder = ["Junior", "Middle", "Senior"]
                 const projectsToShow: Array<{ project: typeof projectModules[0], status: string }> = []
 
-                // Collect all projects that are not LOCKED
+                // Collect ALL projects regardless of TaskProgress status
+                // All levels (Junior, Middle, Senior) should be visible in the trail
                 for (const project of projectModules) {
                   const status = getProjectStatus(project.level)
-                  if (status === "PASSED" || status === "PENDING") {
-                    projectsToShow.push({ project, status })
-                  }
+                  projectsToShow.push({ project, status })
                 }
 
-                // If no projects found based on taskProgress, show the first project as PENDING
-                if (projectsToShow.length === 0 && projectModules.length > 0) {
-                  // Fallback: find Middle or first project
-                  const fallbackProject = projectModules.find(m => m.level === "Middle") || projectModules[0]
-                  if (fallbackProject) {
-                    projectsToShow.push({ project: fallbackProject, status: "PENDING" })
-                  }
-                }
-
-                // Sort: PENDING first, then PASSED
+                // Sort: PASSED projects last, then by level order
                 projectsToShow.sort((a, b) => {
-                  if (a.status === "PENDING" && b.status !== "PENDING") return -1
-                  if (b.status === "PENDING" && a.status !== "PENDING") return 1
-                  // By level order
+                  if (a.status === "PASSED" && b.status !== "PASSED") return 1
+                  if (b.status === "PASSED" && a.status !== "PASSED") return -1
                   return levelOrder.indexOf(a.project.level) - levelOrder.indexOf(b.project.level)
                 })
 
