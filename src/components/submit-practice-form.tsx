@@ -64,10 +64,10 @@ export function SubmitPracticeForm({ moduleId }: SubmitPracticeFormProps) {
         </div>
       )}
 
-      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+      <div className="p-4 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg">
         <div className="flex items-start gap-3">
-          <FileText className="h-5 w-5 text-purple-600 mt-0.5" />
-          <div className="text-sm text-purple-800">
+          <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+          <div className="text-sm text-purple-800 dark:text-purple-200">
             <p className="font-medium mb-1">Как сдать практику:</p>
             <ol className="list-decimal ml-4 space-y-1">
               <li>Загрузи файл на Google Drive или Dropbox</li>

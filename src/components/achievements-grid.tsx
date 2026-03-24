@@ -59,34 +59,34 @@ function getRarityBorder(rarity: string) {
 
 function getRarityGradient(rarity: string) {
   switch (rarity) {
-    case "common": return "from-gray-100 to-gray-200"
-    case "uncommon": return "from-green-100 to-emerald-200"
-    case "rare": return "from-blue-100 to-indigo-200"
-    case "epic": return "from-purple-100 to-violet-200"
-    case "legendary": return "from-orange-100 via-amber-200 to-yellow-100"
-    default: return "from-gray-100 to-gray-200"
+    case "common": return "from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700"
+    case "uncommon": return "from-green-100 to-emerald-200 dark:from-green-900 dark:to-emerald-800"
+    case "rare": return "from-blue-100 to-indigo-200 dark:from-blue-900 dark:to-indigo-800"
+    case "epic": return "from-purple-100 to-violet-200 dark:from-purple-900 dark:to-violet-800"
+    case "legendary": return "from-orange-100 via-amber-200 to-yellow-100 dark:from-orange-900 dark:via-amber-800 dark:to-yellow-900"
+    default: return "from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700"
   }
 }
 
 function getRarityIconBg(rarity: string) {
   switch (rarity) {
-    case "common": return "bg-gray-100"
-    case "uncommon": return "bg-green-100"
-    case "rare": return "bg-blue-100"
-    case "epic": return "bg-purple-100"
-    case "legendary": return "bg-gradient-to-br from-orange-200 via-amber-300 to-yellow-200"
-    default: return "bg-gray-100"
+    case "common": return "bg-gray-100 dark:bg-gray-800"
+    case "uncommon": return "bg-green-100 dark:bg-green-900"
+    case "rare": return "bg-blue-100 dark:bg-blue-900"
+    case "epic": return "bg-purple-100 dark:bg-purple-900"
+    case "legendary": return "bg-gradient-to-br from-orange-200 via-amber-300 to-yellow-200 dark:from-orange-800 dark:via-amber-700 dark:to-yellow-800"
+    default: return "bg-gray-100 dark:bg-gray-800"
   }
 }
 
 function getRarityIconColor(rarity: string) {
   switch (rarity) {
-    case "common": return "text-gray-600"
-    case "uncommon": return "text-green-600"
-    case "rare": return "text-blue-600"
-    case "epic": return "text-purple-600"
-    case "legendary": return "text-orange-600"
-    default: return "text-gray-600"
+    case "common": return "text-gray-600 dark:text-gray-400"
+    case "uncommon": return "text-green-600 dark:text-green-400"
+    case "rare": return "text-blue-600 dark:text-blue-400"
+    case "epic": return "text-purple-600 dark:text-purple-400"
+    case "legendary": return "text-orange-600 dark:text-orange-400"
+    default: return "text-gray-600 dark:text-gray-400"
   }
 }
 

@@ -573,19 +573,19 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
 
                 {/* Требует отправки работы */}
                 {!isProject && (
-                  <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-950 rounded-lg border border-purple-200 dark:border-purple-800">
                     <input
                       type="checkbox"
                       id="requiresSubmission"
                       checked={requiresSubmission}
                       onChange={(e) => setRequiresSubmission(e.target.checked)}
-                      className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                      className="h-5 w-5 rounded border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400 focus:ring-purple-500"
                     />
                     <div>
-                      <label htmlFor="requiresSubmission" className="text-sm font-medium text-purple-900 cursor-pointer">
+                      <label htmlFor="requiresSubmission" className="text-sm font-medium text-purple-900 dark:text-purple-100 cursor-pointer">
                         Требует отправки практической работы
                       </label>
-                      <p className="text-xs text-purple-700">
+                      <p className="text-xs text-purple-700 dark:text-purple-300">
                         Студенты смогут отправить ссылку на файл (Google Drive, Notion и т.д.)
                       </p>
                     </div>

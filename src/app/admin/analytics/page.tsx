@@ -940,7 +940,7 @@ export default function AdvancedAnalyticsPage() {
               onClick={() => setShowMethodology(!showMethodology)}
               variant="outline"
               size="sm"
-              className={showMethodology ? "bg-purple-50 border-purple-200 dark:border-purple-800" : ""}
+              className={showMethodology ? "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800" : ""}
             >
               <Info className="h-4 w-4 mr-2" />
               Методология
@@ -1103,21 +1103,21 @@ export default function AdvancedAnalyticsPage() {
 
         {/* Блок методологии сбора данных */}
         {showMethodology && (
-          <Card className="mb-8 border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <Card className="mb-8 border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg text-purple-900">
+              <CardTitle className="flex items-center gap-2 text-lg text-purple-900 dark:text-purple-100">
                 <Database className="h-5 w-5" />
                 Как собирается аналитика
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3 bg-white/60 rounded-lg border border-purple-100">
+                <div className="p-3 bg-white/60 dark:bg-white/5 rounded-lg border border-purple-100 dark:border-purple-800">
                   <div className="flex items-center gap-2 mb-2">
-                    <Calculator className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium text-purple-900">Источники данных</span>
+                    <Calculator className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span className="font-medium text-purple-900 dark:text-purple-100">Источники данных</span>
                   </div>
-                  <ul className="text-sm text-purple-700 space-y-1">
+                  <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
                     <li>• <strong>User</strong> - профили и роли пользователей</li>
                     <li>• <strong>UserActivity</strong> - ежедневная активность</li>
                     <li>• <strong>ModuleProgress</strong> - прогресс по модулям</li>
@@ -1125,12 +1125,12 @@ export default function AdvancedAnalyticsPage() {
                     <li>• <strong>Certificate</strong> - выданные сертификаты</li>
                   </ul>
                 </div>
-                <div className="p-3 bg-white/60 rounded-lg border border-purple-100">
+                <div className="p-3 bg-white/60 dark:bg-white/5 rounded-lg border border-purple-100 dark:border-purple-800">
                   <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium text-purple-900">Период анализа</span>
+                    <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span className="font-medium text-purple-900 dark:text-purple-100">Период анализа</span>
                   </div>
-                  <ul className="text-sm text-purple-700 space-y-1">
+                  <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
                     <li>• Риск отсева: последняя активность пользователя</li>
                     <li>• Тренды: последние 30 дней</li>
                     <li>• Воронка: все время работы платформы</li>
