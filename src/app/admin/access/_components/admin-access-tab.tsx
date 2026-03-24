@@ -179,7 +179,7 @@ export function AdminAccessTab() {
     <div>
       {/* Header actions */}
       <div className="flex items-center justify-end gap-2 mb-6">
-        <Badge className="bg-red-100 text-red-700 border-0">
+        <Badge className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-0">
           <ShieldCheck className="h-3 w-3 mr-1" />
           Только для ADMIN
         </Badge>
@@ -228,17 +228,17 @@ export function AdminAccessTab() {
                 {/* Co-admin header */}
                 <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${coAdmin.role === "HR" ? "bg-amber-100" : "bg-purple-100"}`}>
-                      <Shield className={`h-5 w-5 ${coAdmin.role === "HR" ? "text-amber-600" : "text-purple-600"}`} />
+                    <div className={`p-2 rounded-lg ${coAdmin.role === "HR" ? "bg-amber-100 dark:bg-amber-900" : "bg-purple-100 dark:bg-purple-900"}`}>
+                      <Shield className={`h-5 w-5 ${coAdmin.role === "HR" ? "text-amber-600 dark:text-amber-400" : "text-purple-600 dark:text-purple-400"}`} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{coAdmin.name}</span>
-                        <Badge className={`border-0 text-xs ${coAdmin.role === "HR" ? "bg-amber-100 text-amber-700" : "bg-purple-100 text-purple-700"}`}>
+                        <Badge className={`border-0 text-xs ${coAdmin.role === "HR" ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300" : "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300"}`}>
                           {coAdmin.role}
                         </Badge>
                         {changed && (
-                          <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">
+                          <Badge className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-0 text-xs">
                             Не сохранено
                           </Badge>
                         )}

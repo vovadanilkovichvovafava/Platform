@@ -448,7 +448,7 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                 </Button>
               )}
               {readOnly && (
-                <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300">
                   Только просмотр
                 </Badge>
               )}
@@ -1039,8 +1039,8 @@ export function ModuleEditor({ moduleId, backUrl, readOnly = false }: ModuleEdit
                                     }}
                                     className={`px-2 py-1 rounded text-xs font-semibold shrink-0 ${
                                       stmt.isTrue
-                                        ? "bg-green-100 text-green-700 border border-green-300"
-                                        : "bg-red-100 text-red-700 border border-red-300"
+                                        ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700"
+                                        : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700"
                                     }`}
                                   >
                                     {stmt.isTrue ? "Верно" : "Неверно"}

@@ -530,10 +530,10 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                 ? "Принят"
                 : "Обучается"
             const statusColor = aggregatedStatus === "NOT_ADMITTED"
-              ? "bg-red-100 text-red-700"
+              ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
               : aggregatedStatus === "ACCEPTED"
-                ? "bg-green-100 text-green-700"
-                : "bg-blue-100 text-blue-700"
+                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
+                : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
 
             return (
               <Link key={student.id} href={`/teacher/students/${student.id}`}>
@@ -543,7 +543,7 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                       {/* Avatar & Info */}
                       <div className="flex items-center gap-3 flex-1">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
+                          <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-sm">
                             {getInitials(student.name)}
                           </AvatarFallback>
                         </Avatar>
@@ -712,10 +712,10 @@ export function StudentsSearch({ students, trails, tagsForFilter, studentTagIdsM
                           <Badge
                             className={`text-xs ${
                               lastSubmission.status === "APPROVED"
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
                                 : lastSubmission.status === "PENDING"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-orange-100 text-orange-700"
+                                ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                                : "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300"
                             } border-0`}
                           >
                             {lastSubmission.status === "APPROVED"

@@ -600,17 +600,17 @@ export default async function TrailPage({ params }: Props) {
                             <div className="flex items-center gap-2">
                               <h3 className="font-medium text-gray-900 dark:text-slate-100 truncate">{module.title}</h3>
                               {hasPendingSubmission && (
-                                <Badge className="bg-amber-100 text-amber-700 border-0 text-xs shrink-0">
+                                <Badge className="bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border-0 text-xs shrink-0">
                                   На проверке
                                 </Badge>
                               )}
                               {hasRevision && (
-                                <Badge className="bg-orange-100 text-orange-700 border-0 text-xs shrink-0">
+                                <Badge className="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 border-0 text-xs shrink-0">
                                   На доработку
                                 </Badge>
                               )}
                               {hasFailed && (
-                                <Badge className="bg-red-100 text-red-700 border-0 text-xs shrink-0">
+                                <Badge className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-0 text-xs shrink-0">
                                   Не сдано
                                 </Badge>
                               )}

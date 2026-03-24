@@ -226,7 +226,7 @@ export function MatchingExercise({
               >
                 <span className={cn(
                   "flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold",
-                  canClick ? "bg-blue-100 text-blue-600" : "bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
+                  canClick ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400" : "bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
                 )}>
                   {index + 1}
                 </span>

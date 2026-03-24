@@ -29,10 +29,10 @@ interface CertificatesShowcaseProps {
 
 const getLevelColor = (level?: string) => {
   switch (level) {
-    case "Junior": return "bg-green-100 text-green-700"
-    case "Middle": return "bg-orange-100 text-orange-700"
-    case "Senior": return "bg-yellow-100 text-yellow-700"
-    default: return "bg-amber-100 text-amber-700"
+    case "Junior": return "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
+    case "Middle": return "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300"
+    case "Senior": return "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300"
+    default: return "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300"
   }
 }
 

@@ -308,7 +308,7 @@ export default async function ModulePage({ params }: Props) {
                   {typeLabels[courseModule.type]}
                 </Badge>
                 {isCompleted && (
-                  <Badge className="bg-green-100 text-green-700 border-0">
+                  <Badge className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     Завершено
                   </Badge>

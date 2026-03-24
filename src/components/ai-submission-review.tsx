@@ -223,15 +223,15 @@ function StatusBadge({ status }: { status: string }) {
     },
     processing: {
       label: "Анализ…",
-      className: "bg-blue-100 dark:bg-blue-950 text-blue-700 border-0",
+      className: "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-0",
     },
     completed: {
       label: "Готово",
-      className: "bg-green-100 dark:bg-green-950 text-green-700 border-0",
+      className: "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-0",
     },
     failed: {
       label: "Ошибка",
-      className: "bg-red-100 dark:bg-red-950 text-red-700 border-0",
+      className: "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-0",
     },
   }
   const c = config[status] ?? config.pending
