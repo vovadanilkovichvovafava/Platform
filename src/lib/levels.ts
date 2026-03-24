@@ -17,14 +17,14 @@ export interface LevelConfig {
 
 // Уровни масштабируемы - просто добавьте новые в массив
 export const LEVELS: LevelConfig[] = [
-  { level: 1, name: "Новичок", minXP: 0, maxXP: 100, color: "text-gray-600", bgColor: "bg-gray-100", icon: "🌱" },
-  { level: 2, name: "Ученик", minXP: 100, maxXP: 250, color: "text-green-600", bgColor: "bg-green-100", icon: "📖" },
-  { level: 3, name: "Практик", minXP: 250, maxXP: 500, color: "text-blue-600", bgColor: "bg-blue-100", icon: "💪" },
-  { level: 4, name: "Специалист", minXP: 500, maxXP: 1000, color: "text-indigo-600", bgColor: "bg-indigo-100", icon: "⭐" },
-  { level: 5, name: "Эксперт", minXP: 1000, maxXP: 2000, color: "text-purple-600", bgColor: "bg-purple-100", icon: "🏆" },
-  { level: 6, name: "Мастер", minXP: 2000, maxXP: 3500, color: "text-amber-600", bgColor: "bg-amber-100", icon: "👑" },
-  { level: 7, name: "Гуру", minXP: 3500, maxXP: 5000, color: "text-orange-600", bgColor: "bg-orange-100", icon: "🔥" },
-  { level: 8, name: "Легенда", minXP: 5000, maxXP: null, color: "text-rose-600", bgColor: "bg-rose-100", icon: "🌟" },
+  { level: 1, name: "Новичок", minXP: 0, maxXP: 100, color: "text-gray-600 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800", icon: "🌱" },
+  { level: 2, name: "Ученик", minXP: 100, maxXP: 250, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-900", icon: "📖" },
+  { level: 3, name: "Практик", minXP: 250, maxXP: 500, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-900", icon: "💪" },
+  { level: 4, name: "Специалист", minXP: 500, maxXP: 1000, color: "text-indigo-600 dark:text-indigo-400", bgColor: "bg-indigo-100 dark:bg-indigo-900", icon: "⭐" },
+  { level: 5, name: "Эксперт", minXP: 1000, maxXP: 2000, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-900", icon: "🏆" },
+  { level: 6, name: "Мастер", minXP: 2000, maxXP: 3500, color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-900", icon: "👑" },
+  { level: 7, name: "Гуру", minXP: 3500, maxXP: 5000, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-100 dark:bg-orange-900", icon: "🔥" },
+  { level: 8, name: "Легенда", minXP: 5000, maxXP: null, color: "text-rose-600 dark:text-rose-400", bgColor: "bg-rose-100 dark:bg-rose-900", icon: "🌟" },
 ]
 
 // ==============================================
@@ -49,9 +49,9 @@ export const RANKS: RankConfig[] = [
     name: "Beginner",
     minXP: 0,
     maxXP: 200,
-    color: "text-gray-600",
-    bgColor: "bg-gray-100",
-    borderColor: "border-gray-300",
+    color: "text-gray-600 dark:text-gray-400",
+    bgColor: "bg-gray-100 dark:bg-gray-800",
+    borderColor: "border-gray-300 dark:border-gray-600",
     description: "Начало пути",
   },
   {
@@ -59,9 +59,9 @@ export const RANKS: RankConfig[] = [
     name: "Intermediate",
     minXP: 200,
     maxXP: 500,
-    color: "text-green-600",
-    bgColor: "bg-green-100",
-    borderColor: "border-green-400",
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-900",
+    borderColor: "border-green-400 dark:border-green-600",
     description: "Уверенный рост",
   },
   {
@@ -69,9 +69,9 @@ export const RANKS: RankConfig[] = [
     name: "Advanced",
     minXP: 500,
     maxXP: 1500,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
-    borderColor: "border-blue-400",
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900",
+    borderColor: "border-blue-400 dark:border-blue-600",
     description: "Продвинутый уровень",
   },
   {
@@ -79,9 +79,9 @@ export const RANKS: RankConfig[] = [
     name: "Expert",
     minXP: 1500,
     maxXP: 3000,
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
-    borderColor: "border-purple-400",
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-100 dark:bg-purple-900",
+    borderColor: "border-purple-400 dark:border-purple-600",
     description: "Экспертное мастерство",
   },
   {
@@ -89,9 +89,9 @@ export const RANKS: RankConfig[] = [
     name: "Master",
     minXP: 3000,
     maxXP: null,
-    color: "text-amber-600",
-    bgColor: "bg-amber-100",
-    borderColor: "border-amber-400",
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-100 dark:bg-amber-900",
+    borderColor: "border-amber-400 dark:border-amber-600",
     description: "Высшее достижение",
   },
 ]

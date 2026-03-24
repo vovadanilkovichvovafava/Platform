@@ -1498,12 +1498,12 @@ export default function UnifiedContentPage() {
                 <div className="space-y-6">
                   {importing && importProgress ? (
                     // Показываем прогресс-бар во время парсинга
-                    <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 rounded-lg border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="relative">
-                          <RefreshCw className="h-8 w-8 text-purple-600 animate-spin" />
+                          <RefreshCw className="h-8 w-8 text-purple-600 dark:text-purple-400 animate-spin" />
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-xs font-bold text-purple-700">
+                            <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
                               {importProgress.current}%
                             </span>
                           </div>
@@ -1601,10 +1601,10 @@ export default function UnifiedContentPage() {
 
               {/* Ошибка парсинга или состояние регенерации */}
               {(parseError || regenerating) && (
-                <div className={`p-4 rounded-lg mb-4 ${regenerating ? "bg-purple-50 border border-purple-200 dark:border-purple-800" : "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800"}`}>
+                <div className={`p-4 rounded-lg mb-4 ${regenerating ? "bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800" : "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800"}`}>
                   <div className="flex items-start gap-2">
                     {regenerating ? (
-                      <RefreshCw className="h-5 w-5 text-purple-600 mt-0.5 animate-spin" />
+                      <RefreshCw className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5 animate-spin" />
                     ) : (
                       <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
                     )}
@@ -1632,7 +1632,7 @@ export default function UnifiedContentPage() {
                                 onClick={handleRegenerate}
                                 disabled={regenerating}
                                 className={useNeuralParser
-                                  ? "text-purple-700 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950"
+                                  ? "text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950"
                                   : "text-gray-600 dark:text-slate-400 border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"}
                               >
                                 {useNeuralParser ? (
@@ -1842,7 +1842,7 @@ export default function UnifiedContentPage() {
                       variant="outline"
                       onClick={handleRegenerate}
                       disabled={regenerating || saving}
-                      className="text-purple-700 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950"
+                      className="text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950"
                     >
                       {regenerating ? (
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />

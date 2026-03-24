@@ -303,8 +303,8 @@ export function StudentModuleList({
                           className={`flex items-center justify-between p-3 rounded-lg group transition-colors ${
                             isCompleted
                               ? isSkipped
-                                ? "bg-purple-50 hover:bg-purple-100"
-                                : "bg-green-50 hover:bg-green-100"
+                                ? "bg-purple-50 dark:bg-purple-950 hover:bg-purple-100 dark:hover:bg-purple-900"
+                                : "bg-green-50 dark:bg-green-950 hover:bg-green-100 dark:hover:bg-green-900"
                               : isInProgress
                               ? "bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900"
                               : "bg-gray-50 dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-700"
@@ -327,8 +327,8 @@ export function StudentModuleList({
                                 className={`text-sm font-medium truncate block ${
                                   isCompleted
                                     ? isSkipped
-                                      ? "text-purple-700"
-                                      : "text-green-700"
+                                      ? "text-purple-700 dark:text-purple-300"
+                                      : "text-green-700 dark:text-green-300"
                                     : isInProgress
                                     ? "text-blue-700"
                                     : "text-gray-600 dark:text-slate-400"
@@ -337,7 +337,7 @@ export function StudentModuleList({
                                 {module.title}
                               </span>
                               {isSkipped && (
-                                <Badge variant="outline" className="text-xs text-purple-600 border-purple-300 mt-1">
+                                <Badge variant="outline" className="text-xs text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-700 mt-1">
                                   пропущен учителем
                                 </Badge>
                               )}

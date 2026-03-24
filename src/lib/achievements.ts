@@ -10,11 +10,11 @@ export interface AchievementDef {
 
 // Стандартизированные цвета по редкостям
 export const RARITY_COLORS = {
-  common: "bg-gray-100 text-gray-600",
-  uncommon: "bg-green-100 text-green-700",
-  rare: "bg-blue-100 text-blue-700",
-  epic: "bg-purple-100 text-purple-700",
-  legendary: "bg-orange-100 text-orange-700",
+  common: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
+  uncommon: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300",
+  rare: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
+  epic: "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300",
+  legendary: "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300",
 } as const
 
 export const ACHIEVEMENTS: Record<string, AchievementDef> = {
