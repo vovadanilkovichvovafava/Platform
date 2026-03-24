@@ -222,9 +222,9 @@ export function CaseAnalysisExercise({
                 <div
                   className={cn(
                     "flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold",
-                    status === "correct" && "bg-green-100 dark:bg-green-950 text-green-700",
-                    status === "missed" && "bg-amber-100 text-amber-700",
-                    status === "wrong" && "bg-red-100 dark:bg-red-950 text-red-700"
+                    status === "correct" && "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300",
+                    status === "missed" && "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300",
+                    status === "wrong" && "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300"
                   )}
                 >
                   {status === "correct" && "Верно"}

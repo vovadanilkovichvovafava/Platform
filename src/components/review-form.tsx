@@ -82,21 +82,21 @@ export function ReviewForm({
       icon: CheckCircle2,
       label: "Принять работу",
       hint: `Ученик получит ${modulePoints} XP и перейдёт на следующий уровень`,
-      hintColor: "bg-green-50 dark:bg-green-950 text-green-700",
+      hintColor: "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300",
     },
     REVISION: {
       color: "bg-orange-600 hover:bg-orange-700",
       icon: AlertCircle,
       label: "На доработку",
       hint: "Ученик исправит замечания и пересдаст. Уровень не меняется",
-      hintColor: "bg-orange-50 dark:bg-orange-950 text-orange-700",
+      hintColor: "bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300",
     },
     FAILED: {
       color: "bg-red-600 hover:bg-red-700",
       icon: XCircle,
       label: "Провал",
       hint: "Ученик переходит на уровень ниже",
-      hintColor: "bg-red-50 dark:bg-red-950 text-red-700",
+      hintColor: "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300",
     },
   }
 

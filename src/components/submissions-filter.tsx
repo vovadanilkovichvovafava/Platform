@@ -149,11 +149,11 @@ function getDaysWaiting(createdAt: string): number {
 }
 
 function getDaysWaitingLabel(days: number): { label: string; color: string } {
-  if (days === 0) return { label: "Сегодня", color: "bg-green-100 dark:bg-green-950 text-green-700" }
-  if (days === 1) return { label: "1 день", color: "bg-green-100 dark:bg-green-950 text-green-700" }
-  if (days <= 3) return { label: `${days} дня`, color: "bg-yellow-100 text-yellow-700" }
-  if (days <= 7) return { label: `${days} дней`, color: "bg-orange-100 dark:bg-orange-950 text-orange-700" }
-  return { label: `${days} дней`, color: "bg-red-100 dark:bg-red-950 text-red-700" }
+  if (days === 0) return { label: "Сегодня", color: "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300" }
+  if (days === 1) return { label: "1 день", color: "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300" }
+  if (days <= 3) return { label: `${days} дня`, color: "bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300" }
+  if (days <= 7) return { label: `${days} дней`, color: "bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300" }
+  return { label: `${days} дней`, color: "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300" }
 }
 
 const FILTER_DEFAULTS = { trail: "all", status: "all", sort: "waiting", q: "", perPage: "10", page: "1" }
@@ -736,10 +736,10 @@ export function SubmissionsFilter({
                       <Badge
                         className={
                           submission.status === "APPROVED"
-                            ? "bg-green-100 dark:bg-green-950 text-green-700 border-0"
+                            ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-0"
                             : submission.status === "FAILED"
-                            ? "bg-red-100 dark:bg-red-950 text-red-700 border-0"
-                            : "bg-orange-100 dark:bg-orange-950 text-orange-700 border-0"
+                            ? "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-0"
+                            : "bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 border-0"
                         }
                       >
                         {submission.status === "APPROVED" ? (

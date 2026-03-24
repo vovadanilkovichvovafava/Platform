@@ -53,19 +53,19 @@ interface StudentModuleListProps {
 const STATUS_CONFIG = {
   NOT_ADMITTED: {
     label: "Отклонен",
-    color: "bg-red-100 text-red-700 border-red-300",
+    color: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700",
     activeColor: "bg-red-500 text-white border-red-500",
     icon: Ban,
   },
   LEARNING: {
     label: "Обучается",
-    color: "bg-blue-100 text-blue-700 border-blue-300",
+    color: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700",
     activeColor: "bg-blue-500 text-white border-blue-500",
     icon: BookOpen,
   },
   ACCEPTED: {
     label: "Принят",
-    color: "bg-green-100 text-green-700 border-green-300",
+    color: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700",
     activeColor: "bg-green-500 text-white border-green-500",
     icon: GraduationCap,
   },

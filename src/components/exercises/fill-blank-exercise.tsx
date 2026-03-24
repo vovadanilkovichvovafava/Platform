@@ -191,7 +191,7 @@ export function FillBlankExercise({
                         onClick={() => setAnswer(blankId, option)}
                         className={cn(
                           "w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors",
-                          userAnswer === option && "bg-blue-100 text-blue-700"
+                          userAnswer === option && "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
                         )}
                       >
                         {option}

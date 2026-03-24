@@ -405,7 +405,7 @@ export function AchievementsGrid({
           {stats && (
             <Badge
               variant="secondary"
-              className="bg-orange-100 text-orange-700 border-0 hover:bg-orange-100"
+              className="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 border-0 hover:bg-orange-100 dark:hover:bg-orange-900"
             >
               {progressPercent}%
             </Badge>

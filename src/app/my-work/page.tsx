@@ -26,22 +26,22 @@ import { NotificationSyncTrigger } from "@/components/notification-sync-trigger"
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   PENDING: {
     label: "На проверке",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
     icon: Clock,
   },
   APPROVED: {
     label: "Принято",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300",
     icon: CheckCircle2,
   },
   REVISION: {
     label: "На доработку",
-    color: "bg-orange-100 text-orange-700",
+    color: "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300",
     icon: AlertCircle,
   },
   FAILED: {
     label: "Провал",
-    color: "bg-red-100 text-red-700",
+    color: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
     icon: XCircle,
   },
 }
