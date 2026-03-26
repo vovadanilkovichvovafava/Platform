@@ -428,7 +428,7 @@ export function TeachersTab() {
                           <User className="h-5 w-5 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">
+                          <p className="font-medium text-gray-900 dark:text-slate-100 truncate">
                             {teacher.name}
                           </p>
                           <p className="text-sm text-gray-500 truncate">
@@ -497,7 +497,7 @@ export function TeachersTab() {
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <BookOpen className="h-5 w-5 text-green-600" />
-                            <h3 className="font-medium text-gray-900">
+                            <h3 className="font-medium text-gray-900 dark:text-slate-100">
                               {trail.title}
                             </h3>
                           </div>
@@ -525,7 +525,7 @@ export function TeachersTab() {
                                     ? "bg-green-100 border border-green-300 border-dashed"
                                     : teacher.isRemoving
                                     ? "bg-red-50 border border-red-200 border-dashed opacity-60 line-through"
-                                    : "bg-gray-100"
+                                    : "bg-gray-100 dark:bg-slate-700"
                                 }`}
                               >
                                 <User className={`h-3 w-3 ${

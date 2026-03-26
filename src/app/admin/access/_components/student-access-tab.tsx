@@ -789,7 +789,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                 className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs transition-colors ${
                   sortField === field
                     ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-500 hover:bg-gray-50 border-gray-200"
+                    : "bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 border-gray-200 dark:border-slate-600"
                 }`}
               >
                 {label}
@@ -830,7 +830,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
               className={`p-2 ${
                 viewMode === "grid"
                   ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-500 hover:bg-gray-50"
+                  : "bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700"
               }`}
               title="Карточки"
             >
@@ -841,7 +841,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
               className={`p-2 ${
                 viewMode === "list"
                   ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-500 hover:bg-gray-50"
+                  : "bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700"
               }`}
               title="Список"
             >
@@ -922,12 +922,12 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                   <div className="mb-3">
                     <div className="flex items-center gap-2 mb-1">
                       <User className="h-4 w-4 text-gray-400 shrink-0" />
-                      <span className="font-medium text-gray-900 truncate">
+                      <span className="font-medium text-gray-900 dark:text-slate-100 truncate">
                         {student.name}
                       </span>
                       <Link
                         href={`/teacher/students/${student.id}`}
-                        className="ml-auto shrink-0 p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                        className="ml-auto shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300 transition-colors"
                         title="На страницу студента"
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -1057,9 +1057,9 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                       </Button>
 
                       {activeDropdownId === student.id && (
-                        <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-auto">
+                        <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-800 border dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-auto">
                           {/* Search in dropdown */}
-                          <div className="p-2 border-b sticky top-0 bg-white">
+                          <div className="p-2 border-b sticky top-0 bg-white dark:bg-slate-800">
                             <div className="relative">
                               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                               <input
@@ -1091,7 +1091,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                                   onClick={() =>
                                     addTrailToStudent(student.id, trail)
                                   }
-                                  className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
+                                  className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm border-b last:border-b-0"
                                 >
                                   <div className="font-medium text-xs">
                                     {trail.title}
@@ -1123,18 +1123,18 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                 return (
                   <div
                     key={student.id}
-                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 hover:bg-gray-50"
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-slate-800"
                   >
                     {/* Student info */}
                     <div className="min-w-0 sm:w-72 shrink-0">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-gray-400 shrink-0" />
-                        <span className="font-medium text-sm text-gray-900 truncate">
+                        <span className="font-medium text-sm text-gray-900 dark:text-slate-100 truncate">
                           {student.name}
                         </span>
                         <Link
                           href={`/teacher/students/${student.id}`}
-                          className="shrink-0 p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition-colors"
+                          className="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300 transition-colors"
                           title="На страницу студента"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
@@ -1252,8 +1252,8 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                         </Button>
 
                         {activeDropdownId === student.id && (
-                          <div className="absolute z-20 right-0 w-64 mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-auto">
-                            <div className="p-2 border-b sticky top-0 bg-white">
+                          <div className="absolute z-20 right-0 w-64 mt-1 bg-white dark:bg-slate-800 border dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-auto">
+                            <div className="p-2 border-b sticky top-0 bg-white dark:bg-slate-800">
                               <div className="relative">
                                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                                 <input
@@ -1285,7 +1285,7 @@ export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
                                     onClick={() =>
                                       addTrailToStudent(student.id, trail)
                                     }
-                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
+                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm border-b last:border-b-0"
                                   >
                                     <div className="font-medium text-xs">
                                       {trail.title}

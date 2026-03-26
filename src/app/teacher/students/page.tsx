@@ -120,14 +120,21 @@ export default async function TeacherStudentsPage({
     )
     if (daysSinceRegistered < NEWCOMER_DAYS) return true
 
-    // Non-newcomer with zero activity — inactive, hide
-    if (student._count.activityDays === 0) return false
+    // Determine last activity from activityDays OR submissions (whichever is more recent)
+    const lastActivityDate = student.activityDays[0]?.date
+    const lastSubmissionDate = student.submissions[0]?.createdAt
 
-    // Check last activity date
-    const lastActivity = student.activityDays[0]?.date
-    if (!lastActivity) return false
+    // No activity and no submissions — inactive, hide
+    if (!lastActivityDate && !lastSubmissionDate) return false
+
+    // Use the most recent date between activity and submission
+    const lastActiveTime = Math.max(
+      lastActivityDate ? new Date(lastActivityDate).getTime() : 0,
+      lastSubmissionDate ? new Date(lastSubmissionDate).getTime() : 0,
+    )
+
     const daysSinceActive = Math.floor(
-      (now.getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24)
+      (now.getTime() - lastActiveTime) / (1000 * 60 * 60 * 24)
     )
     // 7+ days without activity — at risk, hide
     return daysSinceActive < INACTIVE_DAYS

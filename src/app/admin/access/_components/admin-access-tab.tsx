@@ -226,7 +226,7 @@ export function AdminAccessTab() {
                 }`}
               >
                 {/* Co-admin header */}
-                <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+                <div className="p-4 border-b bg-gray-50 dark:bg-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${coAdmin.role === "HR" ? "bg-amber-100 dark:bg-amber-900" : "bg-purple-100 dark:bg-purple-900"}`}>
                       <Shield className={`h-5 w-5 ${coAdmin.role === "HR" ? "text-amber-600 dark:text-amber-400" : "text-purple-600 dark:text-purple-400"}`} />
@@ -324,7 +324,7 @@ export function AdminAccessTab() {
                               disabled={isSaving}
                             />
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-medium text-gray-900 truncate block">
+                              <span className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate block">
                                 {trail.title}
                               </span>
                               {!trail.isPublished && (

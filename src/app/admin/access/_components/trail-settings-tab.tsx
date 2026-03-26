@@ -514,7 +514,7 @@ export function TrailSettingsTab() {
                   <button
                     type="button"
                     onClick={() => toggleExpanded(trail)}
-                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {trail.isRestricted ? (
@@ -565,9 +565,9 @@ export function TrailSettingsTab() {
 
                   {/* Expanded toggles — never show for locked trails */}
                   {isExpanded && !isTrailLocked(trail) && (
-                    <div className="p-4 space-y-3 border-t bg-white">
+                    <div className="p-4 space-y-3 border-t bg-white dark:bg-slate-900">
                       {/* Published toggle */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
                         <div className="flex items-center gap-2">
                           {trail.isPublished ? (
                             <Eye className="h-4 w-4 text-green-600" />
@@ -594,7 +594,7 @@ export function TrailSettingsTab() {
                       </div>
 
                       {/* Visibility toggle */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
                         <div className="flex items-center gap-2">
                           {!trail.isRestricted ? (
                             <Unlock className="h-4 w-4 text-green-600" />
