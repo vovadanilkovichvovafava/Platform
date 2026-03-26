@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { isPrivileged, isHR, isAdmin as checkIsAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
+import { INACTIVE_DAYS, NEWCOMER_DAYS, getLastActiveDate, getDaysSinceActive } from "@/lib/activity"
 
 export const dynamic = "force-dynamic"
 import { Users } from "lucide-react"
@@ -109,10 +110,8 @@ export default async function TeacherStudentsPage({
     },
   })
 
-  // Filter out inactive students, but keep newcomers (registered < 14 days ago)
+  // Filter out inactive students, but keep newcomers (registered < NEWCOMER_DAYS ago)
   const now = new Date()
-  const NEWCOMER_DAYS = 14
-  const INACTIVE_DAYS = 10
 
   const activeStudents = students.filter((student) => {
     // Newcomers always visible regardless of activity
@@ -122,34 +121,17 @@ export default async function TeacherStudentsPage({
     if (daysSinceRegistered < NEWCOMER_DAYS) return true
 
     // Determine last activity from all interaction sources
-    const lastActivityDate = student.activityDays[0]?.date
-    const lastSubmissionDate = student.submissions[0]?.createdAt
-    const lastEnrollmentDate = student.enrollments.length > 0
-      ? student.enrollments.reduce((latest, e) =>
-          new Date(e.createdAt) > new Date(latest.createdAt) ? e : latest
-        ).createdAt
-      : null
-    const lastModuleProgressDate = student.moduleProgress.length > 0
-      ? student.moduleProgress.reduce((latest, mp) =>
-          new Date(mp.updatedAt) > new Date(latest.updatedAt) ? mp : latest
-        ).updatedAt
-      : null
+    const lastActive = getLastActiveDate({
+      activityDays: student.activityDays,
+      submissions: student.submissions,
+      enrollments: student.enrollments,
+      moduleProgress: student.moduleProgress,
+    })
 
     // No activity at all — inactive, hide
-    if (!lastActivityDate && !lastSubmissionDate && !lastEnrollmentDate && !lastModuleProgressDate) return false
+    if (!lastActive) return false
 
-    // Use the most recent date across all activity sources
-    const lastActiveTime = Math.max(
-      lastActivityDate ? new Date(lastActivityDate).getTime() : 0,
-      lastSubmissionDate ? new Date(lastSubmissionDate).getTime() : 0,
-      lastEnrollmentDate ? new Date(lastEnrollmentDate).getTime() : 0,
-      lastModuleProgressDate ? new Date(lastModuleProgressDate).getTime() : 0,
-    )
-
-    const daysSinceActive = Math.floor(
-      (now.getTime() - lastActiveTime) / (1000 * 60 * 60 * 24)
-    )
-    // 10+ days without activity — at risk, hide
+    const daysSinceActive = getDaysSinceActive(lastActive, student.createdAt)
     return daysSinceActive < INACTIVE_DAYS
   })
 

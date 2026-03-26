@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { pluralizeRu } from "@/lib/utils"
 import { isPrivileged, isHR, isAdmin, isAnyAdmin, getTeacherAllowedTrailIds, getAdminAllowedTrailIds } from "@/lib/admin-access"
+import { getLastActiveDate } from "@/lib/activity"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -226,6 +227,14 @@ export default async function StudentDetailPage({ params }: Props) {
     activityDetailsMap.set(dateKey, details)
   })
 
+  // Compute last active date from all interaction sources
+  const lastActiveDate = getLastActiveDate({
+    activityDays: student.activityDays,
+    submissions: student.submissions,
+    enrollments: student.enrollments,
+    moduleProgress: student.moduleProgress,
+  })
+
   // Build activity days with details
   const activityDaysWithDetails = student.activityDays.map((d) => {
     const dateKey = d.date.toISOString().split("T")[0]
@@ -413,11 +422,11 @@ export default async function StudentDetailPage({ params }: Props) {
                       <p className="text-xs text-orange-600">на проверке</p>
                     </div>
                     {/* Recent Activity */}
-                    {student.activityDays.length > 0 && (
+                    {lastActiveDate && (
                       <div className="col-span-2 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                         <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Последняя активность</p>
                         <p className="text-sm font-medium text-gray-800 dark:text-slate-200">
-                          {new Date(student.activityDays[student.activityDays.length - 1].date).toLocaleDateString("ru-RU", {
+                          {lastActiveDate.toLocaleDateString("ru-RU", {
                             day: "numeric",
                             month: "long",
                             year: "numeric",

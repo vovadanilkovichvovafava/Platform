@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyExternalAuth } from "@/lib/external-auth"
 import { ACHIEVEMENTS } from "@/lib/achievements"
+import { getLastActiveDate, getDaysSinceActive } from "@/lib/activity"
 
 export async function GET(
   request: Request,
@@ -26,13 +27,14 @@ export async function GET(
         createdAt: true,
         moduleProgress: {
           where: { status: "COMPLETED" },
-          select: { id: true, moduleId: true },
+          select: { id: true, moduleId: true, updatedAt: true },
         },
         submissions: {
           select: {
             id: true,
             status: true,
             moduleId: true,
+            createdAt: true,
           },
         },
         certificates: {
@@ -144,11 +146,14 @@ export async function GET(
     })
     const leaderboardRank = higherRanked + 1
 
-    // Last activity
-    const lastActivityDate = user.activityDays[0]?.date ?? null
-    const daysSinceActive = lastActivityDate
-      ? Math.floor((new Date().getTime() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24))
-      : Math.floor((new Date().getTime() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    // Last activity from all interaction sources
+    const lastActive = getLastActiveDate({
+      activityDays: user.activityDays,
+      submissions: user.submissions,
+      enrollments: user.enrollments,
+      moduleProgress: user.moduleProgress,
+    })
+    const daysSinceActive = getDaysSinceActive(lastActive, user.createdAt)
 
     // Per-trail progress
     type EnrollmentType = typeof user.enrollments[number]
@@ -198,7 +203,7 @@ export async function GET(
         totalXP: user.totalXP,
         currentStreak: user.currentStreak,
         registeredAt: user.createdAt.toISOString(),
-        lastActiveAt: lastActivityDate ? lastActivityDate.toISOString() : null,
+        lastActiveAt: lastActive ? lastActive.toISOString() : null,
         daysSinceActive,
         leaderboardRank,
         modulesCompleted: user.moduleProgress.length,

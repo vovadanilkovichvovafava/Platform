@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyExternalAuth } from "@/lib/external-auth"
+import { getLastActiveDate, getDaysSinceActive, CHURN_HIGH_DAYS, CHURN_MEDIUM_DAYS } from "@/lib/activity"
 
 export async function GET(request: NextRequest) {
   const authError = verifyExternalAuth(request)
@@ -40,6 +41,21 @@ export async function GET(request: NextRequest) {
           take: 1,
           select: { date: true },
         },
+        submissions: {
+          orderBy: { createdAt: "desc" as const },
+          take: 1,
+          select: { createdAt: true },
+        },
+        enrollments: {
+          orderBy: { createdAt: "desc" as const },
+          take: 1,
+          select: { createdAt: true },
+        },
+        moduleProgress: {
+          orderBy: { updatedAt: "desc" as const },
+          take: 1,
+          select: { updatedAt: true },
+        },
         _count: {
           select: {
             moduleProgress: trailFilter !== "all"
@@ -64,25 +80,28 @@ export async function GET(request: NextRequest) {
 
     const now = new Date()
     for (const student of students) {
-      const lastActivityDate = student.activityDays[0]?.date
-      const daysSinceActive = lastActivityDate
-        ? Math.floor((now.getTime() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24))
-        : Math.floor((now.getTime() - new Date(student.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      const lastActive = getLastActiveDate({
+        activityDays: student.activityDays,
+        submissions: student.submissions,
+        enrollments: student.enrollments,
+        moduleProgress: student.moduleProgress,
+      })
+      const daysSinceActive = getDaysSinceActive(lastActive, student.createdAt)
 
       const entry = {
         id: student.id,
         name: student.name,
         email: student.email,
         telegramUsername: student.telegramUsername,
-        lastActive: lastActivityDate ? lastActivityDate.toISOString() : null,
+        lastActive: lastActive ? lastActive.toISOString() : null,
         daysSinceActive,
         modulesCompleted: student._count.moduleProgress,
         xp: student.totalXP,
       }
 
-      if (daysSinceActive >= 14) {
+      if (daysSinceActive >= CHURN_HIGH_DAYS) {
         churnRisk.high.push(entry)
-      } else if (daysSinceActive >= 7) {
+      } else if (daysSinceActive >= CHURN_MEDIUM_DAYS) {
         churnRisk.medium.push(entry)
       } else {
         churnRisk.low.push(entry)
