@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyExternalAuth } from "@/lib/external-auth"
+import { getLastActiveDate, getDaysSinceActive } from "@/lib/activity"
 
 export async function GET(request: Request) {
   const authError = verifyExternalAuth(request)
@@ -41,12 +42,13 @@ export async function GET(request: Request) {
         },
         moduleProgress: {
           where: { status: "COMPLETED" },
-          select: { moduleId: true },
+          select: { moduleId: true, updatedAt: true },
         },
         submissions: {
           select: {
             moduleId: true,
             status: true,
+            createdAt: true,
             review: {
               select: { score: true },
             },
@@ -71,17 +73,14 @@ export async function GET(request: Request) {
     const completedModuleIds = new Set<string>()
 
     const interns = students.map((student) => {
-      // Last activity
-      const lastActivityDate = student.activityDays[0]?.date ?? null
-      const daysSinceActive = lastActivityDate
-        ? Math.floor(
-            (now.getTime() - new Date(lastActivityDate).getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
-        : Math.floor(
-            (now.getTime() - new Date(student.createdAt).getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
+      // Last activity from all interaction sources
+      const lastActive = getLastActiveDate({
+        activityDays: student.activityDays,
+        submissions: student.submissions,
+        enrollments: student.enrollments,
+        moduleProgress: student.moduleProgress,
+      })
+      const daysSinceActive = getDaysSinceActive(lastActive, student.createdAt)
 
       // Build a set of completed module IDs for this student
       completedModuleIds.clear()
@@ -174,8 +173,8 @@ export async function GET(request: Request) {
         totalXP: student.totalXP,
         currentStreak: student.currentStreak,
         registeredAt: student.createdAt.toISOString(),
-        lastActiveAt: lastActivityDate
-          ? lastActivityDate.toISOString()
+        lastActiveAt: lastActive
+          ? lastActive.toISOString()
           : null,
         daysSinceActive,
         trails,
