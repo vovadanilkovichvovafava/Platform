@@ -75,6 +75,7 @@ export default async function TeacherStudentsPage({
         },
         select: {
           id: true,
+          updatedAt: true,
           module: {
             select: {
               points: true,
@@ -111,7 +112,7 @@ export default async function TeacherStudentsPage({
   // Filter out inactive students, but keep newcomers (registered < 14 days ago)
   const now = new Date()
   const NEWCOMER_DAYS = 14
-  const INACTIVE_DAYS = 7
+  const INACTIVE_DAYS = 10
 
   const activeStudents = students.filter((student) => {
     // Newcomers always visible regardless of activity
@@ -120,23 +121,35 @@ export default async function TeacherStudentsPage({
     )
     if (daysSinceRegistered < NEWCOMER_DAYS) return true
 
-    // Determine last activity from activityDays OR submissions (whichever is more recent)
+    // Determine last activity from all interaction sources
     const lastActivityDate = student.activityDays[0]?.date
     const lastSubmissionDate = student.submissions[0]?.createdAt
+    const lastEnrollmentDate = student.enrollments.length > 0
+      ? student.enrollments.reduce((latest, e) =>
+          new Date(e.createdAt) > new Date(latest.createdAt) ? e : latest
+        ).createdAt
+      : null
+    const lastModuleProgressDate = student.moduleProgress.length > 0
+      ? student.moduleProgress.reduce((latest, mp) =>
+          new Date(mp.updatedAt) > new Date(latest.updatedAt) ? mp : latest
+        ).updatedAt
+      : null
 
-    // No activity and no submissions — inactive, hide
-    if (!lastActivityDate && !lastSubmissionDate) return false
+    // No activity at all — inactive, hide
+    if (!lastActivityDate && !lastSubmissionDate && !lastEnrollmentDate && !lastModuleProgressDate) return false
 
-    // Use the most recent date between activity and submission
+    // Use the most recent date across all activity sources
     const lastActiveTime = Math.max(
       lastActivityDate ? new Date(lastActivityDate).getTime() : 0,
       lastSubmissionDate ? new Date(lastSubmissionDate).getTime() : 0,
+      lastEnrollmentDate ? new Date(lastEnrollmentDate).getTime() : 0,
+      lastModuleProgressDate ? new Date(lastModuleProgressDate).getTime() : 0,
     )
 
     const daysSinceActive = Math.floor(
       (now.getTime() - lastActiveTime) / (1000 * 60 * 60 * 24)
     )
-    // 7+ days without activity — at risk, hide
+    // 10+ days without activity — at risk, hide
     return daysSinceActive < INACTIVE_DAYS
   })
 
