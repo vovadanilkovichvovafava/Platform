@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { createContext, useContext, useState, useCallback } from "react"
+import { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { AlertTriangle, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -49,6 +49,16 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     state?.resolve(false)
     setState(null)
   }
+
+  // Close on ESC key
+  useEffect(() => {
+    if (!state) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleCancel()
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [state])
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>

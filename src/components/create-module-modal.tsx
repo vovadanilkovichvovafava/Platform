@@ -68,6 +68,16 @@ export function CreateModuleModal({
     }
   }, [open])
 
+  // Close on ESC key
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [open, onClose])
+
   const handleSubmit = async () => {
     if (!form.title.trim()) return
 

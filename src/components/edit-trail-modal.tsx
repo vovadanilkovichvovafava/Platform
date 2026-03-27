@@ -160,6 +160,16 @@ export function EditTrailModal({
     }
   }, [open])
 
+  // Close on ESC key
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [open, onClose])
+
   // Reset form when trail changes or modal opens
   useEffect(() => {
     if (mode === "create") {
