@@ -36,10 +36,10 @@ function getActivityLevel(actions: number): number {
 function getActivityColor(level: number): string {
   switch (level) {
     case 0: return "bg-gray-100 dark:bg-slate-800"
-    case 1: return "bg-green-200"
-    case 2: return "bg-green-400"
+    case 1: return "bg-green-200 dark:bg-green-800"
+    case 2: return "bg-green-400 dark:bg-green-600"
     case 3: return "bg-green-500"
-    case 4: return "bg-green-600"
+    case 4: return "bg-green-600 dark:bg-green-400"
     default: return "bg-gray-100 dark:bg-slate-800"
   }
 }

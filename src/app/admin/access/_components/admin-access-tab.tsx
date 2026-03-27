@@ -221,7 +221,7 @@ export function AdminAccessTab() {
             return (
               <div
                 key={coAdmin.id}
-                className={`bg-white rounded-xl border overflow-hidden ${
+                className={`bg-white dark:bg-slate-800 rounded-xl border overflow-hidden ${
                   changed ? "ring-2 ring-blue-500" : ""
                 }`}
               >
@@ -313,7 +313,7 @@ export function AdminAccessTab() {
                             className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                               isSelected
                                 ? "bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700"
-                                : "hover:bg-gray-50 dark:hover:bg-slate-800"
+                                : "hover:bg-gray-50 dark:hover:bg-slate-900"
                             }`}
                           >
                             <Checkbox
