@@ -621,18 +621,18 @@ export function TrailSettingsTab() {
                       </div>
 
                       {/* Password protection toggle */}
-                      <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-100 dark:border-amber-800">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <KeyRound className="h-4 w-4 text-amber-600" />
+                            <KeyRound className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                             <div>
                               <div className="flex items-center gap-1">
-                                <span className="text-sm font-medium text-amber-900">
+                                <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
                                   Защита паролем
                                 </span>
                                 <InfoHint hint={adminHelpHints.studentAccess.trailPasswordProtection.shortHint} side="right" />
                               </div>
-                              <p className="text-xs text-amber-700">
+                              <p className="text-xs text-amber-700 dark:text-amber-300">
                                 {trail.isPasswordProtected
                                   ? "Требуется пароль для доступа"
                                   : "Доступ без пароля"}
@@ -660,12 +660,12 @@ export function TrailSettingsTab() {
                           </div>
                         </div>
                         {trail.isPasswordProtected && trail.passwordHint && (
-                          <p className="text-xs text-amber-600 mt-2">
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
                             Подсказка: {trail.passwordHint}
                           </p>
                         )}
                         {!isCreator && (
-                          <p className="text-xs text-amber-600 mt-2">
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
                             Только создатель trail может управлять паролем
                           </p>
                         )}

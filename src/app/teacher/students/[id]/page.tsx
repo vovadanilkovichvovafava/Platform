@@ -276,7 +276,7 @@ export default async function StudentDetailPage({ params }: Props) {
                     {isAnyAdmin(session.user.role) && (
                       <Link
                         href={`/admin/access?tab=student-access&studentId=${student.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 hover:bg-emerald-100 dark:hover:bg-emerald-900 rounded-lg transition-colors"
                       >
                         <Shield className="h-4 w-4" />
                         Изменить доступы

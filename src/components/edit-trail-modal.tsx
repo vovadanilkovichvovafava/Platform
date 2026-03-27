@@ -511,15 +511,15 @@ export function EditTrailModal({
               </div>
 
               {/* Password Protection - Create mode */}
-              <div className="space-y-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <div className="space-y-3 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-100 dark:border-amber-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-amber-600" />
+                    <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                     <div>
-                      <span className="text-sm font-medium text-amber-900">
+                      <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
                         Защита паролем
                       </span>
-                      <p className="text-xs text-amber-700">
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
                         {form.isPasswordProtected
                           ? "Требуется пароль для доступа"
                           : "Доступ без пароля"}
@@ -543,7 +543,7 @@ export function EditTrailModal({
                 {form.isPasswordProtected && (
                   <div className="space-y-3 pt-2 border-t border-amber-200">
                     <div>
-                      <Label htmlFor="trailPassword" className="text-amber-900">
+                      <Label htmlFor="trailPassword" className="text-amber-900 dark:text-amber-100">
                         Пароль *
                       </Label>
                       <div className="relative">
@@ -570,7 +570,7 @@ export function EditTrailModal({
                     </div>
 
                     <div>
-                      <Label htmlFor="trailPasswordConfirm" className="text-amber-900">
+                      <Label htmlFor="trailPasswordConfirm" className="text-amber-900 dark:text-amber-100">
                         Подтвердите пароль *
                       </Label>
                       <div className="relative">
@@ -604,7 +604,7 @@ export function EditTrailModal({
                     </div>
 
                     <div>
-                      <Label htmlFor="trailPasswordHint" className="text-amber-900">
+                      <Label htmlFor="trailPasswordHint" className="text-amber-900 dark:text-amber-100">
                         Подсказка (опционально)
                       </Label>
                       <div className="relative">
@@ -619,7 +619,7 @@ export function EditTrailModal({
                       </div>
                     </div>
 
-                    <p className="text-xs text-amber-700">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
                       Доступ получают: создатель, пользователи с паролем, привязанные студенты.
                       Роль admin/teacher не даёт автоматического доступа.
                     </p>
@@ -664,7 +664,7 @@ export function EditTrailModal({
                     teacherVisibility: e.target.value,
                     assignedTeacherId: e.target.value !== "SPECIFIC" ? null : form.assignedTeacherId
                   })}
-                  className="w-full p-2 pr-8 border border-blue-200 rounded-lg bg-white text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 pr-8 border border-blue-200 dark:border-blue-800 rounded-lg bg-white dark:bg-slate-800 dark:text-slate-100 text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   {visibilityOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -684,7 +684,7 @@ export function EditTrailModal({
                       Загрузка учителей...
                     </div>
                   ) : teachers.length === 0 ? (
-                    <div className="p-2 text-sm text-amber-700 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className="p-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
                       Нет учителей для назначения. Сначала создайте учителя в разделе &quot;Пользователи&quot;.
                     </div>
                   ) : (
@@ -692,7 +692,7 @@ export function EditTrailModal({
                       <select
                         value={form.assignedTeacherId || ""}
                         onChange={(e) => setForm({ ...form, assignedTeacherId: e.target.value || null })}
-                        className="w-full p-2 pr-8 border border-blue-200 rounded-lg bg-white text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-2 pr-8 border border-blue-200 dark:border-blue-800 rounded-lg bg-white dark:bg-slate-800 dark:text-slate-100 text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Выберите учителя...</option>
                         {teachers.map((teacher) => (
