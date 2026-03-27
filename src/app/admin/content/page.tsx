@@ -299,6 +299,20 @@ export default function AdminContentPage() {
     fetchTrails()
   }, [])
 
+  // Close modals on ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showHistory) setShowHistory(false)
+        else if (showAnalytics) setShowAnalytics(false)
+        else if (showImportModal) resetImportModal()
+        else if (showTrailModal) setShowTrailModal(false)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [showHistory, showAnalytics, showImportModal, showTrailModal])
+
   const createModule = async (data: {
     title: string
     description: string

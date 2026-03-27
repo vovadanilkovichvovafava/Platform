@@ -118,12 +118,12 @@ function getRarityBorderGradient(rarity: string) {
 
 function getRarityBgGradient(rarity: string) {
   switch (rarity) {
-    case "common": return "from-gray-50 via-slate-100 to-gray-50"
-    case "uncommon": return "from-green-50 via-emerald-100 to-green-50"
-    case "rare": return "from-blue-50 via-indigo-100 to-blue-50"
-    case "epic": return "from-purple-50 via-violet-100 to-purple-50"
-    case "legendary": return "from-orange-50 via-amber-100 to-yellow-50"
-    default: return "from-gray-50 via-slate-100 to-gray-50"
+    case "common": return "from-gray-50 via-slate-100 to-gray-50 dark:from-gray-900 dark:via-slate-800 dark:to-gray-900"
+    case "uncommon": return "from-green-50 via-emerald-100 to-green-50 dark:from-green-950 dark:via-emerald-900 dark:to-green-950"
+    case "rare": return "from-blue-50 via-indigo-100 to-blue-50 dark:from-blue-950 dark:via-indigo-900 dark:to-blue-950"
+    case "epic": return "from-purple-50 via-violet-100 to-purple-50 dark:from-purple-950 dark:via-violet-900 dark:to-purple-950"
+    case "legendary": return "from-orange-50 via-amber-100 to-yellow-50 dark:from-orange-950 dark:via-amber-900 dark:to-yellow-950"
+    default: return "from-gray-50 via-slate-100 to-gray-50 dark:from-gray-900 dark:via-slate-800 dark:to-gray-900"
   }
 }
 

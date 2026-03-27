@@ -121,6 +121,17 @@ export default function TeacherContentPage() {
     fetchData()
   }, [])
 
+  // Close modals on ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showTrailModal) setShowTrailModal(false)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [showTrailModal])
+
   // Filter trails to show only assigned ones
   const assignedTrails = trails.filter((t) => assignedTrailIds.includes(t.id))
 

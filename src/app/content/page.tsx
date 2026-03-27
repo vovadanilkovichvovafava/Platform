@@ -270,6 +270,18 @@ export default function UnifiedContentPage() {
     fetchData()
   }, [status, isPrivileged, router, fetchData])
 
+  // Close modals on ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showHistory) setShowHistory(false)
+        else if (showImportModal) resetImportModal()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [showHistory, showImportModal])
+
   // Check if a trail is locked for the current user (requires password)
   const isTrailLocked = useCallback((trail: Trail): boolean => {
     if (!trail.isPasswordProtected) return false

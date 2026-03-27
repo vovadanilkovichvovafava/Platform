@@ -931,7 +931,7 @@ export default function AdvancedAnalyticsPage() {
               onClick={() => setShowGuide(!showGuide)}
               variant="outline"
               size="sm"
-              className={showGuide ? "bg-cyan-50 border-cyan-200" : ""}
+              className={showGuide ? "bg-cyan-50 dark:bg-cyan-950 border-cyan-200 dark:border-cyan-800" : ""}
             >
               <HelpCircle className="h-4 w-4 mr-2" />
               Гайд
@@ -1043,10 +1043,10 @@ export default function AdvancedAnalyticsPage() {
 
         {/* Module C: Guide — Как читать аналитику */}
         {showGuide && (
-          <Card className="mb-6 border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50">
+          <Card className="mb-6 border-cyan-200 dark:border-cyan-800 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950 dark:to-blue-950">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg text-cyan-900">
+                <CardTitle className="flex items-center gap-2 text-lg text-cyan-900 dark:text-cyan-100">
                   <HelpCircle className="h-5 w-5" />
                   Как читать аналитику
                 </CardTitle>
@@ -1057,44 +1057,44 @@ export default function AdvancedAnalyticsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
-                  <p className="font-medium text-cyan-800 text-sm mb-1">Date Start</p>
-                  <p className="text-xs text-cyan-700">Дата первого начатого модуля в трейле. Автоматически фиксируется при открытии практики.</p>
+                <div className="p-3 bg-white/70 dark:bg-slate-800/70 rounded-lg border border-cyan-100 dark:border-cyan-900">
+                  <p className="font-medium text-cyan-800 dark:text-cyan-200 text-sm mb-1">Date Start</p>
+                  <p className="text-xs text-cyan-700 dark:text-cyan-300">Дата первого начатого модуля в трейле. Автоматически фиксируется при открытии практики.</p>
                 </div>
-                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
-                  <p className="font-medium text-cyan-800 text-sm mb-1">Прогресс</p>
-                  <p className="text-xs text-cyan-700">Кружки: каждый = модуль трейла. Зелёный = завершён, жёлтый = в процессе, пустой = не начат. Клик по кружку открывает проверку работы.</p>
+                <div className="p-3 bg-white/70 dark:bg-slate-800/70 rounded-lg border border-cyan-100 dark:border-cyan-900">
+                  <p className="font-medium text-cyan-800 dark:text-cyan-200 text-sm mb-1">Прогресс</p>
+                  <p className="text-xs text-cyan-700 dark:text-cyan-300">Кружки: каждый = модуль трейла. Зелёный = завершён, жёлтый = в процессе, пустой = не начат. Клик по кружку открывает проверку работы.</p>
                 </div>
-                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
-                  <p className="font-medium text-cyan-800 text-sm mb-1">Date End</p>
-                  <p className="text-xs text-cyan-700">Дата завершения последнего модуля. Появляется только когда все модули трейла завершены.</p>
+                <div className="p-3 bg-white/70 dark:bg-slate-800/70 rounded-lg border border-cyan-100 dark:border-cyan-900">
+                  <p className="font-medium text-cyan-800 dark:text-cyan-200 text-sm mb-1">Date End</p>
+                  <p className="text-xs text-cyan-700 dark:text-cyan-300">Дата завершения последнего модуля. Появляется только когда все модули трейла завершены.</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
-                  <p className="font-medium text-cyan-800 text-sm mb-1">Фильтры</p>
-                  <ul className="text-xs text-cyan-700 space-y-0.5">
+                <div className="p-3 bg-white/70 dark:bg-slate-800/70 rounded-lg border border-cyan-100 dark:border-cyan-900">
+                  <p className="font-medium text-cyan-800 dark:text-cyan-200 text-sm mb-1">Фильтры</p>
+                  <ul className="text-xs text-cyan-700 dark:text-cyan-300 space-y-0.5">
                     <li>• <strong>Направление</strong> — выбор конкретного трейла</li>
                     <li>• <strong>Период</strong> — временное окно анализа</li>
                     <li>• <strong>Статус</strong> — в процессе / завершено</li>
                   </ul>
                 </div>
-                <div className="p-3 bg-white/70 rounded-lg border border-cyan-100">
-                  <p className="font-medium text-cyan-800 text-sm mb-1">Блоки</p>
-                  <ul className="text-xs text-cyan-700 space-y-0.5">
+                <div className="p-3 bg-white/70 dark:bg-slate-800/70 rounded-lg border border-cyan-100 dark:border-cyan-900">
+                  <p className="font-medium text-cyan-800 dark:text-cyan-200 text-sm mb-1">Блоки</p>
+                  <ul className="text-xs text-cyan-700 dark:text-cyan-300 space-y-0.5">
                     <li>• <strong>Студенты по направлениям</strong> — прогресс всех студентов по каждому трейлу</li>
                     <li>• <strong>Детальный анализ</strong> — drill-down по конкретному студенту + AI-разбор</li>
                   </ul>
                 </div>
               </div>
               {/* Video guide placeholder */}
-              <div className="p-4 bg-white/50 rounded-lg border border-dashed border-cyan-300 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 shrink-0">
-                  <PlayCircle className="h-5 w-5 text-cyan-600" />
+              <div className="p-4 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-dashed border-cyan-300 dark:border-cyan-700 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900 shrink-0">
+                  <PlayCircle className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-cyan-800">Видеогайд</p>
-                  <p className="text-xs text-cyan-600">Здесь будет видеоинструкция по работе с аналитикой. Вставьте ссылку на видео или embed-код.</p>
+                  <p className="text-sm font-medium text-cyan-800 dark:text-cyan-200">Видеогайд</p>
+                  <p className="text-xs text-cyan-600 dark:text-cyan-400">Здесь будет видеоинструкция по работе с аналитикой. Вставьте ссылку на видео или embed-код.</p>
                 </div>
               </div>
             </CardContent>
