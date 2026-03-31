@@ -498,7 +498,7 @@ export default async function TrailPage({ params }: Props) {
                     size="lg"
                     className="bg-[#0176D3] hover:bg-[#014486] w-full md:w-auto"
                   >
-                    Начать оценку
+                    Начать
                   </Button>
                 </form>
               ) : (
