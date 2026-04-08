@@ -114,6 +114,7 @@ export function SubmitProjectForm({ moduleId, nextModuleSlug, autoNavigate }: Su
           name="comment"
           placeholder="Опишите что сделано, какие были сложности..."
           rows={4}
+          maxLength={5000}
           disabled={isLoading}
         />
       </div>

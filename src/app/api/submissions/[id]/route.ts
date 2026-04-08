@@ -42,7 +42,7 @@ const updateSubmissionSchema = z.object({
     )
     .optional()
     .or(z.literal("")),
-  comment: z.string().max(2000, "Комментарий слишком длинный").optional(),
+  comment: z.string().max(5000, "Комментарий слишком длинный").optional(),
 })
 
 // GET - Get submission details

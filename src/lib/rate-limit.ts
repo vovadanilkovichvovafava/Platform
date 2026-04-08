@@ -19,8 +19,8 @@ export const RATE_LIMITS = {
   auth: { windowMs: 60 * 1000, maxRequests: 5 },
   // Стандартный для API (60 запросов в минуту)
   api: { windowMs: 60 * 1000, maxRequests: 60 },
-  // Для отправки работ (10 в час)
-  submissions: { windowMs: 60 * 60 * 1000, maxRequests: 10 },
+  // Для отправки работ (50 в час)
+  submissions: { windowMs: 60 * 60 * 1000, maxRequests: 50 },
 } as const
 
 /**

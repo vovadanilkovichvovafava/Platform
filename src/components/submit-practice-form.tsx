@@ -103,6 +103,7 @@ export function SubmitPracticeForm({ moduleId }: SubmitPracticeFormProps) {
           name="comment"
           placeholder="Опишите что сделано, какие были сложности, что узнали нового..."
           rows={4}
+          maxLength={5000}
           disabled={isLoading}
         />
       </div>
