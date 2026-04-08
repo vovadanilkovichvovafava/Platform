@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Rate limiting - 10 отправок в час
+    // Rate limiting - 50 отправок в час
     // Проверяем после валидации, чтобы невалидные запросы не расходовали лимит
     const rateLimit = checkRateLimit(`submissions:${session.user.id}`, RATE_LIMITS.submissions)
     if (!rateLimit.allowed) {
