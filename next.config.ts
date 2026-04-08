@@ -10,7 +10,7 @@ const cspHeader = `
   font-src 'self';
   connect-src 'self' https://api.iconify.design;
   media-src 'self' blob:;
-  frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com;
+  frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com https://docs.google.com https://drive.google.com;
   frame-ancestors 'self';
   form-action 'self';
   base-uri 'self';
