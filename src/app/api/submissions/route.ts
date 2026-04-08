@@ -54,7 +54,7 @@ const submissionSchema = z.object({
     )
     .optional()
     .or(z.literal("")),
-  comment: z.string().max(2000, "Комментарий слишком длинный").optional(),
+  comment: z.string().max(5000, "Комментарий слишком длинный").optional(),
 })
 
 export async function POST(request: Request) {
@@ -63,12 +63,6 @@ export async function POST(request: Request) {
 
     if (!session) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
-    }
-
-    // Rate limiting - 10 отправок в час
-    const rateLimit = checkRateLimit(`submissions:${session.user.id}`, RATE_LIMITS.submissions)
-    if (!rateLimit.allowed) {
-      return rateLimitResponse(rateLimit.resetIn)
     }
 
     // Record daily activity
@@ -82,6 +76,13 @@ export async function POST(request: Request) {
         { error: "Укажите хотя бы одну ссылку (GitHub, деплой или файл)" },
         { status: 400 }
       )
+    }
+
+    // Rate limiting - 10 отправок в час
+    // Проверяем после валидации, чтобы невалидные запросы не расходовали лимит
+    const rateLimit = checkRateLimit(`submissions:${session.user.id}`, RATE_LIMITS.submissions)
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetIn)
     }
 
     // Check if module exists and is a project
