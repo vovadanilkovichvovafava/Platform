@@ -13,4 +13,6 @@ export const FEATURE_FLAGS = {
   LEADERBOARD_ENABLED: false,
   /** When true, AI analysis of submissions is triggered after submit and shown on review page. */
   AI_SUBMISSION_REVIEW_ENABLED: process.env.AI_SUBMISSION_REVIEW_ENABLED === "true",
+  /** Google Docs/Drive links are automatically scanned on submission and results shown on review page. */
+  GOOGLE_DOCS_SCAN_ENABLED: true,
 } as const

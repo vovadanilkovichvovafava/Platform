@@ -15,6 +15,7 @@ import {
 } from "@/lib/telegram"
 import { FEATURE_FLAGS } from "@/lib/feature-flags"
 import { runAiSubmissionReview, isAiReviewAvailable } from "@/lib/ai-submission-review"
+import { runGoogleDocsScan, isGoogleDocsScanAvailable } from "@/lib/google-docs-scanner"
 
 const submissionSchema = z.object({
   moduleId: z.string().min(1),
@@ -273,6 +274,13 @@ export async function POST(request: Request) {
     if (FEATURE_FLAGS.AI_SUBMISSION_REVIEW_ENABLED && isAiReviewAvailable()) {
       runAiSubmissionReview(submission.id).catch((err) =>
         console.error("[AI-SubmissionReview] Auto-trigger failed:", err instanceof Error ? err.message : err)
+      )
+    }
+
+    // Trigger Google Docs scan (non-blocking, isolated)
+    if (FEATURE_FLAGS.GOOGLE_DOCS_SCAN_ENABLED && isGoogleDocsScanAvailable() && data.fileUrl) {
+      runGoogleDocsScan(submission.id).catch((err) =>
+        console.error("[GoogleDocsScan] Auto-trigger failed:", err instanceof Error ? err.message : err)
       )
     }
 

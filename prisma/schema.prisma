@@ -340,8 +340,9 @@ model Submission {
 
   user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   module   Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  review   Review?
-  aiReview AiSubmissionReview?
+  review         Review?
+  aiReview       AiSubmissionReview?
+  googleDocsScan GoogleDocsScan?
 
   @@index([userId])
   @@index([moduleId])
@@ -634,4 +635,25 @@ model StudentTagAssignment {
   @@unique([studentId, tagId])
   @@index([studentId])
   @@index([tagId])
+}
+
+// Google Docs/Drive link scanner — auto-scans public document links on submission
+model GoogleDocsScan {
+  id              String   @id @default(cuid())
+  submissionId    String   @unique
+  status          String   @default("pending")   // pending, processing, completed, failed
+  initialScanData String?  @db.Text              // JSON: first scan result (IMMUTABLE after set)
+  rescanData      String?  @db.Text              // JSON: latest re-scan result (replaced on each re-scan)
+  rescanStatus    String?                         // pending, processing, completed, failed
+  errorMessage    String?
+  rescanError     String?
+  scannedAt       DateTime?
+  rescannedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([status])
 }
