@@ -113,24 +113,36 @@ export async function POST(request: NextRequest) {
     })
 
     if (nextModule) {
-      await prisma.moduleProgress.upsert({
+      const nextProgress = await prisma.moduleProgress.findUnique({
         where: {
           userId_moduleId: {
             userId: session.user.id,
             moduleId: nextModule.id,
           },
         },
-        update: {
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
-        },
-        create: {
-          userId: session.user.id,
-          moduleId: nextModule.id,
-          status: "IN_PROGRESS",
-          startedAt: new Date(),
-        },
+        select: { status: true, startedAt: true },
       })
+
+      if (nextProgress?.status !== "COMPLETED") {
+        await prisma.moduleProgress.upsert({
+          where: {
+            userId_moduleId: {
+              userId: session.user.id,
+              moduleId: nextModule.id,
+            },
+          },
+          update: {
+            status: "IN_PROGRESS",
+            ...(nextProgress && !nextProgress.startedAt ? { startedAt: new Date() } : {}),
+          },
+          create: {
+            userId: session.user.id,
+            moduleId: nextModule.id,
+            status: "IN_PROGRESS",
+            startedAt: new Date(),
+          },
+        })
+      }
     }
 
     // Check and award achievements after module completion
