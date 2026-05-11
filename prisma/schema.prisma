@@ -136,6 +136,8 @@ model Trail {
   createdById         String?  // Creator/owner of the trail (always has access)
   allowSkipReview     Boolean  @default(true) // If true, students can proceed to next module after submission without waiting for review
   projectAutoNavigate Boolean  @default(true) // If true, auto-redirect to next module after project submission
+  // Folder grouping (purely organizational; deleting folder must not delete trails)
+  folderId            String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -151,8 +153,24 @@ model Trail {
   passwordAttempts TrailPasswordAttempt[]
   studentStatuses  StudentTrailStatus[]
   creator          User?                  @relation("CreatedTrails", fields: [createdById], references: [id], onDelete: SetNull)
+  folder           TrailFolder?           @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@index([createdById])
+  @@index([folderId])
+}
+
+// Folders/sections to group trails (organizational only — never owns content)
+model TrailFolder {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trails Trail[]
+
+  @@index([order])
 }
 
 model Module {
