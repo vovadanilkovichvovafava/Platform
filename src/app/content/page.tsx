@@ -51,6 +51,7 @@ import {
   Pencil,
   FileCheck,
   Copy,
+  MoreHorizontal,
 } from "lucide-react"
 import { CreateModuleModal } from "@/components/create-module-modal"
 import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
@@ -1700,64 +1701,76 @@ export default function UnifiedContentPage() {
                   >
                     <div className="flex items-center gap-4">
                       {isAdmin && (
-                        <DropdownMenu
-                          open={openMoveMenu === trail.id}
-                          onOpenChange={(o) => setOpenMoveMenu(o ? trail.id : null)}
-                          modal={false}
-                        >
-                          <DropdownMenuTrigger asChild>
-                            <div
-                              className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 outline-none"
-                              role="button"
-                              tabIndex={0}
-                              draggable
-                              onClick={(e) => e.stopPropagation()}
-                              onDragStart={(e) => {
-                                e.stopPropagation()
-                                setOpenMoveMenu(null)
-                                handleTrailDragStart(trail.id)
-                              }}
-                              onDragEnd={handleTrailDragEnd}
-                              title="Кликните, чтобы переместить в папку, или перетащите"
-                            >
-                              <GripVertical className="h-5 w-5" />
-                            </div>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuLabel>Переместить в…</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {trail.folderId && (
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  setOpenMoveMenu(null)
-                                  moveTrailToFolder(trail.id, null)
-                                }}
+                        <div className="flex items-center -ml-1" onClick={(e) => e.stopPropagation()}>
+                          {/* Drag handle (drag only — separate from the move-to menu so it doesn't fight the trigger) */}
+                          <div
+                            className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 outline-none select-none"
+                            draggable
+                            onClick={(e) => e.stopPropagation()}
+                            onDragStart={(e) => {
+                              e.stopPropagation()
+                              setOpenMoveMenu(null)
+                              handleTrailDragStart(trail.id)
+                            }}
+                            onDragEnd={handleTrailDragEnd}
+                            title="Перетащите, чтобы переместить trail"
+                            aria-label="Перетащить trail"
+                          >
+                            <GripVertical className="h-5 w-5" />
+                          </div>
+                          {/* Move-to menu trigger (click only) */}
+                          <DropdownMenu
+                            open={openMoveMenu === trail.id}
+                            onOpenChange={(o) => setOpenMoveMenu(o ? trail.id : null)}
+                            modal={false}
+                          >
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 rounded hover:bg-gray-100 dark:hover:bg-slate-700 outline-none"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Переместить в папку…"
+                                aria-label="Переместить в папку"
                               >
-                                Без папки
-                              </DropdownMenuItem>
-                            )}
-                            {folders
-                              .filter((f) => f.id !== trail.folderId)
-                              .sort((a, b) => a.order - b.order)
-                              .map((f) => (
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuLabel>Переместить в…</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {trail.folderId && (
                                 <DropdownMenuItem
-                                  key={f.id}
                                   onSelect={() => {
                                     setOpenMoveMenu(null)
-                                    moveTrailToFolder(trail.id, f.id)
+                                    moveTrailToFolder(trail.id, null)
                                   }}
                                 >
-                                  <Folder className="h-4 w-4 mr-2 text-amber-600" />
-                                  {f.name}
+                                  Без папки
                                 </DropdownMenuItem>
-                              ))}
-                            {folders.length === 0 && !trail.folderId && (
-                              <div className="px-2 py-1.5 text-xs text-gray-500 dark:text-slate-400">
-                                Нет доступных папок
-                              </div>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              )}
+                              {folders
+                                .filter((f) => f.id !== trail.folderId)
+                                .sort((a, b) => a.order - b.order)
+                                .map((f) => (
+                                  <DropdownMenuItem
+                                    key={f.id}
+                                    onSelect={() => {
+                                      setOpenMoveMenu(null)
+                                      moveTrailToFolder(trail.id, f.id)
+                                    }}
+                                  >
+                                    <Folder className="h-4 w-4 mr-2 text-amber-600" />
+                                    {f.name}
+                                  </DropdownMenuItem>
+                                ))}
+                              {folders.length === 0 && !trail.folderId && (
+                                <div className="px-2 py-1.5 text-xs text-gray-500 dark:text-slate-400">
+                                  Нет доступных папок
+                                </div>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       )}
                       {/* Expand/Collapse indicator */}
                       <button
