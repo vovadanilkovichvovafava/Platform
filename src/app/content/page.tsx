@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -13,6 +13,14 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 import { Breadcrumbs } from "@/components/ui/breadcrumbs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   BookOpen,
   Wrench,
@@ -95,6 +103,7 @@ interface Trail {
   passwordHint?: string | null
   createdById?: string | null
   folderId?: string | null
+  order?: number
   createdAt?: string
 }
 
@@ -239,7 +248,11 @@ export default function UnifiedContentPage() {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   // null = the "no folder" pseudo-section, "id" = a real folder
   const [draggedTrail, setDraggedTrail] = useState<string | null>(null)
+  // Source folder of the trail being dragged (null = root). Used to allow
+  // reordering only within the same group.
+  const draggedTrailSourceRef = useRef<string | null>(null)
   const [dragOverFolder, setDragOverFolder] = useState<string | "__root__" | null>(null)
+  const [dragOverTrailId, setDragOverTrailId] = useState<string | null>(null)
   const [draggedFolder, setDraggedFolder] = useState<string | null>(null)
   const [dragOverFolderRow, setDragOverFolderRow] = useState<string | null>(null)
 
@@ -247,6 +260,10 @@ export default function UnifiedContentPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortMode, setSortMode] = useState<SortMode>("default")
   const [filterMode, setFilterMode] = useState<FilterMode>("all")
+  const [hideOtherFolders, setHideOtherFolders] = useState(false)
+
+  // Which trail's "Move to..." menu is open. Only one at a time.
+  const [openMoveMenu, setOpenMoveMenu] = useState<string | null>(null)
 
   // Bulk selection
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set())
@@ -320,6 +337,60 @@ export default function UnifiedContentPage() {
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [showHistory, showImportModal])
+
+  // Auto-scroll the window while a DnD drag is in progress.
+  // HTML5 native DnD captures the pointer and blocks normal wheel events,
+  // so users can't scroll a long list while holding a card. This listener
+  // edges-scrolls the viewport when the cursor approaches the top/bottom.
+  useEffect(() => {
+    const EDGE = 80           // px from viewport edge where auto-scroll kicks in
+    const MAX_SPEED = 24      // px per frame at the very edge
+
+    let rafId: number | null = null
+    let velocity = 0
+
+    const step = () => {
+      if (velocity !== 0) {
+        window.scrollBy(0, velocity)
+        rafId = requestAnimationFrame(step)
+      } else {
+        rafId = null
+      }
+    }
+
+    const onDragOver = (e: DragEvent) => {
+      const y = e.clientY
+      const h = window.innerHeight
+      let next = 0
+      if (y < EDGE) {
+        next = -Math.ceil(((EDGE - y) / EDGE) * MAX_SPEED)
+      } else if (y > h - EDGE) {
+        next = Math.ceil(((y - (h - EDGE)) / EDGE) * MAX_SPEED)
+      }
+      velocity = next
+      if (velocity !== 0 && rafId === null) {
+        rafId = requestAnimationFrame(step)
+      }
+    }
+
+    const stop = () => {
+      velocity = 0
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+    }
+
+    window.addEventListener("dragover", onDragOver)
+    window.addEventListener("dragend", stop)
+    window.addEventListener("drop", stop)
+    return () => {
+      window.removeEventListener("dragover", onDragOver)
+      window.removeEventListener("dragend", stop)
+      window.removeEventListener("drop", stop)
+      stop()
+    }
+  }, [])
 
   // Check if a trail is locked for the current user (requires password)
   const isTrailLocked = useCallback((trail: Trail): boolean => {
@@ -410,6 +481,7 @@ export default function UnifiedContentPage() {
         sorted.sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))
         break
       default:
+        sorted.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         break
     }
     return sorted
@@ -428,7 +500,13 @@ export default function UnifiedContentPage() {
     }
   }
   const sortedRootTrails = sortTrails(rootTrails)
-  const sortedFolders = [...folders].sort((a, b) => a.order - b.order)
+  const allSortedFolders = [...folders].sort((a, b) => a.order - b.order)
+  // When "hide other folders" is enabled, only show folders that contain at
+  // least one trail matching the current search/filter. If nothing matches,
+  // no folders are rendered.
+  const sortedFolders = hideOtherFolders
+    ? allSortedFolders.filter((f) => (folderIdToTrails.get(f.id)?.length ?? 0) > 0)
+    : allSortedFolders
 
   const createModule = async (data: {
     title: string
@@ -854,6 +932,10 @@ export default function UnifiedContentPage() {
   }
 
   const handleDragOver = (e: React.DragEvent, moduleId: string) => {
+    // Only respond when a module is being dragged. Otherwise we'd capture
+    // events meant for the parent trail card (e.g. when dragging a trail
+    // over an expanded card with modules inside).
+    if (!draggedModule) return
     e.preventDefault()
     if (draggedModule !== moduleId) {
       setDragOverModule(moduleId)
@@ -865,8 +947,9 @@ export default function UnifiedContentPage() {
   }
 
   const handleDrop = async (e: React.DragEvent, targetModuleId: string, trailId: string) => {
+    if (!draggedModule) return
     e.preventDefault()
-    if (!draggedModule || draggedModule === targetModuleId) {
+    if (draggedModule === targetModuleId) {
       setDraggedModule(null)
       setDragOverModule(null)
       return
@@ -1098,11 +1181,15 @@ export default function UnifiedContentPage() {
 
   // Trail DnD: dragging a trail into a folder (or to root)
   const handleTrailDragStart = (trailId: string) => {
+    const t = trails.find((x) => x.id === trailId)
+    draggedTrailSourceRef.current = t?.folderId ?? null
     setDraggedTrail(trailId)
   }
   const handleTrailDragEnd = () => {
     setDraggedTrail(null)
     setDragOverFolder(null)
+    setDragOverTrailId(null)
+    draggedTrailSourceRef.current = null
   }
   const handleFolderDragOver = (e: React.DragEvent, folderTargetId: string | "__root__") => {
     if (!draggedTrail) return
@@ -1119,9 +1206,89 @@ export default function UnifiedContentPage() {
     e.stopPropagation()
     const targetFolder = folderTargetId === "__root__" ? null : folderTargetId
     const trailId = draggedTrail
+    const source = draggedTrailSourceRef.current
     setDraggedTrail(null)
     setDragOverFolder(null)
+    setDragOverTrailId(null)
+    draggedTrailSourceRef.current = null
+    // If the trail is dropped on its current group container, do nothing —
+    // reordering inside that group is handled by per-trail drop targets below.
+    if ((source ?? null) === (targetFolder ?? null)) return
     await moveTrailToFolder(trailId, targetFolder)
+  }
+
+  // Reorder trails inside the same group (same folder or both in root).
+  // Persists relative order via /api/admin/trails/reorder.
+  const reorderTrailsInGroup = async (folderKey: string | null, orderedIds: string[]) => {
+    const prevTrails = trails
+    // Optimistic: rewrite the trails array so the rendered order changes.
+    // We do this by remapping the `order` field of trails in this group
+    // using the existing sorted order values, mirroring the server logic.
+    const groupTrails = trails.filter((t) => (t.folderId ?? null) === folderKey)
+    const sortedOrders = groupTrails.map((t) => t.order ?? 0).sort((a, b) => a - b)
+    const idToNewOrder = new Map<string, number>()
+    orderedIds.forEach((id, idx) => idToNewOrder.set(id, sortedOrders[idx] ?? idx))
+    setTrails((prev) =>
+      prev.map((t) =>
+        idToNewOrder.has(t.id) ? { ...t, order: idToNewOrder.get(t.id) } : t
+      )
+    )
+
+    try {
+      const res = await fetch("/api/admin/trails/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trailIds: orderedIds }),
+      })
+      if (!res.ok) throw new Error("reorder failed")
+    } catch {
+      setTrails(prevTrails)
+      showToast("Не удалось сохранить порядок trails", "error")
+    }
+  }
+
+  const handleTrailDragOverTrail = (e: React.DragEvent, targetTrailId: string) => {
+    if (!draggedTrail || draggedTrail === targetTrailId) return
+    const target = trails.find((t) => t.id === targetTrailId)
+    if (!target) return
+    // Only allow reorder within the same group as the dragged trail
+    if ((target.folderId ?? null) !== (draggedTrailSourceRef.current ?? null)) return
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverTrailId(targetTrailId)
+  }
+  const handleTrailDropOnTrail = async (e: React.DragEvent, targetTrailId: string) => {
+    if (!draggedTrail || draggedTrail === targetTrailId) {
+      setDragOverTrailId(null)
+      return
+    }
+    const target = trails.find((t) => t.id === targetTrailId)
+    const source = draggedTrailSourceRef.current
+    if (!target || (target.folderId ?? null) !== (source ?? null)) {
+      // Different group: let the drop bubble up to the parent folder/root
+      // drop target so the trail is moved into that group.
+      setDragOverTrailId(null)
+      return
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    const folderKey = source ?? null
+    const ordered = trails
+      .filter((t) => (t.folderId ?? null) === folderKey)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((t) => t.id)
+    const fromIdx = ordered.indexOf(draggedTrail)
+    const toIdx = ordered.indexOf(targetTrailId)
+    if (fromIdx === -1 || toIdx === -1) {
+      setDragOverTrailId(null)
+      return
+    }
+    const [moved] = ordered.splice(fromIdx, 1)
+    ordered.splice(toIdx, 0, moved)
+    setDraggedTrail(null)
+    setDragOverTrailId(null)
+    draggedTrailSourceRef.current = null
+    await reorderTrailsInGroup(folderKey, ordered)
   }
 
   // Folder DnD: reorder folders vertically
@@ -1473,8 +1640,16 @@ export default function UnifiedContentPage() {
               <option value="oldest">Сначала старые</option>
             </select>
           </div>
-          {(searchQuery || filterMode !== "all" || sortMode !== "default") && (
-            <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(""); setFilterMode("all"); setSortMode("default") }}>
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300 cursor-pointer select-none">
+            <Checkbox
+              checked={hideOtherFolders}
+              onCheckedChange={(v) => setHideOtherFolders(v === true)}
+              aria-label="Скрыть прочие папки"
+            />
+            <span>Скрыть прочие папки</span>
+          </label>
+          {(searchQuery || filterMode !== "all" || sortMode !== "default" || hideOtherFolders) && (
+            <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(""); setFilterMode("all"); setSortMode("default"); setHideOtherFolders(false) }}>
               Сбросить
             </Button>
           )}
@@ -1504,7 +1679,11 @@ export default function UnifiedContentPage() {
               return (
                 <Card
                   key={trail.id}
-                  className={draggedTrail === trail.id ? "opacity-50" : ""}
+                  className={`${draggedTrail === trail.id ? "opacity-50" : ""} ${
+                    dragOverTrailId === trail.id ? "border-blue-500 ring-2 ring-blue-200 dark:ring-blue-900" : ""
+                  }`}
+                  onDragOver={isAdmin ? (e) => handleTrailDragOverTrail(e, trail.id) : undefined}
+                  onDrop={isAdmin ? (e) => handleTrailDropOnTrail(e, trail.id) : undefined}
                 >
                   <CardHeader
                     className="cursor-pointer select-none"
@@ -1521,19 +1700,64 @@ export default function UnifiedContentPage() {
                   >
                     <div className="flex items-center gap-4">
                       {isAdmin && (
-                        <div
-                          className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-gray-400 dark:text-slate-500 hover:text-gray-600"
-                          draggable
-                          onClick={(e) => e.stopPropagation()}
-                          onDragStart={(e) => {
-                            e.stopPropagation()
-                            handleTrailDragStart(trail.id)
-                          }}
-                          onDragEnd={handleTrailDragEnd}
-                          title="Перетащить в папку"
+                        <DropdownMenu
+                          open={openMoveMenu === trail.id}
+                          onOpenChange={(o) => setOpenMoveMenu(o ? trail.id : null)}
+                          modal={false}
                         >
-                          <GripVertical className="h-5 w-5" />
-                        </div>
+                          <DropdownMenuTrigger asChild>
+                            <div
+                              className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 outline-none"
+                              role="button"
+                              tabIndex={0}
+                              draggable
+                              onClick={(e) => e.stopPropagation()}
+                              onDragStart={(e) => {
+                                e.stopPropagation()
+                                setOpenMoveMenu(null)
+                                handleTrailDragStart(trail.id)
+                              }}
+                              onDragEnd={handleTrailDragEnd}
+                              title="Кликните, чтобы переместить в папку, или перетащите"
+                            >
+                              <GripVertical className="h-5 w-5" />
+                            </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuLabel>Переместить в…</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {trail.folderId && (
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setOpenMoveMenu(null)
+                                  moveTrailToFolder(trail.id, null)
+                                }}
+                              >
+                                Без папки
+                              </DropdownMenuItem>
+                            )}
+                            {folders
+                              .filter((f) => f.id !== trail.folderId)
+                              .sort((a, b) => a.order - b.order)
+                              .map((f) => (
+                                <DropdownMenuItem
+                                  key={f.id}
+                                  onSelect={() => {
+                                    setOpenMoveMenu(null)
+                                    moveTrailToFolder(trail.id, f.id)
+                                  }}
+                                >
+                                  <Folder className="h-4 w-4 mr-2 text-amber-600" />
+                                  {f.name}
+                                </DropdownMenuItem>
+                              ))}
+                            {folders.length === 0 && !trail.folderId && (
+                              <div className="px-2 py-1.5 text-xs text-gray-500 dark:text-slate-400">
+                                Нет доступных папок
+                              </div>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                       {/* Expand/Collapse indicator */}
                       <button
@@ -1852,7 +2076,13 @@ export default function UnifiedContentPage() {
             }
 
             const hasResults = sortedRootTrails.length > 0 || sortedFolders.some((f) => (folderIdToTrails.get(f.id)?.length ?? 0) > 0)
-            if (!hasResults && folders.length === 0) {
+            // When hide-other-folders is on, an empty sortedFolders + no root
+            // trails really means nothing is visible — show the empty state
+            // instead of a blank section.
+            const shouldShowEmpty = hideOtherFolders
+              ? sortedRootTrails.length === 0 && sortedFolders.length === 0
+              : !hasResults && folders.length === 0
+            if (shouldShowEmpty) {
               return (
                 <Card>
                   <CardContent className="p-12 text-center">
