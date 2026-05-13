@@ -41,6 +41,7 @@ import {
   X,
   Check,
   Minus,
+  Square,
 } from "lucide-react"
 import {
   PER_PAGE_OPTIONS,
@@ -715,8 +716,9 @@ export function SubmissionsFilter({
                       {isSelected ? (
                         <Check className="h-4 w-4" strokeWidth={3} />
                       ) : (
-                        <span className="sr-only">Выбрать</span>
+                        <Square className="h-4 w-4 text-gray-400 dark:text-slate-500" strokeWidth={2.5} aria-hidden />
                       )}
+                      <span className="sr-only">Выбрать</span>
                     </button>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
