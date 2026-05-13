@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 import {
@@ -40,6 +39,8 @@ import {
   ChevronRight,
   List,
   X,
+  Check,
+  Minus,
 } from "lucide-react"
 import {
   PER_PAGE_OPTIONS,
@@ -336,6 +337,19 @@ export function SubmissionsFilter({
     setSelectedIds(new Set())
   }, [])
 
+  // Master "select all on this page" toggle for the current pagination window
+  const togglePageSelection = useCallback((ids: string[], allSelected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allSelected) {
+        for (const id of ids) next.delete(id)
+      } else {
+        for (const id of ids) next.add(id)
+      }
+      return next
+    })
+  }, [])
+
   const handleBulkApprove = async () => {
     if (bulkApproving || selectedIds.size === 0) return
 
@@ -567,55 +581,94 @@ export function SubmissionsFilter({
 
       {/* Bulk action toolbar — appears when one or more pending works are selected */}
       {selectedIds.size > 0 && (
-        <Card className="mb-6 border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30">
-          <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-slate-100">
-              <CheckCircle2 className="h-4 w-4 text-blue-600" />
-              Выбрано работ: <span className="text-blue-700 dark:text-blue-300">{selectedIds.size}</span>
-            </div>
-            <div className="flex gap-2 sm:ml-auto">
-              <Button
-                onClick={handleBulkApprove}
-                disabled={bulkApproving}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {bulkApproving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Принимаем…
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Принять работу
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={clearSelection}
-                disabled={bulkApproving}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Отмена
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6">
+          <Card className="border-2 border-blue-500 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/60 shadow-md">
+            <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-slate-100">
+                <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                Выбрано работ:{" "}
+                <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-sm font-bold">
+                  {selectedIds.size}
+                </span>
+              </div>
+              <div className="flex gap-2 sm:ml-auto">
+                <Button
+                  onClick={handleBulkApprove}
+                  disabled={bulkApproving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {bulkApproving ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Принимаем…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Принять работу
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={clearSelection}
+                  disabled={bulkApproving}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Отмена
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Pending Submissions */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            Работы на проверку
-            {sortedPending.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {sortedPending.length}
-              </Badge>
-            )}
-          </CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Работы на проверку
+              {sortedPending.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {sortedPending.length}
+                </Badge>
+              )}
+            </CardTitle>
+            {paginatedPending.length > 0 && (() => {
+              const pageIds = paginatedPending.map((s) => s.id)
+              const selectedOnPage = pageIds.filter((id) => selectedIds.has(id)).length
+              const allOnPageSelected = selectedOnPage === pageIds.length
+              const someOnPageSelected = selectedOnPage > 0 && !allOnPageSelected
+              return (
+                <button
+                  type="button"
+                  onClick={() => togglePageSelection(pageIds, allOnPageSelected)}
+                  aria-label={allOnPageSelected ? "Снять выбор со всех работ на странице" : "Выбрать все работы на странице"}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-slate-200 hover:border-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                >
+                  <span
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${
+                      allOnPageSelected
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : someOnPageSelected
+                        ? "bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                        : "border-gray-400 dark:border-slate-500 bg-white dark:bg-slate-800"
+                    }`}
+                    aria-hidden
+                  >
+                    {allOnPageSelected ? (
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                    ) : someOnPageSelected ? (
+                      <Minus className="h-3.5 w-3.5" strokeWidth={3} />
+                    ) : null}
+                  </span>
+                  {allOnPageSelected ? "Снять выбор" : "Выбрать все на странице"}
+                </button>
+              )
+            })()}
+          </div>
         </CardHeader>
         <CardContent>
           {sortedPending.length === 0 ? (
@@ -642,19 +695,29 @@ export function SubmissionsFilter({
                 return (
                   <div
                     key={submission.id}
-                    className={`flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-lg ${
+                    className={`flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-lg transition-colors ${
                       isSelected
-                        ? "bg-blue-50 dark:bg-blue-950/40 ring-1 ring-blue-300 dark:ring-blue-800"
+                        ? "bg-blue-50 dark:bg-blue-950/40 ring-2 ring-blue-500 dark:ring-blue-600"
                         : "bg-gray-50 dark:bg-slate-900"
                     }`}
                   >
-                    <div className="flex items-center md:self-start md:pt-1">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelected(submission.id)}
-                        aria-label={`Выбрать работу ${submission.user.name}: ${submission.module.title}`}
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleSelected(submission.id)}
+                      aria-label={`Выбрать работу ${submission.user.name}: ${submission.module.title}`}
+                      aria-pressed={isSelected}
+                      className={`flex items-center justify-center h-7 w-7 rounded-md border-2 shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:self-start md:mt-1 ${
+                        isSelected
+                          ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700"
+                          : "border-gray-400 dark:border-slate-500 bg-white dark:bg-slate-800 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <Check className="h-4 w-4" strokeWidth={3} />
+                      ) : (
+                        <span className="sr-only">Выбрать</span>
+                      )}
+                    </button>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
