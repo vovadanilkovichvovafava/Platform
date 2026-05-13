@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/toast"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 import {
@@ -38,6 +39,7 @@ import {
   ChevronLeft,
   ChevronRight,
   List,
+  X,
 } from "lucide-react"
 import {
   PER_PAGE_OPTIONS,
@@ -205,6 +207,8 @@ export function SubmissionsFilter({
   const [perPage, setPerPage] = useState<PerPageOption>(10)
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkApproving, setBulkApproving] = useState(false)
 
   // Keep trails in a ref to avoid effect re-runs on array reference changes
   const trailsRef = useRef(trails)
@@ -276,12 +280,14 @@ export function SubmissionsFilter({
   const handleTrailChange = useCallback((value: string) => {
     setTrailFilter(value)
     setCurrentPage(1)
+    setSelectedIds(new Set())
     updateUrl({ trail: value, status: statusFilter, sort: sortBy, q: search, perPage: String(perPage), page: "1" })
   }, [statusFilter, sortBy, search, perPage, updateUrl])
 
   const handleStatusChange = useCallback((value: string) => {
     setStatusFilter(value)
     setCurrentPage(1)
+    setSelectedIds(new Set())
     updateUrl({ trail: trailFilter, status: value, sort: sortBy, q: search, perPage: String(perPage), page: "1" })
   }, [trailFilter, sortBy, search, perPage, updateUrl])
 
@@ -313,6 +319,73 @@ export function SubmissionsFilter({
       }
     }
   }, [])
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
+  const handleBulkApprove = async () => {
+    if (bulkApproving || selectedIds.size === 0) return
+
+    const count = selectedIds.size
+    const confirmed = await confirm({
+      title: "Принять выбранные работы?",
+      message: `Будут приняты ${count} ${count === 1 ? "работа" : count < 5 ? "работы" : "работ"} с оценкой 7/10. Студенты получат уведомления. Продолжить?`,
+      confirmText: "Принять",
+      variant: "default",
+    })
+
+    if (!confirmed) return
+
+    try {
+      setBulkApproving(true)
+      const ids = Array.from(selectedIds)
+      const res = await fetch("/api/teacher/bulk-approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionIds: ids }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Ошибка при принятии работ")
+      }
+
+      const data = (await res.json()) as { approvedCount: number; skipped?: { id: string; reason: string }[] }
+      const approved = data.approvedCount ?? 0
+      const skippedCount = data.skipped?.length ?? 0
+
+      if (approved > 0) {
+        showToast(
+          skippedCount > 0
+            ? `Принято работ: ${approved}. Пропущено: ${skippedCount}`
+            : `Принято работ: ${approved}`,
+          "success",
+        )
+      } else {
+        showToast("Ни одна работа не была принята", "error")
+      }
+
+      clearSelection()
+      router.refresh()
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Ошибка при принятии работ", "error")
+    } finally {
+      setBulkApproving(false)
+    }
+  }
 
   const handleDeleteSubmission = async (id: string, userName: string, moduleTitle: string) => {
     if (deletingId) return
@@ -492,6 +565,45 @@ export function SubmissionsFilter({
         </CardContent>
       </Card>
 
+      {/* Bulk action toolbar — appears when one or more pending works are selected */}
+      {selectedIds.size > 0 && (
+        <Card className="mb-6 border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30">
+          <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-slate-100">
+              <CheckCircle2 className="h-4 w-4 text-blue-600" />
+              Выбрано работ: <span className="text-blue-700 dark:text-blue-300">{selectedIds.size}</span>
+            </div>
+            <div className="flex gap-2 sm:ml-auto">
+              <Button
+                onClick={handleBulkApprove}
+                disabled={bulkApproving}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {bulkApproving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Принимаем…
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Принять работу
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={clearSelection}
+                disabled={bulkApproving}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Отмена
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pending Submissions */}
       <Card className="mb-8">
         <CardHeader>
@@ -525,12 +637,24 @@ export function SubmissionsFilter({
               {paginatedPending.map((submission) => {
                 const days = getDaysWaiting(submission.createdAt)
                 const { label, color } = getDaysWaitingLabel(days)
+                const isSelected = selectedIds.has(submission.id)
 
                 return (
                   <div
                     key={submission.id}
-                    className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 dark:bg-slate-900 rounded-lg"
+                    className={`flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-lg ${
+                      isSelected
+                        ? "bg-blue-50 dark:bg-blue-950/40 ring-1 ring-blue-300 dark:ring-blue-800"
+                        : "bg-gray-50 dark:bg-slate-900"
+                    }`}
                   >
+                    <div className="flex items-center md:self-start md:pt-1">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelected(submission.id)}
+                        aria-label={`Выбрать работу ${submission.user.name}: ${submission.module.title}`}
+                      />
+                    </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
