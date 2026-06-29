@@ -72,6 +72,8 @@ export async function GET() {
         totalXP: true,
         createdAt: true,
         telegramUsername: true,
+        enrollments: { select: { trailId: true } },
+        trailAccess: { select: { trailId: true } },
         _count: {
           select: {
             enrollments: true,

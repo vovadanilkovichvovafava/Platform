@@ -37,6 +37,7 @@ import {
 import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
 import { TagAssignDropdown } from "@/components/tag-assign-dropdown"
 import { TagFilterDropdown } from "@/components/tag-filter-dropdown"
+import { TrailFilterDropdown } from "@/components/trail-filter-dropdown"
 
 interface TagAssignment {
   id: string
@@ -57,6 +58,8 @@ interface User {
   role: UserRole
   totalXP: number
   createdAt: string
+  enrollments: { trailId: string }[]
+  trailAccess: { trailId: string }[]
   _count: {
     enrollments: number
     submissions: number
@@ -110,6 +113,9 @@ function AdminUsersPageContent() {
   const [perPage, setPerPage] = useState<PerPageOption>(10)
   const [currentPage, setCurrentPage] = useState(1)
   const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [trailFilter, setTrailFilter] = useState<string[]>([])
+  const [trailMatchMode, setTrailMatchMode] = useState<"any" | "all">("any")
+  const [allTrails, setAllTrails] = useState<{ id: string; title: string }[]>([])
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
@@ -204,10 +210,11 @@ function AdminUsersPageContent() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const [usersRes, tagsRes, tagAssignRes] = await Promise.all([
+      const [usersRes, tagsRes, tagAssignRes, trailsRes] = await Promise.all([
         fetch("/api/admin/users"),
         fetch("/api/admin/student-tags"),
         fetch("/api/admin/student-tag-assignments"),
+        fetch("/api/admin/trails"),
       ])
       if (!usersRes.ok) throw new Error("Failed to fetch")
       const data = await usersRes.json()
@@ -221,6 +228,10 @@ function AdminUsersPageContent() {
       if (tagAssignRes.ok) {
         const assignData = await tagAssignRes.json()
         setTagAssignments(assignData)
+      }
+      if (trailsRes.ok) {
+        const trailsData = await trailsRes.json()
+        setAllTrails(trailsData.map((t: { id: string; title: string }) => ({ id: t.id, title: t.title })))
       }
     } catch {
       setError("Ошибка загрузки пользователей")
@@ -355,6 +366,14 @@ function AdminUsersPageContent() {
     [],
   )
 
+  const handleTrailFilterChange = useCallback(
+    (ids: string[]) => {
+      setTrailFilter(ids)
+      setCurrentPage(1)
+    },
+    [],
+  )
+
   const tagsForFilter = useMemo(() => {
     return allTagsRaw.map((t) => ({
       id: t.id,
@@ -363,6 +382,25 @@ function AdminUsersPageContent() {
       count: t._count?.assignments ?? 0,
     }))
   }, [allTagsRaw])
+
+  // A user is "attached" to a trail if enrolled in it OR granted access to it
+  const getUserTrailIds = (user: User): Set<string> =>
+    new Set([
+      ...user.enrollments.map((e) => e.trailId),
+      ...user.trailAccess.map((a) => a.trailId),
+    ])
+
+  const trailsForFilter = useMemo(() => {
+    return allTrails.map((t) => ({
+      id: t.id,
+      title: t.title,
+      count: users.filter(
+        (u) =>
+          u.enrollments.some((e) => e.trailId === t.id) ||
+          u.trailAccess.some((a) => a.trailId === t.id),
+      ).length,
+    }))
+  }, [allTrails, users])
 
   useEffect(() => {
     fetchUsers()
@@ -382,7 +420,12 @@ function AdminUsersPageContent() {
     const matchesRole = roleFilter === "ALL" || user.role === roleFilter
     const matchesTags = tagFilter.length === 0 ||
       tagFilter.some((tagId) => tagAssignments.some((a) => a.studentId === user.id && a.tagId === tagId))
-    return matchesSearch && matchesRole && matchesTags
+    const userTrailIds = getUserTrailIds(user)
+    const matchesTrails = trailFilter.length === 0 ||
+      (trailMatchMode === "any"
+        ? trailFilter.some((trailId) => userTrailIds.has(trailId))
+        : trailFilter.every((trailId) => userTrailIds.has(trailId)))
+    return matchesSearch && matchesRole && matchesTags && matchesTrails
   })
 
   // Pagination
@@ -613,6 +656,14 @@ function AdminUsersPageContent() {
                   selectedTagIds={tagFilter}
                   onChange={handleTagFilterChange}
                 />
+                {/* Trail filter */}
+                <TrailFilterDropdown
+                  trails={trailsForFilter}
+                  selectedTrailIds={trailFilter}
+                  onChange={handleTrailFilterChange}
+                  matchMode={trailMatchMode}
+                  onMatchModeChange={setTrailMatchMode}
+                />
                 {/* Per page */}
                 <select
                   value={String(perPage)}
@@ -628,7 +679,7 @@ function AdminUsersPageContent() {
               </div>
             </div>
             {/* Results count */}
-            {(searchQuery || roleFilter !== "ALL" || tagFilter.length > 0) && (
+            {(searchQuery || roleFilter !== "ALL" || tagFilter.length > 0 || trailFilter.length > 0) && (
               <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">
                 Найдено: {filteredUsers.length} из {users.length}
               </p>
