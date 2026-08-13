@@ -1,0 +1,59 @@
+# Fully self-hosted stack — no external SaaS. Use this to validate the Saturn
+# migration locally before deploying, and as a reference for the target topology.
+#
+#   cp .env.example .env   (fill NEXTAUTH_SECRET at minimum)
+#   docker compose up --build
+#   open http://localhost:8080
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rnd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rnd_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-rnd_academy}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rnd} -d ${POSTGRES_DB:-rnd_academy}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Not published by default — the app reaches it over the internal network.
+    # Uncomment to inspect the DB from the host.
+    # ports:
+    #   - "5432:5432"
+
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rnd}:${POSTGRES_PASSWORD:-rnd_local_password}@db:5432/${POSTGRES_DB:-rnd_academy}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-rnd}:${POSTGRES_PASSWORD:-rnd_local_password}@db:5432/${POSTGRES_DB:-rnd_academy}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:8080}
+      DB_MIGRATE_MODE: ${DB_MIGRATE_MODE:-deploy}
+      PORT: "8080"
+      # Optional integrations — leave unset to run fully offline
+      AI_PARSER_ENABLED: ${AI_PARSER_ENABLED:-false}
+      AI_SUBMISSION_REVIEW_ENABLED: ${AI_SUBMISSION_REVIEW_ENABLED:-false}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_API_ENDPOINT: ${AI_API_ENDPOINT:-}
+      AI_MODEL: ${AI_MODEL:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      COMMUNICATION_API_KEY: ${COMMUNICATION_API_KEY:-}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      # Uploaded media MUST outlive the container
+      - uploads:/app/public/uploads
+
+volumes:
+  db-data:
+  uploads:

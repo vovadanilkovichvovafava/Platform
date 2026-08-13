@@ -18,6 +18,10 @@ const cspHeader = `
 `.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
 
 const nextConfig: NextConfig = {
+  // Self-contained build output for container deployment (Saturn / Docker).
+  // Additive: `next start` keeps working, but `.next/standalone/server.js` is
+  // also emitted so the runtime image does not need full node_modules.
+  output: 'standalone',
   // Prevent 307 redirects for trailing slash - important for webhooks (Telegram)
   skipTrailingSlashRedirect: true,
   async rewrites() {
