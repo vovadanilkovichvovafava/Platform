@@ -54,11 +54,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Prisma schema + migrations + CLI, so the container can run `migrate deploy`
 # itself in a closed network (no npx download at runtime).
+#
+# Do NOT copy node_modules/.bin/prisma: it is a symlink to ../prisma/build/index.js
+# and Docker COPY dereferences symlinks, producing a detached copy that cannot
+# find its sibling prisma_schema_build_bg.wasm. The entrypoint invokes the real
+# path (node ./node_modules/prisma/build/index.js) instead.
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 COPY --chown=nextjs:nodejs scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 RUN chmod +x ./scripts/docker-entrypoint.sh

@@ -10,7 +10,9 @@
 set -e
 
 MODE="${DB_MIGRATE_MODE:-deploy}"
-PRISMA="./node_modules/.bin/prisma"
+# Invoke the CLI by its real path — node_modules/.bin/prisma is a symlink, and a
+# dereferenced copy of it cannot locate its own .wasm assets.
+PRISMA="node ./node_modules/prisma/build/index.js"
 
 if [ -z "$DATABASE_URL" ]; then
   echo "FATAL: DATABASE_URL is not set." >&2
@@ -20,13 +22,16 @@ fi
 case "$MODE" in
   deploy)
     echo "[entrypoint] Applying migrations (prisma migrate deploy)..."
-    "$PRISMA" migrate deploy
+    # Unquoted on purpose: $PRISMA expands to two words (node + script path).
+    # shellcheck disable=SC2086
+    $PRISMA migrate deploy
     ;;
   push)
     echo "[entrypoint] Syncing schema (prisma db push)..."
     # Deliberately WITHOUT --accept-data-loss: a destructive change must fail
     # rather than silently drop columns.
-    "$PRISMA" db push --skip-generate
+    # shellcheck disable=SC2086
+    $PRISMA db push --skip-generate
     ;;
   none)
     echo "[entrypoint] DB_MIGRATE_MODE=none — skipping schema step."
