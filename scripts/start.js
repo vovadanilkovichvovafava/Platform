@@ -7,8 +7,14 @@ const { PrismaClient } = require('@prisma/client');
  *
  * Environment:
  *   DB_MIGRATE_MODE       push (default) | deploy | none
- *                         `deploy` applies prisma/migrations — REQUIRED for Saturn
- *                         and any environment holding real data.
+ *                         `deploy` applies prisma/migrations. DO NOT USE YET:
+ *                         prisma/migrations has no baseline, so nothing creates the
+ *                         core tables (User, Trail, ...). On a database that lacks
+ *                         them `migrate deploy` fails at 20260130_add_admin_trail_access,
+ *                         records the failure in _prisma_migrations and blocks every
+ *                         later run with P3009 — the container then crash-loops.
+ *                         See SATURN_MIGRATION.md 4.3 for how to clear P3009 and how
+ *                         to create the baseline that would make `deploy` usable.
  *   DB_ACCEPT_DATA_LOSS   'true' (default) only in push mode — see warning below.
  *   ALLOW_SEED_ON_ERROR   'true' to seed even when the DB could not be read.
  *   FORCE_SEED            'true' to re-run the seed unconditionally.
@@ -41,7 +47,8 @@ function runMigrations() {
     console.warn(
       '\n⚠️  WARNING: running `prisma db push --accept-data-loss`.\n' +
       '    This can DROP COLUMNS/TABLES without confirmation and ignores\n' +
-      '    prisma/migrations. Set DB_MIGRATE_MODE=deploy for real data.\n'
+      '    prisma/migrations. Set DB_ACCEPT_DATA_LOSS=false to make a\n' +
+      '    destructive change fail instead of applying silently.\n'
     );
   }
   console.log('Syncing schema (prisma db push)...');
