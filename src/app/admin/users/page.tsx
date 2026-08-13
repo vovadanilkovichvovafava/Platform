@@ -647,6 +647,7 @@ function AdminUsersPageContent() {
                   <option value="ALL">Все роли</option>
                   <option value="STUDENT">Студенты</option>
                   <option value="TEACHER">Учителя</option>
+                  <option value="HR">HR</option>
                   <option value="CO_ADMIN">Со-админы</option>
                   <option value="ADMIN">Админы</option>
                 </select>
