@@ -3,10 +3,14 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export function HeroSection() {
+interface HeroSectionProps {
+  isLoggedIn?: boolean
+}
+
+export function HeroSection({ isLoggedIn = false }: HeroSectionProps) {
   return (
     <section
-      className="relative min-h-[90vh] flex items-center overflow-hidden bg-slate-900 bg-cover bg-center bg-no-repeat"
+      className="relative min-h-[90vh] flex items-center overflow-hidden bg-slate-900 dark:bg-slate-950 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/hero-bg.jpg')" }}
     >
       {/* Overlay for better text readability */}
@@ -32,21 +36,44 @@ export function HeroSection() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button
-              asChild
-              size="lg"
-              className="h-12 px-8 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/30"
-            >
-              <Link href="/login">Войти в систему</Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-12 px-8 text-base font-semibold bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:border-white/50"
-            >
-              <Link href="/trails">Смотреть trails</Link>
-            </Button>
+            {isLoggedIn ? (
+              <Button
+                asChild
+                size="lg"
+                className="h-12 px-8 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/30"
+              >
+                <Link href="/dashboard">Перейти в Dashboard</Link>
+              </Button>
+            ) : (
+              <Button
+                asChild
+                size="lg"
+                className="h-12 px-8 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/30"
+              >
+                <Link href="/login">Войти в систему</Link>
+              </Button>
+            )}
+            {isLoggedIn ? (
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 px-8 text-base font-semibold bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:border-white/50"
+              >
+                <Link href="/trails">Смотреть trails</Link>
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 px-8 text-base font-semibold bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:border-white/50"
+                onClick={() => {
+                  document.getElementById('trails-section')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              >
+                Смотреть trails
+              </Button>
+            )}
           </div>
         </div>
       </div>

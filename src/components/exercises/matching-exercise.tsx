@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback, useRef, useEffect } from "react"
+import React, { useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Check, RotateCcw } from "lucide-react"
 
@@ -102,26 +102,26 @@ export function MatchingExercise({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h3 className="text-lg font-bold text-gray-900">{question}</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">{question}</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Выберите задачу слева, затем ответ справа
         </p>
       </div>
 
       {/* Main matching area - simple table-like layout */}
-      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+      <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 space-y-3">
         {/* Column headers */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="text-center text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
             {leftLabel}
           </div>
-          <div className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="text-center text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
             {rightLabel}
           </div>
         </div>
 
         {/* Left items as rows with their matches */}
-        {leftItems.map((item) => {
+        {leftItems.map((item, index) => {
           const isMatched = !!matches[item.id]
           const isSelected = selectedLeft === item.id
           const colorIndex = getColorIndex(item.id)
@@ -132,53 +132,64 @@ export function MatchingExercise({
           const isPairWrong = showResult && isMatched && correctPairs[item.id] !== matches[item.id]
 
           return (
-            <div key={item.id} className="grid grid-cols-2 gap-3 items-center">
-              {/* Left item */}
+            <div key={item.id} className="grid grid-cols-2 gap-3 items-stretch">
+              {/* Left item with number */}
               <button
                 onClick={() => handleLeftClick(item.id)}
                 disabled={disabled || showResult}
                 className={cn(
                   "w-full p-3 rounded-lg text-left text-sm font-medium transition-all",
-                  "border-2",
-                  !isMatched && !isSelected && "bg-white border-gray-200 hover:border-blue-300",
-                  isSelected && "bg-blue-50 border-blue-500 shadow-md",
+                  "border-2 overflow-hidden",
+                  !isMatched && !isSelected && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-300",
+                  isSelected && "bg-blue-50 dark:bg-blue-950 border-blue-500 dark:border-blue-400 shadow-md",
                   isMatched && !showResult && colors && `bg-white ${colors.border}`,
                   isPairCorrect && "bg-green-50 border-green-500",
                   isPairWrong && "bg-red-50 border-red-500",
                   (disabled || showResult) && "cursor-default"
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
+                  {/* Номер вопроса */}
+                  <span className={cn(
+                    "flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                    isSelected ? "bg-blue-500 text-white" :
+                    isPairCorrect ? "bg-green-500 text-white" :
+                    isPairWrong ? "bg-red-500 text-white" :
+                    isMatched && colors ? colors.bg + " text-white" :
+                    "bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
+                  )}>
+                    {index + 1}
+                  </span>
                   {isMatched && colors && !showResult && (
-                    <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", colors.bg)} />
+                    <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1", colors.bg)} />
                   )}
-                  {isPairCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                  {isPairCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />}
                   {isPairWrong && <span className="text-red-600 font-bold flex-shrink-0">✕</span>}
-                  <span className="leading-tight">{item.text}</span>
+                  <span className="leading-tight break-words overflow-wrap-anywhere min-w-0">{item.text}</span>
                 </div>
               </button>
 
               {/* Right side - show match or placeholder */}
               <div
                 className={cn(
-                  "w-full p-3 rounded-lg text-sm font-medium transition-all border-2 min-h-[44px]",
-                  isMatched && !showResult && colors && `bg-white ${colors.border}`,
-                  isPairCorrect && "bg-green-50 border-green-500",
-                  isPairWrong && "bg-red-50 border-red-500",
-                  !isMatched && "bg-gray-100 border-gray-200 border-dashed"
+                  "w-full p-3 rounded-lg text-sm font-medium transition-all border-2 min-h-[44px] overflow-hidden",
+                  isMatched && !showResult && colors && `bg-white dark:bg-slate-800 ${colors.border}`,
+                  isPairCorrect && "bg-green-50 dark:bg-green-950 border-green-500",
+                  isPairWrong && "bg-red-50 dark:bg-red-950 border-red-500",
+                  !isMatched && "bg-gray-100 dark:bg-slate-800 border-gray-200 dark:border-slate-700 border-dashed"
                 )}
               >
                 {matchedText ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     {isMatched && colors && !showResult && (
-                      <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", colors.bg)} />
+                      <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1", colors.bg)} />
                     )}
-                    {isPairCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                    {isPairCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />}
                     {isPairWrong && <span className="text-red-600 font-bold flex-shrink-0">✕</span>}
-                    <span className="leading-tight">{matchedText}</span>
+                    <span className="leading-tight break-words overflow-wrap-anywhere min-w-0">{matchedText}</span>
                   </div>
                 ) : (
-                  <span className="text-gray-400">—</span>
+                  <span className="text-gray-400 dark:text-slate-500">—</span>
                 )}
               </div>
             </div>
@@ -186,15 +197,18 @@ export function MatchingExercise({
         })}
 
         {/* Divider */}
-        <div className="border-t border-gray-200 my-4" />
+        <div className="border-t border-gray-200 dark:border-slate-700 my-4" />
 
         {/* Right items to choose from */}
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+        <div className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
           Варианты ответов (можно использовать несколько раз)
         </div>
         <div className="flex flex-wrap gap-2">
-          {rightItems.map((item) => {
-            const useCount = Object.values(matches).filter(id => id === item.id).length
+          {rightItems.map((item, index) => {
+            // Find which left items (questions) are connected to this right item (answer)
+            const connectedLeftIndices = leftItems
+              .map((leftItem, idx) => matches[leftItem.id] === item.id ? idx + 1 : null)
+              .filter((idx): idx is number => idx !== null)
             const canClick = selectedLeft && !disabled && !showResult
 
             return (
@@ -204,15 +218,22 @@ export function MatchingExercise({
                 disabled={disabled || showResult || !selectedLeft}
                 className={cn(
                   "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border-2 relative",
-                  !canClick && "bg-white border-gray-200 text-gray-700",
-                  canClick && "bg-white border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer shadow-sm hover:shadow",
+                  "max-w-full break-words text-left flex items-start gap-2",
+                  !canClick && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300",
+                  canClick && "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 cursor-pointer shadow-sm hover:shadow",
                   (disabled || showResult) && "cursor-default"
                 )}
               >
-                {item.text}
-                {useCount > 0 && (
-                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                    {useCount}
+                <span className={cn(
+                  "flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold",
+                  canClick ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400" : "bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
+                )}>
+                  {index + 1}
+                </span>
+                <span className="break-words overflow-wrap-anywhere">{item.text}</span>
+                {connectedLeftIndices.length > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    {connectedLeftIndices.join(",")}
                   </span>
                 )}
               </button>
@@ -235,12 +256,12 @@ export function MatchingExercise({
                       ? "bg-green-500"
                       : "bg-red-500"
                     : PAIR_COLORS[idx % PAIR_COLORS.length].bg
-                  : "bg-gray-300"
+                  : "bg-gray-300 dark:bg-slate-600"
               )}
             />
           ))}
         </div>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-gray-500 dark:text-slate-400">
           {Object.keys(matches).length} / {leftItems.length}
         </span>
       </div>
@@ -249,7 +270,7 @@ export function MatchingExercise({
       {showResult && (
         <div className={cn(
           "p-4 rounded-xl text-center",
-          isCorrect ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+          isCorrect ? "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800"
         )}>
           <p className={cn("font-semibold", isCorrect ? "text-green-700" : "text-red-700")}>
             {isCorrect ? "Отлично! Все пары верны!" : "Есть ошибки. Попробуйте снова."}
@@ -267,7 +288,7 @@ export function MatchingExercise({
               "px-8 py-3 rounded-xl font-semibold text-white transition-all",
               allMatched && !disabled
                 ? "bg-blue-500 hover:bg-blue-600 shadow-lg"
-                : "bg-gray-300 cursor-not-allowed"
+                : "bg-gray-300 dark:bg-slate-600 cursor-not-allowed"
             )}
           >
             Проверить
@@ -275,7 +296,7 @@ export function MatchingExercise({
         ) : !isCorrect && (
           <button
             onClick={handleRetry}
-            className="px-8 py-3 rounded-xl font-semibold bg-white border-2 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+            className="px-8 py-3 rounded-xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Ещё раз

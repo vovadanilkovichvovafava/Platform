@@ -20,6 +20,7 @@ interface ReviewFormProps {
   moduleId: string
   userId: string
   modulePoints: number
+  returnTo?: string
 }
 
 type ReviewStatus = "APPROVED" | "REVISION" | "FAILED"
@@ -29,6 +30,7 @@ export function ReviewForm({
   moduleId,
   userId,
   modulePoints,
+  returnTo,
 }: ReviewFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -65,7 +67,7 @@ export function ReviewForm({
         throw new Error(result.error || "Ошибка при сохранении")
       }
 
-      router.push("/teacher")
+      router.push(returnTo || "/teacher")
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при сохранении")
@@ -80,21 +82,21 @@ export function ReviewForm({
       icon: CheckCircle2,
       label: "Принять работу",
       hint: `Ученик получит ${modulePoints} XP и перейдёт на следующий уровень`,
-      hintColor: "bg-green-50 text-green-700",
+      hintColor: "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300",
     },
     REVISION: {
       color: "bg-orange-600 hover:bg-orange-700",
       icon: AlertCircle,
       label: "На доработку",
       hint: "Ученик исправит замечания и пересдаст. Уровень не меняется",
-      hintColor: "bg-orange-50 text-orange-700",
+      hintColor: "bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300",
     },
     FAILED: {
       color: "bg-red-600 hover:bg-red-700",
       icon: XCircle,
       label: "Провал",
       hint: "Ученик переходит на уровень ниже",
-      hintColor: "bg-red-50 text-red-700",
+      hintColor: "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300",
     },
   }
 
@@ -104,7 +106,7 @@ export function ReviewForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950 rounded-lg">
           {error}
         </div>
       )}

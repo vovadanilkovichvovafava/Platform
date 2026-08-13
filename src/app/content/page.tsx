@@ -1,0 +1,2790 @@
+"use client"
+
+import { useState, useEffect, useCallback, useRef } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
+import { Progress } from "@/components/ui/progress"
+import { useToast } from "@/components/ui/toast"
+import { useConfirm } from "@/components/ui/confirm-dialog"
+import { Breadcrumbs } from "@/components/ui/breadcrumbs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  BookOpen,
+  Wrench,
+  FolderGit2,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
+  Code,
+  Target,
+  Palette,
+  Lightbulb,
+  RefreshCw,
+  Plus,
+  X,
+  Upload,
+  Download,
+  CheckCircle,
+  Trash2,
+  Users,
+  Lock,
+  GripVertical,
+  BarChart3,
+  History,
+  Sparkles,
+  AlertTriangle,
+  Info,
+  Pencil,
+  FileCheck,
+  Copy,
+  MoreHorizontal,
+} from "lucide-react"
+import { CreateModuleModal } from "@/components/create-module-modal"
+import { EditTrailModal, TrailFormData } from "@/components/edit-trail-modal"
+import { AdminTrailPasswordModal } from "@/components/admin-trail-password-modal"
+import { FolderEditModal, FolderFormData } from "@/components/folder-edit-modal"
+import { Input } from "@/components/ui/input"
+import { FolderPlus, Folder, Search, ArrowUpDown, Filter } from "lucide-react"
+import { pluralizeRu } from "@/lib/utils"
+
+interface Module {
+  id: string
+  slug: string
+  title: string
+  description: string
+  type: "THEORY" | "PRACTICE" | "PROJECT"
+  level: string
+  points: number
+  duration: string
+  order: number
+  _count: {
+    questions: number
+  }
+}
+
+interface TrailTeacherAssignment {
+  teacher: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
+interface Trail {
+  id: string
+  slug: string
+  title: string
+  subtitle: string
+  description: string
+  icon: string
+  color: string
+  duration: string
+  isPublished: boolean
+  isRestricted: boolean
+  allowSkipReview: boolean
+  teacherVisibility: string
+  teachers: TrailTeacherAssignment[]
+  modules: Module[]
+  // Password protection fields
+  isPasswordProtected?: boolean
+  passwordHint?: string | null
+  createdById?: string | null
+  folderId?: string | null
+  order?: number
+  createdAt?: string
+}
+
+interface TrailFolder {
+  id: string
+  name: string
+  description: string
+  order: number
+}
+
+type SortMode = "default" | "title-asc" | "title-desc" | "modules-desc" | "modules-asc" | "newest" | "oldest"
+type FilterMode = "all" | "in-folder" | "no-folder" | "published" | "hidden"
+
+const iconMap: Record<string, typeof Code> = {
+  Code,
+  Target,
+  Palette,
+  Lightbulb,
+}
+
+const typeIcons: Record<string, typeof BookOpen> = {
+  THEORY: BookOpen,
+  PRACTICE: Wrench,
+  PROJECT: FolderGit2,
+}
+
+const typeLabels: Record<string, string> = {
+  THEORY: "Теория",
+  PRACTICE: "Практика",
+  PROJECT: "Проект",
+}
+
+interface Assignment {
+  trailId: string
+}
+
+export default function UnifiedContentPage() {
+  const router = useRouter()
+  const { data: session, status } = useSession()
+  const [trails, setTrails] = useState<Trail[]>([])
+  const [assignedTrailIds, setAssignedTrailIds] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
+
+  const isFullAdmin = session?.user?.role === "ADMIN"
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "CO_ADMIN"
+  const isTeacher = session?.user?.role === "TEACHER"
+  const isPrivileged = isAdmin || isTeacher
+
+
+  // Edit trail modal
+  const [showEditTrailModal, setShowEditTrailModal] = useState(false)
+  const [editingTrail, setEditingTrail] = useState<TrailFormData | null>(null)
+  const [trailModalMode, setTrailModalMode] = useState<"edit" | "create">("edit")
+
+  // Password verification modal (for password-protected trails)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordTrail, setPasswordTrail] = useState<Trail | null>(null)
+  const [passwordIsExpired, setPasswordIsExpired] = useState(false)
+
+  // Tracks which password-protected trails have been verified this session
+  const [verifiedTrails, setVerifiedTrails] = useState<Set<string>>(new Set())
+  // Stores the action to execute after successful password verification
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+
+  // Create module modal
+  const [showModuleModal, setShowModuleModal] = useState(false)
+  const [selectedTrailId, setSelectedTrailId] = useState("")
+
+  // Import modal (admin only)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [parsedData, setParsedData] = useState<{
+    trails: Array<{
+      title: string
+      slug: string
+      subtitle?: string
+      description?: string
+      icon?: string
+      color?: string
+      modules: Array<{
+        title: string
+        slug: string
+        type: "THEORY" | "PRACTICE" | "PROJECT"
+        points: number
+        description?: string
+        content?: string
+        questions: Array<{
+          question: string
+          options: string[]
+          correctAnswer: number
+        }>
+      }>
+    }>
+    warnings?: string[]
+    parseMethod?: string
+    detectedFormat?: string
+    structureConfidence?: number
+    confidenceDetails?: {
+      totalScore: number
+      maxPossibleScore: number
+      percentage: number
+      criteria: Array<{
+        name: string
+        description: string
+        score: number
+        maxScore: number
+        met: boolean
+      }>
+    }
+  } | null>(null)
+  const [showConfidenceDetails, setShowConfidenceDetails] = useState(false)
+  const [parseError, setParseError] = useState<string | null>(null)
+  const [aiStatus, setAiStatus] = useState<{ available: boolean; error?: string; checking: boolean }>({
+    available: false,
+    checking: false,
+  })
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [useNeuralParser, setUseNeuralParser] = useState(true)
+
+  // Progress tracking для импорта
+  const [importProgress, setImportProgress] = useState<{
+    current: number
+    total: number
+    status: string
+    phase: string
+  } | null>(null)
+
+  // Drag and drop
+  const [draggedModule, setDraggedModule] = useState<string | null>(null)
+  const [dragOverModule, setDragOverModule] = useState<string | null>(null)
+
+  // Folders
+  const [folders, setFolders] = useState<TrailFolder[]>([])
+  const [showFolderModal, setShowFolderModal] = useState(false)
+  const [folderModalMode, setFolderModalMode] = useState<"create" | "edit">("create")
+  const [editingFolder, setEditingFolder] = useState<FolderFormData | null>(null)
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+  // null = the "no folder" pseudo-section, "id" = a real folder
+  const [draggedTrail, setDraggedTrail] = useState<string | null>(null)
+  // Source folder of the trail being dragged (null = root). Used to allow
+  // reordering only within the same group.
+  const draggedTrailSourceRef = useRef<string | null>(null)
+  const [dragOverFolder, setDragOverFolder] = useState<string | "__root__" | null>(null)
+  const [dragOverTrailId, setDragOverTrailId] = useState<string | null>(null)
+  const [draggedFolder, setDraggedFolder] = useState<string | null>(null)
+  const [dragOverFolderRow, setDragOverFolderRow] = useState<string | null>(null)
+
+  // Search / sort / filter
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortMode, setSortMode] = useState<SortMode>("default")
+  const [filterMode, setFilterMode] = useState<FilterMode>("all")
+  const [hideOtherFolders, setHideOtherFolders] = useState(false)
+
+  // Which trail's "Move to..." menu is open. Only one at a time.
+  const [openMoveMenu, setOpenMoveMenu] = useState<string | null>(null)
+
+  // Bulk selection
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+
+  // History (admin only)
+  const [showHistory, setShowHistory] = useState(false)
+
+  // Track which trails are expanded (default: all collapsed)
+  const [expandedTrails, setExpandedTrails] = useState<Set<string>>(new Set())
+  const [auditLogs, setAuditLogs] = useState<Array<{
+    id: string
+    userName: string
+    action: string
+    entityType: string
+    entityName: string
+    createdAt: string
+  }>>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError("")
+
+      // Fetch trails
+      const trailsRes = await fetch("/api/admin/trails")
+      if (!trailsRes.ok) throw new Error("Failed to fetch trails")
+      const trailsData = await trailsRes.json()
+      setTrails(trailsData)
+
+      // Fetch folders (shared globally)
+      const foldersRes = await fetch("/api/admin/folders")
+      if (foldersRes.ok) {
+        const foldersData = await foldersRes.json()
+        setFolders(foldersData)
+      }
+
+      // For teachers, also fetch assignments to filter visible trails
+      if (isTeacher && !isAdmin) {
+        const assignmentsRes = await fetch("/api/teacher/assignments")
+        if (assignmentsRes.ok) {
+          const assignmentsData = await assignmentsRes.json()
+          setAssignedTrailIds(assignmentsData.map((a: Assignment) => a.trailId))
+        }
+      }
+    } catch {
+      setError("Ошибка загрузки данных")
+    } finally {
+      setLoading(false)
+    }
+  }, [isTeacher, isAdmin])
+
+  useEffect(() => {
+    if (status === "loading") return
+    if (!isPrivileged) {
+      router.push("/dashboard")
+      return
+    }
+    fetchData()
+  }, [status, isPrivileged, router, fetchData])
+
+  // Close modals on ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showHistory) setShowHistory(false)
+        else if (showImportModal) resetImportModal()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [showHistory, showImportModal])
+
+  // Auto-scroll the window while a DnD drag is in progress.
+  // HTML5 native DnD captures the pointer and blocks normal wheel events,
+  // so users can't scroll a long list while holding a card. This listener
+  // edges-scrolls the viewport when the cursor approaches the top/bottom.
+  useEffect(() => {
+    const EDGE = 80           // px from viewport edge where auto-scroll kicks in
+    const MAX_SPEED = 24      // px per frame at the very edge
+
+    let rafId: number | null = null
+    let velocity = 0
+
+    const step = () => {
+      if (velocity !== 0) {
+        window.scrollBy(0, velocity)
+        rafId = requestAnimationFrame(step)
+      } else {
+        rafId = null
+      }
+    }
+
+    const onDragOver = (e: DragEvent) => {
+      const y = e.clientY
+      const h = window.innerHeight
+      let next = 0
+      if (y < EDGE) {
+        next = -Math.ceil(((EDGE - y) / EDGE) * MAX_SPEED)
+      } else if (y > h - EDGE) {
+        next = Math.ceil(((y - (h - EDGE)) / EDGE) * MAX_SPEED)
+      }
+      velocity = next
+      if (velocity !== 0 && rafId === null) {
+        rafId = requestAnimationFrame(step)
+      }
+    }
+
+    const stop = () => {
+      velocity = 0
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+    }
+
+    window.addEventListener("dragover", onDragOver)
+    window.addEventListener("dragend", stop)
+    window.addEventListener("drop", stop)
+    return () => {
+      window.removeEventListener("dragover", onDragOver)
+      window.removeEventListener("dragend", stop)
+      window.removeEventListener("drop", stop)
+      stop()
+    }
+  }, [])
+
+  // Check if a trail is locked for the current user (requires password)
+  const isTrailLocked = useCallback((trail: Trail): boolean => {
+    if (!trail.isPasswordProtected) return false
+    if (trail.createdById === session?.user?.id) return false
+    if (verifiedTrails.has(trail.id)) return false
+    return true
+  }, [session?.user?.id, verifiedTrails])
+
+  // Guard any trail action behind password verification
+  const guardTrailAction = useCallback(async (trail: Trail, action: () => void) => {
+    if (!isTrailLocked(trail)) {
+      action()
+      return
+    }
+
+    // Check server-side if password is already unlocked (from a previous session)
+    try {
+      const res = await fetch(`/api/admin/trails/${trail.id}/password-status`)
+      if (res.ok) {
+        const data = await res.json()
+        if (!data.needsPassword) {
+          // Already unlocked on server, update local state and proceed
+          setVerifiedTrails(prev => new Set(prev).add(trail.id))
+          action()
+          return
+        }
+        setPasswordIsExpired(data.isExpired)
+      }
+    } catch {
+      // On error, fall through to show password modal
+    }
+
+    // Password required — show modal with pending action
+    setPasswordTrail(trail)
+    setPendingAction(() => action)
+    setShowPasswordModal(true)
+  }, [isTrailLocked])
+
+  // Filter trails for teachers
+  const visibleTrails = isAdmin
+    ? trails
+    : trails.filter((t) => assignedTrailIds.includes(t.id))
+
+  // Apply search / filter / sort
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const matchesSearch = (t: Trail): boolean => {
+    if (!normalizedQuery) return true
+    return (
+      t.title.toLowerCase().includes(normalizedQuery) ||
+      t.subtitle.toLowerCase().includes(normalizedQuery) ||
+      t.description.toLowerCase().includes(normalizedQuery)
+    )
+  }
+  const passesFilter = (t: Trail): boolean => {
+    switch (filterMode) {
+      case "in-folder":
+        return !!t.folderId
+      case "no-folder":
+        return !t.folderId
+      case "published":
+        return t.isPublished
+      case "hidden":
+        return !t.isPublished
+      default:
+        return true
+    }
+  }
+  const sortTrails = (list: Trail[]): Trail[] => {
+    const sorted = [...list]
+    switch (sortMode) {
+      case "title-asc":
+        sorted.sort((a, b) => a.title.localeCompare(b.title, "ru"))
+        break
+      case "title-desc":
+        sorted.sort((a, b) => b.title.localeCompare(a.title, "ru"))
+        break
+      case "modules-desc":
+        sorted.sort((a, b) => b.modules.length - a.modules.length)
+        break
+      case "modules-asc":
+        sorted.sort((a, b) => a.modules.length - b.modules.length)
+        break
+      case "newest":
+        sorted.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
+        break
+      case "oldest":
+        sorted.sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))
+        break
+      default:
+        sorted.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        break
+    }
+    return sorted
+  }
+
+  const filteredVisibleTrails = visibleTrails.filter((t) => matchesSearch(t) && passesFilter(t))
+
+  const folderIdToTrails = new Map<string, Trail[]>()
+  for (const f of folders) folderIdToTrails.set(f.id, [])
+  const rootTrails: Trail[] = []
+  for (const t of filteredVisibleTrails) {
+    if (t.folderId && folderIdToTrails.has(t.folderId)) {
+      folderIdToTrails.get(t.folderId)!.push(t)
+    } else {
+      rootTrails.push(t)
+    }
+  }
+  const sortedRootTrails = sortTrails(rootTrails)
+  const allSortedFolders = [...folders].sort((a, b) => a.order - b.order)
+  // When "hide other folders" is enabled, only show folders that contain at
+  // least one trail matching the current search/filter. If nothing matches,
+  // no folders are rendered.
+  const sortedFolders = hideOtherFolders
+    ? allSortedFolders.filter((f) => (folderIdToTrails.get(f.id)?.length ?? 0) > 0)
+    : allSortedFolders
+
+  const createModule = async (data: {
+    title: string
+    description: string
+    type: "THEORY" | "PRACTICE" | "PROJECT"
+    level: string
+    points: number
+    duration: string
+  }) => {
+    if (!selectedTrailId) return
+
+    const res = await fetch("/api/admin/modules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        trailId: selectedTrailId,
+        ...data,
+      }),
+    })
+
+    if (!res.ok) throw new Error("Failed to create")
+
+    const newModule = await res.json()
+    setShowModuleModal(false)
+    router.push(`/content/modules/${newModule.id}`)
+  }
+
+  const openModuleModal = (trailId: string) => {
+    setSelectedTrailId(trailId)
+    setShowModuleModal(true)
+  }
+
+  const openCreateTrailModal = () => {
+    setEditingTrail(null)
+    setTrailModalMode("create")
+    setShowEditTrailModal(true)
+  }
+
+  // Proceed to open edit modal (called directly or after password verification)
+  const proceedToEditModal = (trail: Trail) => {
+    const assignedTeacherId = trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0
+      ? trail.teachers[0].teacher.id
+      : null
+
+    setEditingTrail({
+      id: trail.id,
+      title: trail.title,
+      subtitle: trail.subtitle,
+      description: trail.description,
+      icon: trail.icon,
+      color: trail.color,
+      duration: trail.duration,
+      isPublished: trail.isPublished,
+      isRestricted: trail.isRestricted,
+      allowSkipReview: trail.allowSkipReview,
+      teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
+      assignedTeacherId,
+      isPasswordProtected: trail.isPasswordProtected,
+      passwordHint: trail.passwordHint,
+      createdById: trail.createdById,
+    })
+    setTrailModalMode("edit")
+    setShowEditTrailModal(true)
+  }
+
+  const openEditTrailModal = async (trail: Trail) => {
+    guardTrailAction(trail, () => proceedToEditModal(trail))
+  }
+
+  // Called when password is successfully entered
+  const handlePasswordSuccess = () => {
+    setShowPasswordModal(false)
+    if (passwordTrail) {
+      setVerifiedTrails(prev => new Set(prev).add(passwordTrail.id))
+    }
+    if (pendingAction) {
+      pendingAction()
+      setPendingAction(null)
+    }
+    setPasswordTrail(null)
+  }
+
+  const handleTrailSave = () => {
+    fetchData()
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setImporting(true)
+      setParsedData(null)
+      setParseError(null)
+      setUploadedFile(file)
+      setImportProgress({ current: 0, total: 100, status: "Подготовка...", phase: "analyzing" })
+
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("useAI", useNeuralParser ? "true" : "false")
+      formData.append("forceAI", useNeuralParser ? "true" : "false")
+
+      const res = await fetch("/api/admin/import/stream", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        setParseError(errorData.error || "Ошибка при загрузке файла")
+        setParsedData(null)
+        setImportProgress(null)
+        return
+      }
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        setParseError("Не удалось создать поток для чтения")
+        setParsedData(null)
+        setImportProgress(null)
+        return
+      }
+
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6))
+
+              if (event.type === "progress") {
+                setImportProgress({
+                  current: event.current || 0,
+                  total: event.total || 100,
+                  status: event.status || "Обработка...",
+                  phase: event.phase || "parsing"
+                })
+              } else if (event.type === "complete") {
+                const data = event.result
+                if (!data.success || !data.trails || data.trails.length === 0) {
+                  const errorDetails = data.details?.length > 0
+                    ? `\n${data.details.join("; ")}`
+                    : ""
+                  setParseError((data.error || "Не удалось распознать структуру файла") + errorDetails)
+                  setParsedData(null)
+                } else {
+                  setParsedData({
+                    trails: data.trails,
+                    warnings: data.warnings,
+                    parseMethod: data.parseMethod,
+                    detectedFormat: data.detectedFormat,
+                    structureConfidence: data.structureConfidence,
+                    confidenceDetails: data.confidenceDetails,
+                  })
+                  setParseError(null)
+                }
+                setImportProgress(null)
+              } else if (event.type === "error") {
+                setParseError(event.error || "Неизвестная ошибка")
+                setParsedData(null)
+                setImportProgress(null)
+              }
+            } catch {
+              console.error("Failed to parse SSE event:", line)
+            }
+          }
+        }
+      }
+    } catch {
+      setParseError("Ошибка при загрузке файла")
+      setParsedData(null)
+      setImportProgress(null)
+    } finally {
+      setImporting(false)
+      e.target.value = ""
+    }
+  }
+
+  const handleSaveImport = async () => {
+    if (!parsedData?.trails) return
+
+    try {
+      setSaving(true)
+      const res = await fetch("/api/admin/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save",
+          trails: parsedData.trails,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        showToast(data.message || "Контент успешно добавлен", "success")
+        setShowImportModal(false)
+        setParsedData(null)
+        setUploadedFile(null)
+        fetchData()
+      } else {
+        showToast(data.error || "Ошибка сохранения", "error")
+      }
+    } catch {
+      showToast("Ошибка при сохранении", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const resetImportModal = () => {
+    setShowImportModal(false)
+    setParsedData(null)
+    setParseError(null)
+    setUploadedFile(null)
+    setShowConfidenceDetails(false)
+    setImportProgress(null)
+  }
+
+  const handleRegenerate = async () => {
+    if (!uploadedFile) return
+
+    try {
+      setRegenerating(true)
+      setParsedData(null)
+      setParseError(null)
+      setImportProgress({ current: 0, total: 100, status: "Подготовка к перегенерации...", phase: "analyzing" })
+
+      const formData = new FormData()
+      formData.append("file", uploadedFile)
+      formData.append("useAI", useNeuralParser ? "true" : "false")
+      formData.append("forceAI", useNeuralParser ? "true" : "false")
+
+      const res = await fetch("/api/admin/import/stream", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        setParseError(errorData.error || "Ошибка при перегенерации")
+        setParsedData(null)
+        setImportProgress(null)
+        return
+      }
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        setParseError("Не удалось создать поток для чтения")
+        setParsedData(null)
+        setImportProgress(null)
+        return
+      }
+
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6))
+
+              if (event.type === "progress") {
+                setImportProgress({
+                  current: event.current || 0,
+                  total: event.total || 100,
+                  status: event.status || "Обработка...",
+                  phase: event.phase || "parsing"
+                })
+              } else if (event.type === "complete") {
+                const data = event.result
+                if (!data.success || !data.trails || data.trails.length === 0) {
+                  const errorDetails = data.details?.length > 0
+                    ? `\n${data.details.join("; ")}`
+                    : ""
+                  setParseError((data.error || "AI не смог распознать структуру") + errorDetails)
+                  setParsedData(null)
+                } else {
+                  setParsedData({
+                    trails: data.trails,
+                    warnings: data.warnings,
+                    parseMethod: data.parseMethod,
+                    detectedFormat: data.detectedFormat,
+                    structureConfidence: data.structureConfidence,
+                    confidenceDetails: data.confidenceDetails,
+                  })
+                  setParseError(null)
+                }
+                setImportProgress(null)
+              } else if (event.type === "error") {
+                setParseError(event.error || "Неизвестная ошибка")
+                setParsedData(null)
+                setImportProgress(null)
+              }
+            } catch {
+              console.error("Failed to parse SSE event:", line)
+            }
+          }
+        }
+      }
+    } catch {
+      setParseError("Ошибка при перегенерации")
+      setParsedData(null)
+      setImportProgress(null)
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  const checkAIStatus = useCallback(async () => {
+    setAiStatus({ available: false, checking: true })
+    try {
+      const res = await fetch("/api/admin/import?action=check-ai")
+      const data = await res.json()
+      setAiStatus({
+        available: data.available,
+        error: data.error,
+        checking: false,
+      })
+    } catch {
+      setAiStatus({
+        available: false,
+        error: "Ошибка проверки AI",
+        checking: false,
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (showImportModal && isAdmin) {
+      checkAIStatus()
+    }
+  }, [showImportModal, checkAIStatus, isAdmin])
+
+  const deleteTrail = async (trailId: string, title: string) => {
+    const confirmed = await confirm({
+      title: "Удалить trail?",
+      message: `Вы уверены, что хотите удалить "${title}" и все его модули?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
+
+    try {
+      const res = await fetch(`/api/admin/trails/${trailId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to delete")
+      fetchData()
+      showToast("Trail удалён", "success")
+    } catch {
+      showToast("Ошибка при удалении trail", "error")
+    }
+  }
+
+  const deleteModule = async (moduleId: string, title: string) => {
+    const confirmed = await confirm({
+      title: "Удалить модуль?",
+      message: `Вы уверены, что хотите удалить "${title}"?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
+
+    try {
+      const res = await fetch(`/api/admin/modules/${moduleId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to delete")
+      fetchData()
+      showToast("Модуль удалён", "success")
+    } catch {
+      showToast("Ошибка при удалении модуля", "error")
+    }
+  }
+
+  const duplicateTrail = async (trailId: string, title: string) => {
+    try {
+      const res = await fetch(`/api/admin/trails/${trailId}/duplicate`, {
+        method: "POST",
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to duplicate")
+      }
+      const data = await res.json()
+      fetchData()
+      showToast(`Trail "${data.title}" создан`, "success")
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Ошибка при дублировании trail",
+        "error"
+      )
+    }
+  }
+
+  // Drag and drop handlers
+  const handleDragStart = (moduleId: string) => {
+    setDraggedModule(moduleId)
+  }
+
+  const handleDragOver = (e: React.DragEvent, moduleId: string) => {
+    // Only respond when a module is being dragged. Otherwise we'd capture
+    // events meant for the parent trail card (e.g. when dragging a trail
+    // over an expanded card with modules inside).
+    if (!draggedModule) return
+    e.preventDefault()
+    if (draggedModule !== moduleId) {
+      setDragOverModule(moduleId)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverModule(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetModuleId: string, trailId: string) => {
+    if (!draggedModule) return
+    e.preventDefault()
+    if (draggedModule === targetModuleId) {
+      setDraggedModule(null)
+      setDragOverModule(null)
+      return
+    }
+
+    const trail = visibleTrails.find((t) => t.id === trailId)
+    if (!trail) return
+
+    const modules = [...trail.modules]
+    const draggedIndex = modules.findIndex((m) => m.id === draggedModule)
+    const targetIndex = modules.findIndex((m) => m.id === targetModuleId)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    const [removed] = modules.splice(draggedIndex, 1)
+    modules.splice(targetIndex, 0, removed)
+
+    setTrails((prev) =>
+      prev.map((t) =>
+        t.id === trailId ? { ...t, modules } : t
+      )
+    )
+
+    try {
+      const res = await fetch("/api/admin/modules/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trailId,
+          moduleIds: modules.map((m) => m.id),
+        }),
+      })
+      if (!res.ok) throw new Error("Failed to reorder")
+    } catch {
+      setError("Ошибка при изменении порядка")
+      fetchData()
+    }
+
+    setDraggedModule(null)
+    setDragOverModule(null)
+  }
+
+  // Bulk selection
+  const toggleModuleSelection = (moduleId: string) => {
+    setSelectedModules((prev) => {
+      const next = new Set(prev)
+      if (next.has(moduleId)) {
+        next.delete(moduleId)
+      } else {
+        next.add(moduleId)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAllInTrail = (trailId: string) => {
+    const trail = visibleTrails.find((t) => t.id === trailId)
+    if (!trail) return
+
+    const allSelected = trail.modules.every((m) => selectedModules.has(m.id))
+
+    setSelectedModules((prev) => {
+      const next = new Set(prev)
+      if (allSelected) {
+        trail.modules.forEach((m) => next.delete(m.id))
+      } else {
+        trail.modules.forEach((m) => next.add(m.id))
+      }
+      return next
+    })
+  }
+
+  const isAllSelectedInTrail = (trailId: string) => {
+    const trail = visibleTrails.find((t) => t.id === trailId)
+    if (!trail || trail.modules.length === 0) return false
+    return trail.modules.every((m) => selectedModules.has(m.id))
+  }
+
+  // Toggle trail expansion (unguarded - used after password verification)
+  const doToggleTrailExpanded = (trailId: string) => {
+    setExpandedTrails((prev) => {
+      const next = new Set(prev)
+      if (next.has(trailId)) {
+        next.delete(trailId)
+      } else {
+        next.add(trailId)
+      }
+      return next
+    })
+  }
+
+  // Toggle trail expansion with password guard
+  const toggleTrailExpanded = (trail: Trail) => {
+    // Collapsing is always allowed
+    if (expandedTrails.has(trail.id)) {
+      doToggleTrailExpanded(trail.id)
+      return
+    }
+    // Expanding requires password for locked trails
+    guardTrailAction(trail, () => doToggleTrailExpanded(trail.id))
+  }
+
+  const isTrailExpanded = (trailId: string) => expandedTrails.has(trailId)
+
+  const clearSelection = () => {
+    setSelectedModules(new Set())
+  }
+
+  // Folder handlers
+  const openCreateFolderModal = () => {
+    setFolderModalMode("create")
+    setEditingFolder(null)
+    setShowFolderModal(true)
+  }
+
+  const openEditFolderModal = (folder: TrailFolder) => {
+    setFolderModalMode("edit")
+    setEditingFolder({ id: folder.id, name: folder.name, description: folder.description })
+    setShowFolderModal(true)
+  }
+
+  const submitFolder = async (data: FolderFormData) => {
+    try {
+      let res: Response
+      if (data.id) {
+        res = await fetch(`/api/admin/folders/${data.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: data.name, description: data.description }),
+        })
+      } else {
+        res = await fetch("/api/admin/folders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: data.name, description: data.description }),
+        })
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        showToast(body.error || "Ошибка сохранения папки", "error")
+        return
+      }
+      const saved: TrailFolder = await res.json()
+      setFolders((prev) => {
+        const exists = prev.some((f) => f.id === saved.id)
+        if (exists) return prev.map((f) => (f.id === saved.id ? saved : f))
+        return [...prev, saved].sort((a, b) => a.order - b.order)
+      })
+      setShowFolderModal(false)
+      showToast(data.id ? "Папка обновлена" : "Папка создана", "success")
+    } catch {
+      showToast("Ошибка сохранения папки", "error")
+    }
+  }
+
+  const deleteFolder = async (folder: TrailFolder) => {
+    const trailsInside = visibleTrails.filter((t) => t.folderId === folder.id).length
+    if (trailsInside > 0) {
+      showToast(
+        `Нельзя удалить папку: в ней ${trailsInside} ${pluralizeRu(trailsInside, ["trail", "trail-а", "trail-ов"])}. Сначала вынесите их.`,
+        "error"
+      )
+      return
+    }
+    const confirmed = await confirm({
+      title: "Удалить папку?",
+      message: `Папка "${folder.name}" будет удалена. Контент трейлов не пострадает.`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+    if (!confirmed) return
+
+    try {
+      const res = await fetch(`/api/admin/folders/${folder.id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        showToast(body.error || "Не удалось удалить папку", "error")
+        return
+      }
+      setFolders((prev) => prev.filter((f) => f.id !== folder.id))
+      showToast("Папка удалена", "success")
+    } catch {
+      showToast("Ошибка при удалении папки", "error")
+    }
+  }
+
+  const toggleFolderExpanded = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev)
+      if (next.has(folderId)) next.delete(folderId)
+      else next.add(folderId)
+      return next
+    })
+  }
+
+  const moveTrailToFolder = async (trailId: string, folderId: string | null) => {
+    const trail = trails.find((t) => t.id === trailId)
+    if (!trail) return
+    if ((trail.folderId ?? null) === folderId) return
+
+    // Optimistic update
+    setTrails((prev) =>
+      prev.map((t) => (t.id === trailId ? { ...t, folderId } : t))
+    )
+
+    try {
+      const res = await fetch(`/api/admin/trails/${trailId}/move-to-folder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderId }),
+      })
+      if (!res.ok) {
+        // Revert on error
+        setTrails((prev) =>
+          prev.map((t) => (t.id === trailId ? { ...t, folderId: trail.folderId ?? null } : t))
+        )
+        const body = await res.json().catch(() => ({}))
+        showToast(body.error || "Не удалось переместить trail", "error")
+        return
+      }
+      showToast(folderId ? "Trail перемещён в папку" : "Trail вынесен из папки", "success")
+    } catch {
+      setTrails((prev) =>
+        prev.map((t) => (t.id === trailId ? { ...t, folderId: trail.folderId ?? null } : t))
+      )
+      showToast("Ошибка при перемещении", "error")
+    }
+  }
+
+  // Trail DnD: dragging a trail into a folder (or to root)
+  const handleTrailDragStart = (trailId: string) => {
+    const t = trails.find((x) => x.id === trailId)
+    draggedTrailSourceRef.current = t?.folderId ?? null
+    setDraggedTrail(trailId)
+  }
+  const handleTrailDragEnd = () => {
+    setDraggedTrail(null)
+    setDragOverFolder(null)
+    setDragOverTrailId(null)
+    draggedTrailSourceRef.current = null
+  }
+  const handleFolderDragOver = (e: React.DragEvent, folderTargetId: string | "__root__") => {
+    if (!draggedTrail) return
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverFolder(folderTargetId)
+  }
+  const handleFolderDragLeave = () => {
+    setDragOverFolder(null)
+  }
+  const handleFolderDrop = async (e: React.DragEvent, folderTargetId: string | "__root__") => {
+    if (!draggedTrail) return
+    e.preventDefault()
+    e.stopPropagation()
+    const targetFolder = folderTargetId === "__root__" ? null : folderTargetId
+    const trailId = draggedTrail
+    const source = draggedTrailSourceRef.current
+    setDraggedTrail(null)
+    setDragOverFolder(null)
+    setDragOverTrailId(null)
+    draggedTrailSourceRef.current = null
+    // If the trail is dropped on its current group container, do nothing —
+    // reordering inside that group is handled by per-trail drop targets below.
+    if ((source ?? null) === (targetFolder ?? null)) return
+    await moveTrailToFolder(trailId, targetFolder)
+  }
+
+  // Reorder trails inside the same group (same folder or both in root).
+  // Persists relative order via /api/admin/trails/reorder.
+  const reorderTrailsInGroup = async (folderKey: string | null, orderedIds: string[]) => {
+    const prevTrails = trails
+    // Optimistic: rewrite the trails array so the rendered order changes.
+    // We do this by remapping the `order` field of trails in this group
+    // using the existing sorted order values, mirroring the server logic.
+    const groupTrails = trails.filter((t) => (t.folderId ?? null) === folderKey)
+    const sortedOrders = groupTrails.map((t) => t.order ?? 0).sort((a, b) => a - b)
+    const idToNewOrder = new Map<string, number>()
+    orderedIds.forEach((id, idx) => idToNewOrder.set(id, sortedOrders[idx] ?? idx))
+    setTrails((prev) =>
+      prev.map((t) =>
+        idToNewOrder.has(t.id) ? { ...t, order: idToNewOrder.get(t.id) } : t
+      )
+    )
+
+    try {
+      const res = await fetch("/api/admin/trails/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trailIds: orderedIds }),
+      })
+      if (!res.ok) throw new Error("reorder failed")
+    } catch {
+      setTrails(prevTrails)
+      showToast("Не удалось сохранить порядок trails", "error")
+    }
+  }
+
+  const handleTrailDragOverTrail = (e: React.DragEvent, targetTrailId: string) => {
+    if (!draggedTrail || draggedTrail === targetTrailId) return
+    const target = trails.find((t) => t.id === targetTrailId)
+    if (!target) return
+    // Only allow reorder within the same group as the dragged trail
+    if ((target.folderId ?? null) !== (draggedTrailSourceRef.current ?? null)) return
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverTrailId(targetTrailId)
+  }
+  const handleTrailDropOnTrail = async (e: React.DragEvent, targetTrailId: string) => {
+    if (!draggedTrail || draggedTrail === targetTrailId) {
+      setDragOverTrailId(null)
+      return
+    }
+    const target = trails.find((t) => t.id === targetTrailId)
+    const source = draggedTrailSourceRef.current
+    if (!target || (target.folderId ?? null) !== (source ?? null)) {
+      // Different group: let the drop bubble up to the parent folder/root
+      // drop target so the trail is moved into that group.
+      setDragOverTrailId(null)
+      return
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    const folderKey = source ?? null
+    const ordered = trails
+      .filter((t) => (t.folderId ?? null) === folderKey)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((t) => t.id)
+    const fromIdx = ordered.indexOf(draggedTrail)
+    const toIdx = ordered.indexOf(targetTrailId)
+    if (fromIdx === -1 || toIdx === -1) {
+      setDragOverTrailId(null)
+      return
+    }
+    const [moved] = ordered.splice(fromIdx, 1)
+    ordered.splice(toIdx, 0, moved)
+    setDraggedTrail(null)
+    setDragOverTrailId(null)
+    draggedTrailSourceRef.current = null
+    await reorderTrailsInGroup(folderKey, ordered)
+  }
+
+  // Folder DnD: reorder folders vertically
+  const handleFolderDragStart = (folderId: string) => {
+    setDraggedFolder(folderId)
+  }
+  const handleFolderDragOverRow = (e: React.DragEvent, folderId: string) => {
+    if (!draggedFolder || draggedFolder === folderId) return
+    e.preventDefault()
+    setDragOverFolderRow(folderId)
+  }
+  const handleFolderDropOnRow = async (e: React.DragEvent, targetFolderId: string) => {
+    e.preventDefault()
+    if (!draggedFolder || draggedFolder === targetFolderId) {
+      setDraggedFolder(null)
+      setDragOverFolderRow(null)
+      return
+    }
+    const next = [...folders].sort((a, b) => a.order - b.order)
+    const fromIdx = next.findIndex((f) => f.id === draggedFolder)
+    const toIdx = next.findIndex((f) => f.id === targetFolderId)
+    if (fromIdx === -1 || toIdx === -1) {
+      setDraggedFolder(null)
+      setDragOverFolderRow(null)
+      return
+    }
+    const [moved] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, moved)
+    const reordered = next.map((f, idx) => ({ ...f, order: idx }))
+    setFolders(reordered)
+    setDraggedFolder(null)
+    setDragOverFolderRow(null)
+
+    try {
+      const res = await fetch("/api/admin/folders/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderIds: reordered.map((f) => f.id) }),
+      })
+      if (!res.ok) throw new Error("reorder failed")
+    } catch {
+      showToast("Не удалось сохранить порядок папок", "error")
+      fetchData()
+    }
+  }
+
+  const bulkDeleteModules = async () => {
+    if (selectedModules.size === 0) return
+
+    const confirmed = await confirm({
+      title: "Удалить модули?",
+      message: `Вы уверены, что хотите удалить ${selectedModules.size} ${pluralizeRu(selectedModules.size, ["модуль", "модуля", "модулей"])}?`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
+
+    try {
+      setBulkDeleting(true)
+      const res = await fetch("/api/admin/modules/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleIds: Array.from(selectedModules) }),
+      })
+
+      if (!res.ok) throw new Error("Failed to delete")
+
+      setSelectedModules(new Set())
+      fetchData()
+      showToast(`Удалено ${selectedModules.size} ${pluralizeRu(selectedModules.size, ["модуль", "модуля", "модулей"])}`, "success")
+    } catch {
+      showToast("Ошибка при массовом удалении", "error")
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  // Export content
+  const exportContent = async (trailId?: string) => {
+    try {
+      const url = trailId
+        ? `/api/admin/export-content?trailId=${trailId}`
+        : "/api/admin/export-content"
+      const res = await fetch(url)
+      if (!res.ok) throw new Error("Export failed")
+
+      const blob = await res.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = trailId
+        ? `trail-export-${new Date().toISOString().split("T")[0]}.txt`
+        : `all-content-${new Date().toISOString().split("T")[0]}.txt`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(blobUrl)
+      document.body.removeChild(a)
+    } catch {
+      setError("Ошибка экспорта")
+    }
+  }
+
+  // Audit history (admin only)
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true)
+      const res = await fetch("/api/admin/audit-logs?limit=50")
+      if (!res.ok) throw new Error("Failed to fetch")
+      const data = await res.json()
+      setAuditLogs(data)
+      setShowHistory(true)
+    } catch {
+      setError("Ошибка загрузки истории")
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
+      </div>
+    )
+  }
+
+  if (!isPrivileged) {
+    return null
+  }
+
+  if (error && !trails.length) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    )
+  }
+
+  // Determine analytics link based on role
+  const analyticsHref = isAdmin ? "/admin/analytics" : "/teacher/analytics"
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b">
+        <div className="container mx-auto px-4 py-6">
+          <Breadcrumbs
+            items={[
+              { label: isAdmin ? "Админ" : "Учитель", href: isAdmin ? "/admin/invites" : "/teacher" },
+              { label: "Контент" },
+            ]}
+            className="mb-4"
+          />
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                Управление контентом
+              </h1>
+              <p className="text-gray-600 dark:text-slate-400 mt-1">
+                {isAdmin
+                  ? "Редактирование теории, вопросов и проектов"
+                  : "Просмотр назначенных trails (только чтение)"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Teacher-specific buttons */}
+              {isTeacher && (
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/teacher/students">
+                      <Users className="h-4 w-4 mr-2" />
+                      Ученики
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/teacher">
+                      <FileCheck className="h-4 w-4 mr-2" />
+                      Работы на проверку
+                    </Link>
+                  </Button>
+                </>
+              )}
+
+              {/* Admin-specific buttons */}
+              {isAdmin && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/admin/access">
+                    <Lock className="h-4 w-4 mr-2" />
+                    Доступы
+                  </Link>
+                </Button>
+              )}
+
+              {/* Analytics - both roles */}
+              <Button asChild variant="outline" size="sm">
+                <Link href={analyticsHref}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Аналитика
+                </Link>
+              </Button>
+
+              {/* History - admin only */}
+              {isAdmin && (
+                <Button onClick={() => fetchHistory()} variant="outline" size="sm" disabled={loadingHistory}>
+                  <History className="h-4 w-4 mr-2" />
+                  История
+                </Button>
+              )}
+
+              {/* Export - both roles */}
+              <Button onClick={() => exportContent()} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Экспорт
+              </Button>
+
+              {/* Import - admin only */}
+              {isAdmin && (
+                <Button onClick={() => setShowImportModal(true)} variant="outline" size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Импорт
+                </Button>
+              )}
+
+              {/* New Folder - admin only */}
+              {isAdmin && (
+                <Button onClick={openCreateFolderModal} variant="outline" size="sm">
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  Новая папка
+                </Button>
+              )}
+
+              {/* New Trail - admin only (TEACHER cannot create) */}
+              {isAdmin && (
+                <Button onClick={() => openCreateTrailModal()} className="bg-green-600 hover:bg-green-700" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Новый Trail
+                </Button>
+              )}
+
+              <Button onClick={fetchData} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Role indicator */}
+          <div className="mt-4 flex items-center gap-2">
+            <Badge
+              variant={isFullAdmin ? "default" : "secondary"}
+              className={isFullAdmin ? "bg-purple-600" : session?.user?.role === "CO_ADMIN" ? "bg-indigo-600" : "bg-blue-600"}
+            >
+              {isFullAdmin ? "Администратор" : session?.user?.role === "CO_ADMIN" ? "Со-администратор" : "Учитель"}
+            </Badge>
+            {!isAdmin && (
+              <span className="text-sm text-gray-500 dark:text-slate-400">
+                Показаны только назначенные trails ({visibleTrails.length})
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Error message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700">
+            <AlertTriangle className="h-5 w-5" />
+            {error}
+            <button onClick={() => setError("")} className="ml-auto">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Bulk actions bar */}
+        {selectedModules.size > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-blue-700 font-medium">
+                Выбрано: {selectedModules.size} {pluralizeRu(selectedModules.size, ["модуль", "модуля", "модулей"])}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSelection}
+              >
+                Снять выделение
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={bulkDeleteModules}
+                disabled={bulkDeleting}
+              >
+                {bulkDeleting ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Удалить выбранные
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Search / filter / sort toolbar */}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
+            <Input
+              type="search"
+              placeholder="Поиск по trails (название, описание)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500 dark:text-slate-400" />
+            <select
+              value={filterMode}
+              onChange={(e) => setFilterMode(e.target.value as FilterMode)}
+              className="h-9 rounded-md border px-3 text-sm bg-transparent"
+              aria-label="Фильтр"
+            >
+              <option value="all">Все</option>
+              <option value="in-folder">В папке</option>
+              <option value="no-folder">Без папки</option>
+              <option value="published">Опубликованные</option>
+              <option value="hidden">Скрытые</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="h-4 w-4 text-gray-500 dark:text-slate-400" />
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className="h-9 rounded-md border px-3 text-sm bg-transparent"
+              aria-label="Сортировка"
+            >
+              <option value="default">По умолчанию</option>
+              <option value="title-asc">Название (А→Я)</option>
+              <option value="title-desc">Название (Я→А)</option>
+              <option value="modules-desc">Больше модулей</option>
+              <option value="modules-asc">Меньше модулей</option>
+              <option value="newest">Сначала новые</option>
+              <option value="oldest">Сначала старые</option>
+            </select>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300 cursor-pointer select-none">
+            <Checkbox
+              checked={hideOtherFolders}
+              onCheckedChange={(v) => setHideOtherFolders(v === true)}
+              aria-label="Скрыть прочие папки"
+            />
+            <span>Скрыть прочие папки</span>
+          </label>
+          {(searchQuery || filterMode !== "all" || sortMode !== "default" || hideOtherFolders) && (
+            <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(""); setFilterMode("all"); setSortMode("default"); setHideOtherFolders(false) }}>
+              Сбросить
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          {visibleTrails.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <p className="text-gray-500 dark:text-slate-400 mb-4">
+                  {isAdmin ? "Нет trails" : "Нет назначенных trails"}
+                </p>
+                {isAdmin && (
+                  <Button onClick={() => openCreateTrailModal()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Создать первый Trail
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (() => {
+            const renderTrailCard = (trail: Trail) => {
+              const Icon = iconMap[trail.icon] || Code
+              const assessmentModules = trail.modules.filter(m => m.type !== "PROJECT")
+              const projectModules = trail.modules.filter(m => m.type === "PROJECT")
+
+              return (
+                <Card
+                  key={trail.id}
+                  className={`${draggedTrail === trail.id ? "opacity-50" : ""} ${
+                    dragOverTrailId === trail.id ? "border-blue-500 ring-2 ring-blue-200 dark:ring-blue-900" : ""
+                  }`}
+                  onDragOver={isAdmin ? (e) => handleTrailDragOverTrail(e, trail.id) : undefined}
+                  onDrop={isAdmin ? (e) => handleTrailDropOnTrail(e, trail.id) : undefined}
+                >
+                  <CardHeader
+                    className="cursor-pointer select-none"
+                    onClick={() => toggleTrailExpanded(trail)}
+                    role="button"
+                    aria-expanded={isTrailExpanded(trail.id)}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        toggleTrailExpanded(trail)
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-4">
+                      {isAdmin && (
+                        <div className="flex items-center -ml-1" onClick={(e) => e.stopPropagation()}>
+                          {/* Drag handle (drag only — separate from the move-to menu so it doesn't fight the trigger) */}
+                          <div
+                            className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 outline-none select-none"
+                            draggable
+                            onClick={(e) => e.stopPropagation()}
+                            onDragStart={(e) => {
+                              e.stopPropagation()
+                              setOpenMoveMenu(null)
+                              handleTrailDragStart(trail.id)
+                            }}
+                            onDragEnd={handleTrailDragEnd}
+                            title="Перетащите, чтобы переместить trail"
+                            aria-label="Перетащить trail"
+                          >
+                            <GripVertical className="h-5 w-5" />
+                          </div>
+                          {/* Move-to menu trigger (click only) */}
+                          <DropdownMenu
+                            open={openMoveMenu === trail.id}
+                            onOpenChange={(o) => setOpenMoveMenu(o ? trail.id : null)}
+                            modal={false}
+                          >
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 rounded hover:bg-gray-100 dark:hover:bg-slate-700 outline-none"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Переместить в папку…"
+                                aria-label="Переместить в папку"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuLabel>Переместить в…</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {trail.folderId && (
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setOpenMoveMenu(null)
+                                    moveTrailToFolder(trail.id, null)
+                                  }}
+                                >
+                                  Без папки
+                                </DropdownMenuItem>
+                              )}
+                              {folders
+                                .filter((f) => f.id !== trail.folderId)
+                                .sort((a, b) => a.order - b.order)
+                                .map((f) => (
+                                  <DropdownMenuItem
+                                    key={f.id}
+                                    onSelect={() => {
+                                      setOpenMoveMenu(null)
+                                      moveTrailToFolder(trail.id, f.id)
+                                    }}
+                                  >
+                                    <Folder className="h-4 w-4 mr-2 text-amber-600" />
+                                    {f.name}
+                                  </DropdownMenuItem>
+                                ))}
+                              {folders.length === 0 && !trail.folderId && (
+                                <div className="px-2 py-1.5 text-xs text-gray-500 dark:text-slate-400">
+                                  Нет доступных папок
+                                </div>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+                      {/* Expand/Collapse indicator */}
+                      <button
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleTrailExpanded(trail)
+                        }}
+                        aria-label={isTrailExpanded(trail.id) ? "Свернуть" : "Развернуть"}
+                      >
+                        {isTrailExpanded(trail.id) ? (
+                          <ChevronDown className="h-5 w-5 text-gray-500 dark:text-slate-400" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-gray-500 dark:text-slate-400" />
+                        )}
+                      </button>
+                      <div
+                        className="flex h-12 w-12 items-center justify-center rounded-xl"
+                        style={{ backgroundColor: `${trail.color}20` }}
+                      >
+                        <Icon className="h-6 w-6" style={{ color: trail.color }} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <CardTitle>{trail.title}</CardTitle>
+                          {!trail.isPublished && (
+                            <Badge variant="secondary">Скрыт</Badge>
+                          )}
+                          {isAdmin && trail.teacherVisibility === "ALL_TEACHERS" && (
+                            <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 border-0">
+                              <Users className="h-3 w-3 mr-1" />
+                              Все учителя
+                            </Badge>
+                          )}
+                          {isAdmin && trail.teacherVisibility === "SPECIFIC" && trail.teachers.length > 0 && (
+                            <Badge className="bg-purple-100 dark:bg-purple-950 text-purple-700 border-0">
+                              <Users className="h-3 w-3 mr-1" />
+                              {trail.teachers[0].teacher.name}
+                            </Badge>
+                          )}
+                          {trail.isPasswordProtected && (
+                            <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-700 border-0">
+                              <Lock className="h-3 w-3 mr-1" />
+                              Пароль
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-slate-400">{trail.subtitle}</p>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-sm text-gray-500 dark:text-slate-400">
+                          {trail.modules.length} {pluralizeRu(trail.modules.length, ["модуль", "модуля", "модулей"])}
+                        </span>
+                        {isTrailLocked(trail) && (
+                          <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-700 border-amber-300 border">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Заблокирован
+                          </Badge>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant={isAllSelectedInTrail(trail.id) ? "default" : "ghost"}
+                            onClick={() => guardTrailAction(trail, () => toggleSelectAllInTrail(trail.id))}
+                            title={isAllSelectedInTrail(trail.id) ? "Снять выделение" : "Выбрать все модули"}
+                            className={isAllSelectedInTrail(trail.id) ? "bg-blue-600 hover:bg-blue-700" : ""}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditTrailModal(trail)}
+                            title="Редактировать trail"
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {(!trail.isPasswordProtected || trail.createdById === session?.user?.id || (isFullAdmin && !trail.createdById)) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => guardTrailAction(trail, () => exportContent(trail.id))}
+                            title="Экспорт trail"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => guardTrailAction(trail, () => duplicateTrail(trail.id, trail.title))}
+                            title="Дублировать trail"
+                            className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => guardTrailAction(trail, () => openModuleModal(trail.id))}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Модуль
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost-destructive"
+                            onClick={() => guardTrailAction(trail, () => deleteTrail(trail.id, trail.title))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  {isTrailExpanded(trail.id) && <CardContent>
+                    {isTrailLocked(trail) ? (
+                      /* Locked trail — show password gate instead of modules */
+                      <div
+                        className="flex flex-col items-center justify-center py-8 cursor-pointer rounded-lg hover:bg-amber-50/50 transition-colors"
+                        onClick={() => guardTrailAction(trail, () => {})}
+                      >
+                        <div
+                          className="flex h-14 w-14 items-center justify-center rounded-full mb-3"
+                          style={{ backgroundColor: `${trail.color}15` }}
+                        >
+                          <Lock className="h-7 w-7 text-amber-500" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                          Требуется пароль
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                          Нажмите для ввода пароля и просмотра содержимого
+                        </p>
+                      </div>
+                    ) : trail.modules.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+                        <p className="mb-3">Нет модулей</p>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openModuleModal(trail.id)}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Добавить модуль
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {/* Assessment Modules */}
+                        {assessmentModules.length > 0 && (
+                          <div className="mb-6">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">
+                              Оценка знаний
+                            </h3>
+                            <div className="space-y-2">
+                              {assessmentModules.map((module) => {
+                                const TypeIcon = typeIcons[module.type]
+                                return (
+                                  <div
+                                    key={module.id}
+                                    draggable={isAdmin}
+                                    onDragStart={isAdmin ? () => handleDragStart(module.id) : undefined}
+                                    onDragOver={isAdmin ? (e) => handleDragOver(e, module.id) : undefined}
+                                    onDragLeave={isAdmin ? handleDragLeave : undefined}
+                                    onDrop={isAdmin ? (e) => handleDrop(e, module.id, trail.id) : undefined}
+                                    className={`group flex items-center gap-3 p-3 rounded-lg border bg-white dark:bg-slate-800 transition-colors ${
+                                      draggedModule === module.id ? "opacity-50" : ""
+                                    } ${
+                                      dragOverModule === module.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "hover:bg-gray-50 dark:hover:bg-slate-800"
+                                    }`}
+                                  >
+                                    {isAdmin && (
+                                      <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600">
+                                        <GripVertical className="h-4 w-4" />
+                                      </div>
+                                    )}
+                                    {isAdmin && (
+                                      <Checkbox
+                                        checked={selectedModules.has(module.id)}
+                                        onCheckedChange={() => toggleModuleSelection(module.id)}
+                                      />
+                                    )}
+                                    <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-800 shrink-0">
+                                        <TypeIcon className="h-5 w-5 text-gray-600 dark:text-slate-400" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-gray-900 dark:text-slate-100 truncate">
+                                            {module.title}
+                                          </span>
+                                          <Badge variant="outline" className="text-xs shrink-0">
+                                            {typeLabels[module.type]}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
+                                          {module.description}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-slate-400 shrink-0">
+                                        <div className="flex items-center gap-1">
+                                          <HelpCircle className="h-4 w-4" />
+                                          {module._count.questions}
+                                        </div>
+                                        <span>{module.points} XP</span>
+                                        <ChevronRight className="h-4 w-4" />
+                                      </div>
+                                    </Link>
+                                    {isAdmin && (
+                                      <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                          onClick={() => deleteModule(module.id, module.title)}
+                                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded"
+                                          title="Удалить модуль"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Project Modules */}
+                        {projectModules.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">
+                              Проекты
+                            </h3>
+                            <div className="space-y-2">
+                              {projectModules.map((module) => (
+                                <div
+                                  key={module.id}
+                                  draggable={isAdmin}
+                                  onDragStart={isAdmin ? () => handleDragStart(module.id) : undefined}
+                                  onDragOver={isAdmin ? (e) => handleDragOver(e, module.id) : undefined}
+                                  onDragLeave={isAdmin ? handleDragLeave : undefined}
+                                  onDrop={isAdmin ? (e) => handleDrop(e, module.id, trail.id) : undefined}
+                                  className={`group flex items-center gap-3 p-3 rounded-lg border bg-white dark:bg-slate-800 transition-colors ${
+                                    draggedModule === module.id ? "opacity-50" : ""
+                                  } ${
+                                    dragOverModule === module.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "hover:bg-gray-50 dark:hover:bg-slate-800"
+                                  }`}
+                                >
+                                  {isAdmin && (
+                                    <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600">
+                                      <GripVertical className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                  {isAdmin && (
+                                    <Checkbox
+                                      checked={selectedModules.has(module.id)}
+                                      onCheckedChange={() => toggleModuleSelection(module.id)}
+                                    />
+                                  )}
+                                  <Link href={`/content/modules/${module.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950 shrink-0">
+                                      <FolderGit2 className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-900 dark:text-slate-100 truncate">
+                                          {module.title}
+                                        </span>
+                                        <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 border-0 text-xs shrink-0">
+                                          {module.level}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
+                                        {module.description}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-slate-400 shrink-0">
+                                      <span>{module.duration}</span>
+                                      <span>{module.points} XP</span>
+                                      <ChevronRight className="h-4 w-4" />
+                                    </div>
+                                  </Link>
+                                  {isAdmin && (
+                                    <div className="shrink-0 border-l pl-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => deleteModule(module.id, module.title)}
+                                        className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded"
+                                        title="Удалить модуль"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>}
+                </Card>
+              )
+            }
+
+            const hasResults = sortedRootTrails.length > 0 || sortedFolders.some((f) => (folderIdToTrails.get(f.id)?.length ?? 0) > 0)
+            // When hide-other-folders is on, an empty sortedFolders + no root
+            // trails really means nothing is visible — show the empty state
+            // instead of a blank section.
+            const shouldShowEmpty = hideOtherFolders
+              ? sortedRootTrails.length === 0 && sortedFolders.length === 0
+              : !hasResults && folders.length === 0
+            if (shouldShowEmpty) {
+              return (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <p className="text-gray-500 dark:text-slate-400">Ничего не найдено</p>
+                  </CardContent>
+                </Card>
+              )
+            }
+
+            return (
+              <>
+                {sortedFolders.map((folder) => {
+                  const items = sortTrails(folderIdToTrails.get(folder.id) || [])
+                  const expanded = expandedFolders.has(folder.id)
+                  const isDropTarget = dragOverFolder === folder.id
+                  return (
+                    <Card
+                      key={folder.id}
+                      className={`border-2 ${isDropTarget ? "border-blue-500 ring-2 ring-blue-200 dark:ring-blue-900" : "border-dashed border-gray-200 dark:border-slate-700"} ${
+                        draggedFolder === folder.id ? "opacity-60" : ""
+                      } ${dragOverFolderRow === folder.id ? "border-blue-500" : ""}`}
+                      onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                      onDragLeave={handleFolderDragLeave}
+                      onDrop={(e) => handleFolderDrop(e, folder.id)}
+                    >
+                      <CardHeader
+                        className="cursor-pointer select-none"
+                        onClick={() => toggleFolderExpanded(folder.id)}
+                        role="button"
+                        aria-expanded={expanded}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            toggleFolderExpanded(folder.id)
+                          }
+                        }}
+                        draggable={isAdmin}
+                        onDragStart={isAdmin ? (e) => {
+                          e.stopPropagation()
+                          handleFolderDragStart(folder.id)
+                        } : undefined}
+                        onDragOver={isAdmin ? (e) => {
+                          if (draggedFolder && draggedFolder !== folder.id) {
+                            handleFolderDragOverRow(e, folder.id)
+                          }
+                        } : undefined}
+                        onDrop={isAdmin ? (e) => {
+                          if (draggedFolder) {
+                            handleFolderDropOnRow(e, folder.id)
+                          }
+                        } : undefined}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isAdmin && (
+                            <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600" title="Перетащить для смены порядка">
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleFolderExpanded(folder.id)
+                            }}
+                            aria-label={expanded ? "Свернуть" : "Развернуть"}
+                          >
+                            {expanded ? (
+                              <ChevronDown className="h-5 w-5 text-gray-500 dark:text-slate-400" />
+                            ) : (
+                              <ChevronRight className="h-5 w-5 text-gray-500 dark:text-slate-400" />
+                            )}
+                          </button>
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-950">
+                            <Folder className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="truncate">{folder.name}</CardTitle>
+                            {folder.description && (
+                              <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
+                                {folder.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-sm text-gray-500 dark:text-slate-400">
+                              {items.length} trail{items.length === 1 ? "" : items.length >= 2 && items.length <= 4 ? "-а" : "-ов"}
+                            </span>
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openEditFolderModal(folder)}
+                                title="Редактировать папку"
+                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="ghost-destructive"
+                                onClick={() => deleteFolder(folder)}
+                                title={items.length > 0 ? "Сначала вынесите trails" : "Удалить папку"}
+                                disabled={items.length > 0}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      {expanded && (
+                        <CardContent>
+                          {items.length === 0 ? (
+                            <div className="text-center py-6 text-sm text-gray-500 dark:text-slate-400 border-2 border-dashed rounded-lg">
+                              Папка пуста. {isAdmin && "Перетащите сюда trail из списка ниже."}
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {items.map((t) => renderTrailCard(t))}
+                            </div>
+                          )}
+                        </CardContent>
+                      )}
+                    </Card>
+                  )
+                })}
+
+                {/* Root section (no folder) */}
+                <div
+                  onDragOver={(e) => handleFolderDragOver(e, "__root__")}
+                  onDragLeave={handleFolderDragLeave}
+                  onDrop={(e) => handleFolderDrop(e, "__root__")}
+                  className={`space-y-6 ${dragOverFolder === "__root__" ? "ring-2 ring-blue-300 dark:ring-blue-800 rounded-xl p-2 -m-2" : ""}`}
+                >
+                  {sortedFolders.length > 0 && sortedRootTrails.length > 0 && (
+                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400 font-medium pt-2">
+                      Без папки
+                    </div>
+                  )}
+                  {sortedRootTrails.map((t) => renderTrailCard(t))}
+                  {sortedFolders.length > 0 && sortedRootTrails.length === 0 && draggedTrail && (
+                    <div className="text-center py-4 text-sm text-gray-500 dark:text-slate-400 border-2 border-dashed rounded-lg">
+                      Отпустите здесь, чтобы вынести trail из папки
+                    </div>
+                  )}
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      </div>
+
+      {/* Create Module Modal */}
+      <CreateModuleModal
+        open={showModuleModal}
+        onClose={() => setShowModuleModal(false)}
+        onSubmit={createModule}
+        trailId={selectedTrailId}
+      />
+
+      {/* Import Modal - Admin Only */}
+      {showImportModal && isAdmin && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                Импорт контента
+              </h2>
+              <button
+                onClick={resetImportModal}
+                className="text-gray-400 dark:text-slate-500 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {/* Import content - simplified for brevity */}
+              {!parsedData && !parseError && !regenerating && (
+                <div className="space-y-6">
+                  {importing && importProgress ? (
+                    // Показываем прогресс-бар во время парсинга
+                    <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="relative">
+                          <RefreshCw className="h-8 w-8 text-purple-600 dark:text-purple-400 animate-spin" />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
+                              {importProgress.current}%
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-lg font-medium text-purple-700">
+                            {importProgress.phase === "analyzing" && "Анализ структуры"}
+                            {importProgress.phase === "metadata" && "Извлечение метаданных"}
+                            {importProgress.phase === "parsing" && "Обработка контента"}
+                            {importProgress.phase === "merging" && "Объединение результатов"}
+                          </p>
+                          <p className="text-sm text-purple-600">{importProgress.status}</p>
+                        </div>
+                      </div>
+
+                      <Progress value={importProgress.current} className="h-3 mb-3" />
+
+                      {/* Этапы парсинга */}
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-slate-400 mt-4">
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 5 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 5 ? "bg-purple-600" : "bg-gray-300 dark:bg-slate-600"}`} />
+                          Анализ
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 10 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 10 ? "bg-purple-600" : "bg-gray-300 dark:bg-slate-600"}`} />
+                          Метаданные
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 50 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 50 ? "bg-purple-600" : "bg-gray-300 dark:bg-slate-600"}`} />
+                          Парсинг
+                        </div>
+                        <div className={`flex items-center gap-1 ${importProgress.current >= 95 ? "text-purple-600" : ""}`}>
+                          <div className={`w-2 h-2 rounded-full ${importProgress.current >= 95 ? "bg-purple-600" : "bg-gray-300 dark:bg-slate-600"}`} />
+                          Финализация
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-4 text-center">
+                        Большие файлы могут обрабатываться несколько минут
+                      </p>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                      <div className="flex flex-col items-center justify-center">
+                        <Upload className="h-12 w-12 text-gray-400 dark:text-slate-500 mb-3" />
+                        <p className="text-lg text-gray-600 dark:text-slate-400 font-medium">Выберите файл для импорта</p>
+                        <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">.txt, .md, .json, .xml, .pdf, .doc, .docx</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">PDF/DOC/DOCX лучше с AI-парсером</p>
+                      </div>
+                      <input
+                        type="file"
+                        accept=".txt,.md,.markdown,.json,.xml,.pdf,.doc,.docx"
+                        onChange={handleImport}
+                        disabled={importing}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+
+                  <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className={`h-4 w-4 ${useNeuralParser ? "text-purple-500" : "text-gray-400 dark:text-slate-500"}`} />
+                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Использовать нейросеть</span>
+                      </div>
+                      <Switch
+                        checked={useNeuralParser}
+                        onCheckedChange={setUseNeuralParser}
+                        disabled={importing}
+                      />
+                    </div>
+                    {useNeuralParser && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
+                        {aiStatus.checking ? (
+                          <span className="flex items-center gap-1">
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                            Проверка AI...
+                          </span>
+                        ) : aiStatus.available ? (
+                          <span className="flex items-center gap-1 text-green-600">
+                            <CheckCircle className="h-3 w-3" />
+                            AI доступен
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-red-500">
+                            <AlertTriangle className="h-3 w-3" />
+                            {aiStatus.error || "AI недоступен"}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Ошибка парсинга или состояние регенерации */}
+              {(parseError || regenerating) && (
+                <div className={`p-4 rounded-lg mb-4 ${regenerating ? "bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800" : "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800"}`}>
+                  <div className="flex items-start gap-2">
+                    {regenerating ? (
+                      <RefreshCw className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5 animate-spin" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      {regenerating ? (
+                        <div className="space-y-3">
+                          <span className="text-purple-700 font-medium">Повторная обработка с AI...</span>
+                          {importProgress ? (
+                            <>
+                              <Progress value={importProgress.current} className="h-2" />
+                              <p className="text-purple-600 text-sm">{importProgress.status}</p>
+                            </>
+                          ) : (
+                            <p className="text-purple-600 text-sm">Подготовка...</p>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-red-700 whitespace-pre-line">{parseError}</span>
+                          {uploadedFile && (
+                            <div className="mt-3">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRegenerate}
+                                disabled={regenerating}
+                                className={useNeuralParser
+                                  ? "text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950"
+                                  : "text-gray-600 dark:text-slate-400 border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"}
+                              >
+                                {useNeuralParser ? (
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                )}
+                                {useNeuralParser ? "Попробовать с AI ещё раз" : "Попробовать ещё раз"}
+                              </Button>
+                            </div>
+                          )}
+                          {uploadedFile && (
+                            <div className="mt-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setParseError(null)
+                                  setUploadedFile(null)
+                                }}
+                                className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
+                              >
+                                Загрузить другой файл
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Превью распарсенных данных */}
+              {parsedData && parsedData.trails.length > 0 && (
+                <div className="space-y-6">
+                  {/* Информация о парсинге с выпадающим списком критериев */}
+                  <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg overflow-hidden">
+                    <div
+                      className="flex items-center gap-3 p-3 cursor-pointer hover:bg-green-100/50 transition-colors"
+                      onClick={() => parsedData.confidenceDetails && setShowConfidenceDetails(!showConfidenceDetails)}
+                    >
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div className="flex-1">
+                        <span className="text-green-700 font-medium">Контент успешно распознан</span>
+                        <span className="text-green-600 text-sm ml-2">
+                          ({parsedData.parseMethod === "ai" ? "AI" : parsedData.parseMethod === "hybrid" ? "Гибридный" : "Авто"})
+                        </span>
+                      </div>
+                      {parsedData.structureConfidence !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-green-600 font-medium">
+                            Уверенность: {parsedData.structureConfidence}%
+                          </span>
+                          {parsedData.confidenceDetails && (
+                            <button
+                              type="button"
+                              className="text-green-600 hover:text-green-700 p-1 rounded-full hover:bg-green-100"
+                              title="Показать критерии оценки"
+                            >
+                              {showConfidenceDetails ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Выпадающий список критериев уверенности */}
+                    {showConfidenceDetails && parsedData.confidenceDetails && (
+                      <div className="border-t border-green-200 dark:border-green-800 p-3 bg-green-50/50">
+                        <div className="flex items-center gap-2 mb-3 text-sm text-green-700">
+                          <Info className="h-4 w-4" />
+                          <span className="font-medium">Критерии оценки структуры</span>
+                        </div>
+                        <div className="space-y-2">
+                          {parsedData.confidenceDetails.criteria.map((criterion, idx) => (
+                            <div
+                              key={idx}
+                              className={`p-2 rounded-lg border ${
+                                criterion.met
+                                  ? 'bg-green-100/50 border-green-300'
+                                  : 'bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm font-medium ${
+                                  criterion.met ? 'text-green-700' : 'text-gray-600 dark:text-slate-400'
+                                }`}>
+                                  {criterion.name}
+                                </span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                  criterion.met
+                                    ? 'bg-green-200 text-green-700'
+                                    : 'bg-gray-200 text-gray-600 dark:text-slate-400'
+                                }`}>
+                                  +{criterion.score}/{criterion.maxScore}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600 dark:text-slate-400">
+                                {criterion.description}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-800 flex items-center justify-between text-sm">
+                          <span className="text-green-700">Итоговая оценка</span>
+                          <span className="font-bold text-green-700">
+                            {parsedData.confidenceDetails.totalScore} из {parsedData.confidenceDetails.maxPossibleScore} баллов
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Предупреждения */}
+                  {parsedData.warnings && parsedData.warnings.length > 0 && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-yellow-700 font-medium mb-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Предупреждения
+                      </div>
+                      <ul className="text-sm text-yellow-600 space-y-1">
+                        {parsedData.warnings.slice(0, 5).map((w, i) => (
+                          <li key={i}>• {w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Превью trails */}
+                  <div className="space-y-4">
+                    {parsedData.trails.map((trail, trailIndex) => (
+                      <div key={trailIndex} className="border rounded-lg overflow-hidden">
+                        <div
+                          className="p-4 flex items-center gap-3"
+                          style={{ backgroundColor: `${trail.color || "#6366f1"}15` }}
+                        >
+                          <span className="text-2xl">{trail.icon || "📚"}</span>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 dark:text-slate-100">{trail.title}</h3>
+                            {trail.subtitle && (
+                              <p className="text-sm text-gray-600 dark:text-slate-400">{trail.subtitle}</p>
+                            )}
+                          </div>
+                          <Badge variant="outline">
+                            {trail.modules.length} {pluralizeRu(trail.modules.length, ["модуль", "модуля", "модулей"])}
+                          </Badge>
+                        </div>
+
+                        <div className="divide-y">
+                          {trail.modules.map((module, moduleIndex) => {
+                            const TypeIcon = typeIcons[module.type] || BookOpen
+                            return (
+                              <div key={moduleIndex} className="p-3 flex items-center gap-3 bg-white dark:bg-slate-800">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-800">
+                                  <TypeIcon className="h-4 w-4 text-gray-600 dark:text-slate-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900 dark:text-slate-100 truncate">
+                                      {module.title}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs shrink-0">
+                                      {typeLabels[module.type]}
+                                    </Badge>
+                                  </div>
+                                  {module.description && (
+                                    <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{module.description}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400 shrink-0">
+                                  {module.questions.length > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <HelpCircle className="h-3 w-3" />
+                                      {module.questions.length}
+                                    </span>
+                                  )}
+                                  <span>{module.points} XP</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 dark:bg-slate-900">
+              {parsedData ? (
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={resetImportModal}
+                    className="flex-1"
+                  >
+                    Отмена
+                  </Button>
+                  {useNeuralParser && aiStatus.available && (
+                    <Button
+                      variant="outline"
+                      onClick={handleRegenerate}
+                      disabled={regenerating || saving}
+                      className="text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950"
+                    >
+                      {regenerating ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      Перегенерировать
+                    </Button>
+                  )}
+                  {!useNeuralParser && (
+                    <Button
+                      variant="outline"
+                      onClick={handleRegenerate}
+                      disabled={regenerating || saving}
+                      className="text-gray-600 dark:text-slate-400 border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
+                    >
+                      {regenerating ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Перепарсить
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleSaveImport}
+                    disabled={saving || regenerating}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {saving ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Добавить
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" onClick={resetImportModal} className="w-full">
+                  Закрыть
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal - Admin Only */}
+      {showHistory && isAdmin && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <History className="h-5 w-5" />
+                История изменений
+              </h2>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="text-gray-400 dark:text-slate-500 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {auditLogs.length === 0 ? (
+                <p className="text-gray-500 dark:text-slate-400 text-center py-8">Нет записей</p>
+              ) : (
+                <div className="space-y-3">
+                  {auditLogs.map((log) => {
+                    const actionLabels: Record<string, { label: string; color: string }> = {
+                      CREATE: { label: "Создание", color: "bg-green-100 dark:bg-green-950 text-green-700" },
+                      UPDATE: { label: "Изменение", color: "bg-blue-100 dark:bg-blue-950 text-blue-700" },
+                      DELETE: { label: "Удаление", color: "bg-red-100 dark:bg-red-950 text-red-700" },
+                      REORDER: { label: "Сортировка", color: "bg-purple-100 dark:bg-purple-950 text-purple-700" },
+                    }
+                    const actionInfo = actionLabels[log.action] || { label: log.action, color: "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300" }
+
+                    return (
+                      <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`px-2 py-0.5 rounded text-xs ${actionInfo.color}`}>
+                              {actionInfo.label}
+                            </span>
+                            <span className="text-sm font-medium">{log.entityName}</span>
+                            <span className="text-xs text-gray-400 dark:text-slate-500">{log.entityType}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
+                            <span>{log.userName}</span>
+                            <span>•</span>
+                            <span>
+                              {new Date(log.createdAt).toLocaleDateString("ru-RU", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 dark:bg-slate-900">
+              <Button variant="outline" onClick={() => setShowHistory(false)} className="w-full">
+                Закрыть
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Password Verification Modal */}
+      {passwordTrail && (
+        <AdminTrailPasswordModal
+          open={showPasswordModal}
+          trailId={passwordTrail.id}
+          trailTitle={passwordTrail.title}
+          trailColor={passwordTrail.color}
+          isExpired={passwordIsExpired}
+          onClose={() => {
+            setShowPasswordModal(false)
+            setPasswordTrail(null)
+          }}
+          onSuccess={handlePasswordSuccess}
+        />
+      )}
+
+      {/* Edit/Create Trail Modal */}
+      <EditTrailModal
+        open={showEditTrailModal}
+        trail={editingTrail}
+        mode={trailModalMode}
+        onClose={() => {
+          setShowEditTrailModal(false)
+          setEditingTrail(null)
+        }}
+        onSave={handleTrailSave}
+      />
+
+      {/* Create/Edit Folder Modal */}
+      <FolderEditModal
+        open={showFolderModal}
+        mode={folderModalMode}
+        folder={editingFolder}
+        onClose={() => {
+          setShowFolderModal(false)
+          setEditingFolder(null)
+        }}
+        onSubmit={submitFolder}
+      />
+    </div>
+  )
+}

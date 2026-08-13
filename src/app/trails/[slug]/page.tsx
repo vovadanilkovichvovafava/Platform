@@ -22,7 +22,17 @@ import {
   FolderGit2,
   LucideIcon,
   AlertCircle,
+  XCircle,
+  Award,
+  Pencil,
 } from "lucide-react"
+import { ClaimCertificateButton } from "@/components/claim-certificate-button"
+import { TrailEditButton } from "@/components/trail-edit-button"
+import { TrailPasswordForm } from "@/components/trail-password-form"
+import { ModuleLink } from "@/components/module-link"
+import { ModuleButton } from "@/components/module-button"
+import { resolveTrailAccess } from "@/lib/trail-access"
+import { guardTrailPassword } from "@/lib/trail-password"
 
 const iconMap: Record<string, LucideIcon> = {
   Code,
@@ -37,21 +47,6 @@ const typeIcons: Record<string, LucideIcon> = {
   PROJECT: FolderGit2,
 }
 
-const levelLabels: Record<string, string> = {
-  Junior: "Начальный",
-  Middle: "Средний",
-  Senior: "Продвинутый",
-  JUNIOR: "Начальный",
-  MIDDLE: "Средний",
-  SENIOR: "Продвинутый",
-}
-
-const levelColors: Record<string, string> = {
-  Junior: "bg-green-100 text-green-700",
-  Middle: "bg-blue-100 text-blue-700",
-  Senior: "bg-purple-100 text-purple-700",
-}
-
 interface Props {
   params: Promise<{ slug: string }>
 }
@@ -60,12 +55,25 @@ export default async function TrailPage({ params }: Props) {
   const { slug } = await params
   const session = await getServerSession(authOptions)
 
+  // Step 1: Load trail metadata WITHOUT modules (no data leak before password check)
   const trail = await prisma.trail.findUnique({
     where: { slug },
-    include: {
-      modules: {
-        orderBy: { order: "asc" },
-      },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      subtitle: true,
+      description: true,
+      icon: true,
+      color: true,
+      duration: true,
+      isPublished: true,
+      isRestricted: true,
+      isPasswordProtected: true,
+      passwordHint: true,
+      createdById: true,
+      allowSkipReview: true,
+      projectAutoNavigate: true,
     },
   })
 
@@ -73,33 +81,124 @@ export default async function TrailPage({ params }: Props) {
     notFound()
   }
 
-  // Check access for restricted trails
-  if (trail.isRestricted) {
-    const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER"
+  // ── Unified access check (PASSWORD > PUBLIC > HIDDEN/ASSIGNED) ──────────
+  const isPrivilegedUser = session?.user.role === "ADMIN" || session?.user.role === "TEACHER" || session?.user.role === "CO_ADMIN"
 
-    if (!session) {
-      redirect("/login")
-    }
+  // Check student access record
+  let hasStudentAccess = false
+  let hasPasswordAccess = false
+  let isEnrolledForAccess = false
 
-    if (!isPrivileged) {
-      const hasAccess = await prisma.studentTrailAccess.findUnique({
-        where: {
-          studentId_trailId: {
-            studentId: session.user.id,
-            trailId: trail.id,
-          },
+  if (session && !isPrivilegedUser) {
+    const studentAccess = await prisma.studentTrailAccess.findUnique({
+      where: {
+        studentId_trailId: {
+          studentId: session.user.id,
+          trailId: trail.id,
         },
-      })
-
-      if (!hasAccess) {
-        redirect("/trails") // Redirect to trails list if no access
-      }
-    }
+      },
+    })
+    hasStudentAccess = !!studentAccess
   }
 
+  // Admin password TTL: 4 hours (must match trail-policy.ts ADMIN_PASSWORD_TTL_MS)
+  const ADMIN_PASSWORD_TTL_MS = 4 * 60 * 60 * 1000
+
+  if (session && trail.isPasswordProtected) {
+    const passwordAccess = await prisma.trailPasswordAccess.findUnique({
+      where: {
+        userId_trailId: {
+          userId: session.user.id,
+          trailId: trail.id,
+        },
+      },
+      select: { unlockedAt: true },
+    })
+
+    if (passwordAccess) {
+      if (isPrivilegedUser && trail.createdById !== session.user.id) {
+        // For privileged non-creator users: apply TTL
+        const elapsed = Date.now() - passwordAccess.unlockedAt.getTime()
+        hasPasswordAccess = elapsed <= ADMIN_PASSWORD_TTL_MS
+      } else {
+        // For students and creators: permanent access
+        hasPasswordAccess = true
+      }
+    }
+
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_trailId: {
+          userId: session.user.id,
+          trailId: trail.id,
+        },
+      },
+    })
+    isEnrolledForAccess = !!enrollment
+  }
+
+  const accessDecision = resolveTrailAccess(
+    {
+      isPublished: trail.isPublished,
+      isRestricted: trail.isRestricted,
+      isPasswordProtected: trail.isPasswordProtected,
+      createdById: trail.createdById,
+    },
+    {
+      isAuthenticated: !!session,
+      userId: session?.user.id ?? null,
+      isPrivileged: isPrivilegedUser,
+      hasStudentAccess,
+      hasPasswordAccess,
+      isEnrolled: isEnrolledForAccess,
+    },
+  )
+
+  // Handle access denial
+  if (!accessDecision.visible && !accessDecision.needsPassword) {
+    if (accessDecision.reason === "login_required") {
+      redirect("/login")
+    }
+    redirect("/trails")
+  }
+
+  // Password-protected trails require authentication to submit the password form
+  if (accessDecision.needsPassword && !session) {
+    redirect("/login")
+  }
+
+  const needsPasswordUnlock = accessDecision.needsPassword
+
+  // Show password unlock form if trail is password protected and user doesn't have access
+  // IMPORTANT: modules are NOT loaded yet — no data leak
+  if (needsPasswordUnlock) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+        <TrailPasswordForm
+          trailId={trail.id}
+          trailTitle={trail.title}
+          trailColor={trail.color}
+          hint={trail.passwordHint}
+        />
+      </div>
+    )
+  }
+
+  // Step 2: Access granted — NOW load modules
+  const trailModulesData = await prisma.module.findMany({
+    where: { trailId: trail.id },
+    orderBy: { order: "asc" },
+  })
+
   let isEnrolled = false
-  let moduleProgressMap: Record<string, string> = {}
+  const moduleProgressMap: Record<string, string> = {}
   let taskProgress: { currentLevel: string; middleStatus: string; juniorStatus: string; seniorStatus: string } | null = null
+  let hasCertificate = false
+
+  // Map to track which modules have pending submissions (for instant progress unlock)
+  const modulesWithPendingSubmission = new Set<string>()
+  // Map to track submission status per module (PENDING, REVISION, FAILED)
+  const moduleSubmissionStatus = new Map<string, string>()
 
   if (session) {
     const enrollment = await prisma.enrollment.findUnique({
@@ -116,11 +215,27 @@ export default async function TrailPage({ params }: Props) {
       const progress = await prisma.moduleProgress.findMany({
         where: {
           userId: session.user.id,
-          moduleId: { in: trail.modules.map((m) => m.id) },
+          moduleId: { in: trailModulesData.map((m) => m.id) },
         },
       })
       progress.forEach((p) => {
         moduleProgressMap[p.moduleId] = p.status
+      })
+
+      // Fetch submissions to check for statuses (PENDING, REVISION, FAILED)
+      const submissions = await prisma.submission.findMany({
+        where: {
+          userId: session.user.id,
+          moduleId: { in: trailModulesData.map((m) => m.id) },
+          status: { in: ["PENDING", "REVISION", "FAILED"] },
+        },
+        select: { moduleId: true, status: true },
+      })
+      submissions.forEach((s) => {
+        moduleSubmissionStatus.set(s.moduleId, s.status)
+        if (s.status === "PENDING") {
+          modulesWithPendingSubmission.add(s.moduleId)
+        }
       })
 
       // Get task progress for project levels
@@ -138,25 +253,58 @@ export default async function TrailPage({ params }: Props) {
         juniorStatus: "LOCKED",
         seniorStatus: "LOCKED",
       }
+
+      // Check if certificate already exists
+      const certificate = await prisma.certificate.findUnique({
+        where: {
+          userId_trailId: {
+            userId: session.user.id,
+            trailId: trail.id,
+          },
+        },
+      })
+      hasCertificate = !!certificate
     }
   }
 
+  // Get user preference for module warning modal
+  let skipModuleWarning = false
+  if (session) {
+    const userPrefs = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { skipModuleWarning: true },
+    })
+    skipModuleWarning = userPrefs?.skipModuleWarning ?? false
+  }
+
   // Separate assessment modules and project modules
-  const assessmentModules = trail.modules.filter(m => m.type !== "PROJECT")
-  const projectModules = trail.modules.filter(m => m.type === "PROJECT")
+  const assessmentModules = trailModulesData.filter(m => m.type !== "PROJECT")
+  const projectModules = trailModulesData.filter(m => m.type === "PROJECT")
 
   // Check if all assessments are completed
   const assessmentCompletedCount = assessmentModules.filter(
     m => moduleProgressMap[m.id] === "COMPLETED"
   ).length
-  const allAssessmentsCompleted = assessmentModules.length > 0 && assessmentCompletedCount === assessmentModules.length
+  const allAssessmentsCompleted = assessmentModules.length === 0 || assessmentCompletedCount === assessmentModules.length
+
+  // Check if at least one project is completed
+  const completedProjectCount = projectModules.filter(
+    m => moduleProgressMap[m.id] === "COMPLETED"
+  ).length
+  const hasCompletedProject = completedProjectCount > 0
+
+  // Check if all modules are completed (eligible for certificate)
+  const allModulesCompleted = allAssessmentsCompleted && hasCompletedProject
 
   const progressPercent = assessmentModules.length > 0
     ? Math.round((assessmentCompletedCount / assessmentModules.length) * 100)
     : 0
 
-  const totalXP = trail.modules.reduce((sum, m) => sum + m.points, 0)
+  const totalXP = trailModulesData.reduce((sum, m) => sum + m.points, 0)
   const Icon = iconMap[trail.icon] || Code
+
+  // Check if user is admin or teacher (to show level badges)
+  const isPrivileged = session?.user?.role === "ADMIN" || session?.user?.role === "TEACHER" || session?.user?.role === "CO_ADMIN"
 
   // Capture values for server action closure
   const trailId = trail.id
@@ -168,6 +316,12 @@ export default async function TrailPage({ params }: Props) {
     const session = await getServerSession(authOptions)
     if (!session || !session.user?.id) {
       redirect("/login")
+    }
+
+    // Server-side password guard: prevent enrollment without password
+    const passwordGuard = await guardTrailPassword(trailId, session.user.id)
+    if (passwordGuard.denied) {
+      redirect(`/trails/${slug}`)
     }
 
     try {
@@ -245,13 +399,8 @@ export default async function TrailPage({ params }: Props) {
     return "LOCKED"
   }
 
-  const isProjectAvailable = (level: string) => {
-    const status = getProjectStatus(level)
-    return status !== "LOCKED"
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header */}
       <div
         className="relative py-12"
@@ -271,15 +420,40 @@ export default async function TrailPage({ params }: Props) {
             </div>
 
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {trail.title}
-              </h1>
-              <p className="text-lg text-gray-600 mb-4">{trail.subtitle}</p>
-              <p className="text-gray-600 mb-6 max-w-2xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
+                    {trail.title}
+                  </h1>
+                  <p className="text-lg text-gray-600 dark:text-slate-400 mb-4">{trail.subtitle}</p>
+                </div>
+                {/* Admin/Teacher edit button */}
+                {isPrivileged && (
+                  <TrailEditButton
+                    trail={{
+                      id: trail.id,
+                      title: trail.title,
+                      subtitle: trail.subtitle,
+                      description: trail.description,
+                      icon: trail.icon,
+                      color: trail.color,
+                      duration: trail.duration,
+                      isPublished: trail.isPublished,
+                      isRestricted: trail.isRestricted,
+                      allowSkipReview: trail.allowSkipReview,
+                      projectAutoNavigate: trail.projectAutoNavigate,
+                      isPasswordProtected: trail.isPasswordProtected,
+                      passwordHint: trail.passwordHint,
+                      createdById: trail.createdById,
+                    }}
+                  />
+                )}
+              </div>
+              <p className="text-gray-600 dark:text-slate-400 mb-6 max-w-2xl">
                 {trail.description}
               </p>
 
-              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-slate-400">
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   {trail.duration}
@@ -303,14 +477,14 @@ export default async function TrailPage({ params }: Props) {
               {isEnrolled ? (
                 <Card className="md:w-64">
                   <CardContent className="p-4">
-                    <div className="text-sm font-medium text-gray-600 mb-2">
+                    <div className="text-sm font-medium text-gray-600 dark:text-slate-400 mb-2">
                       Прогресс оценки
                     </div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl font-bold text-[#2E844A]">
                         {progressPercent}%
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-slate-400">
                         {assessmentCompletedCount}/{assessmentModules.length}
                       </span>
                     </div>
@@ -324,7 +498,7 @@ export default async function TrailPage({ params }: Props) {
                     size="lg"
                     className="bg-[#0176D3] hover:bg-[#014486] w-full md:w-auto"
                   >
-                    Начать оценку
+                    Начать
                   </Button>
                 </form>
               ) : (
@@ -340,8 +514,8 @@ export default async function TrailPage({ params }: Props) {
       <div className="container mx-auto px-4 py-8">
         {/* Assessment Section */}
         <div className="mb-12">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Оценка знаний</h2>
-          <p className="text-gray-500 mb-6">Пройдите тесты для получения доступа к заданиям</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">Оценка знаний</h2>
+          <p className="text-gray-500 dark:text-slate-400 mb-6">Пройдите тесты для получения доступа к заданиям</p>
 
           <div className="space-y-4">
             {assessmentModules.map((module, index) => {
@@ -350,15 +524,29 @@ export default async function TrailPage({ params }: Props) {
               const isCompleted = status === "COMPLETED"
               const isInProgress = status === "IN_PROGRESS"
 
-              // Lock if not enrolled or previous not completed
+              // Lock if not enrolled or previous not completed/submitted
               let isLocked = !isEnrolled
               if (isEnrolled && index > 0) {
                 const prevModule = assessmentModules[index - 1]
                 const prevStatus = moduleProgressMap[prevModule.id]
-                if (prevStatus !== "COMPLETED" && status === "NOT_STARTED") {
+                const prevHasPendingSubmission = modulesWithPendingSubmission.has(prevModule.id)
+
+                // Unlock next module if:
+                // 1. Previous is COMPLETED, OR
+                // 2. (Only if allowSkipReview) Previous is IN_PROGRESS AND has a PENDING submission
+                const prevAllowsProgress = prevStatus === "COMPLETED" ||
+                  (trail.allowSkipReview && prevStatus === "IN_PROGRESS" && prevHasPendingSubmission)
+
+                if (!prevAllowsProgress && status === "NOT_STARTED") {
                   isLocked = true
                 }
               }
+
+              // Check submission status for UI indicators
+              const hasPendingSubmission = modulesWithPendingSubmission.has(module.id)
+              const submissionStatus = moduleSubmissionStatus.get(module.id)
+              const hasRevision = submissionStatus === "REVISION"
+              const hasFailed = submissionStatus === "FAILED"
 
               return (
                 <Card
@@ -370,36 +558,81 @@ export default async function TrailPage({ params }: Props) {
                   <CardContent className="p-0">
                     {isLocked ? (
                       <div className="flex items-center gap-4 p-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-                          <Lock className="h-6 w-6 text-gray-400" />
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-800">
+                          <Lock className="h-6 w-6 text-gray-400 dark:text-slate-500" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-400">{module.title}</h3>
-                          <p className="text-sm text-gray-400">{module.description}</p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-400 dark:text-slate-500 truncate">{module.title}</h3>
+                          <p className="text-sm text-gray-400 dark:text-slate-500 line-clamp-1">{module.description}</p>
                         </div>
+                        {/* Admin/Teacher edit button - доступна даже на заблокированных модулях */}
+                        {isPrivileged && (
+                          <Link
+                            href={`/content/modules/${module.id}`}
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors shrink-0"
+                            title="Редактировать модуль"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        )}
                       </div>
                     ) : (
-                      <Link href={`/module/${module.slug}`} className="flex items-center gap-4 p-4">
-                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                          isCompleted ? "bg-green-100" : isInProgress ? "bg-blue-100" : "bg-gray-100"
-                        }`}>
-                          {isCompleted ? (
-                            <CheckCircle2 className="h-6 w-6 text-green-600" />
-                          ) : isInProgress ? (
-                            <PlayCircle className="h-6 w-6 text-blue-600" />
-                          ) : (
-                            <TypeIcon className="h-6 w-6 text-gray-500" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{module.title}</h3>
-                          <p className="text-sm text-gray-500">{module.description}</p>
-                        </div>
-                        <div className="hidden sm:flex items-center gap-4 text-sm text-gray-500">
-                          <span>{module.duration}</span>
-                          <span>{module.points} XP</span>
-                        </div>
-                      </Link>
+                      <div className="flex items-center gap-4 p-4">
+                        <ModuleLink href={`/module/${module.slug}`} moduleSlug={module.slug} moduleId={module.id} skipWarning={skipModuleWarning || isCompleted} className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+                            isCompleted ? "bg-green-100 dark:bg-green-950" : hasPendingSubmission ? "bg-amber-100 dark:bg-amber-950" : hasRevision ? "bg-orange-100 dark:bg-orange-950" : hasFailed ? "bg-red-100 dark:bg-red-950" : isInProgress ? "bg-blue-100 dark:bg-blue-950" : "bg-gray-100 dark:bg-slate-800"
+                          }`}>
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-6 w-6 text-green-600" />
+                            ) : hasPendingSubmission ? (
+                              <Clock className="h-6 w-6 text-amber-600" />
+                            ) : hasRevision ? (
+                              <AlertCircle className="h-6 w-6 text-orange-600" />
+                            ) : hasFailed ? (
+                              <XCircle className="h-6 w-6 text-red-600" />
+                            ) : isInProgress ? (
+                              <PlayCircle className="h-6 w-6 text-blue-600" />
+                            ) : (
+                              <TypeIcon className="h-6 w-6 text-gray-500 dark:text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-gray-900 dark:text-slate-100 truncate">{module.title}</h3>
+                              {hasPendingSubmission && (
+                                <Badge className="bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border-0 text-xs shrink-0">
+                                  На проверке
+                                </Badge>
+                              )}
+                              {hasRevision && (
+                                <Badge className="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 border-0 text-xs shrink-0">
+                                  На доработку
+                                </Badge>
+                              )}
+                              {hasFailed && (
+                                <Badge className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-0 text-xs shrink-0">
+                                  Не сдано
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-slate-400 line-clamp-1">{module.description}</p>
+                          </div>
+                          <div className="hidden sm:flex items-center gap-4 text-sm text-gray-500 dark:text-slate-400 shrink-0 ml-4">
+                            <span className="whitespace-nowrap">{module.duration}</span>
+                            <span className="whitespace-nowrap">{module.points} XP</span>
+                          </div>
+                        </ModuleLink>
+                        {/* Admin/Teacher edit button */}
+                        {isPrivileged && (
+                          <Link
+                            href={`/content/modules/${module.id}`}
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors shrink-0"
+                            title="Редактировать модуль"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        )}
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -408,11 +641,11 @@ export default async function TrailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Project Section - Show only current available project */}
+        {/* Project Section - Show completed and current available projects */}
         {projectModules.length > 0 && (
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Практическое задание</h2>
-            <p className="text-gray-500 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">Практическое задание</h2>
+            <p className="text-gray-500 dark:text-slate-400 mb-6">
               {allAssessmentsCompleted
                 ? "Выполните задание и отправьте на проверку"
                 : "Завершите оценку знаний для доступа к заданию"
@@ -420,7 +653,7 @@ export default async function TrailPage({ params }: Props) {
             </p>
 
             {!allAssessmentsCompleted && (
-              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3">
+              <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-900 rounded-lg flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-orange-500" />
                 <span className="text-orange-700">
                   Пройдите все тесты ({assessmentCompletedCount}/{assessmentModules.length}) для доступа к заданию
@@ -428,71 +661,147 @@ export default async function TrailPage({ params }: Props) {
               </div>
             )}
 
-            {(() => {
-              // Find the current available project based on taskProgress
-              // Priority: PENDING status, then by level order
-              const levelOrder = ["Middle", "Junior", "Senior"]
-              let currentProject = null
+            <div className="grid gap-4 max-w-4xl">
+              {(() => {
+                // Show projects based on their status in taskProgress
+                // PASSED = completed, PENDING = current, LOCKED = hidden
+                const levelOrder = ["Junior", "Middle", "Senior"]
+                const projectsToShow: Array<{ project: typeof projectModules[0], status: string }> = []
 
-              if (taskProgress) {
-                // Find project with PENDING status
-                for (const level of levelOrder) {
-                  const status = getProjectStatus(level)
-                  if (status === "PENDING") {
-                    currentProject = projectModules.find(m => m.level === level)
-                    if (currentProject) break
-                  }
+                // Collect ALL projects regardless of TaskProgress status
+                // All levels (Junior, Middle, Senior) should be visible in the trail
+                for (const project of projectModules) {
+                  const status = getProjectStatus(project.level)
+                  projectsToShow.push({ project, status })
                 }
-              }
 
-              // Fallback to Middle project if no pending found
-              if (!currentProject) {
-                currentProject = projectModules.find(m => m.level === "Middle") || projectModules[0]
-              }
+                // Sort: PASSED projects last, then by level order
+                projectsToShow.sort((a, b) => {
+                  if (a.status === "PASSED" && b.status !== "PASSED") return 1
+                  if (b.status === "PASSED" && a.status !== "PASSED") return -1
+                  return levelOrder.indexOf(a.project.level) - levelOrder.indexOf(b.project.level)
+                })
 
-              if (!currentProject) return null
+                return projectsToShow.map(({ project, status }) => {
+                  const isProjectCompleted = status === "PASSED" || moduleProgressMap[project.id] === "COMPLETED"
+                  const isPending = status === "PENDING" && !isProjectCompleted
+                  const projectSubmissionStatus = moduleSubmissionStatus.get(project.id)
+                  const projectHasPending = projectSubmissionStatus === "PENDING"
+                  const projectHasRevision = projectSubmissionStatus === "REVISION"
+                  const projectHasFailed = projectSubmissionStatus === "FAILED"
 
-              const isProjectCompleted = moduleProgressMap[currentProject.id] === "COMPLETED"
+                  return (
+                    <Card
+                      key={project.id}
+                      className={`transition-all ${!allAssessmentsCompleted ? "opacity-60" : "hover:shadow-md"}`}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 border-0">
+                              <FolderGit2 className="h-3 w-3 mr-1" />
+                              Проект
+                            </Badge>
+                            {isPrivileged && (
+                              <Badge variant="outline" className="text-xs">
+                                {project.level}
+                              </Badge>
+                            )}
+                          </div>
+                          {isProjectCompleted && (
+                            <Badge className="bg-green-100 dark:bg-green-950 text-green-700 border-0">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Сдано
+                            </Badge>
+                          )}
+                          {!isProjectCompleted && projectHasPending && (
+                            <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-700 border-0">
+                              <Clock className="h-3 w-3 mr-1" />
+                              На проверке
+                            </Badge>
+                          )}
+                          {!isProjectCompleted && projectHasRevision && (
+                            <Badge className="bg-orange-100 dark:bg-orange-950 text-orange-700 border-0">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              На доработку
+                            </Badge>
+                          )}
+                          {!isProjectCompleted && projectHasFailed && (
+                            <Badge className="bg-red-100 dark:bg-red-950 text-red-700 border-0">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Не сдано
+                            </Badge>
+                          )}
+                        </div>
+                        <CardTitle className="text-lg">{project.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">{project.description}</p>
+                        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-slate-400 mb-4">
+                          <span>{project.duration}</span>
+                          <span className="font-medium">{project.points} XP</span>
+                        </div>
+                        {allAssessmentsCompleted ? (
+                          <ModuleButton
+                            href={`/module/${project.slug}`}
+                            moduleSlug={project.slug}
+                            moduleId={project.id}
+                            skipWarning={skipModuleWarning || isProjectCompleted || projectHasPending || projectHasRevision || projectHasFailed}
+                            variant={isProjectCompleted ? "outline" : projectHasPending ? "outline" : "default"}
+                            className={`w-full ${projectHasRevision ? "bg-orange-500 hover:bg-orange-600" : projectHasFailed ? "bg-red-500 hover:bg-red-600" : ""}`}
+                          >
+                            {isProjectCompleted ? "Просмотреть" : projectHasPending ? "Посмотреть" : projectHasRevision ? "Доработать" : projectHasFailed ? "Перейти на проект" : "Начать задание"}
+                          </ModuleButton>
+                        ) : (
+                          <Button disabled className="w-full" variant="outline">
+                            <Lock className="h-4 w-4 mr-2" />
+                            Недоступно
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })
+              })()}
+            </div>
+          </div>
+        )}
 
-              return (
-                <Card className={`max-w-2xl transition-all ${!allAssessmentsCompleted ? "opacity-60" : "hover:shadow-md"}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <Badge className="bg-blue-100 text-blue-700 border-0">
-                        <FolderGit2 className="h-3 w-3 mr-1" />
-                        Проект
-                      </Badge>
-                      {isProjectCompleted && (
-                        <Badge className="bg-green-100 text-green-700 border-0">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Сдано
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="text-lg">{currentProject.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">{currentProject.description}</p>
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                      <span>{currentProject.duration}</span>
-                      <span className="font-medium">{currentProject.points} XP</span>
-                    </div>
-                    {allAssessmentsCompleted ? (
-                      <Button asChild className="w-full" variant={isProjectCompleted ? "outline" : "default"}>
-                        <Link href={`/module/${currentProject.slug}`}>
-                          {isProjectCompleted ? "Просмотреть" : "Начать задание"}
+        {/* Certificate Section */}
+        {isEnrolled && allModulesCompleted && (
+          <div className="mt-12">
+            <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-200 dark:border-amber-800">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
+                    <Award className="h-8 w-8 text-amber-600" />
+                  </div>
+                  <div className="flex-1 text-center md:text-left">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">
+                      {hasCertificate ? "Сертификат получен!" : "Trail завершён!"}
+                    </h3>
+                    <p className="text-gray-600 dark:text-slate-400">
+                      {hasCertificate
+                        ? "Вы уже получили сертификат за этот trail"
+                        : "Поздравляем! Вы прошли все модули и можете получить сертификат"
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    {hasCertificate ? (
+                      <Button asChild variant="outline" className="gap-2">
+                        <Link href="/certificates">
+                          <Award className="h-4 w-4" />
+                          Мои сертификаты
                         </Link>
                       </Button>
                     ) : (
-                      <Button disabled className="w-full" variant="outline">
-                        <Lock className="h-4 w-4 mr-2" />
-                        Недоступно
-                      </Button>
+                      <ClaimCertificateButton trailId={trail.id} />
                     )}
-                  </CardContent>
-                </Card>
-              )
-            })()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

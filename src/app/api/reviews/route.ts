@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, privilegedHasTrailAccess } from "@/lib/admin-access"
+import { processAchievementEvent } from "@/lib/achievement-service"
 import { z } from "zod"
 
 const reviewSchema = z.object({
@@ -15,16 +17,6 @@ const reviewSchema = z.object({
   comment: z.string().optional(),
   modulePoints: z.number().default(0),
 })
-
-// Helper to check if teacher is assigned to trail
-async function isTeacherAssignedToTrail(teacherId: string, trailId: string): Promise<boolean> {
-  const assignment = await prisma.trailTeacher.findUnique({
-    where: {
-      trailId_teacherId: { trailId, teacherId },
-    },
-  })
-  return !!assignment
-}
 
 // Helper to update TaskProgress based on project level and result
 // status: APPROVED = go up, REVISION = stay (retry), FAILED = go down
@@ -100,12 +92,11 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    // Allow both TEACHER and ADMIN roles
-    if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+    // Allow TEACHER, CO_ADMIN, and ADMIN roles
+    if (!session?.user?.id || !isPrivileged(session.user.role)) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    const isAdmin = session.user.role === "ADMIN"
     const body = await request.json()
     const data = reviewSchema.parse(body)
 
@@ -119,12 +110,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Модуль не найден" }, { status: 404 })
     }
 
-    // Verify teacher is assigned to this trail (ADMIN can review any trail)
-    if (!isAdmin) {
-      const isAssigned = await isTeacherAssignedToTrail(session.user.id, moduleForCheck.trailId)
-      if (!isAssigned) {
-        return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
-      }
+    // Verify user has access to this trail (ADMIN always, CO_ADMIN/TEACHER by assignment)
+    const hasAccess = await privilegedHasTrailAccess(session.user.id, session.user.role, moduleForCheck.trailId)
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Вы не назначены на этот trail" }, { status: 403 })
     }
 
     // Create review
@@ -146,10 +135,29 @@ export async function POST(request: Request) {
       data: { status: data.status },
     })
 
-    // Get module info for task progress update
+    // Get module info for task progress update and notification
     const currentModule = await prisma.module.findUnique({
       where: { id: data.moduleId },
       include: { trail: true },
+    })
+
+    // Create notification for the student
+    const statusMessages: Record<string, string> = {
+      APPROVED: "Работа принята!",
+      REVISION: "Работа отправлена на доработку",
+      FAILED: "Работа не принята",
+    }
+
+    await prisma.notification.create({
+      data: {
+        userId: data.userId,
+        type: "REVIEW_RECEIVED",
+        title: statusMessages[data.status],
+        message: currentModule
+          ? `Ваша работа по модулю "${currentModule.title}" получила оценку ${data.score}/10`
+          : `Ваша работа получила оценку ${data.score}/10`,
+        link: `/my-work`,
+      },
     })
 
     // Update TaskProgress for project modules (level progression)
@@ -195,7 +203,56 @@ export async function POST(request: Request) {
           },
         })
       }
+
+      // Auto-start next assessment module after approval
+      // In STRICT mode (allowSkipReview=false) the next module was NOT started on submission,
+      // so we start it now after teacher review. In FREE mode this is a harmless no-op
+      // since the next module was already started on submission.
+      if (currentModule && currentModule.type !== "PROJECT") {
+        const nextModule = await prisma.module.findFirst({
+          where: {
+            trailId: currentModule.trailId,
+            order: { gt: currentModule.order },
+            type: { not: "PROJECT" },
+          },
+          orderBy: { order: "asc" },
+        })
+
+        if (nextModule) {
+          await prisma.moduleProgress.upsert({
+            where: {
+              userId_moduleId: {
+                userId: data.userId,
+                moduleId: nextModule.id,
+              },
+            },
+            update: {},
+            create: {
+              userId: data.userId,
+              moduleId: nextModule.id,
+              status: "IN_PROGRESS",
+            },
+          })
+        }
+      }
     }
+
+    // Синхронизация уведомлений: автопрочтение SUBMISSION_PENDING для ВСЕХ учителей
+    // Работа проверена — уведомления о ней у всех получателей больше не актуальны
+    prisma.notification.updateMany({
+      where: {
+        type: "SUBMISSION_PENDING",
+        link: `/teacher/reviews/${data.submissionId}`,
+        isRead: false,
+      },
+      data: { isRead: true },
+    }).catch(() => {})
+
+    // Check and award achievements for the student after review
+    // Non-blocking: don't fail the review if achievement check errors
+    processAchievementEvent("REVIEW_RECEIVED", data.userId).catch((err) =>
+      console.error("Achievement check after review failed:", err)
+    )
 
     return NextResponse.json(review)
   } catch (error) {

@@ -2,12 +2,14 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isAnyAdmin, isAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 // GET - List student access entries (optionally filtered by trailId or studentId)
+// CO_ADMIN sees only entries for their assigned trails
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAnyAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -15,15 +17,39 @@ export async function GET(request: NextRequest) {
   const trailId = searchParams.get("trailId")
   const studentId = searchParams.get("studentId")
 
-  const where: { trailId?: string; studentId?: string } = {}
-  if (trailId) where.trailId = trailId
+  // Build where clause
+  const where: { trailId?: string | { in: string[] }; studentId?: string } = {}
   if (studentId) where.studentId = studentId
+
+  // CO_ADMIN: filter by allowed trails
+  if (!isAdmin(session.user.role)) {
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    if (allowedTrailIds !== null) {
+      // If specific trailId requested, verify access
+      if (trailId) {
+        if (!allowedTrailIds.includes(trailId)) {
+          return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+        }
+        where.trailId = trailId
+      } else {
+        // No specific trail - filter by allowed trails
+        where.trailId = { in: allowedTrailIds }
+      }
+    }
+  } else if (trailId) {
+    // ADMIN with specific trailId filter
+    where.trailId = trailId
+  }
 
   const access = await prisma.studentTrailAccess.findMany({
     where,
     include: {
       student: {
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, telegramUsername: true },
       },
       trail: {
         select: { id: true, title: true, slug: true },
@@ -36,10 +62,11 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Grant student access to a trail
+// CO_ADMIN can only grant access to their assigned trails
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAnyAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -50,6 +77,18 @@ export async function POST(request: NextRequest) {
       { error: "studentId and trailId are required" },
       { status: 400 }
     )
+  }
+
+  // CO_ADMIN: verify access to this trail
+  if (!isAdmin(session.user.role)) {
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    if (allowedTrailIds !== null && !allowedTrailIds.includes(trailId)) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
   }
 
   // Check if already exists
@@ -70,7 +109,7 @@ export async function POST(request: NextRequest) {
     data: { studentId, trailId },
     include: {
       student: {
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, telegramUsername: true },
       },
       trail: {
         select: { id: true, title: true, slug: true },
@@ -78,14 +117,28 @@ export async function POST(request: NextRequest) {
     },
   })
 
+  // Audit log: student access granted
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Unknown",
+      action: "CREATE",
+      entityType: "STUDENT_ACCESS",
+      entityId: access.id,
+      entityName: `${access.student.name} → ${access.trail.title}`,
+      details: JSON.stringify({ studentId, trailId }),
+    },
+  })
+
   return NextResponse.json(access)
 }
 
 // DELETE - Remove student access
+// CO_ADMIN can only remove access for their assigned trails
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAnyAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -100,20 +153,57 @@ export async function DELETE(request: NextRequest) {
     )
   }
 
+  // CO_ADMIN: verify access to this trail
+  if (!isAdmin(session.user.role)) {
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    if (allowedTrailIds !== null && !allowedTrailIds.includes(trailId)) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+  }
+
+  // Fetch before delete for audit log
+  const accessRecord = await prisma.studentTrailAccess.findUnique({
+    where: { studentId_trailId: { studentId, trailId } },
+    include: {
+      student: { select: { name: true } },
+      trail: { select: { title: true } },
+    },
+  })
+
   await prisma.studentTrailAccess.delete({
     where: {
       studentId_trailId: { studentId, trailId },
     },
   })
 
+  // Audit log: student access revoked
+  if (accessRecord) {
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        userName: session.user.name || session.user.email || "Unknown",
+        action: "DELETE",
+        entityType: "STUDENT_ACCESS",
+        entityId: `${studentId}_${trailId}`,
+        entityName: `${accessRecord.student.name} → ${accessRecord.trail.title}`,
+        details: JSON.stringify({ studentId, trailId }),
+      },
+    })
+  }
+
   return NextResponse.json({ success: true })
 }
 
 // PATCH - Toggle trail restriction status
+// CO_ADMIN can only modify restriction for their assigned trails
 export async function PATCH(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAnyAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -126,9 +216,36 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
+  // CO_ADMIN: verify access to this trail
+  if (!isAdmin(session.user.role)) {
+    const allowedTrailIds = await getAdminAllowedTrailIds(
+      session.user.id,
+      session.user.role
+    )
+
+    if (allowedTrailIds !== null && !allowedTrailIds.includes(trailId)) {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    }
+  }
+
   const trail = await prisma.trail.update({
     where: { id: trailId },
     data: { isRestricted },
+  })
+
+  // Audit log: trail restriction status changed
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      userName: session.user.name || session.user.email || "Unknown",
+      action: "UPDATE",
+      entityType: "TRAIL",
+      entityId: trailId,
+      entityName: trail.title,
+      details: JSON.stringify({
+        statusChanges: [isRestricted ? "restricted" : "made_public"],
+      }),
+    },
   })
 
   return NextResponse.json(trail)

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-background: #ffffff;
   --color-foreground: #0f172a;
@@ -28,6 +30,33 @@
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
+}
+
+/* Dark theme overrides */
+.dark {
+  --color-background: #0f172a;
+  --color-foreground: #e2e8f0;
+  --color-card: #1e293b;
+  --color-card-foreground: #e2e8f0;
+  --color-popover: #1e293b;
+  --color-popover-foreground: #e2e8f0;
+  --color-primary: #38bdf8;
+  --color-primary-foreground: #0f172a;
+  --color-secondary: #334155;
+  --color-secondary-foreground: #e2e8f0;
+  --color-muted: #334155;
+  --color-muted-foreground: #94a3b8;
+  --color-accent: #334155;
+  --color-accent-foreground: #e2e8f0;
+  --color-destructive: #f87171;
+  --color-destructive-foreground: #0f172a;
+  --color-border: #334155;
+  --color-input: #334155;
+  --color-ring: #38bdf8;
+  --color-success: #4ade80;
+  --color-success-foreground: #0f172a;
+  --color-warning: #fbbf24;
+  --color-warning-foreground: #0f172a;
 }
 
 body {
@@ -116,8 +145,16 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
+.dark .card-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 .card-shadow-hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.dark .card-shadow-hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Progress bar colors */
@@ -149,4 +186,373 @@ body {
 
 .trail-rnd-creator {
   background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+/* Achievement Card Holographic Effects */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes holographic-rotate {
+  0%, 100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(30deg);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+/* Achievement card base with holographic effect */
+.achievement-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+.achievement-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.3) 45%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.3) 55%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 12s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.achievement-card:hover::before {
+  opacity: 1;
+}
+
+/* Rarity-specific glow effects */
+.achievement-card-common {
+  --glow-color: rgb(156, 163, 175);
+  --border-color: rgb(209, 213, 219);
+  --gradient-start: #9ca3af;
+  --gradient-end: #6b7280;
+}
+
+.achievement-card-uncommon {
+  --glow-color: rgb(34, 197, 94);
+  --border-color: rgb(74, 222, 128);
+  --gradient-start: #22c55e;
+  --gradient-end: #16a34a;
+}
+
+.achievement-card-rare {
+  --glow-color: rgb(59, 130, 246);
+  --border-color: rgb(96, 165, 250);
+  --gradient-start: #3b82f6;
+  --gradient-end: #2563eb;
+}
+
+.achievement-card-epic {
+  --glow-color: rgb(168, 85, 247);
+  --border-color: rgb(192, 132, 252);
+  --gradient-start: #a855f7;
+  --gradient-end: #9333ea;
+}
+
+.achievement-card-legendary {
+  --glow-color: rgb(249, 115, 22);
+  --border-color: rgb(251, 146, 60);
+  --gradient-start: #f97316;
+  --gradient-end: #ea580c;
+}
+
+/* Holographic pattern overlay for modal */
+.achievement-holographic {
+  position: relative;
+  overflow: hidden;
+}
+
+.achievement-holographic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 4px
+    );
+  pointer-events: none;
+  animation: holographic-rotate 16s ease-in-out infinite;
+}
+
+/* Glowing border animation */
+.achievement-glow {
+  position: relative;
+}
+
+.achievement-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    45deg,
+    var(--gradient-start),
+    var(--gradient-end),
+    var(--gradient-start),
+    var(--gradient-end)
+  );
+  background-size: 400% 400%;
+  border-radius: inherit;
+  z-index: -1;
+  animation: glow-pulse 8s ease-in-out infinite;
+  filter: blur(8px);
+  opacity: 0.6;
+}
+
+/* Shimmer effect for modal cards */
+.achievement-modal-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.achievement-modal-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 10s ease-in-out infinite;
+}
+
+/* Stencil pattern for achievement icons */
+.achievement-stencil {
+  position: relative;
+}
+
+.achievement-stencil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.1) 25%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 50%,
+      transparent 75%,
+      rgba(255, 255, 255, 0.1) 75%
+    );
+  background-size: 8px 8px;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: shimmer 16s linear infinite;
+}
+
+/* Legendary special rainbow effect */
+.achievement-card-legendary .achievement-stencil::after {
+  background:
+    linear-gradient(135deg,
+      transparent 25%,
+      rgba(255, 200, 100, 0.15) 25%,
+      rgba(255, 200, 100, 0.15) 50%,
+      transparent 50%,
+      transparent 75%,
+      rgba(255, 200, 100, 0.15) 75%
+    );
+  background-size: 8px 8px;
+}
+
+/* Sparkle effect for earned achievements */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+.achievement-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.achievement-sparkle:nth-child(1) { top: 10%; left: 15%; animation-delay: 0s; }
+.achievement-sparkle:nth-child(2) { top: 20%; right: 20%; animation-delay: 0.3s; }
+.achievement-sparkle:nth-child(3) { bottom: 25%; left: 10%; animation-delay: 0.6s; }
+.achievement-sparkle:nth-child(4) { bottom: 15%; right: 15%; animation-delay: 0.9s; }
+
+/* Achievements scroll container */
+/* Video player fixed sizing */
+.video-player-container {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-landscape {
+  max-width: 854px;
+  aspect-ratio: 16 / 9;
+}
+
+.video-portrait {
+  max-width: 380px;
+  aspect-ratio: 9 / 16;
+}
+
+/* Fullscreen overrides */
+.video-player-container:fullscreen {
+  max-width: 100%;
+  aspect-ratio: unset;
+  border-radius: 0;
+}
+
+.video-player-container:fullscreen video {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Custom audio player styling */
+audio {
+  width: 100%;
+  height: 48px;
+  border-radius: 0.75rem;
+}
+
+audio::-webkit-media-controls-panel {
+  background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 50%, #ede9fe 100%);
+  border-radius: 0.75rem;
+  padding: 0 12px;
+}
+
+.dark audio::-webkit-media-controls-panel {
+  background: linear-gradient(135deg, #2e1065 0%, #1e1b4b 50%, #2e1065 100%);
+}
+
+audio::-webkit-media-controls-play-button {
+  background-color: #7c3aed;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  filter: brightness(0) invert(1);
+  cursor: pointer;
+}
+
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+  color: #4c1d95;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dark audio::-webkit-media-controls-current-time-display,
+.dark audio::-webkit-media-controls-time-remaining-display {
+  color: #c4b5fd;
+}
+
+audio::-webkit-media-controls-timeline {
+  background-color: #c4b5fd;
+  border-radius: 4px;
+  height: 6px;
+}
+
+.dark audio::-webkit-media-controls-timeline {
+  background-color: #6d28d9;
+}
+
+audio::-webkit-media-controls-volume-slider {
+  background-color: #c4b5fd;
+  border-radius: 4px;
+}
+
+.dark audio::-webkit-media-controls-volume-slider {
+  background-color: #6d28d9;
+}
+
+audio::-webkit-media-controls-mute-button {
+  filter: brightness(0) saturate(100%) invert(16%) sepia(60%) saturate(5000%) hue-rotate(262deg) brightness(90%) contrast(100%);
+}
+
+/* Firefox audio styling */
+@-moz-document url-prefix() {
+  audio {
+    background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 50%, #ede9fe 100%);
+    border-radius: 0.75rem;
+  }
+}
+
+.achievements-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.dark .achievements-scroll {
+  scrollbar-color: #475569 transparent;
+}
+
+.achievements-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.achievements-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.achievements-scroll::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.dark .achievements-scroll::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+
+.achievements-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: #9ca3af;
+}
+
+.dark .achievements-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: #64748b;
 }

@@ -2,52 +2,71 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit"
+import { checkRateLimit, getClientIP, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
 
 const registerSchema = z.object({
+  inviteCode: z.string().min(1, "Код приглашения обязателен"),
+  firstName: z.string().min(2, "Имя должно быть минимум 2 символа"),
+  lastName: z.string().min(2, "Фамилия должна быть минимум 2 символа"),
+  telegramUsername: z
+    .string()
+    .min(1, "Telegram-ник обязателен")
+    .regex(/^@[a-zA-Z0-9_]{5,32}$/, "Некорректный Telegram-ник"),
   email: z.string().email("Некорректный email"),
   password: z.string().min(6, "Пароль должен быть минимум 6 символов"),
-  name: z.string().min(2, "Имя должно быть минимум 2 символа"),
-  inviteCode: z.string().min(1, "Введите код приглашения"),
 })
 
 export async function POST(request: Request) {
-  // Rate limiting - 3 registrations per minute per IP
-  const ip = getClientIp(request)
-  const rateLimit = checkRateLimit(`register:${ip}`, RATE_LIMITS.register)
-
-  if (!rateLimit.success) {
-    return NextResponse.json(
-      { error: `Слишком много попыток. Попробуйте через ${rateLimit.resetIn} секунд` },
-      { status: 429 }
-    )
-  }
-
   try {
-    const body = await request.json()
-    const { email, password, name, inviteCode } = registerSchema.parse(body)
+    // Rate limiting для защиты от брутфорса
+    const clientIP = getClientIP(request)
+    const rateLimit = checkRateLimit(`register:${clientIP}`, RATE_LIMITS.auth)
 
-    // Check invite code
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetIn)
+    }
+
+    const body = await request.json()
+    const { inviteCode, email, password, firstName, lastName, telegramUsername } = registerSchema.parse(body)
+    const name = `${firstName} ${lastName}`
+
+    // 1. Validate invite code and get associated trails
     const invite = await prisma.invite.findUnique({
-      where: { code: inviteCode },
+      where: { code: inviteCode.toUpperCase() },
+      include: {
+        trails: {
+          include: {
+            trail: {
+              select: { id: true },
+            },
+          },
+        },
+        tags: {
+          include: {
+            tag: {
+              select: { id: true },
+            },
+          },
+        },
+      },
     })
 
     if (!invite) {
       return NextResponse.json(
-        { error: "Неверный код приглашения" },
+        { error: "Недействительный код приглашения" },
         { status: 400 }
       )
     }
 
-    // Check if invite is expired
-    if (invite.expiresAt && invite.expiresAt < new Date()) {
+    // 2. Check if code is expired
+    if (invite.expiresAt && new Date() > invite.expiresAt) {
       return NextResponse.json(
         { error: "Код приглашения истёк" },
         { status: 400 }
       )
     }
 
-    // Check if invite has uses left
+    // 3. Check usage limit
     if (invite.usedCount >= invite.maxUses) {
       return NextResponse.json(
         { error: "Код приглашения уже использован максимальное количество раз" },
@@ -55,14 +74,15 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if invite is restricted to specific email
-    if (invite.email && invite.email !== email) {
+    // 4. Check if code is restricted to specific email
+    if (invite.email && invite.email.toLowerCase() !== email.toLowerCase()) {
       return NextResponse.json(
         { error: "Этот код приглашения предназначен для другого email" },
         { status: 400 }
       )
     }
 
+    // 5. Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     })
@@ -76,23 +96,83 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create user and update invite in transaction
-    const user = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name,
-          role: "STUDENT",
-          invitedBy: invite.createdById,
-        },
-      })
+    // Determine role from invite with safe fallback
+    const VALID_ROLES = ["STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"]
+    let assignedRole = "STUDENT"
+    if (invite.role && VALID_ROLES.includes(invite.role)) {
+      assignedRole = invite.role
+    } else if (invite.role) {
+      console.warn(`Invalid role "${invite.role}" in invite ${invite.id}, falling back to STUDENT`)
+    }
 
+    // Get trail IDs from invite
+    // Note: If admin attached a trail to invite, student should get access regardless of isPublished status
+    const validTrailIds = invite.trails
+      .map((t) => t.trail)
+      .filter((trail) => trail !== null) // Filter out deleted trails
+      .map((trail) => trail.id)
+
+    // Use transaction to ensure atomicity
+    const user = await prisma.$transaction(async (tx) => {
       // Increment invite usage
       await tx.invite.update({
         where: { id: invite.id },
         data: { usedCount: { increment: 1 } },
       })
+
+      // Create user with role from invite
+      const newUser = await tx.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          firstName,
+          lastName,
+          telegramUsername,
+          role: assignedRole,
+          invitedBy: invite.createdById,
+        },
+      })
+
+      // Assign trail access from invite based on role
+      if (validTrailIds.length > 0) {
+        if (assignedRole === "HR" || assignedRole === "CO_ADMIN") {
+          // HR and CO_ADMIN get admin-level trail access
+          await tx.adminTrailAccess.createMany({
+            data: validTrailIds.map((trailId) => ({
+              adminId: newUser.id,
+              trailId,
+            })),
+            skipDuplicates: true,
+          })
+        } else {
+          // STUDENT, TEACHER, ADMIN get student trail access
+          await tx.studentTrailAccess.createMany({
+            data: validTrailIds.map((trailId) => ({
+              studentId: newUser.id,
+              trailId,
+            })),
+            skipDuplicates: true,
+          })
+        }
+      }
+
+      // Assign tags from invite
+      const validTagIds = invite.tags
+        .map((t) => t.tag)
+        .filter((tag) => tag !== null)
+        .map((tag) => tag.id)
+
+      if (validTagIds.length > 0) {
+        await tx.studentTagAssignment.createMany({
+          data: validTagIds.map((tagId) => ({
+            studentId: newUser.id,
+            tagId,
+            assignedBy: invite.createdById,
+          })),
+          skipDuplicates: true,
+        })
+      }
 
       return newUser
     })

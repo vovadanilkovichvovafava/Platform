@@ -3,60 +3,115 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit"
+import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
+import { guardTrailPassword } from "@/lib/trail-password"
+import { recordActivity } from "@/lib/activity"
+import { processAchievementEvent } from "@/lib/achievement-service"
+import {
+  sendTelegramMessage,
+  buildSubmissionNotificationMessage,
+  getReviewUrl,
+  isTelegramConfigured,
+} from "@/lib/telegram"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
+import { runAiSubmissionReview, isAiReviewAvailable } from "@/lib/ai-submission-review"
+import { runGoogleDocsScan, isGoogleDocsScanAvailable } from "@/lib/google-docs-scanner"
 
 const submissionSchema = z.object({
   moduleId: z.string().min(1),
-  githubUrl: z.string().url().optional().or(z.literal("")),
-  deployUrl: z.string().url().optional().or(z.literal("")),
-  comment: z.string().optional(),
+  githubUrl: z
+    .string()
+    .url()
+    .refine(
+      (url) => url.startsWith("https://github.com/"),
+      "GitHub URL должен начинаться с https://github.com/"
+    )
+    .optional()
+    .or(z.literal("")),
+  deployUrl: z
+    .string()
+    .url()
+    .refine(
+      (url) => url.startsWith("https://"),
+      "URL деплоя должен использовать HTTPS"
+    )
+    .optional()
+    .or(z.literal("")),
+  demoUrl: z
+    .string()
+    .url()
+    .refine(
+      (url) => url.startsWith("https://"),
+      "Ссылка на демо должна использовать HTTPS"
+    )
+    .optional()
+    .or(z.literal("")),
+  fileUrl: z
+    .string()
+    .url("Некорректная ссылка на файл")
+    .refine(
+      (url) => url.startsWith("https://"),
+      "Ссылка должна использовать HTTPS"
+    )
+    .optional()
+    .or(z.literal("")),
+  comment: z.string().max(5000, "Комментарий слишком длинный").optional(),
 })
 
 export async function POST(request: Request) {
-  // Rate limiting - 10 submissions per minute per IP
-  const ip = getClientIp(request)
-  const rateLimit = checkRateLimit(`submissions:${ip}`, RATE_LIMITS.submissions)
-
-  if (!rateLimit.success) {
-    return NextResponse.json(
-      { error: `Слишком много отправок. Попробуйте через ${rateLimit.resetIn} секунд` },
-      { status: 429 }
-    )
-  }
-
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || !session.user?.id) {
+    if (!session) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
+
+    // Record daily activity
+    await recordActivity(session.user.id)
 
     const body = await request.json()
     const data = submissionSchema.parse(body)
 
-    if (!data.githubUrl && !data.deployUrl) {
+    if (!data.githubUrl && !data.deployUrl && !data.fileUrl) {
       return NextResponse.json(
-        { error: "Укажите хотя бы GitHub или ссылку на деплой" },
+        { error: "Укажите хотя бы одну ссылку (GitHub, деплой или файл)" },
         { status: 400 }
       )
     }
 
+    // Rate limiting - 50 отправок в час
+    // Проверяем после валидации, чтобы невалидные запросы не расходовали лимит
+    const rateLimit = checkRateLimit(`submissions:${session.user.id}`, RATE_LIMITS.submissions)
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetIn)
+    }
+
     // Check if module exists and is a project
-    const module = await prisma.module.findUnique({
+    const courseModule = await prisma.module.findUnique({
       where: { id: data.moduleId },
     })
 
-    if (!module) {
+    if (!courseModule) {
       return NextResponse.json(
         { error: "Модуль не найден" },
         { status: 404 }
       )
     }
 
-    if (module.type !== "PROJECT") {
+    // Разрешаем отправку для проектов, практик и модулей с requiresSubmission
+    if (courseModule.type !== "PROJECT" && courseModule.type !== "PRACTICE" && !courseModule.requiresSubmission) {
       return NextResponse.json(
-        { error: "Можно отправлять только проекты" },
+        { error: "Этот модуль не требует отправки работы" },
         { status: 400 }
+      )
+    }
+
+    // Password check — no role exceptions, only creator bypasses
+    const passwordGuard = await guardTrailPassword(courseModule.trailId, session.user.id)
+    if (passwordGuard.denied) {
+      return NextResponse.json(
+        { error: "Для отправки работы необходимо ввести пароль к trail" },
+        { status: 403 }
       )
     }
 
@@ -65,7 +120,7 @@ export async function POST(request: Request) {
       where: {
         userId_trailId: {
           userId: session.user.id,
-          trailId: module.trailId,
+          trailId: courseModule.trailId,
         },
       },
     })
@@ -77,48 +132,86 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if there's an existing submission that needs revision
-    const existingSubmission = await prisma.submission.findFirst({
-      where: {
+    // Create submission
+    const submission = await prisma.submission.create({
+      data: {
         userId: session.user.id,
         moduleId: data.moduleId,
-        status: "REVISION", // Only update if status is REVISION (resubmit)
+        githubUrl: data.githubUrl || null,
+        deployUrl: data.deployUrl || null,
+        demoUrl: data.demoUrl || null,
+        fileUrl: data.fileUrl || null,
+        comment: data.comment || null,
+        status: "PENDING",
       },
-      include: { review: true },
     })
 
-    let submission
+    // Notify teachers about new submission
+    // Get trail to check teacherVisibility and get title for notifications
+    const trail = await prisma.trail.findUnique({
+      where: { id: courseModule.trailId },
+      select: { teacherVisibility: true, title: true, allowSkipReview: true },
+    })
 
-    if (existingSubmission) {
-      // Update existing submission (resubmit after revision)
-      // Delete old review first if exists
-      if (existingSubmission.review) {
-        await prisma.review.delete({
-          where: { id: existingSubmission.review.id },
+    // Collect user IDs to notify (teachers and admins)
+    const userIdsToNotify = new Set<string>()
+
+    // 1. Always notify specifically assigned teachers
+    const trailTeachers = await prisma.trailTeacher.findMany({
+      where: { trailId: courseModule.trailId },
+      select: { teacherId: true },
+    })
+    trailTeachers.forEach((tt: { teacherId: string }) => userIdsToNotify.add(tt.teacherId))
+
+    // 2. If trail is visible to all teachers, notify all teachers
+    if (trail?.teacherVisibility === "ALL_TEACHERS") {
+      const allTeachers = await prisma.user.findMany({
+        where: { role: "TEACHER" },
+        select: { id: true },
+      })
+      allTeachers.forEach((t: { id: string }) => userIdsToNotify.add(t.id))
+    }
+
+    // 3. Add admins and co-admins who have access to this trail
+    const admins = await prisma.user.findMany({
+      where: { role: "ADMIN" },
+      select: { id: true },
+    })
+    admins.forEach((a: { id: string }) => userIdsToNotify.add(a.id))
+
+    // For CO_ADMINs, only add those with explicit access to this trail
+    const coAdminsWithAccess = await prisma.adminTrailAccess.findMany({
+      where: { trailId: courseModule.trailId },
+      select: { adminId: true },
+    })
+    coAdminsWithAccess.forEach((ca: { adminId: string }) => userIdsToNotify.add(ca.adminId))
+
+    // Create notifications for all teachers and admins
+    if (userIdsToNotify.size > 0) {
+      await prisma.notification.createMany({
+        data: Array.from(userIdsToNotify).map((userId) => ({
+          userId: userId,
+          type: "SUBMISSION_PENDING",
+          title: "Новая работа на проверку",
+          message: trail?.title
+            ? `${session.user.name} отправил(а) работу "${courseModule.title}" (${trail.title})`
+            : `${session.user.name} отправил(а) работу "${courseModule.title}"`,
+          link: `/teacher/reviews/${submission.id}`,
+        })),
+      })
+
+      // Send Telegram notifications (non-blocking, errors don't affect main flow)
+      if (isTelegramConfigured()) {
+        sendTelegramNotifications({
+          submissionId: submission.id,
+          userIds: Array.from(userIdsToNotify),
+          studentName: session.user.name || "Студент",
+          moduleTitle: courseModule.title,
+          trailTitle: trail?.title,
+        }).catch(() => {
+          // Silently ignore - logged inside function
         })
       }
-
-      submission = await prisma.submission.update({
-        where: { id: existingSubmission.id },
-        data: {
-          githubUrl: data.githubUrl || null,
-          deployUrl: data.deployUrl || null,
-          comment: data.comment || null,
-          status: "PENDING",
-        },
-      })
-    } else {
-      // Create new submission
-      submission = await prisma.submission.create({
-        data: {
-          userId: session.user.id,
-          moduleId: data.moduleId,
-          githubUrl: data.githubUrl || null,
-          deployUrl: data.deployUrl || null,
-          comment: data.comment || null,
-          status: "PENDING",
-        },
-      })
     }
 
     // Update module progress to in_progress if not already
@@ -138,7 +231,62 @@ export async function POST(request: Request) {
       },
     })
 
-    return NextResponse.json(submission)
+    // Instant progress unlock: Start next assessment module (non-PROJECT) automatically
+    // Only in FREE mode (allowSkipReview=true) — allows the student to continue learning while waiting for review
+    // In STRICT mode (allowSkipReview=false) — student must wait for teacher review before proceeding
+    // NOTE: startedAt is intentionally NOT set here — it will be set when the student
+    // actually opens the module (via modal, gate, or page auto-start)
+    if (courseModule.type !== "PROJECT" && trail?.allowSkipReview) {
+      const nextModule = await prisma.module.findFirst({
+        where: {
+          trailId: courseModule.trailId,
+          order: { gt: courseModule.order },
+          type: { not: "PROJECT" },
+        },
+        orderBy: { order: "asc" },
+      })
+
+      if (nextModule) {
+        await prisma.moduleProgress.upsert({
+          where: {
+            userId_moduleId: {
+              userId: session.user.id,
+              moduleId: nextModule.id,
+            },
+          },
+          update: {},
+          create: {
+            userId: session.user.id,
+            moduleId: nextModule.id,
+            status: "IN_PROGRESS",
+            // startedAt left null — will be set when student actually opens the module
+          },
+        })
+      }
+    }
+
+    // Check and award achievements after submission (non-blocking)
+    processAchievementEvent("SUBMISSION_CREATED", session.user.id).catch((err) =>
+      console.error("Achievement check after submission failed:", err)
+    )
+
+    // Trigger AI submission review (non-blocking, isolated)
+    if (FEATURE_FLAGS.AI_SUBMISSION_REVIEW_ENABLED && isAiReviewAvailable()) {
+      runAiSubmissionReview(submission.id).catch((err) =>
+        console.error("[AI-SubmissionReview] Auto-trigger failed:", err instanceof Error ? err.message : err)
+      )
+    }
+
+    // Trigger Google Docs scan (non-blocking, isolated)
+    if (FEATURE_FLAGS.GOOGLE_DOCS_SCAN_ENABLED && isGoogleDocsScanAvailable() && data.fileUrl) {
+      runGoogleDocsScan(submission.id).catch((err) =>
+        console.error("[GoogleDocsScan] Auto-trigger failed:", err instanceof Error ? err.message : err)
+      )
+    }
+
+    // Strip internal time tracking fields from student-facing response
+    const { editCount: _ec, lastEditedAt: _le, ...safeSubmission } = submission
+    return NextResponse.json(safeSubmission)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -150,6 +298,83 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Ошибка при отправке работы" },
       { status: 500 }
+    )
+  }
+}
+
+/**
+ * Send Telegram notifications to teachers (idempotent, non-blocking)
+ * Errors are logged safely without exposing secrets
+ */
+async function sendTelegramNotifications(params: {
+  submissionId: string
+  userIds: string[]
+  studentName: string
+  moduleTitle: string
+  trailTitle?: string
+}): Promise<void> {
+  const { submissionId, userIds, studentName, moduleTitle, trailTitle } = params
+
+  try {
+    // Idempotency check: skip if already notified
+    const submission = await prisma.submission.findUnique({
+      where: { id: submissionId },
+      select: { telegramNotifiedAt: true },
+    })
+
+    if (submission?.telegramNotifiedAt) {
+      return // Already notified
+    }
+
+    // Get users with Telegram enabled
+    const usersWithTelegram = await prisma.user.findMany({
+      where: {
+        id: { in: userIds },
+        telegramChatId: { not: null },
+        telegramEnabled: true,
+      },
+      select: {
+        id: true,
+        telegramChatId: true,
+      },
+    })
+
+    if (usersWithTelegram.length === 0) {
+      return // No users with Telegram
+    }
+
+    // Build message
+    const reviewUrl = getReviewUrl(submissionId)
+    const message = buildSubmissionNotificationMessage({
+      studentName,
+      moduleTitle,
+      trailTitle,
+      reviewUrl,
+    })
+
+    // Send to all users (parallel, but don't fail fast)
+    const results = await Promise.allSettled(
+      usersWithTelegram.map((user: { id: string; telegramChatId: string | null }) =>
+        sendTelegramMessage(user.telegramChatId!, message)
+      )
+    )
+
+    // Log failures (without sensitive data)
+    const failures = results.filter((r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.success))
+    if (failures.length > 0) {
+      console.warn(`[Telegram] ${failures.length}/${usersWithTelegram.length} notifications failed for submission ${submissionId}`)
+    }
+
+    // Mark as notified (even if some failed - to prevent spam on retry)
+    await prisma.submission.update({
+      where: { id: submissionId },
+      data: { telegramNotifiedAt: new Date() },
+    })
+  } catch (error) {
+    // Log safely without exposing secrets
+    console.error(
+      "[Telegram] Error sending notifications:",
+      error instanceof Error ? error.message : "Unknown"
     )
   }
 }

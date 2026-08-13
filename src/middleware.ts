@@ -2,6 +2,11 @@ import { withAuth } from "next-auth/middleware"
 import { NextResponse, NextRequest } from "next/server"
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
 
+// Generate simple request ID for tracing (no crypto needed)
+function generateRequestId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 // Get client IP from request
 function getClientIp(request: NextRequest): string {
   const forwardedFor = request.headers.get("x-forwarded-for")
@@ -24,7 +29,7 @@ function checkAuthRateLimit(request: NextRequest): NextResponse | null {
     const ip = getClientIp(request)
     const rateLimit = checkRateLimit(`auth:${ip}`, RATE_LIMITS.auth)
 
-    if (!rateLimit.success) {
+    if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: `Слишком много попыток входа. Попробуйте через ${rateLimit.resetIn} секунд` },
         { status: 429 }
@@ -41,14 +46,61 @@ const authMiddleware = withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
-    // Protect teacher routes (allow both TEACHER and ADMIN)
-    if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "ADMIN") {
+    // NOTE: We intentionally do NOT redirect /login or /register → /dashboard here.
+    // The middleware uses getToken() which decodes the raw JWT cookie without running
+    // jwt/session callbacks. If the user was deleted from DB, the cookie still has a
+    // valid token.id, but getServerSession (which runs callbacks) returns an empty session.
+    // A server-side redirect here would cause an infinite loop:
+    //   middleware(/login) → redirect(/dashboard) → getServerSession → redirect(/login) → ...
+    // Instead, login/register pages handle the redirect client-side via useSession(),
+    // which calls /api/auth/session — this endpoint runs callbacks AND updates the cookie.
+
+    // Protect teacher routes (allow TEACHER, CO_ADMIN, ADMIN, and HR for read-only analytics)
+    if (path.startsWith("/teacher") && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN" && token?.role !== "HR") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Protect admin routes
-    if (path.startsWith("/admin") && token?.role !== "ADMIN") {
+    // Protect admin routes (allow CO_ADMIN, ADMIN, and HR)
+    if (path.startsWith("/admin") && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN" && token?.role !== "HR") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
+    // Redirect /admin to /admin/invites (default admin landing page)
+    if (path === "/admin" && (token?.role === "CO_ADMIN" || token?.role === "ADMIN" || token?.role === "HR")) {
+      return NextResponse.redirect(new URL("/admin/invites", req.url))
+    }
+
+    // HR: block access to admin pages and teacher pages that HR should not see
+    if (token?.role === "HR") {
+      const hrDeniedAdminPaths = ["/admin/users", "/admin/access", "/admin/content", "/admin/history"]
+      if (hrDeniedAdminPaths.some(p => path === p || path.startsWith(p + "/"))) {
+        return NextResponse.redirect(new URL("/admin/invites", req.url))
+      }
+      // HR cannot edit content via teacher routes (but CAN view submissions read-only)
+      const hrDeniedTeacherPaths = ["/teacher/content"]
+      if (hrDeniedTeacherPaths.some(p => path === p || path.startsWith(p + "/"))) {
+        return NextResponse.redirect(new URL("/teacher/stats", req.url))
+      }
+    }
+
+    // Protect shared content editing routes (allow TEACHER, CO_ADMIN, and ADMIN — NOT HR)
+    if (path.startsWith("/content/modules/") && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
+    // Protect /content main page (allow TEACHER, CO_ADMIN, and ADMIN — NOT HR)
+    if (path === "/content" && token?.role !== "TEACHER" && token?.role !== "CO_ADMIN" && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
+    // Redirects for backward compatibility: /admin/content → /content (not for HR)
+    if (path === "/admin/content" && (token?.role === "CO_ADMIN" || token?.role === "ADMIN")) {
+      return NextResponse.redirect(new URL("/content", req.url))
+    }
+
+    // Redirects for backward compatibility: /teacher/content → /content
+    if (path === "/teacher/content" && (token?.role === "TEACHER" || token?.role === "CO_ADMIN" || token?.role === "ADMIN")) {
+      return NextResponse.redirect(new URL("/content", req.url))
     }
 
     return NextResponse.next()
@@ -65,29 +117,70 @@ const authMiddleware = withAuth(
           path === "/register" ||
           path.startsWith("/trails") ||
           path.startsWith("/api/auth") ||
-          path.startsWith("/api/register")
+          path.startsWith("/api/register") ||
+          // Health probes must bypass auth - container platforms (Saturn/k8s)
+          // call them without a session. The handler exposes no business data.
+          path === "/api/health" ||
+          // Telegram webhook must bypass auth - Telegram sends requests without session
+          // Security is handled via X-Telegram-Bot-Api-Secret-Token header in the handler
+          path.startsWith("/api/telegram") ||
+          // External API endpoints must bypass auth - external services communicate without session
+          // Security should be handled in the individual route handlers
+          path.startsWith("/api/external")
         ) {
           return true
         }
 
         // All other routes require authentication
-        return !!token
+        // Check token.id specifically — a token without id means the user was invalidated
+        return !!token?.id
       },
     },
   }
 )
 
+// Feature flag: leaderboard enabled (hardcoded, change in src/lib/feature-flags.ts to re-enable)
+const LEADERBOARD_ENABLED = false
+
 // Combined middleware: rate limit first, then auth
 export default function middleware(request: NextRequest) {
-  // Check rate limit for auth endpoints
-  const rateLimitResponse = checkAuthRateLimit(request)
-  if (rateLimitResponse) {
-    return rateLimitResponse
-  }
+  const requestId = generateRequestId()
+  const path = request.nextUrl.pathname
 
-  // Proceed with auth middleware
-  // @ts-expect-error - withAuth returns a middleware that accepts NextRequest
-  return authMiddleware(request)
+  try {
+    // Block /leaderboard and /api/leaderboard when feature is disabled
+    if (!LEADERBOARD_ENABLED && (path === "/leaderboard" || path.startsWith("/leaderboard/") || path === "/api/leaderboard" || path.startsWith("/api/leaderboard/"))) {
+      if (path.startsWith("/api/")) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 })
+      }
+      // Rewrite to a path that doesn't exist, triggering Next.js 404 page
+      const url = request.nextUrl.clone()
+      url.pathname = "/__disabled"
+      return NextResponse.rewrite(url)
+    }
+
+    // Check rate limit for auth endpoints
+    const rateLimitResponse = checkAuthRateLimit(request)
+    if (rateLimitResponse) {
+      return rateLimitResponse
+    }
+
+    // Proceed with auth middleware
+    // @ts-expect-error - withAuth returns a middleware that accepts NextRequest
+    return authMiddleware(request)
+  } catch (error) {
+    // Log error with request ID for tracing (no sensitive data)
+    console.error(`[middleware] requestId=${requestId} path=${path} error=${error instanceof Error ? error.message : "unknown"}`)
+
+    // Return a safe response instead of 503
+    // For auth pages, allow the request to proceed
+    if (path === "/login" || path === "/register") {
+      return NextResponse.next()
+    }
+
+    // For other routes, redirect to login as a safe fallback
+    return NextResponse.redirect(new URL("/login", request.url))
+  }
 }
 
 export const config = {
@@ -97,8 +190,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public files (images, etc.)
+     * - public files (images, media, etc.)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|wav|ogg|m4a|aac|flac|wma|opus|webm|mov|avi|mkv|m4v)$).*)",
   ],
 }

@@ -50,6 +50,25 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = user.role
+      } else if (token.id) {
+        // Sync role from database on every request (handles role changes by admin)
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true },
+          })
+          if (dbUser) {
+            token.role = dbUser.role
+          } else {
+            // User confirmed deleted from DB — invalidate token
+            // This prevents redirect loop: middleware won't treat as authenticated
+            token.id = null
+            token.role = null
+          }
+        } catch {
+          // DB error (timeout, pool exhausted) — keep existing token
+          // Don't invalidate on temporary failures
+        }
       }
       return token
     },
@@ -63,16 +82,20 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!dbUser) {
-            // User no longer exists - invalidate session
-            throw new Error("User not found")
+            // User confirmed deleted — clear session fields
+            // JWT callback will also clear token.id on next request
+            session.user.id = ""
+            session.user.role = ""
+            return session
           }
 
           session.user.id = dbUser.id
           session.user.role = dbUser.role
         } catch {
-          // If user doesn't exist, return empty session to force re-login
-          session.user.id = ""
-          session.user.role = ""
+          // DB error (timeout, connection issue) — use token values as fallback
+          // This prevents redirect loop: session stays valid even if DB is temporarily down
+          session.user.id = token.id as string
+          session.user.role = (token.role as string) || ""
         }
       }
       return session

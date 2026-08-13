@@ -1,58 +1,53 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, isHR, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Clock,
   CheckCircle2,
   AlertCircle,
   XCircle,
-  Github,
-  Globe,
-  Eye,
-  ClipboardList,
-  History,
 } from "lucide-react"
+import { SubmissionsFilter } from "@/components/submissions-filter"
 
-export default async function TeacherDashboard() {
+export default async function TeacherDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ trail?: string; status?: string; sort?: string; q?: string }>
+}) {
+  const resolvedSearchParams = await searchParams
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR (HR = read-only view)
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
 
-  const isAdmin = session.user.role === "ADMIN"
+  // Get teacher's assigned trails via unified helper
+  // - ADMIN: null (all), CO_ADMIN/TEACHER: specific trail IDs
+  const allowedTrailIds = await getPrivilegedAllowedTrailIds(session.user.id, session.user.role)
+  const assignedTrailIds: string[] = allowedTrailIds || []
 
-  // Get teacher's assigned trails (ADMIN sees all)
-  const teacherAssignments = isAdmin ? [] : await prisma.trailTeacher.findMany({
-    where: { teacherId: session.user.id },
-    select: { trailId: true },
-  })
-
-  const assignedTrailIds = teacherAssignments.map((a) => a.trailId)
-  const hasAssignments = !isAdmin && assignedTrailIds.length > 0
-
-  // ADMIN sees all submissions, TEACHER only sees assigned trails
+  // ADMIN sees all submissions, CO_ADMIN and TEACHER only see assigned trails
+  const shouldFilter = allowedTrailIds !== null && assignedTrailIds.length > 0
   const pendingSubmissions = await prisma.submission.findMany({
     where: {
       status: "PENDING",
-      ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(shouldFilter ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(allowedTrailIds !== null && assignedTrailIds.length === 0 ? { id: "__NEVER_MATCH__" } : {}), // No access = no results
     },
     orderBy: { createdAt: "asc" },
     include: {
       user: {
-        select: { name: true, email: true },
+        select: { name: true, email: true, telegramUsername: true },
       },
       module: {
         include: {
-          trail: true,
+          trail: { select: { title: true, slug: true } },
         },
       },
     },
@@ -62,16 +57,18 @@ export default async function TeacherDashboard() {
   const reviewedSubmissions = await prisma.submission.findMany({
     where: {
       status: { in: ["APPROVED", "REVISION", "FAILED"] },
-      ...(hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(shouldFilter ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+      ...(allowedTrailIds !== null && assignedTrailIds.length === 0 ? { id: "__NEVER_MATCH__" } : {}),
     },
     orderBy: { updatedAt: "desc" },
+    take: 50, // Limit history to last 50
     include: {
       user: {
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, telegramUsername: true },
       },
       module: {
         include: {
-          trail: { select: { title: true } },
+          trail: { select: { title: true, slug: true } },
         },
       },
       review: {
@@ -88,7 +85,9 @@ export default async function TeacherDashboard() {
   // Stats - only for assigned trails
   const stats = await prisma.submission.groupBy({
     by: ["status"],
-    where: hasAssignments ? { module: { trailId: { in: assignedTrailIds } } } : {},
+    where: shouldFilter
+      ? { module: { trailId: { in: assignedTrailIds } } }
+      : (allowedTrailIds !== null && assignedTrailIds.length === 0 ? { id: "__NEVER_MATCH__" } : {}),
     _count: true,
   })
 
@@ -97,13 +96,98 @@ export default async function TeacherDashboard() {
   const revisionCount = stats.find((s) => s.status === "REVISION")?._count || 0
   const failedCount = stats.find((s) => s.status === "FAILED")?._count || 0
 
+  // Get unique trails for filter
+  const allTrails = new Set<string>()
+  pendingSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
+  reviewedSubmissions.forEach((s) => allTrails.add(s.module.trail.title))
+  const trails = Array.from(allTrails).sort()
+
+  // --- Time tracking: fetch ModuleProgress startedAt + first submission dates ---
+  const allSubmissions = [...pendingSubmissions, ...reviewedSubmissions]
+  const userModuleKeys = new Map<string, { userId: string; moduleId: string }>()
+  for (const s of allSubmissions) {
+    userModuleKeys.set(`${s.userId}:${s.moduleId}`, { userId: s.userId, moduleId: s.moduleId })
+  }
+  const pairs = [...userModuleKeys.values()]
+
+  // Batch-fetch module progress (startedAt) for all user+module pairs
+  const progressRecords = pairs.length > 0
+    ? await prisma.moduleProgress.findMany({
+        where: { OR: pairs.map((p) => ({ userId: p.userId, moduleId: p.moduleId })) },
+        select: { userId: true, moduleId: true, startedAt: true },
+      })
+    : []
+  const progressMap = new Map<string, Date | null>()
+  for (const p of progressRecords) {
+    progressMap.set(`${p.userId}:${p.moduleId}`, p.startedAt)
+  }
+
+  // Batch-fetch earliest submission createdAt per user+module (for timeToFirstSubmit)
+  const firstSubmitRecords = pairs.length > 0
+    ? await prisma.submission.groupBy({
+        by: ["userId", "moduleId"],
+        _min: { createdAt: true },
+        where: { OR: pairs.map((p) => ({ userId: p.userId, moduleId: p.moduleId })) },
+      })
+    : []
+  const firstSubmitMap = new Map<string, Date | null>()
+  for (const r of firstSubmitRecords) {
+    firstSubmitMap.set(`${r.userId}:${r.moduleId}`, r._min.createdAt)
+  }
+
+  // Helper: build time tracking object for a submission (all values serialized)
+  function buildTimeTracking(s: { userId: string; moduleId: string; createdAt: Date; editCount: number; lastEditedAt: Date | null }) {
+    const key = `${s.userId}:${s.moduleId}`
+    const moduleStartedAt = progressMap.get(key) ?? null
+    const firstSubmittedAt = firstSubmitMap.get(key) ?? null
+    const timeToFirstSubmitMs =
+      moduleStartedAt && firstSubmittedAt
+        ? firstSubmittedAt.getTime() - moduleStartedAt.getTime()
+        : null
+    const totalEditTimeMs =
+      s.editCount > 0 && s.lastEditedAt
+        ? s.lastEditedAt.getTime() - s.createdAt.getTime()
+        : null
+    return {
+      moduleStartedAt: moduleStartedAt?.toISOString() ?? null,
+      firstSubmittedAt: firstSubmittedAt?.toISOString() ?? null,
+      timeToFirstSubmitMs,
+      totalEditTimeMs,
+      editCount: s.editCount,
+      lastActivityAt: (s.lastEditedAt ?? s.createdAt).toISOString(),
+    }
+  }
+
+  // Serialize dates for client component
+  const serializedPending = pendingSubmissions.map((s) => ({
+    ...s,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+    lastEditedAt: s.lastEditedAt?.toISOString() ?? null,
+    timeTracking: buildTimeTracking(s),
+  }))
+
+  const serializedReviewed = reviewedSubmissions.map((s) => ({
+    ...s,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+    lastEditedAt: s.lastEditedAt?.toISOString() ?? null,
+    review: s.review
+      ? {
+          ...s.review,
+          createdAt: s.review.createdAt.toISOString(),
+        }
+      : null,
+    timeTracking: buildTimeTracking(s),
+  }))
+
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">
           Добро пожаловать!
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-slate-400">
           Управляйте проверкой работ и отслеживайте прогресс учеников
         </p>
       </div>
@@ -113,12 +197,12 @@ export default async function TeacherDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
+              <div className="p-3 bg-blue-100 dark:bg-blue-950 rounded-xl">
                 <Clock className="h-6 w-6 text-blue-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{pendingCount}</div>
-                <div className="text-sm text-gray-500">На проверке</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">На проверке</div>
               </div>
             </div>
           </CardContent>
@@ -127,12 +211,12 @@ export default async function TeacherDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-xl">
+              <div className="p-3 bg-green-100 dark:bg-green-950 rounded-xl">
                 <CheckCircle2 className="h-6 w-6 text-green-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{approvedCount}</div>
-                <div className="text-sm text-gray-500">Принято</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">Принято</div>
               </div>
             </div>
           </CardContent>
@@ -141,12 +225,12 @@ export default async function TeacherDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 rounded-xl">
+              <div className="p-3 bg-orange-100 dark:bg-orange-950 rounded-xl">
                 <AlertCircle className="h-6 w-6 text-orange-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{revisionCount}</div>
-                <div className="text-sm text-gray-500">На доработку</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">На доработку</div>
               </div>
             </div>
           </CardContent>
@@ -155,218 +239,30 @@ export default async function TeacherDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-xl">
+              <div className="p-3 bg-red-100 dark:bg-red-950 rounded-xl">
                 <XCircle className="h-6 w-6 text-red-600" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{failedCount}</div>
-                <div className="text-sm text-gray-500">Провал</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">Провал</div>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Pending Submissions */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            Работы на проверку
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {pendingSubmissions.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Все работы проверены!
-              </h3>
-              <p className="text-gray-600">
-                Новые работы появятся здесь автоматически
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingSubmissions.map((submission) => (
-                <div
-                  key={submission.id}
-                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {submission.module.trail.title}
-                      </Badge>
-                      <Badge className="bg-blue-100 text-blue-700 border-0">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Ожидает проверки
-                      </Badge>
-                    </div>
-                    <h3 className="font-medium text-gray-900">
-                      {submission.module.title}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {submission.user.name} ({submission.user.email})
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Отправлено{" "}
-                      {new Date(submission.createdAt).toLocaleDateString(
-                        "ru-RU",
-                        {
-                          day: "numeric",
-                          month: "long",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="flex gap-2">
-                      {submission.githubUrl && (
-                        <a
-                          href={submission.githubUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                        >
-                          <Github className="h-4 w-4" />
-                        </a>
-                      )}
-                      {submission.deployUrl && (
-                        <a
-                          href={submission.deployUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                        >
-                          <Globe className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-
-                    <Button asChild>
-                      <Link href={`/teacher/reviews/${submission.id}`}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Проверить
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* History of reviewed submissions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            История проверок
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {reviewedSubmissions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Пока нет проверенных работ
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {reviewedSubmissions.map((submission) => (
-                <div
-                  key={submission.id}
-                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {submission.module.trail.title}
-                      </Badge>
-                      <Badge
-                        className={
-                          submission.status === "APPROVED"
-                            ? "bg-green-100 text-green-700 border-0"
-                            : submission.status === "FAILED"
-                            ? "bg-red-100 text-red-700 border-0"
-                            : "bg-orange-100 text-orange-700 border-0"
-                        }
-                      >
-                        {submission.status === "APPROVED" ? (
-                          <>
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Принято
-                          </>
-                        ) : submission.status === "FAILED" ? (
-                          <>
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Провал
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            На доработку
-                          </>
-                        )}
-                      </Badge>
-                    </div>
-                    <h3 className="font-medium text-gray-900">
-                      {submission.module.title}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {submission.user.name}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    {submission.review && (
-                      <div className="text-center px-4">
-                        <div className="text-2xl font-bold text-[#0176D3]">
-                          {submission.review.score}/10
-                        </div>
-                        <div className="text-xs text-gray-500">Оценка</div>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      {submission.githubUrl && (
-                        <a
-                          href={submission.githubUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                        >
-                          <Github className="h-4 w-4" />
-                        </a>
-                      )}
-                      {submission.deployUrl && (
-                        <a
-                          href={submission.deployUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                        >
-                          <Globe className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/teacher/reviews/${submission.id}`}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        Детали
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Submissions with filter */}
+      <SubmissionsFilter
+        pendingSubmissions={serializedPending}
+        reviewedSubmissions={serializedReviewed}
+        trails={trails}
+        initialFilters={{
+          trail: resolvedSearchParams.trail || "all",
+          status: resolvedSearchParams.status || "all",
+          sort: resolvedSearchParams.sort || "waiting",
+          q: resolvedSearchParams.q || "",
+        }}
+      />
     </div>
   )
 }

@@ -1,63 +1,238 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/components/ui/toast"
+import { useConfirm } from "@/components/ui/confirm-dialog"
+import { Breadcrumbs } from "@/components/ui/breadcrumbs"
+import { pluralizeRu } from "@/lib/utils"
 import {
-  ArrowLeft,
   RefreshCw,
   Users,
   GraduationCap,
   Shield,
+  ShieldCheck,
   BookOpen,
-  FileText,
+  Trash2,
+  CalendarDays,
+  Search,
+  X,
+  Gift,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
+import { useSession } from "next-auth/react"
+import {
+  getUrlParams,
+  parseEnumParam,
+  updateUrl,
+  PER_PAGE_OPTIONS,
+  type PerPageOption,
+  parsePerPageParam,
+  parsePageParam,
+  loadFiltersFromStorage,
+} from "@/lib/url-state"
+import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
+import { TagAssignDropdown } from "@/components/tag-assign-dropdown"
+import { TagFilterDropdown } from "@/components/tag-filter-dropdown"
+import { TrailFilterDropdown } from "@/components/trail-filter-dropdown"
+
+interface TagAssignment {
+  id: string
+  studentId: string
+  tagId: string
+  tag: TagInfo
+}
+
+type UserRole = "STUDENT" | "TEACHER" | "HR" | "CO_ADMIN" | "ADMIN"
+type RoleFilterValue = "ALL" | UserRole
+const VALID_ROLE_FILTERS: readonly RoleFilterValue[] = ["ALL", "STUDENT", "TEACHER", "HR", "CO_ADMIN", "ADMIN"]
+const FILTER_DEFAULTS = { q: "", role: "ALL", perPage: "10", page: "1" }
 
 interface User {
   id: string
   email: string
   name: string
-  role: "STUDENT" | "TEACHER" | "ADMIN"
+  role: UserRole
   totalXP: number
   createdAt: string
+  enrollments: { trailId: string }[]
+  trailAccess: { trailId: string }[]
   _count: {
     enrollments: number
     submissions: number
+    activityDays: number
   }
 }
 
-const roleConfig = {
+const roleConfig: Record<UserRole, { label: string; color: string; icon: typeof Shield }> = {
   STUDENT: {
     label: "Студент",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 dark:bg-blue-950 text-blue-700",
     icon: GraduationCap,
   },
   TEACHER: {
     label: "Учитель",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 dark:bg-green-950 text-green-700",
     icon: BookOpen,
+  },
+  HR: {
+    label: "HR",
+    color: "bg-amber-100 dark:bg-amber-950 text-amber-700",
+    icon: Users,
+  },
+  CO_ADMIN: {
+    label: "Со-админ",
+    color: "bg-purple-100 dark:bg-purple-950 text-purple-700",
+    icon: Shield,
   },
   ADMIN: {
     label: "Админ",
-    color: "bg-purple-100 text-purple-700",
-    icon: Shield,
+    color: "bg-red-100 dark:bg-red-950 text-red-700",
+    icon: ShieldCheck,
   },
 }
 
-export default function AdminUsersPage() {
+function AdminUsersPageContent() {
+  const { data: session } = useSession()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [grantingAchievementId, setGrantingAchievementId] = useState<string | null>(null)
+  const [allTags, setAllTags] = useState<TagInfo[]>([])
+  const [allTagsRaw, setAllTagsRaw] = useState<(TagInfo & { _count?: { assignments: number } })[]>([])
+  const [tagAssignments, setTagAssignments] = useState<TagAssignment[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [roleFilter, setRoleFilter] = useState<RoleFilterValue>("ALL")
+  const [perPage, setPerPage] = useState<PerPageOption>(10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [trailFilter, setTrailFilter] = useState<string[]>([])
+  const [trailMatchMode, setTrailMatchMode] = useState<"any" | "all">("any")
+  const [allTrails, setAllTrails] = useState<{ id: string; title: string }[]>([])
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
+
+  const isAdmin = session?.user?.role === "ADMIN"
+
+  // Sync filter state to URL
+  const syncUrl = useCallback(
+    (params: { q: string; role: string; perPage: number; page: number }) => {
+      updateUrl(pathname, {
+        q: params.q,
+        role: params.role,
+        perPage: String(params.perPage),
+        page: String(params.page),
+      }, FILTER_DEFAULTS)
+    },
+    [pathname],
+  )
+
+  // Sync state from URL search params on navigation changes
+  useEffect(() => {
+    const stored = loadFiltersFromStorage(pathname)
+
+    const resolvedQ = searchParams.get("q") ?? stored?.q ?? ""
+    const resolvedRole = parseEnumParam(
+      searchParams.get("role") ?? stored?.role ?? undefined,
+      VALID_ROLE_FILTERS,
+      "ALL",
+    )
+    const resolvedPerPage = parsePerPageParam(
+      searchParams.get("perPage") ?? stored?.perPage ?? undefined,
+      10,
+    )
+    const resolvedPage = parsePageParam(
+      searchParams.get("page") ?? stored?.page ?? undefined,
+      1,
+    )
+
+    setSearchQuery(resolvedQ)
+    setRoleFilter(resolvedRole)
+    setPerPage(resolvedPerPage)
+    setCurrentPage(resolvedPage)
+  }, [searchParams, pathname])
+
+  // Debounced URL sync for search input
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [])
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value)
+      setCurrentPage(1)
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = setTimeout(() => {
+        syncUrl({ q: value, role: roleFilter, perPage, page: 1 })
+      }, 300)
+    },
+    [roleFilter, perPage, syncUrl],
+  )
+
+  const handleRoleFilterChange = useCallback(
+    (value: string) => {
+      const role = value as RoleFilterValue
+      setRoleFilter(role)
+      setCurrentPage(1)
+      syncUrl({ q: searchQuery, role, perPage, page: 1 })
+    },
+    [searchQuery, perPage, syncUrl],
+  )
+
+  const handlePerPageChange = useCallback(
+    (value: string) => {
+      const newPerPage = parseInt(value, 10) as PerPageOption
+      setPerPage(newPerPage)
+      setCurrentPage(1)
+      syncUrl({ q: searchQuery, role: roleFilter, perPage: newPerPage, page: 1 })
+    },
+    [searchQuery, roleFilter, syncUrl],
+  )
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setCurrentPage(page)
+      syncUrl({ q: searchQuery, role: roleFilter, perPage, page })
+    },
+    [searchQuery, roleFilter, perPage, syncUrl],
+  )
 
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const res = await fetch("/api/admin/users")
-      if (!res.ok) throw new Error("Failed to fetch")
-      const data = await res.json()
+      const [usersRes, tagsRes, tagAssignRes, trailsRes] = await Promise.all([
+        fetch("/api/admin/users"),
+        fetch("/api/admin/student-tags"),
+        fetch("/api/admin/student-tag-assignments"),
+        fetch("/api/admin/trails"),
+      ])
+      if (!usersRes.ok) throw new Error("Failed to fetch")
+      const data = await usersRes.json()
       setUsers(data)
+
+      if (tagsRes.ok) {
+        const tagsData = await tagsRes.json()
+        setAllTagsRaw(tagsData)
+        setAllTags(tagsData.map((t: { id: string; name: string; color: string }) => ({ id: t.id, name: t.name, color: t.color })))
+      }
+      if (tagAssignRes.ok) {
+        const assignData = await tagAssignRes.json()
+        setTagAssignments(assignData)
+      }
+      if (trailsRes.ok) {
+        const trailsData = await trailsRes.json()
+        setAllTrails(trailsData.map((t: { id: string; title: string }) => ({ id: t.id, title: t.title })))
+      }
     } catch {
       setError("Ошибка загрузки пользователей")
     } finally {
@@ -65,11 +240,209 @@ export default function AdminUsersPage() {
     }
   }
 
+  const getStudentTags = (studentId: string): TagInfo[] => {
+    return tagAssignments
+      .filter((a) => a.studentId === studentId)
+      .map((a) => a.tag)
+  }
+
+  const getStudentAssignedTagIds = (studentId: string): string[] => {
+    return tagAssignments
+      .filter((a) => a.studentId === studentId)
+      .map((a) => a.tagId)
+  }
+
+  const handleAssignTag = async (studentId: string, tagId: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tag-assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, tagId }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || "Ошибка", "error")
+        return
+      }
+      const assignment = await res.json()
+      setTagAssignments((prev) => [...prev, assignment])
+      showToast("Тег назначен", "success")
+    } catch {
+      showToast("Ошибка назначения тега", "error")
+    }
+  }
+
+  const handleRemoveTag = async (studentId: string, tagId: string) => {
+    try {
+      const res = await fetch(
+        `/api/admin/student-tag-assignments?studentId=${studentId}&tagId=${tagId}`,
+        { method: "DELETE" }
+      )
+      if (!res.ok) {
+        showToast("Ошибка удаления тега", "error")
+        return
+      }
+      setTagAssignments((prev) =>
+        prev.filter((a) => !(a.studentId === studentId && a.tagId === tagId))
+      )
+      showToast("Тег снят", "success")
+    } catch {
+      showToast("Ошибка удаления тега", "error")
+    }
+  }
+
+  const handleCreateAndAssignTag = async (studentId: string, name: string, color: string) => {
+    try {
+      const createRes = await fetch("/api/admin/student-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      })
+      const createData = await createRes.json()
+
+      let tagId: string
+      if (createRes.ok) {
+        tagId = createData.id
+        setAllTags((prev) => [...prev, { id: createData.id, name: createData.name, color: createData.color }])
+      } else if (createData.tag) {
+        tagId = createData.tag.id
+      } else {
+        showToast(createData.error || "Ошибка создания тега", "error")
+        return
+      }
+
+      await handleAssignTag(studentId, tagId)
+    } catch {
+      showToast("Ошибка создания тега", "error")
+    }
+  }
+
+  const handleEditTag = async (tagId: string, name: string, color: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: tagId, name, color }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || "Ошибка редактирования тега", "error")
+        return
+      }
+      const updated = await res.json()
+      setAllTags((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setAllTagsRaw((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setTagAssignments((prev) =>
+        prev.map((a) => (a.tagId === tagId ? { ...a, tag: { ...a.tag, name: updated.name, color: updated.color } } : a))
+      )
+      showToast("Тег обновлён", "success")
+    } catch {
+      showToast("Ошибка редактирования тега", "error")
+    }
+  }
+
+  const handleDeleteTag = async (tagId: string) => {
+    try {
+      const res = await fetch(`/api/admin/student-tags?id=${tagId}`, { method: "DELETE" })
+      if (!res.ok) {
+        showToast("Ошибка удаления тега", "error")
+        return
+      }
+      setAllTags((prev) => prev.filter((t) => t.id !== tagId))
+      setAllTagsRaw((prev) => prev.filter((t) => t.id !== tagId))
+      setTagAssignments((prev) => prev.filter((a) => a.tagId !== tagId))
+      setTagFilter((prev) => prev.filter((id) => id !== tagId))
+      showToast("Тег удалён", "success")
+    } catch {
+      showToast("Ошибка удаления тега", "error")
+    }
+  }
+
+  const handleTagFilterChange = useCallback(
+    (ids: string[]) => {
+      setTagFilter(ids)
+      setCurrentPage(1)
+    },
+    [],
+  )
+
+  const handleTrailFilterChange = useCallback(
+    (ids: string[]) => {
+      setTrailFilter(ids)
+      setCurrentPage(1)
+    },
+    [],
+  )
+
+  const tagsForFilter = useMemo(() => {
+    return allTagsRaw.map((t) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+      count: t._count?.assignments ?? 0,
+    }))
+  }, [allTagsRaw])
+
+  // A user is "attached" to a trail if enrolled in it OR granted access to it
+  const getUserTrailIds = (user: User): Set<string> =>
+    new Set([
+      ...user.enrollments.map((e) => e.trailId),
+      ...user.trailAccess.map((a) => a.trailId),
+    ])
+
+  const trailsForFilter = useMemo(() => {
+    return allTrails.map((t) => ({
+      id: t.id,
+      title: t.title,
+      count: users.filter(
+        (u) =>
+          u.enrollments.some((e) => e.trailId === t.id) ||
+          u.trailAccess.some((a) => a.trailId === t.id),
+      ).length,
+    }))
+  }, [allTrails, users])
+
   useEffect(() => {
     fetchUsers()
   }, [])
 
-  const updateRole = async (userId: string, newRole: "STUDENT" | "TEACHER" | "ADMIN") => {
+  const students = users.filter(u => u.role === "STUDENT")
+  const teachers = users.filter(u => u.role === "TEACHER")
+  const admins = users.filter(u => u.role === "CO_ADMIN" || u.role === "ADMIN")
+
+  // Filter users by search, role, and tags
+  const filteredUsers = users.filter(user => {
+    const q = searchQuery.toLowerCase()
+    const matchesSearch = searchQuery === "" ||
+      user.name.toLowerCase().includes(q) ||
+      user.email.toLowerCase().includes(q) ||
+      getStudentTags(user.id).some((tag) => tag.name.toLowerCase().includes(q))
+    const matchesRole = roleFilter === "ALL" || user.role === roleFilter
+    const matchesTags = tagFilter.length === 0 ||
+      tagFilter.some((tagId) => tagAssignments.some((a) => a.studentId === user.id && a.tagId === tagId))
+    const userTrailIds = getUserTrailIds(user)
+    const matchesTrails = trailFilter.length === 0 ||
+      (trailMatchMode === "any"
+        ? trailFilter.some((trailId) => userTrailIds.has(trailId))
+        : trailFilter.every((trailId) => userTrailIds.has(trailId)))
+    return matchesSearch && matchesRole && matchesTags && matchesTrails
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / perPage)
+  const safePage = Math.min(currentPage, Math.max(1, totalPages))
+  const paginatedUsers = useMemo(
+    () => filteredUsers.slice((safePage - 1) * perPage, safePage * perPage),
+    [filteredUsers, safePage, perPage],
+  )
+
+  const updateRole = async (userId: string, newRole: UserRole) => {
+    // Only ADMIN can assign ADMIN role
+    if (newRole === "ADMIN" && !isAdmin) {
+      showToast("Только админ может назначать роль админа", "error")
+      return
+    }
+
     try {
       setUpdatingId(userId)
       const res = await fetch(`/api/admin/users?id=${userId}`, {
@@ -80,7 +453,7 @@ export default function AdminUsersPage() {
 
       if (!res.ok) {
         const data = await res.json()
-        alert(data.error || "Ошибка")
+        showToast(data.error || "Ошибка", "error")
         return
       }
 
@@ -88,46 +461,102 @@ export default function AdminUsersPage() {
       setUsers(users.map(u =>
         u.id === userId ? { ...u, role: newRole } : u
       ))
+      showToast("Роль обновлена", "success")
     } catch {
-      alert("Ошибка при обновлении роли")
+      showToast("Ошибка при обновлении роли", "error")
     } finally {
       setUpdatingId(null)
     }
   }
 
+  const deleteUser = async (userId: string, userName: string) => {
+    const confirmed = await confirm({
+      title: "Удалить пользователя?",
+      message: `Вы уверены, что хотите удалить "${userName}"? Это действие нельзя отменить.`,
+      confirmText: "Удалить",
+      variant: "danger",
+    })
+
+    if (!confirmed) return
+
+    try {
+      setDeletingId(userId)
+      const res = await fetch(`/api/admin/users?id=${userId}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error + (data.details ? ` ${data.details}` : "") || "Ошибка при удалении", "error")
+        return
+      }
+
+      // Remove from local state
+      setUsers(users.filter(u => u.id !== userId))
+      showToast("Пользователь удалён", "success")
+    } catch {
+      showToast("Ошибка при удалении пользователя", "error")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const grantRandomAchievement = async (userId: string, userName: string) => {
+    try {
+      setGrantingAchievementId(userId)
+      const res = await fetch("/api/admin/achievements/grant-random", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        showToast(data.message || data.error || "Ошибка при выдаче достижения", "error")
+        return
+      }
+
+      showToast(
+        `Достижение "${data.achievement.name}" выдано пользователю ${userName}`,
+        "success"
+      )
+    } catch {
+      showToast("Ошибка при выдаче достижения", "error")
+    } finally {
+      setGrantingAchievementId(null)
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
       </div>
     )
   }
 
-  const students = users.filter(u => u.role === "STUDENT")
-  const teachers = users.filter(u => u.role === "TEACHER")
-  const admins = users.filter(u => u.role === "ADMIN")
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-6">
-          <Link
-            href="/admin/invites"
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            К инвайтам
-          </Link>
+          <Breadcrumbs
+            items={[
+              { label: "Админ", href: "/admin/invites" },
+              { label: "Пользователи" },
+            ]}
+            className="mb-4"
+          />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500">
                 <Users className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                   Управление пользователями
                 </h1>
-                <p className="text-gray-600 text-sm">
+                <p className="text-gray-600 dark:text-slate-400 text-sm">
                   {users.length} пользователей • {teachers.length} учителей
                 </p>
               </div>
@@ -142,68 +571,137 @@ export default function AdminUsersPage() {
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-950 text-red-600 rounded-lg">
             {error}
           </div>
         )}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="p-2 bg-blue-100 dark:bg-blue-950 rounded-lg">
                 <GraduationCap className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{students.length}</p>
-                <p className="text-sm text-gray-500">Студентов</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Студентов</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-2 bg-green-100 dark:bg-green-950 rounded-lg">
                 <BookOpen className="h-5 w-5 text-green-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{teachers.length}</p>
-                <p className="text-sm text-gray-500">Учителей</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Учителей</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
+              <div className="p-2 bg-purple-100 dark:bg-purple-950 rounded-lg">
                 <Shield className="h-5 w-5 text-purple-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{admins.length}</p>
-                <p className="text-sm text-gray-500">Админов</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Админов</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Users List */}
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <div className="p-4 border-b bg-gray-50">
-            <h2 className="font-semibold">Все пользователи</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border overflow-hidden">
+          <div className="p-4 border-b bg-gray-50 dark:bg-slate-900">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+              <h2 className="font-semibold">Все пользователи</h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Поиск по имени, email или тегу..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="pl-9 pr-8 py-1.5 border rounded-lg text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => handleSearchChange("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                {/* Role filter */}
+                <select
+                  value={roleFilter}
+                  onChange={(e) => handleRoleFilterChange(e.target.value)}
+                  className="px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800"
+                >
+                  <option value="ALL">Все роли</option>
+                  <option value="STUDENT">Студенты</option>
+                  <option value="TEACHER">Учителя</option>
+                  <option value="HR">HR</option>
+                  <option value="CO_ADMIN">Со-админы</option>
+                  <option value="ADMIN">Админы</option>
+                </select>
+                {/* Tag filter */}
+                <TagFilterDropdown
+                  tags={tagsForFilter}
+                  selectedTagIds={tagFilter}
+                  onChange={handleTagFilterChange}
+                />
+                {/* Trail filter */}
+                <TrailFilterDropdown
+                  trails={trailsForFilter}
+                  selectedTrailIds={trailFilter}
+                  onChange={handleTrailFilterChange}
+                  matchMode={trailMatchMode}
+                  onMatchModeChange={setTrailMatchMode}
+                />
+                {/* Per page */}
+                <select
+                  value={String(perPage)}
+                  onChange={(e) => handlePerPageChange(e.target.value)}
+                  className="px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800"
+                >
+                  {PER_PAGE_OPTIONS.map((option) => (
+                    <option key={option} value={String(option)}>
+                      {option} на стр.
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {/* Results count */}
+            {(searchQuery || roleFilter !== "ALL" || tagFilter.length > 0 || trailFilter.length > 0) && (
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">
+                Найдено: {filteredUsers.length} из {users.length}
+              </p>
+            )}
           </div>
 
-          {users.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              Нет пользователей
+          {filteredUsers.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 dark:text-slate-400">
+              {users.length === 0 ? "Нет пользователей" : "Никого не найдено"}
             </div>
           ) : (
             <div className="divide-y">
-              {users.map((user) => {
+              {paginatedUsers.map((user) => {
                 const config = roleConfig[user.role]
                 const RoleIcon = config.icon
                 const isUpdating = updatingId === user.id
+                const isDeleting = deletingId === user.id
 
                 return (
-                  <div key={user.id} className="p-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
+                  <div key={user.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${config.color.replace('text-', 'bg-').replace('700', '100')}`}>
                           <RoleIcon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
@@ -215,27 +713,91 @@ export default function AdminUsersPage() {
                               {config.label}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-500">{user.email}</p>
+                          <p className="text-sm text-gray-500 dark:text-slate-400">{user.email}</p>
+                          {/* Student tags */}
+                          {user.role === "STUDENT" && getStudentTags(user.id).length > 0 && (
+                            <div className="mt-1">
+                              <StudentTagsBadges
+                                tags={getStudentTags(user.id)}
+                                maxVisible={3}
+                                onRemove={(tagId) => handleRemoveTag(user.id, tagId)}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="text-right text-sm text-gray-500">
-                          <p>{user.totalXP} XP</p>
-                          <p>{user._count.submissions} работ</p>
+                      <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
+                          <div className="flex items-center gap-1 text-purple-600" title="Активных дней">
+                            <CalendarDays className="h-4 w-4" />
+                            <span className="font-medium">{user._count.activityDays}</span>
+                          </div>
+                          <span>•</span>
+                          <span>{user.totalXP} XP</span>
+                          <span>•</span>
+                          <span>{user._count.submissions} {pluralizeRu(user._count.submissions, ["работа", "работы", "работ"])}</span>
                         </div>
 
                         {/* Role selector */}
-                        <select
-                          value={user.role}
-                          onChange={(e) => updateRole(user.id, e.target.value as "STUDENT" | "TEACHER" | "ADMIN")}
-                          disabled={isUpdating}
-                          className="px-3 py-1.5 border rounded-lg text-sm bg-white disabled:opacity-50"
+                        {/* CO_ADMIN cannot change roles of ADMIN/CO_ADMIN users */}
+                        {!isAdmin && (user.role === "ADMIN" || user.role === "CO_ADMIN") ? (
+                          <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-slate-400">
+                            {roleConfig[user.role].label}
+                          </span>
+                        ) : (
+                          <select
+                            value={user.role}
+                            onChange={(e) => updateRole(user.id, e.target.value as UserRole)}
+                            disabled={isUpdating || isDeleting}
+                            className="px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800 disabled:opacity-50"
+                          >
+                            <option value="STUDENT">Студент</option>
+                            <option value="TEACHER">Учитель</option>
+                            <option value="HR">HR</option>
+                            {/* Only ADMIN can assign CO_ADMIN/ADMIN roles */}
+                            {isAdmin && <option value="CO_ADMIN">Со-админ</option>}
+                            {isAdmin && <option value="ADMIN">Админ</option>}
+                          </select>
+                        )}
+
+                        {/* Tag assign dropdown (only for students) */}
+                        {user.role === "STUDENT" && (
+                          <TagAssignDropdown
+                            availableTags={allTags}
+                            assignedTagIds={getStudentAssignedTagIds(user.id)}
+                            onAssign={(tagId) => handleAssignTag(user.id, tagId)}
+                            onCreateAndAssign={(name, color) => handleCreateAndAssignTag(user.id, name, color)}
+                            onEditTag={handleEditTag}
+                            onDeleteTag={handleDeleteTag}
+                          />
+                        )}
+
+                        {/* Grant random achievement button */}
+                        <button
+                          onClick={() => grantRandomAchievement(user.id, user.name)}
+                          disabled={grantingAchievementId === user.id}
+                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950 rounded-lg transition-colors disabled:opacity-50"
+                          title="Выдать случайное достижение"
                         >
-                          <option value="STUDENT">Студент</option>
-                          <option value="TEACHER">Учитель</option>
-                          <option value="ADMIN">Админ</option>
-                        </select>
+                          {grantingAchievementId === user.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Gift className="h-4 w-4" />
+                          )}
+                        </button>
+
+                        {/* Delete button - CO_ADMIN cannot delete ADMIN/CO_ADMIN users */}
+                        {(isAdmin || (user.role !== "ADMIN" && user.role !== "CO_ADMIN")) && (
+                          <button
+                            onClick={() => deleteUser(user.id, user.name)}
+                            disabled={isDeleting}
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors disabled:opacity-50"
+                            title="Удалить пользователя"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -243,18 +805,58 @@ export default function AdminUsersPage() {
               })}
             </div>
           )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(Math.max(1, safePage - 1))}
+                disabled={safePage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-gray-600 dark:text-slate-400 px-4">
+                Страница {safePage} из {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(Math.min(totalPages, safePage + 1))}
+                disabled={safePage >= totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Help text */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
           <h3 className="font-medium text-blue-900 mb-2">Как это работает:</h3>
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• <strong>Студент</strong> — может проходить тесты и сдавать проекты</li>
             <li>• <strong>Учитель</strong> — может проверять работы на /teacher</li>
-            <li>• <strong>Админ</strong> — полный доступ к админке</li>
+            <li>• <strong>Со-админ</strong> — доступ к админке только для назначенных trails</li>
+            <li>• <strong>Админ</strong> — полный доступ ко всем trails и управление доступом со-админов</li>
           </ul>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-gray-400 dark:text-slate-500" />
+        </div>
+      }
+    >
+      <AdminUsersPageContent />
+    </Suspense>
   )
 }

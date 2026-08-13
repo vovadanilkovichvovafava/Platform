@@ -1,6 +1,54 @@
 import type { NextConfig } from "next";
 
+// Content Security Policy - start with permissive policy, tighten as needed
+// Uses 'unsafe-inline' for styles (required by Tailwind/Next.js) and scripts (Next.js hydration)
+const cspHeader = `
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' 'unsafe-eval';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: blob: https://images.unsplash.com;
+  font-src 'self';
+  connect-src 'self' https://api.iconify.design;
+  media-src 'self' blob:;
+  frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com https://docs.google.com https://drive.google.com;
+  frame-ancestors 'self';
+  form-action 'self';
+  base-uri 'self';
+  object-src 'none';
+`.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+
 const nextConfig: NextConfig = {
+  // Self-contained build output for container deployment (Saturn / Docker).
+  // Additive: `next start` keeps working, but `.next/standalone/server.js` is
+  // also emitted so the runtime image does not need full node_modules.
+  output: 'standalone',
+  // Prevent 307 redirects for trailing slash - important for webhooks (Telegram)
+  skipTrailingSlashRedirect: true,
+  async rewrites() {
+    return [
+      // Serve uploaded media files via API route (files added at runtime
+      // are not reliably served from public/ in production)
+      {
+        source: '/uploads/media/:path*',
+        destination: '/api/media/:path*',
+      },
+    ];
+  },
+  async redirects() {
+    return [
+      // Legacy routes -> unified /admin/access page with tabs
+      {
+        source: '/admin/teachers',
+        destination: '/admin/access?tab=teachers',
+        permanent: true,
+      },
+      {
+        source: '/admin/admin-access',
+        destination: '/admin/access?tab=admin-access',
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -8,6 +56,35 @@ const nextConfig: NextConfig = {
         hostname: 'images.unsplash.com',
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: cspHeader,
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
   },
 };
 

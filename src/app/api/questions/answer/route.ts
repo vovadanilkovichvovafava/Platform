@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit"
+import { z } from "zod"
+import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit"
+import { recordActivity } from "@/lib/activity"
+import { checkTrailPasswordAccess } from "@/lib/trail-password"
+
+const answerSchema = z.object({
+  questionId: z.string().min(1, "ID вопроса обязателен"),
+  selectedAnswer: z.number().min(0, "Ответ должен быть числом"),
+  // Fields for interactive question types (MATCHING, ORDERING, CASE_ANALYSIS)
+  isInteractive: z.boolean().optional(),
+  interactiveResult: z.boolean().optional(),
+  interactiveAttempts: z.number().optional(),
+})
 
 // Scoring based on attempts: 1st = 100%, 2nd = 65%, 3rd = 35%
 function calculateScore(basePoints: number, attempts: number): number {
@@ -12,42 +24,51 @@ function calculateScore(basePoints: number, attempts: number): number {
 }
 
 export async function POST(request: NextRequest) {
-  // Rate limiting - 30 answers per minute per IP
-  const ip = getClientIp(request)
-  const rateLimit = checkRateLimit(`answer:${ip}`, RATE_LIMITS.answer)
-
-  if (!rateLimit.success) {
-    return NextResponse.json(
-      { error: `Слишком много запросов. Попробуйте через ${rateLimit.resetIn} секунд` },
-      { status: 429 }
-    )
-  }
-
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    const { questionId, selectedAnswer, isInteractive, interactiveResult, interactiveAttempts } = await request.json()
-
-    if (!questionId) {
-      return NextResponse.json({ error: "Missing questionId" }, { status: 400 })
+    // Rate limiting - 60 ответов в минуту
+    const rateLimit = checkRateLimit(`answers:${session.user.id}`, RATE_LIMITS.api)
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetIn)
     }
 
-    // For non-interactive questions, selectedAnswer is required
-    if (!isInteractive && selectedAnswer === undefined) {
-      return NextResponse.json({ error: "Missing selectedAnswer" }, { status: 400 })
-    }
+    // Record daily activity
+    await recordActivity(session.user.id)
 
-    // Get question with module info
+    const body = await request.json()
+    const { questionId, selectedAnswer, isInteractive, interactiveResult, interactiveAttempts } = answerSchema.parse(body)
+
+    // Get question with module and trail info
     const question = await prisma.question.findUnique({
       where: { id: questionId },
-      include: { module: true },
+      include: {
+        module: {
+          include: {
+            trail: {
+              select: {
+                id: true,
+                isPasswordProtected: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!question) {
       return NextResponse.json({ error: "Question not found" }, { status: 404 })
+    }
+
+    // Check trail password access
+    if (question.module.trail.isPasswordProtected) {
+      const passwordAccess = await checkTrailPasswordAccess(question.module.trail.id, session.user.id)
+      if (!passwordAccess.hasAccess) {
+        return NextResponse.json({ error: "Доступ запрещён. Требуется пароль к trail." }, { status: 403 })
+      }
     }
 
     // Get or create attempt record
@@ -60,10 +81,21 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // For interactive exercises, use the result from client
-    // For single choice, compare with correctAnswer
-    const isCorrect = isInteractive ? interactiveResult : selectedAnswer === question.correctAnswer
-    const attemptCount = isInteractive ? interactiveAttempts : undefined
+    // Check if this is a replay (module XP already earned in a previous completion)
+    const moduleProgress = await prisma.moduleProgress.findUnique({
+      where: {
+        userId_moduleId: {
+          userId: session.user.id,
+          moduleId: question.module.id,
+        },
+      },
+      select: { hasEarnedXP: true },
+    })
+    const isReplay = moduleProgress?.hasEarnedXP === true
+
+    // For interactive types (MATCHING, ORDERING, CASE_ANALYSIS) use the result from client
+    // For SINGLE_CHOICE compare selectedAnswer with correctAnswer
+    const isCorrect = isInteractive ? (interactiveResult === true) : (selectedAnswer === question.correctAnswer)
 
     if (attempt) {
       // Already answered correctly - no more attempts allowed
@@ -88,9 +120,9 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Update attempt
+      // Update attempt — no XP on replay
       const newAttempts = attempt.attempts + 1
-      const earnedScore = isCorrect ? calculateScore(question.module.points / 3, newAttempts) : 0
+      const earnedScore = isCorrect && !isReplay ? calculateScore(question.module.points / 3, newAttempts) : 0
 
       attempt = await prisma.questionAttempt.update({
         where: { id: attempt.id },
@@ -101,12 +133,27 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Update user XP if correct
-      if (isCorrect) {
+      // Update user XP if correct and not a replay
+      if (isCorrect && !isReplay) {
         await prisma.user.update({
           where: { id: session.user.id },
           data: { totalXP: { increment: earnedScore } },
         })
+      }
+
+      let message: string
+      if (isCorrect) {
+        if (isReplay) {
+          message = "Правильно!"
+        } else if (newAttempts === 2) {
+          message = `Правильно! +${earnedScore} XP (65% за вторую попытку)`
+        } else {
+          message = `Правильно! +${earnedScore} XP (35% за третью попытку)`
+        }
+      } else if (newAttempts >= 3) {
+        message = "Неправильно. Попытки исчерпаны."
+      } else {
+        message = `Неправильно. Осталось попыток: ${3 - newAttempts}`
       }
 
       return NextResponse.json({
@@ -115,51 +162,67 @@ export async function POST(request: NextRequest) {
         attempts: newAttempts,
         earnedScore: isCorrect ? earnedScore : 0,
         correctAnswer: !isCorrect && newAttempts >= 3 ? question.correctAnswer : undefined,
-        message: isCorrect
-          ? `Правильно! +${earnedScore} XP`
-          : newAttempts >= 3
-          ? "Неправильно. Попытки исчерпаны."
-          : `Неправильно. Осталось попыток: ${3 - newAttempts}`,
+        message,
       })
     } else {
-      // First attempt (or interactive exercises which track their own attempts)
-      const finalAttempts = attemptCount || 1
-      const earnedScore = isCorrect ? calculateScore(question.module.points / 3, finalAttempts) : 0
+      // For interactive exercises, use the client-reported attempt count (capped at 3)
+      // Interactive exercises handle retries client-side and only report once on completion
+      const actualAttempts = (isInteractive && interactiveAttempts)
+        ? Math.max(1, Math.min(interactiveAttempts, 3))
+        : 1
+
+      // No XP on replay
+      const earnedScore = isCorrect && !isReplay ? calculateScore(question.module.points / 3, actualAttempts) : 0
 
       attempt = await prisma.questionAttempt.create({
         data: {
           userId: session.user.id,
           questionId: questionId,
-          attempts: finalAttempts,
+          attempts: actualAttempts,
           isCorrect: isCorrect,
           earnedScore: earnedScore,
         },
       })
 
-      // Update user XP if correct
-      if (isCorrect) {
+      // Update user XP if correct and not a replay
+      if (isCorrect && !isReplay && earnedScore > 0) {
         await prisma.user.update({
           where: { id: session.user.id },
           data: { totalXP: { increment: earnedScore } },
         })
       }
 
-      const scorePercent = finalAttempts === 1 ? "100%" : finalAttempts === 2 ? "65%" : "35%"
+      let message: string
+      if (isCorrect) {
+        if (isReplay) {
+          message = "Правильно!"
+        } else if (actualAttempts === 1) {
+          message = `Правильно! +${earnedScore} XP (100% за первую попытку)`
+        } else if (actualAttempts === 2) {
+          message = `Правильно! +${earnedScore} XP (65% за вторую попытку)`
+        } else {
+          message = `Правильно! +${earnedScore} XP (35% за третью попытку)`
+        }
+      } else {
+        message = `Неправильно. Осталось попыток: ${3 - actualAttempts}`
+      }
 
       return NextResponse.json({
         success: true,
         isCorrect,
-        attempts: finalAttempts,
+        attempts: actualAttempts,
         earnedScore,
-        message: isCorrect
-          ? `Правильно! +${earnedScore} XP (${scorePercent})`
-          : isInteractive
-          ? "Попробуйте ещё раз"
-          : "Неправильно. Осталось попыток: 2",
+        message,
       })
     }
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
     console.error("Error answering question:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Внутренняя ошибка сервера" }, { status: 500 })
   }
 }

@@ -1,0 +1,1358 @@
+"use client"
+
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import Link from "next/link"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/components/ui/toast"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+import {
+  RefreshCw,
+  Users,
+  X,
+  Check,
+  AlertCircle,
+  Search,
+  Plus,
+  Undo2,
+  LayoutGrid,
+  List,
+  Mail,
+  MessageCircle,
+  User,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  ArrowUpRight,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react"
+import { HowItWorks } from "@/components/ui/how-it-works"
+import { adminPageLegends } from "@/lib/admin-help-texts"
+import { PER_PAGE_OPTIONS, type PerPageOption } from "@/lib/url-state"
+import { StudentTagsBadges, type TagInfo } from "@/components/student-tags-badges"
+import { TagAssignDropdown } from "@/components/tag-assign-dropdown"
+import { TagFilterDropdown } from "@/components/tag-filter-dropdown"
+
+// ────────────────────────────────────────────────────────────────────────────
+// Types
+// ────────────────────────────────────────────────────────────────────────────
+
+interface Student {
+  id: string
+  name: string
+  email: string
+  telegramUsername: string | null
+  createdAt: string
+}
+
+interface Trail {
+  id: string
+  title: string
+  slug: string
+  isRestricted: boolean
+  isPublished: boolean
+}
+
+interface Access {
+  id: string
+  studentId: string
+  trailId: string
+  student: Student
+  trail: { id: string; title: string; slug: string }
+}
+
+interface TagAssignment {
+  id: string
+  studentId: string
+  tagId: string
+  tag: TagInfo
+}
+
+interface PendingChange {
+  type: "add" | "remove" | "add-tag" | "remove-tag"
+  studentId: string
+  trailId: string
+  trailTitle: string
+  tagId: string
+  tagName: string
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Main Component
+// ────────────────────────────────────────────────────────────────────────────
+
+interface StudentAccessTabProps {
+  initialStudentId?: string
+}
+
+export function StudentAccessTab({ initialStudentId }: StudentAccessTabProps) {
+  const { showToast } = useToast()
+
+  const [students, setStudents] = useState<Student[]>([])
+  const [trails, setTrails] = useState<Trail[]>([])
+  const [access, setAccess] = useState<Access[]>([])
+  const [allTags, setAllTags] = useState<TagInfo[]>([])
+  const [allTagsRaw, setAllTagsRaw] = useState<(TagInfo & { _count?: { assignments: number } })[]>([])
+  const [tagAssignments, setTagAssignments] = useState<TagAssignment[]>([])
+  const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  // View mode
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState("")
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const [perPage, setPerPage] = useState<PerPageOption>(20)
+
+  // Pending changes (save/cancel pattern)
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
+  const [saving, setSaving] = useState(false)
+
+  // Sorting
+  const [sortField, setSortField] = useState<"name" | "trails" | "createdAt">("name")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
+  // Trail assignment dropdown
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null)
+  const [trailDropdownSearch, setTrailDropdownSearch] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const initialStudentApplied = useRef(false)
+
+  // ── Fetch data ────────────────────────────────────────────────────────────
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError("")
+
+      const [usersRes, trailsRes, accessRes, tagsRes, tagAssignRes] = await Promise.all([
+        fetch("/api/admin/users"),
+        fetch("/api/admin/trails"),
+        fetch("/api/admin/student-access"),
+        fetch("/api/admin/student-tags"),
+        fetch("/api/admin/student-tag-assignments"),
+      ])
+
+      const allUsers = await usersRes.json()
+      setStudents(
+        allUsers
+          .filter((u: { role: string }) => u.role === "STUDENT")
+          .map((u: { id: string; name: string; email: string; telegramUsername?: string | null; createdAt?: string }) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            telegramUsername: u.telegramUsername ?? null,
+            createdAt: u.createdAt ?? "",
+          }))
+      )
+
+      const trailsData = await trailsRes.json()
+      setTrails(
+        trailsData.map((t: { id: string; title: string; slug: string; isRestricted: boolean; isPublished: boolean }) => ({
+          id: t.id,
+          title: t.title,
+          slug: t.slug,
+          isRestricted: t.isRestricted,
+          isPublished: t.isPublished,
+        }))
+      )
+
+      const accessData = await accessRes.json()
+      setAccess(accessData)
+
+      const tagsData = await tagsRes.json()
+      setAllTagsRaw(tagsData)
+      setAllTags(
+        tagsData.map((t: { id: string; name: string; color: string }) => ({
+          id: t.id,
+          name: t.name,
+          color: t.color,
+        }))
+      )
+
+      const tagAssignData = await tagAssignRes.json()
+      setTagAssignments(tagAssignData)
+    } catch {
+      setError("Ошибка загрузки данных")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // Auto-focus on student if initialStudentId provided (only once)
+  useEffect(() => {
+    if (initialStudentId && students.length > 0 && !initialStudentApplied.current) {
+      const student = students.find((s) => s.id === initialStudentId)
+      if (student) {
+        setSearchQuery(student.name)
+      }
+      initialStudentApplied.current = true
+    }
+  }, [initialStudentId, students])
+
+  // ── Click outside handler for dropdown ──────────────────────────────────
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setActiveDropdownId(null)
+        setTrailDropdownSearch("")
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  // ── Assignable trails (restricted + published) ─────────────────────────
+
+  const assignableTrails = trails.filter(
+    (t) => t.isRestricted && t.isPublished
+  )
+
+  // ── Compute student trail state with pending changes ───────────────────
+
+  const getStudentTrailState = useCallback(
+    (studentId: string) => {
+      const currentTrailIds = access
+        .filter((a) => a.studentId === studentId)
+        .map((a) => a.trailId)
+
+      const pendingAdds = pendingChanges.filter(
+        (p) => p.studentId === studentId && p.type === "add"
+      )
+      const pendingRemoveIds = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "remove")
+        .map((p) => p.trailId)
+
+      return {
+        active: currentTrailIds.filter((id) => !pendingRemoveIds.includes(id)),
+        pendingAdd: pendingAdds,
+        pendingRemove: pendingRemoveIds,
+      }
+    },
+    [access, pendingChanges]
+  )
+
+  // ── Pending changes actions ────────────────────────────────────────────
+
+  const addTrailToStudent = (studentId: string, trail: Trail) => {
+    // Check if already in pending adds
+    const exists = pendingChanges.some(
+      (p) =>
+        p.studentId === studentId &&
+        p.trailId === trail.id &&
+        p.type === "add"
+    )
+    if (exists) return
+
+    // Check if removing a pending remove (undo remove)
+    const removeIndex = pendingChanges.findIndex(
+      (p) =>
+        p.studentId === studentId &&
+        p.trailId === trail.id &&
+        p.type === "remove"
+    )
+    if (removeIndex !== -1) {
+      setPendingChanges((prev) => prev.filter((_, i) => i !== removeIndex))
+      return
+    }
+
+    setPendingChanges((prev) => [
+      ...prev,
+      {
+        type: "add",
+        studentId,
+        trailId: trail.id,
+        trailTitle: trail.title,
+        tagId: "",
+        tagName: "",
+      },
+    ])
+  }
+
+  const removeTrailFromStudent = (studentId: string, trailId: string) => {
+    // Check if it's a pending add — just remove it
+    const addIndex = pendingChanges.findIndex(
+      (p) =>
+        p.studentId === studentId &&
+        p.trailId === trailId &&
+        p.type === "add"
+    )
+    if (addIndex !== -1) {
+      setPendingChanges((prev) => prev.filter((_, i) => i !== addIndex))
+      return
+    }
+
+    // Check if already pending remove
+    const alreadyPending = pendingChanges.some(
+      (p) =>
+        p.studentId === studentId &&
+        p.trailId === trailId &&
+        p.type === "remove"
+    )
+    if (alreadyPending) return
+
+    const trail = trails.find((t) => t.id === trailId)
+    const trailTitle =
+      trail?.title ||
+      access.find((a) => a.trailId === trailId)?.trail.title ||
+      trailId
+
+    setPendingChanges((prev) => [
+      ...prev,
+      { type: "remove", studentId, trailId, trailTitle, tagId: "", tagName: "" },
+    ])
+  }
+
+  const undoRemove = (studentId: string, trailId: string) => {
+    setPendingChanges((prev) =>
+      prev.filter(
+        (p) =>
+          !(
+            p.studentId === studentId &&
+            p.trailId === trailId &&
+            p.type === "remove"
+          )
+      )
+    )
+  }
+
+  // ── Tag pending changes ─────────────────────────────────────────────
+
+  const getStudentTags = useCallback(
+    (studentId: string): TagInfo[] => {
+      const currentTagIds = tagAssignments
+        .filter((a) => a.studentId === studentId)
+        .map((a) => a.tagId)
+
+      const pendingRemoveTagIds = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "remove-tag")
+        .map((p) => p.tagId)
+
+      const pendingAddTagIds = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "add-tag")
+        .map((p) => p.tagId)
+
+      const activeTags = currentTagIds
+        .filter((id) => !pendingRemoveTagIds.includes(id))
+        .map((id) => tagAssignments.find((a) => a.studentId === studentId && a.tagId === id)?.tag)
+        .filter(Boolean) as TagInfo[]
+
+      const pendingAddTags = pendingAddTagIds
+        .map((id) => allTags.find((t) => t.id === id))
+        .filter(Boolean) as TagInfo[]
+
+      return [...activeTags, ...pendingAddTags]
+    },
+    [tagAssignments, pendingChanges, allTags]
+  )
+
+  const getStudentAssignedTagIds = useCallback(
+    (studentId: string): string[] => {
+      const current = tagAssignments
+        .filter((a) => a.studentId === studentId)
+        .map((a) => a.tagId)
+      const pendingAdds = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "add-tag")
+        .map((p) => p.tagId!)
+      const pendingRemoves = pendingChanges
+        .filter((p) => p.studentId === studentId && p.type === "remove-tag")
+        .map((p) => p.tagId!)
+      return [...current.filter((id) => !pendingRemoves.includes(id)), ...pendingAdds]
+    },
+    [tagAssignments, pendingChanges]
+  )
+
+  const addTagToStudent = (studentId: string, tagId: string) => {
+    const exists = pendingChanges.some(
+      (p) => p.studentId === studentId && p.tagId === tagId && p.type === "add-tag"
+    )
+    if (exists) return
+
+    // Check if undoing a pending remove
+    const removeIdx = pendingChanges.findIndex(
+      (p) => p.studentId === studentId && p.tagId === tagId && p.type === "remove-tag"
+    )
+    if (removeIdx !== -1) {
+      setPendingChanges((prev) => prev.filter((_, i) => i !== removeIdx))
+      return
+    }
+
+    const tag = allTags.find((t) => t.id === tagId)
+    setPendingChanges((prev) => [
+      ...prev,
+      { type: "add-tag", studentId, trailId: "", trailTitle: "", tagId, tagName: tag?.name || tagId },
+    ])
+  }
+
+  const removeTagFromStudent = (studentId: string, tagId: string) => {
+    // If it's a pending add, just remove it
+    const addIdx = pendingChanges.findIndex(
+      (p) => p.studentId === studentId && p.tagId === tagId && p.type === "add-tag"
+    )
+    if (addIdx !== -1) {
+      setPendingChanges((prev) => prev.filter((_, i) => i !== addIdx))
+      return
+    }
+
+    const alreadyPending = pendingChanges.some(
+      (p) => p.studentId === studentId && p.tagId === tagId && p.type === "remove-tag"
+    )
+    if (alreadyPending) return
+
+    const tag = allTags.find((t) => t.id === tagId)
+    const tagName = tag?.name || tagAssignments.find((a) => a.studentId === studentId && a.tagId === tagId)?.tag.name || tagId
+    setPendingChanges((prev) => [
+      ...prev,
+      { type: "remove-tag", studentId, trailId: "", trailTitle: "", tagId, tagName },
+    ])
+  }
+
+  const handleCreateAndAssignTag = async (studentId: string, name: string, color: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      })
+      const data = await res.json()
+
+      let tagId: string
+      if (res.ok) {
+        tagId = data.id
+        setAllTags((prev) => [...prev, { id: data.id, name: data.name, color: data.color }])
+      } else if (data.tag) {
+        // Tag already exists
+        tagId = data.tag.id
+      } else {
+        showToast(data.error || "Ошибка создания тега", "error")
+        return
+      }
+
+      addTagToStudent(studentId, tagId)
+    } catch {
+      showToast("Ошибка создания тега", "error")
+    }
+  }
+
+  const cancelAllChanges = () => {
+    setPendingChanges([])
+  }
+
+  const saveAllChanges = async () => {
+    if (pendingChanges.length === 0) return
+
+    try {
+      setSaving(true)
+      let successCount = 0
+      let errorCount = 0
+
+      for (const change of pendingChanges) {
+        try {
+          if (change.type === "add") {
+            const res = await fetch("/api/admin/student-access", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                studentId: change.studentId,
+                trailId: change.trailId,
+              }),
+            })
+            if (!res.ok) {
+              const data = await res.json()
+              throw new Error(data.error || "Ошибка")
+            }
+          } else if (change.type === "remove") {
+            const res = await fetch(
+              `/api/admin/student-access?studentId=${change.studentId}&trailId=${change.trailId}`,
+              { method: "DELETE" }
+            )
+            if (!res.ok) throw new Error("Ошибка удаления")
+          } else if (change.type === "add-tag") {
+            const res = await fetch("/api/admin/student-tag-assignments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                studentId: change.studentId,
+                tagId: change.tagId,
+              }),
+            })
+            if (!res.ok) {
+              const data = await res.json()
+              throw new Error(data.error || "Ошибка")
+            }
+          } else if (change.type === "remove-tag") {
+            const res = await fetch(
+              `/api/admin/student-tag-assignments?studentId=${change.studentId}&tagId=${change.tagId}`,
+              { method: "DELETE" }
+            )
+            if (!res.ok) throw new Error("Ошибка удаления тега")
+          }
+          successCount++
+        } catch {
+          errorCount++
+        }
+      }
+
+      setPendingChanges([])
+      await fetchData()
+
+      if (errorCount === 0) {
+        showToast(`Сохранено: ${successCount} изменений`, "success")
+      } else {
+        showToast(
+          `Сохранено: ${successCount}, ошибок: ${errorCount}`,
+          "warning"
+        )
+      }
+    } catch {
+      showToast("Ошибка сохранения", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Tag edit/delete handlers ──────────────────────────────────────────
+
+  const handleEditTag = async (tagId: string, name: string, color: string) => {
+    try {
+      const res = await fetch("/api/admin/student-tags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: tagId, name, color }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || "Ошибка редактирования тега", "error")
+        return
+      }
+      const updated = await res.json()
+      setAllTags((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setAllTagsRaw((prev) => prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t)))
+      setTagAssignments((prev) =>
+        prev.map((a) => (a.tagId === tagId ? { ...a, tag: { ...a.tag, name: updated.name, color: updated.color } } : a))
+      )
+      showToast("Тег обновлён", "success")
+    } catch {
+      showToast("Ошибка редактирования тега", "error")
+    }
+  }
+
+  const handleDeleteTag = async (tagId: string) => {
+    try {
+      const res = await fetch(`/api/admin/student-tags?id=${tagId}`, { method: "DELETE" })
+      if (!res.ok) {
+        showToast("Ошибка удаления тега", "error")
+        return
+      }
+      setAllTags((prev) => prev.filter((t) => t.id !== tagId))
+      setAllTagsRaw((prev) => prev.filter((t) => t.id !== tagId))
+      setTagAssignments((prev) => prev.filter((a) => a.tagId !== tagId))
+      setTagFilter((prev) => prev.filter((id) => id !== tagId))
+      showToast("Тег удалён", "success")
+    } catch {
+      showToast("Ошибка удаления тега", "error")
+    }
+  }
+
+  const tagsForFilter = useMemo(() => {
+    return allTagsRaw.map((t) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+      count: t._count?.assignments ?? 0,
+    }))
+  }, [allTagsRaw])
+
+  // ── Helper: get trail slug by trailId ──────────────────────────────────
+
+  const getTrailSlug = (trailId: string, studentId: string): string | null => {
+    const fromTrails = trails.find((t) => t.id === trailId)
+    if (fromTrails) return fromTrails.slug
+    const fromAccess = access.find(
+      (a) => a.studentId === studentId && a.trailId === trailId
+    )?.trail
+    if (fromAccess) return fromAccess.slug
+    return null
+  }
+
+  // ── Sort toggle ──────────────────────────────────────────────────────
+
+  const toggleSort = (field: "name" | "trails" | "createdAt") => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortField(field)
+      setSortDirection("asc")
+    }
+  }
+
+  const getStudentTrailCount = useCallback(
+    (studentId: string) => access.filter((a) => a.studentId === studentId).length,
+    [access]
+  )
+
+  // ── Filtered, sorted & paginated students ───────────────────────────
+
+  const filteredStudents = students.filter((s) => {
+    const q = searchQuery.toLowerCase()
+    const matchesSearch = !searchQuery ||
+      s.name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q) ||
+      (s.telegramUsername && s.telegramUsername.toLowerCase().includes(q)) ||
+      getStudentTags(s.id).some((tag) => tag.name.toLowerCase().includes(q))
+    const matchesTags = tagFilter.length === 0 ||
+      tagFilter.some((tagId) => tagAssignments.some((a) => a.studentId === s.id && a.tagId === tagId))
+    return matchesSearch && matchesTags
+  })
+
+  const sortedStudents = useMemo(() => {
+    return [...filteredStudents].sort((a, b) => {
+      let cmp = 0
+      switch (sortField) {
+        case "name":
+          cmp = a.name.localeCompare(b.name, "ru")
+          break
+        case "trails":
+          cmp = getStudentTrailCount(a.id) - getStudentTrailCount(b.id)
+          break
+        case "createdAt":
+          cmp = a.createdAt.localeCompare(b.createdAt)
+          break
+      }
+      return sortDirection === "asc" ? cmp : -cmp
+    })
+  }, [filteredStudents, sortField, sortDirection, getStudentTrailCount])
+
+  const totalPages = Math.ceil(sortedStudents.length / perPage)
+  const safePage = Math.min(currentPage, Math.max(1, totalPages))
+
+  const paginatedStudents = sortedStudents.slice(
+    (safePage - 1) * perPage,
+    safePage * perPage
+  )
+
+  // ── Get available trails for a student dropdown ────────────────────────
+
+  const getAvailableTrails = (studentId: string) => {
+    const state = getStudentTrailState(studentId)
+    const assignedIds = [
+      ...state.active,
+      ...state.pendingAdd.map((p) => p.trailId),
+    ]
+
+    return assignableTrails
+      .filter((t) => !assignedIds.includes(t.id))
+      .filter((t) =>
+        trailDropdownSearch
+          ? t.title.toLowerCase().includes(trailDropdownSearch.toLowerCase())
+          : true
+      )
+  }
+
+  // ── Trail badge with dropdown menu (shared between grid & list) ────────
+
+  const renderActiveTrailBadge = (trailId: string, studentId: string) => {
+    const trailInfo =
+      access.find(
+        (a) => a.studentId === studentId && a.trailId === trailId
+      )?.trail ||
+      trails.find((t) => t.id === trailId)
+    const slug = getTrailSlug(trailId, studentId)
+
+    return (
+      <Badge key={trailId} variant="secondary" className="text-xs gap-1 pr-1">
+        {slug ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="cursor-pointer hover:underline">
+                {trailInfo?.title || trailId}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" sideOffset={4}>
+              <DropdownMenuItem asChild>
+                <Link href={`/trails/${slug}`} target="_blank">
+                  <ArrowUpRight className="h-4 w-4 mr-2" />
+                  Перейти к трейлу
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span>{trailInfo?.title || trailId}</span>
+        )}
+        <button
+          onClick={() => removeTrailFromStudent(studentId, trailId)}
+          className="ml-0.5 p-0.5 rounded hover:bg-gray-300/50"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </Badge>
+    )
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="pb-64">
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+          <AlertCircle className="h-5 w-5" />
+          {error}
+          <button onClick={() => setError("")} className="ml-auto">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* How it works */}
+      <HowItWorks legend={adminPageLegends.studentAccess} className="mb-6" />
+
+      {/* ── Header: search, view toggle, per-page, refresh ───────── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setCurrentPage(1)
+            }}
+            placeholder="Поиск по имени, email, Telegram или тегу..."
+            className="w-full p-2 pl-10 border rounded-lg text-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery("")
+                setCurrentPage(1)
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Tag filter */}
+          <TagFilterDropdown
+            tags={tagsForFilter}
+            selectedTagIds={tagFilter}
+            onChange={(ids) => { setTagFilter(ids); setCurrentPage(1) }}
+          />
+          {/* Sort buttons */}
+          <div className="flex items-center gap-1">
+            {([
+              { field: "name" as const, label: "Имя" },
+              { field: "trails" as const, label: "Трейлы" },
+              { field: "createdAt" as const, label: "Дата" },
+            ]).map(({ field, label }) => (
+              <button
+                key={field}
+                onClick={() => toggleSort(field)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs transition-colors ${
+                  sortField === field
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 border-gray-200 dark:border-slate-600"
+                }`}
+              >
+                {label}
+                {sortField === field && (
+                  sortDirection === "asc"
+                    ? <ArrowUp className="h-3 w-3" />
+                    : <ArrowDown className="h-3 w-3" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Per-page select */}
+          <Select
+            value={String(perPage)}
+            onValueChange={(v) => {
+              setPerPage(parseInt(v, 10) as PerPageOption)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-[150px] h-9 text-xs">
+              <List className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PER_PAGE_OPTIONS.map((option) => (
+                <SelectItem key={option} value={String(option)}>
+                  {option} на стр.
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* View toggle */}
+          <div className="flex border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-2 ${
+                viewMode === "grid"
+                  ? "bg-gray-900 text-white"
+                  : "bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700"
+              }`}
+              title="Карточки"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 ${
+                viewMode === "list"
+                  ? "bg-gray-900 text-white"
+                  : "bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700"
+              }`}
+              title="Список"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
+
+          <Button onClick={fetchData} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Обновить
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Pending changes bar ─────────────────────────────────────── */}
+      {pendingChanges.length > 0 && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2 text-amber-800">
+            <AlertCircle className="h-5 w-5" />
+            <span className="font-medium">
+              {pendingChanges.length} несохранённых{" "}
+              {pendingChanges.length === 1
+                ? "изменение"
+                : pendingChanges.length < 5
+                  ? "изменения"
+                  : "изменений"}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={cancelAllChanges}
+              disabled={saving}
+            >
+              <Undo2 className="h-4 w-4 mr-2" />
+              Отменить
+            </Button>
+            <Button size="sm" onClick={saveAllChanges} disabled={saving}>
+              {saving ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Check className="h-4 w-4 mr-2" />
+              )}
+              Сохранить
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Stats ───────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
+        <span>
+          Студентов: {filteredStudents.length}
+          {(searchQuery || tagFilter.length > 0) && ` из ${students.length}`}
+        </span>
+        <span>Ограниченных трейлов: {assignableTrails.length}</span>
+      </div>
+
+      {/* ── Student cards ───────────────────────────────────────────── */}
+      {sortedStudents.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-gray-500">
+            <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p>{searchQuery ? "Студенты не найдены" : "Нет студентов"}</p>
+          </CardContent>
+        </Card>
+      ) : viewMode === "grid" ? (
+        /* ── Grid view ─────────────────────────────────────────────── */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {paginatedStudents.map((student) => {
+            const trailState = getStudentTrailState(student.id)
+
+            return (
+              <Card key={student.id} className="relative">
+                <CardContent className="p-4">
+                  {/* Student info */}
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <User className="h-4 w-4 text-gray-400 shrink-0" />
+                      <span className="font-medium text-gray-900 dark:text-slate-100 truncate">
+                        {student.name}
+                      </span>
+                      <Link
+                        href={`/teacher/students/${student.id}`}
+                        className="ml-auto shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300 transition-colors"
+                        title="На страницу студента"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{student.email}</span>
+                    </div>
+                    {student.telegramUsername && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <MessageCircle className="h-3 w-3 shrink-0" />
+                        <span className="truncate">
+                          {student.telegramUsername}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Trail tags */}
+                  <div className="flex flex-wrap gap-1.5 mb-3 min-h-[28px]">
+                    {/* Active trails */}
+                    {trailState.active.map((trailId) =>
+                      renderActiveTrailBadge(trailId, student.id)
+                    )}
+
+                    {/* Pending adds */}
+                    {trailState.pendingAdd.map((change) => (
+                      <Badge
+                        key={`add-${change.trailId}`}
+                        variant="outline"
+                        className="text-xs gap-1 pr-1 bg-green-50 border-green-300 border-dashed text-green-700"
+                      >
+                        + {change.trailTitle}
+                        <button
+                          onClick={() =>
+                            removeTrailFromStudent(
+                              student.id,
+                              change.trailId
+                            )
+                          }
+                          className="ml-0.5 p-0.5 rounded hover:bg-green-200/50"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+
+                    {/* Pending removes */}
+                    {trailState.pendingRemove.map((trailId) => {
+                      const trailInfo =
+                        access.find(
+                          (a) =>
+                            a.studentId === student.id &&
+                            a.trailId === trailId
+                        )?.trail ||
+                        trails.find((t) => t.id === trailId)
+
+                      return (
+                        <Badge
+                          key={`rm-${trailId}`}
+                          variant="outline"
+                          className="text-xs gap-1 pr-1 opacity-60 line-through border-red-300 text-red-600"
+                        >
+                          {trailInfo?.title || trailId}
+                          <button
+                            onClick={() =>
+                              undoRemove(student.id, trailId)
+                            }
+                            className="ml-0.5 p-0.5 rounded hover:bg-red-200/50 no-underline"
+                            title="Отменить удаление"
+                          >
+                            <Undo2 className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      )
+                    })}
+                  </div>
+
+                  {/* Student tags */}
+                  {(() => {
+                    const studentTags = getStudentTags(student.id)
+                    return studentTags.length > 0 ? (
+                      <div className="mb-3">
+                        <StudentTagsBadges
+                          tags={studentTags}
+                          maxVisible={3}
+                          onRemove={(tagId) => removeTagFromStudent(student.id, tagId)}
+                        />
+                      </div>
+                    ) : null
+                  })()}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
+                    <TagAssignDropdown
+                      availableTags={allTags}
+                      assignedTagIds={getStudentAssignedTagIds(student.id)}
+                      onAssign={(tagId) => addTagToStudent(student.id, tagId)}
+                      onCreateAndAssign={(name, color) => handleCreateAndAssignTag(student.id, name, color)}
+                      onEditTag={handleEditTag}
+                      onDeleteTag={handleDeleteTag}
+                    />
+                  </div>
+
+                  {/* Assign trail dropdown */}
+                  {assignableTrails.length > 0 && (
+                    <div className="relative mt-2" ref={activeDropdownId === student.id ? dropdownRef : undefined}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setActiveDropdownId(
+                            activeDropdownId === student.id
+                              ? null
+                              : student.id
+                          )
+                          setTrailDropdownSearch("")
+                        }}
+                        className="w-full justify-between text-xs"
+                      >
+                        <span className="flex items-center gap-1">
+                          <Plus className="h-3 w-3" />
+                          Назначить трейл
+                        </span>
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+
+                      {activeDropdownId === student.id && (
+                        <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-800 border dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-auto">
+                          {/* Search in dropdown */}
+                          <div className="p-2 border-b sticky top-0 bg-white dark:bg-slate-800">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                              <input
+                                type="text"
+                                value={trailDropdownSearch}
+                                onChange={(e) =>
+                                  setTrailDropdownSearch(e.target.value)
+                                }
+                                placeholder="Поиск трейла..."
+                                className="w-full py-1 pl-7 pr-2 text-xs border rounded"
+                                autoFocus
+                              />
+                            </div>
+                          </div>
+
+                          {(() => {
+                            const available = getAvailableTrails(student.id)
+                            return available.length === 0 ? (
+                              <div className="p-3 text-gray-500 text-xs text-center">
+                                {trailDropdownSearch
+                                  ? "Не найдено"
+                                  : "Все трейлы уже назначены"}
+                              </div>
+                            ) : (
+                              available.map((trail) => (
+                                <button
+                                  key={trail.id}
+                                  type="button"
+                                  onClick={() =>
+                                    addTrailToStudent(student.id, trail)
+                                  }
+                                  className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm border-b last:border-b-0"
+                                >
+                                  <div className="font-medium text-xs">
+                                    {trail.title}
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    /{trail.slug}
+                                  </div>
+                                </button>
+                              ))
+                            )
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      ) : (
+        /* ── List view ──────────────────────────────────────────────── */
+        <Card>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {paginatedStudents.map((student) => {
+                const trailState = getStudentTrailState(student.id)
+
+                return (
+                  <div
+                    key={student.id}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-slate-800"
+                  >
+                    {/* Student info */}
+                    <div className="min-w-0 sm:w-72 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-400 shrink-0" />
+                        <span className="font-medium text-sm text-gray-900 dark:text-slate-100 truncate">
+                          {student.name}
+                        </span>
+                        <Link
+                          href={`/teacher/students/${student.id}`}
+                          className="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300 transition-colors"
+                          title="На страницу студента"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                      <div className="text-xs text-gray-500 ml-6 truncate">
+                        {student.email}
+                        {student.telegramUsername && (
+                          <span className="ml-2">{student.telegramUsername}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Trail tags */}
+                    <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                      {trailState.active.map((trailId) =>
+                        renderActiveTrailBadge(trailId, student.id)
+                      )}
+
+                      {trailState.pendingAdd.map((change) => (
+                        <Badge
+                          key={`add-${change.trailId}`}
+                          variant="outline"
+                          className="text-xs gap-1 pr-1 bg-green-50 border-green-300 border-dashed text-green-700"
+                        >
+                          + {change.trailTitle}
+                          <button
+                            onClick={() =>
+                              removeTrailFromStudent(
+                                student.id,
+                                change.trailId
+                              )
+                            }
+                            className="ml-0.5 p-0.5 rounded hover:bg-green-200/50"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+
+                      {trailState.pendingRemove.map((trailId) => {
+                        const trailInfo =
+                          access.find(
+                            (a) =>
+                              a.studentId === student.id &&
+                              a.trailId === trailId
+                          )?.trail ||
+                          trails.find((t) => t.id === trailId)
+
+                        return (
+                          <Badge
+                            key={`rm-${trailId}`}
+                            variant="outline"
+                            className="text-xs gap-1 pr-1 opacity-60 line-through border-red-300 text-red-600"
+                          >
+                            {trailInfo?.title || trailId}
+                            <button
+                              onClick={() =>
+                                undoRemove(student.id, trailId)
+                              }
+                              className="ml-0.5 p-0.5 rounded hover:bg-red-200/50 no-underline"
+                              title="Отменить удаление"
+                            >
+                              <Undo2 className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        )
+                      })}
+                    </div>
+
+                    {/* Student tags */}
+                    {(() => {
+                      const studentTags = getStudentTags(student.id)
+                      return studentTags.length > 0 ? (
+                        <div className="shrink-0">
+                          <StudentTagsBadges
+                            tags={studentTags}
+                            maxVisible={2}
+                            onRemove={(tagId) => removeTagFromStudent(student.id, tagId)}
+                          />
+                        </div>
+                      ) : null
+                    })()}
+
+                    {/* Tag + Trail assign buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <TagAssignDropdown
+                        availableTags={allTags}
+                        assignedTagIds={getStudentAssignedTagIds(student.id)}
+                        onAssign={(tagId) => addTagToStudent(student.id, tagId)}
+                        onCreateAndAssign={(name, color) => handleCreateAndAssignTag(student.id, name, color)}
+                      />
+
+                    {/* Assign button */}
+                    {assignableTrails.length > 0 && (
+                      <div className="relative sm:w-48 shrink-0" ref={activeDropdownId === student.id ? dropdownRef : undefined}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setActiveDropdownId(
+                              activeDropdownId === student.id
+                                ? null
+                                : student.id
+                            )
+                            setTrailDropdownSearch("")
+                          }}
+                          className="w-full text-xs whitespace-nowrap justify-between"
+                        >
+                          <span className="flex items-center gap-1">
+                            <Plus className="h-3 w-3" />
+                            Назначить трейл
+                          </span>
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+
+                        {activeDropdownId === student.id && (
+                          <div className="absolute z-20 right-0 w-64 mt-1 bg-white dark:bg-slate-800 border dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-auto">
+                            <div className="p-2 border-b sticky top-0 bg-white dark:bg-slate-800">
+                              <div className="relative">
+                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                                <input
+                                  type="text"
+                                  value={trailDropdownSearch}
+                                  onChange={(e) =>
+                                    setTrailDropdownSearch(e.target.value)
+                                  }
+                                  placeholder="Поиск трейла..."
+                                  className="w-full py-1 pl-7 pr-2 text-xs border rounded"
+                                  autoFocus
+                                />
+                              </div>
+                            </div>
+
+                            {(() => {
+                              const available = getAvailableTrails(student.id)
+                              return available.length === 0 ? (
+                                <div className="p-3 text-gray-500 text-xs text-center">
+                                  {trailDropdownSearch
+                                    ? "Не найдено"
+                                    : "Все трейлы уже назначены"}
+                                </div>
+                              ) : (
+                                available.map((trail) => (
+                                  <button
+                                    key={trail.id}
+                                    type="button"
+                                    onClick={() =>
+                                      addTrailToStudent(student.id, trail)
+                                    }
+                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm border-b last:border-b-0"
+                                  >
+                                    <div className="font-medium text-xs">
+                                      {trail.title}
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                      /{trail.slug}
+                                    </div>
+                                  </button>
+                                ))
+                              )
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Pagination ───────────────────────────────────────────────── */}
+      {sortedStudents.length > perPage && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-gray-500">
+            Показано {(safePage - 1) * perPage + 1}–
+            {Math.min(safePage * perPage, sortedStudents.length)} из{" "}
+            {sortedStudents.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+              disabled={safePage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Назад
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={page === safePage ? "default" : "outline"}
+                  size="sm"
+                  className="w-8 h-8 p-0"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+              disabled={safePage === totalPages}
+            >
+              Вперёд
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

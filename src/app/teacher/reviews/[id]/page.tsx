@@ -3,9 +3,9 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, isHR, privilegedHasTrailAccess } from "@/lib/admin-access"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   ArrowLeft,
@@ -16,29 +16,70 @@ import {
   User,
   Calendar,
   BookOpen,
+  FileText,
+  Timer,
+  Pencil,
+  Play,
 } from "lucide-react"
 import { ReviewForm } from "@/components/review-form"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { LocalDate } from "@/components/local-date"
+import { FEATURE_FLAGS } from "@/lib/feature-flags"
+import { getAiReviewDTO } from "@/lib/ai-submission-review"
+import { AiSubmissionReview } from "@/components/ai-submission-review"
+import { getGoogleDocsScanDTO } from "@/lib/google-docs-scanner"
+import { GoogleDocsScan } from "@/components/google-docs-scan"
+import { NotificationSyncTrigger } from "@/components/notification-sync-trigger"
 
 interface Props {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
 }
 
-export default async function ReviewPage({ params }: Props) {
+export default async function ReviewPage({ params, searchParams }: Props) {
   const { id } = await params
+  const { from: returnQuery } = await searchParams
+  const backHref = returnQuery ? `/teacher?${returnQuery}` : "/teacher"
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR (HR = read-only view)
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
+
+  const isHRUser = isHR(session.user.role)
+
+  // Синхронизация уведомлений: автопрочтение при просмотре работы
+  // Учитель зашёл на страницу работы — уведомление о ней уже не нужно
+  prisma.notification.updateMany({
+    where: {
+      userId: session.user.id,
+      link: `/teacher/reviews/${id}`,
+      isRead: false,
+    },
+    data: { isRead: true },
+  }).catch(() => {})
 
   const submission = await prisma.submission.findUnique({
     where: { id },
     include: {
-      user: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          totalXP: true,
+        },
+      },
       module: {
         include: {
-          trail: true,
+          trail: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+            },
+          },
         },
       },
       review: true,
@@ -47,6 +88,68 @@ export default async function ReviewPage({ params }: Props) {
 
   if (!submission) {
     notFound()
+  }
+
+  // Verify trail scope access for this user
+  const hasAccess = await privilegedHasTrailAccess(
+    session.user.id,
+    session.user.role,
+    submission.module.trailId
+  )
+  if (!hasAccess) {
+    notFound()
+  }
+
+  // Fetch time tracking data for this submission
+  const moduleProgress = await prisma.moduleProgress.findUnique({
+    where: {
+      userId_moduleId: {
+        userId: submission.userId,
+        moduleId: submission.moduleId,
+      },
+    },
+    select: { startedAt: true },
+  })
+
+  // Get earliest submission for this user+module (for timeToFirstSubmit)
+  const firstSubmission = await prisma.submission.findFirst({
+    where: { userId: submission.userId, moduleId: submission.moduleId },
+    orderBy: { createdAt: "asc" },
+    select: { createdAt: true },
+  })
+
+  // Fetch AI review data if feature is enabled
+  const aiReviewData = FEATURE_FLAGS.AI_SUBMISSION_REVIEW_ENABLED
+    ? await getAiReviewDTO(submission.id).catch(() => null)
+    : null
+
+  // Fetch Google Docs scan data if feature is enabled
+  const googleDocsScanData = FEATURE_FLAGS.GOOGLE_DOCS_SCAN_ENABLED
+    ? await getGoogleDocsScanDTO(submission.id).catch(() => null)
+    : null
+
+  const moduleStartedAt = moduleProgress?.startedAt ?? null
+  const firstSubmittedAt = firstSubmission?.createdAt ?? null
+  const timeToFirstSubmitMs =
+    moduleStartedAt && firstSubmittedAt
+      ? firstSubmittedAt.getTime() - moduleStartedAt.getTime()
+      : null
+  const totalEditTimeMs =
+    submission.editCount > 0 && submission.lastEditedAt
+      ? submission.lastEditedAt.getTime() - submission.createdAt.getTime()
+      : null
+
+  /** Format milliseconds into a compact human-readable duration */
+  function fmtDuration(ms: number | null): string {
+    if (ms == null || ms < 0) return "—"
+    const totalMinutes = Math.floor(ms / 60000)
+    if (totalMinutes < 1) return "< 1мин"
+    const days = Math.floor(totalMinutes / 1440)
+    const hours = Math.floor((totalMinutes % 1440) / 60)
+    const minutes = totalMinutes % 60
+    if (days > 0) return `${days}д ${hours}ч`
+    if (hours > 0) return minutes > 0 ? `${hours}ч ${minutes}мин` : `${hours}ч`
+    return `${minutes}мин`
   }
 
   const getInitials = (name: string) => {
@@ -58,47 +161,12 @@ export default async function ReviewPage({ params }: Props) {
       .slice(0, 2)
   }
 
-  // Simple markdown-like rendering
-  const renderContent = (content: string) => {
-    const lines = content.split("\n")
-    return lines.map((line, i) => {
-      if (line.startsWith("## ")) {
-        return (
-          <h3 key={i} className="text-lg font-semibold mt-4 mb-2">
-            {line.slice(3)}
-          </h3>
-        )
-      }
-      if (line.startsWith("### ")) {
-        return (
-          <h4 key={i} className="text-base font-medium mt-3 mb-1">
-            {line.slice(4)}
-          </h4>
-        )
-      }
-      if (line.startsWith("- ")) {
-        return (
-          <li key={i} className="ml-4 mb-1">
-            {line.slice(2)}
-          </li>
-        )
-      }
-      if (line.trim() === "") {
-        return <br key={i} />
-      }
-      return (
-        <p key={i} className="mb-1">
-          {line}
-        </p>
-      )
-    })
-  }
-
   return (
     <div className="p-8">
+      <NotificationSyncTrigger />
       <Link
-        href="/teacher"
-        className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
+        href={backHref}
+        className="inline-flex items-center text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 mb-6"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
         Назад к списку
@@ -111,16 +179,18 @@ export default async function ReviewPage({ params }: Props) {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary">
-                  {submission.module.trail.title}
-                </Badge>
+                <Link href={`/trails/${submission.module.trail.slug}`} target="_blank">
+                  <Badge variant="secondary" className="hover:bg-gray-200 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+                    {submission.module.trail.title}
+                  </Badge>
+                </Link>
                 <Badge
                   className={
                     submission.status === "PENDING"
-                      ? "bg-blue-100 text-blue-700 border-0"
+                      ? "bg-blue-100 dark:bg-blue-950 text-blue-700 border-0"
                       : submission.status === "APPROVED"
-                      ? "bg-green-100 text-green-700 border-0"
-                      : "bg-orange-100 text-orange-700 border-0"
+                      ? "bg-green-100 dark:bg-green-950 text-green-700 border-0"
+                      : "bg-orange-100 dark:bg-orange-950 text-orange-700 border-0"
                   }
                 >
                   <Clock className="h-3 w-3 mr-1" />
@@ -131,13 +201,21 @@ export default async function ReviewPage({ params }: Props) {
                     : "На доработку"}
                 </Badge>
               </div>
-              <CardTitle>{submission.module.title}</CardTitle>
+              <CardTitle>
+                <Link
+                  href={`/module/${submission.module.slug}`}
+                  target="_blank"
+                  className="hover:text-[#0176D3] hover:underline transition-colors"
+                >
+                  {submission.module.title}
+                </Link>
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">{submission.module.description}</p>
+              <p className="text-gray-600 dark:text-slate-400">{submission.module.description}</p>
 
               {/* Links */}
-              <div className="flex gap-4 mt-4">
+              <div className="flex flex-wrap gap-4 mt-4">
                 {submission.githubUrl && (
                   <a
                     href={submission.githubUrl}
@@ -162,15 +240,48 @@ export default async function ReviewPage({ params }: Props) {
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
+                {submission.demoUrl && (
+                  <a
+                    href={submission.demoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    <Play className="h-4 w-4" />
+                    Демо
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                {submission.fileUrl && (
+                  <a
+                    href={submission.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Файл работы
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                <Link
+                  href={`/module/${submission.module.slug}`}
+                  target="_blank"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Задача модуля
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
               </div>
 
               {/* Student Comment */}
               {submission.comment && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                <div className="mt-6 p-4 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                     Комментарий ученика
                   </h4>
-                  <p className="text-gray-600">{submission.comment}</p>
+                  <p className="text-gray-600 dark:text-slate-400">{submission.comment}</p>
                 </div>
               )}
             </CardContent>
@@ -185,14 +296,14 @@ export default async function ReviewPage({ params }: Props) {
                   Требования к проекту
                 </CardTitle>
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
-                {renderContent(submission.module.requirements)}
+              <CardContent>
+                <MarkdownRenderer content={submission.module.requirements} />
               </CardContent>
             </Card>
           )}
 
-          {/* Review Form */}
-          {submission.status === "PENDING" && (
+          {/* Review Form — hidden for HR (read-only access) */}
+          {submission.status === "PENDING" && !isHRUser && (
             <Card>
               <CardHeader>
                 <CardTitle>Оценка работы</CardTitle>
@@ -203,6 +314,7 @@ export default async function ReviewPage({ params }: Props) {
                   moduleId={submission.moduleId}
                   userId={submission.userId}
                   modulePoints={submission.module.points}
+                  returnTo={backHref}
                 />
               </CardContent>
             </Card>
@@ -219,11 +331,11 @@ export default async function ReviewPage({ params }: Props) {
                   <div className="text-4xl font-bold text-[#0176D3]">
                     {submission.review.score}/10
                   </div>
-                  <div className="text-gray-500">Общая оценка</div>
+                  <div className="text-gray-500 dark:text-slate-400">Общая оценка</div>
                 </div>
 
                 {submission.review.strengths && (
-                  <div className="p-4 bg-green-50 rounded-lg">
+                  <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg">
                     <h4 className="font-medium text-green-700 mb-2">
                       Сильные стороны
                     </h4>
@@ -232,7 +344,7 @@ export default async function ReviewPage({ params }: Props) {
                 )}
 
                 {submission.review.improvements && (
-                  <div className="p-4 bg-orange-50 rounded-lg">
+                  <div className="p-4 bg-orange-50 dark:bg-orange-950 rounded-lg">
                     <h4 className="font-medium text-orange-700 mb-2">
                       Что улучшить
                     </h4>
@@ -243,15 +355,31 @@ export default async function ReviewPage({ params }: Props) {
                 )}
 
                 {submission.review.comment && (
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium text-gray-700 mb-2">
+                  <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                    <h4 className="font-medium text-gray-700 dark:text-slate-300 mb-2">
                       Комментарий
                     </h4>
-                    <p className="text-gray-600">{submission.review.comment}</p>
+                    <p className="text-gray-600 dark:text-slate-400">{submission.review.comment}</p>
                   </div>
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* AI Submission Review Section */}
+          {FEATURE_FLAGS.AI_SUBMISSION_REVIEW_ENABLED && (
+            <AiSubmissionReview
+              submissionId={submission.id}
+              initialData={aiReviewData}
+            />
+          )}
+
+          {/* Google Docs Scan Section */}
+          {FEATURE_FLAGS.GOOGLE_DOCS_SCAN_ENABLED && (
+            <GoogleDocsScan
+              submissionId={submission.id}
+              initialData={googleDocsScanData}
+            />
           )}
         </div>
 
@@ -272,8 +400,13 @@ export default async function ReviewPage({ params }: Props) {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">{submission.user.name}</div>
-                  <div className="text-sm text-gray-500">
+                  <Link
+                    href={`/dashboard/${submission.user.id}`}
+                    className="font-medium hover:text-[#0176D3] hover:underline transition-colors"
+                  >
+                    {submission.user.name}
+                  </Link>
+                  <div className="text-sm text-gray-500 dark:text-slate-400">
                     {submission.user.email}
                   </div>
                 </div>
@@ -281,31 +414,64 @@ export default async function ReviewPage({ params }: Props) {
 
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Total XP</span>
+                  <span className="text-gray-500 dark:text-slate-400">Total XP</span>
                   <span className="font-medium">{submission.user.totalXP}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Streak</span>
-                  <span className="font-medium">
-                    {submission.user.currentStreak} дней
-                  </span>
                 </div>
               </div>
 
               <div className="mt-4 pt-4 border-t">
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mb-2">
                   <Calendar className="h-4 w-4" />
                   Дата отправки
                 </div>
                 <div className="font-medium">
-                  {new Date(submission.createdAt).toLocaleDateString("ru-RU", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  <LocalDate date={submission.createdAt.toISOString()} format="long" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Time Tracking Card */}
+          <Card className="mt-4">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Timer className="h-4 w-4" />
+                Время выполнения
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {moduleStartedAt && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-slate-400">Старт модуля</span>
+                  <span className="font-medium">
+                    <LocalDate date={moduleStartedAt.toISOString()} format="short" />
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 dark:text-slate-400">До первой отправки</span>
+                <span className="font-medium">{fmtDuration(timeToFirstSubmitMs)}</span>
+              </div>
+              {submission.editCount > 0 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 dark:text-slate-400 inline-flex items-center gap-1">
+                      <Pencil className="h-3 w-3" />
+                      Правок
+                    </span>
+                    <span className="font-medium">{submission.editCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 dark:text-slate-400">Время редактирования</span>
+                    <span className="font-medium">{fmtDuration(totalEditTimeMs)}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 dark:text-slate-400">Последнее обновление</span>
+                <span className="font-medium">
+                  <LocalDate date={(submission.lastEditedAt ?? submission.createdAt).toISOString()} format="short" />
+                </span>
               </div>
             </CardContent>
           </Card>

@@ -1,0 +1,546 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Icon } from "@iconify/react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Award, Lock, ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { pluralizeRu } from "@/lib/utils"
+
+export interface Achievement {
+  id: string
+  name: string
+  description: string
+  icon: string
+  color: string
+  rarity: string
+  earned: boolean
+  earnedAt: string | null
+}
+
+interface AchievementsGridProps {
+  achievements: Achievement[]
+  stats?: { count: number; total: number }
+  showTitle?: boolean
+  compact?: boolean
+  collapsible?: boolean
+  defaultExpanded?: boolean
+  highlightId?: string | null
+}
+
+function getRarityLabel(rarity: string) {
+  switch (rarity) {
+    case "common": return "Обычное"
+    case "uncommon": return "Необычное"
+    case "rare": return "Редкое"
+    case "epic": return "Эпическое"
+    case "legendary": return "Легендарное"
+    default: return rarity
+  }
+}
+
+function getRarityBorder(rarity: string) {
+  switch (rarity) {
+    case "common": return "border-gray-300"
+    case "uncommon": return "border-green-400"
+    case "rare": return "border-blue-500"
+    case "epic": return "border-purple-500"
+    case "legendary": return "border-orange-500"
+    default: return "border-gray-300"
+  }
+}
+
+function getRarityGradient(rarity: string) {
+  switch (rarity) {
+    case "common": return "from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700"
+    case "uncommon": return "from-green-100 to-emerald-200 dark:from-green-900 dark:to-emerald-800"
+    case "rare": return "from-blue-100 to-indigo-200 dark:from-blue-900 dark:to-indigo-800"
+    case "epic": return "from-purple-100 to-violet-200 dark:from-purple-900 dark:to-violet-800"
+    case "legendary": return "from-orange-100 via-amber-200 to-yellow-100 dark:from-orange-900 dark:via-amber-800 dark:to-yellow-900"
+    default: return "from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700"
+  }
+}
+
+function getRarityIconBg(rarity: string) {
+  switch (rarity) {
+    case "common": return "bg-gray-100 dark:bg-gray-800"
+    case "uncommon": return "bg-green-100 dark:bg-green-900"
+    case "rare": return "bg-blue-100 dark:bg-blue-900"
+    case "epic": return "bg-purple-100 dark:bg-purple-900"
+    case "legendary": return "bg-gradient-to-br from-orange-200 via-amber-300 to-yellow-200 dark:from-orange-800 dark:via-amber-700 dark:to-yellow-800"
+    default: return "bg-gray-100 dark:bg-gray-800"
+  }
+}
+
+function getRarityIconColor(rarity: string) {
+  switch (rarity) {
+    case "common": return "text-gray-600 dark:text-gray-400"
+    case "uncommon": return "text-green-600 dark:text-green-400"
+    case "rare": return "text-blue-600 dark:text-blue-400"
+    case "epic": return "text-purple-600 dark:text-purple-400"
+    case "legendary": return "text-orange-600 dark:text-orange-400"
+    default: return "text-gray-600 dark:text-gray-400"
+  }
+}
+
+function getRarityCardClass(rarity: string) {
+  return `achievement-card-${rarity}`
+}
+
+function getRarityGlowColor(rarity: string) {
+  switch (rarity) {
+    case "common": return "shadow-gray-300/50"
+    case "uncommon": return "shadow-green-400/50"
+    case "rare": return "shadow-blue-400/50"
+    case "epic": return "shadow-purple-500/50"
+    case "legendary": return "shadow-orange-500/60"
+    default: return "shadow-gray-300/50"
+  }
+}
+
+function getRarityBorderGradient(rarity: string) {
+  switch (rarity) {
+    case "common": return "from-gray-300 via-gray-400 to-gray-300"
+    case "uncommon": return "from-green-400 via-emerald-500 to-green-400"
+    case "rare": return "from-blue-400 via-indigo-500 to-blue-400"
+    case "epic": return "from-purple-400 via-violet-500 to-purple-400"
+    case "legendary": return "from-orange-400 via-amber-500 to-orange-400"
+    default: return "from-gray-300 via-gray-400 to-gray-300"
+  }
+}
+
+function getRarityBgGradient(rarity: string) {
+  switch (rarity) {
+    case "common": return "from-gray-50 via-slate-100 to-gray-50 dark:from-gray-900 dark:via-slate-800 dark:to-gray-900"
+    case "uncommon": return "from-green-50 via-emerald-100 to-green-50 dark:from-green-950 dark:via-emerald-900 dark:to-green-950"
+    case "rare": return "from-blue-50 via-indigo-100 to-blue-50 dark:from-blue-950 dark:via-indigo-900 dark:to-blue-950"
+    case "epic": return "from-purple-50 via-violet-100 to-purple-50 dark:from-purple-950 dark:via-violet-900 dark:to-purple-950"
+    case "legendary": return "from-orange-50 via-amber-100 to-yellow-50 dark:from-orange-950 dark:via-amber-900 dark:to-yellow-950"
+    default: return "from-gray-50 via-slate-100 to-gray-50 dark:from-gray-900 dark:via-slate-800 dark:to-gray-900"
+  }
+}
+
+function AchievementModal({
+  achievement,
+  open,
+  onOpenChange,
+}: {
+  achievement: Achievement | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  if (!achievement) return null
+
+  const isEarned = achievement.earned
+  const rarity = achievement.rarity
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-0 bg-transparent shadow-none" showCloseButton={false}>
+        <DialogHeader className="sr-only">
+          <DialogTitle>{achievement.name}</DialogTitle>
+        </DialogHeader>
+
+        {/* Main Card with Holographic Effect */}
+        <div
+          className={`relative achievement-card ${getRarityCardClass(rarity)} ${
+            isEarned ? "achievement-glow" : ""
+          }`}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-white/80 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 transition-all duration-200 shadow-sm hover:shadow"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Animated Border Gradient */}
+          <div
+            className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${getRarityBorderGradient(rarity)} p-[2px]`}
+          >
+            <div className={`h-full w-full rounded-2xl bg-gradient-to-br ${getRarityBgGradient(rarity)}`} />
+          </div>
+
+          {/* Card Content */}
+          <div className="relative z-10 p-6 achievement-holographic">
+            {/* Sparkles for earned achievements */}
+            {isEarned && rarity !== "common" && (
+              <>
+                <div className="achievement-sparkle" style={{ top: "10%", left: "15%" }} />
+                <div className="achievement-sparkle" style={{ top: "20%", right: "20%", animationDelay: "0.3s" }} />
+                <div className="achievement-sparkle" style={{ bottom: "25%", left: "10%", animationDelay: "0.6s" }} />
+                <div className="achievement-sparkle" style={{ bottom: "15%", right: "15%", animationDelay: "0.9s" }} />
+              </>
+            )}
+
+            <div className="flex flex-col items-center text-center">
+              {/* Achievement Icon Container - 2x larger */}
+              <div
+                className={`relative w-32 h-32 rounded-2xl flex items-center justify-center mb-5 achievement-stencil achievement-modal-shimmer ${
+                  isEarned
+                    ? `bg-gradient-to-br ${getRarityGradient(rarity)} shadow-xl ${getRarityGlowColor(rarity)}`
+                    : "bg-gray-100 dark:bg-slate-800"
+                }`}
+              >
+                {/* Icon - doubled size */}
+                <Icon
+                  icon={achievement.icon}
+                  className={`w-20 h-20 ${
+                    isEarned ? getRarityIconColor(rarity) : "text-gray-400 dark:text-slate-500"
+                  } transition-transform duration-300 ${isEarned ? "drop-shadow-lg" : ""}`}
+                />
+
+                {/* Lock Overlay for unearned */}
+                {!isEarned && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-slate-800/70 rounded-2xl backdrop-blur-[1px]">
+                    <Lock className="h-10 w-10 text-gray-400 dark:text-slate-500" />
+                  </div>
+                )}
+              </div>
+
+              {/* Achievement Name */}
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">
+                {achievement.name}
+              </h3>
+
+              {/* Rarity Badge with enhanced styling */}
+              <Badge
+                className={`mb-4 px-4 py-1 text-sm font-medium ${
+                  isEarned ? achievement.color : "bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400"
+                }`}
+              >
+                {getRarityLabel(rarity)}
+              </Badge>
+
+              {/* Description */}
+              <p className="text-gray-600 dark:text-slate-400 mb-5 text-base leading-relaxed">
+                {achievement.description}
+              </p>
+
+              {/* Earned Date or Status */}
+              {isEarned && achievement.earnedAt ? (
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+                    rarity === "legendary"
+                      ? "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700"
+                      : rarity === "epic"
+                      ? "bg-purple-50 dark:bg-purple-950 text-purple-700"
+                      : rarity === "rare"
+                      ? "bg-blue-50 dark:bg-blue-950 text-blue-700"
+                      : rarity === "uncommon"
+                      ? "bg-green-50 dark:bg-green-950 text-green-700"
+                      : "bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-slate-300"
+                  }`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Получено {new Date(achievement.earnedAt).toLocaleDateString("ru-RU", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric"
+                    })}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-900 px-4 py-2 rounded-full">
+                  <Lock className="w-4 h-4" />
+                  <span>Ещё не получено</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Items per page: 3 rows × 5 columns (lg) = 15 items
+const ITEMS_PER_PAGE = 15
+
+export function AchievementsGrid({
+  achievements,
+  stats,
+  showTitle = true,
+  compact = false,
+  collapsible = false,
+  defaultExpanded = true,
+  highlightId,
+}: AchievementsGridProps) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [page, setPage] = useState(1)
+
+  // Auto-open modal for highlighted achievement (from notification click)
+  useEffect(() => {
+    if (!highlightId || achievements.length === 0) return
+
+    const target = achievements.find((a) => a.id === highlightId)
+    if (!target) return
+
+    // Calculate which page this achievement is on and navigate there
+    const filteredAchievements = compact
+      ? achievements.filter((a) => a.earned)
+      : achievements
+    const targetIndex = filteredAchievements.findIndex((a) => a.id === highlightId)
+    if (targetIndex >= 0) {
+      const targetPage = Math.floor(targetIndex / ITEMS_PER_PAGE) + 1
+      setPage(targetPage)
+    }
+
+    // Ensure section is expanded
+    setIsExpanded(true)
+
+    // Open the modal after a short delay for rendering
+    const timer = setTimeout(() => {
+      setSelectedAchievement(target)
+      setModalOpen(true)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [highlightId, achievements, compact])
+
+  const handleAchievementClick = (achievement: Achievement) => {
+    setSelectedAchievement(achievement)
+    setModalOpen(true)
+  }
+
+  if (achievements.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-gray-500 dark:text-slate-400">
+          <Award className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-slate-600" />
+          <p>Загрузка достижений...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const filteredAchievements = compact
+    ? achievements.filter((a) => a.earned)
+    : achievements
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredAchievements.length / ITEMS_PER_PAGE)
+  const startIndex = (page - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const paginatedAchievements = filteredAchievements.slice(startIndex, endIndex)
+
+  // Reset page if current page is out of bounds
+  if (page > totalPages && totalPages > 0) {
+    setPage(1)
+  }
+
+  const earnedCount = achievements.filter((a) => a.earned).length
+  const totalCount = stats?.total ?? achievements.length
+  const progressPercent = Math.round((earnedCount / totalCount) * 100)
+
+  // Generate page numbers for pagination UI
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (page > 3) pages.push("ellipsis")
+      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+        pages.push(i)
+      }
+      if (page < totalPages - 2) pages.push("ellipsis")
+      pages.push(totalPages)
+    }
+    return pages
+  }
+
+  return (
+    <div>
+      {showTitle && (
+        <div
+          className={`flex items-center justify-between mb-4 ${
+            collapsible
+              ? "cursor-pointer select-none group hover:bg-gray-50 dark:hover:bg-slate-800 -mx-2 px-2 py-2 rounded-lg transition-colors"
+              : ""
+          }`}
+          onClick={collapsible ? () => setIsExpanded(!isExpanded) : undefined}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 shadow-sm">
+              <Award className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+                Достижения
+                {collapsible && (
+                  <ChevronDown
+                    className={`h-5 w-5 text-gray-400 dark:text-slate-500 transition-transform duration-300 group-hover:text-gray-600 dark:group-hover:text-slate-400 ${
+                      isExpanded ? "rotate-0" : "-rotate-90"
+                    }`}
+                  />
+                )}
+              </h2>
+              {stats && (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="h-1.5 w-24 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-400 to-amber-500 rounded-full transition-all duration-500"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">
+                    {stats.count} из {stats.total} {pluralizeRu(stats.total, ["достижения", "достижений", "достижений"])}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          {stats && (
+            <Badge
+              variant="secondary"
+              className="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 border-0 hover:bg-orange-100 dark:hover:bg-orange-900"
+            >
+              {progressPercent}%
+            </Badge>
+          )}
+        </div>
+      )}
+
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          collapsible && !isExpanded ? "max-h-0 opacity-0" : "opacity-100"
+        }`}
+      >
+        <div>
+          <div className={`grid gap-4 ${
+            compact
+              ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6"
+              : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+          }`}>
+          {paginatedAchievements.map((achievement) => (
+            <Card
+              key={achievement.id}
+              onClick={() => handleAchievementClick(achievement)}
+              className={`relative overflow-hidden transition-all duration-300 cursor-pointer achievement-card ${getRarityCardClass(achievement.rarity)} ${
+                achievement.earned
+                  ? `border-2 ${getRarityBorder(achievement.rarity)} hover:shadow-xl hover:scale-[1.03] hover:-translate-y-1 ${getRarityGlowColor(achievement.rarity)}`
+                  : "opacity-50 grayscale hover:opacity-70 hover:grayscale-[50%]"
+              }`}
+            >
+              <CardContent className={`text-center ${compact ? "p-3" : "p-5"}`}>
+                <div
+                  className={`${compact ? "w-12 h-12 mb-2" : "w-[76px] h-[76px] mb-3"} mx-auto rounded-xl flex items-center justify-center transition-transform duration-200 hover:scale-110 achievement-stencil ${
+                    achievement.earned
+                      ? `${getRarityIconBg(achievement.rarity)} ${getRarityGlowColor(achievement.rarity)} shadow-lg`
+                      : "bg-gray-100 dark:bg-slate-800"
+                  }`}
+                >
+                  <Icon
+                    icon={achievement.icon}
+                    className={`${compact ? "w-8 h-8" : "w-11 h-11"} ${
+                      achievement.earned
+                        ? getRarityIconColor(achievement.rarity)
+                        : "text-gray-400 dark:text-slate-500"
+                    }`}
+                  />
+                </div>
+                <h3 className={`font-semibold text-gray-900 dark:text-slate-100 mb-1 ${
+                  compact ? "text-xs" : "text-sm"
+                }`}>
+                  {achievement.name}
+                </h3>
+                {!compact && (
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-2 line-clamp-2">
+                    {achievement.description}
+                  </p>
+                )}
+                <Badge
+                  className={`text-[10px] ${
+                    achievement.earned ? achievement.color : "bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400"
+                  }`}
+                >
+                  {getRarityLabel(achievement.rarity)}
+                </Badge>
+                {!compact && achievement.earned && achievement.earnedAt && (
+                  <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
+                    {new Date(achievement.earnedAt).toLocaleDateString("ru-RU")}
+                  </p>
+                )}
+                {!achievement.earned && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-800/50 transition-opacity duration-200">
+                    <Lock className="h-6 w-6 text-gray-400 dark:text-slate-500" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+          </div>
+
+          {/* Pagination UI */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-slate-700">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((pageNum, idx) =>
+                  pageNum === "ellipsis" ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 dark:text-slate-500">
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={pageNum}
+                      variant={page === pageNum ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setPage(pageNum)}
+                      className="h-8 w-8 p-0 text-sm"
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {compact && filteredAchievements.length === 0 && (
+          <p className="text-center text-gray-500 dark:text-slate-400 text-sm py-4">
+            Пока нет достижений
+          </p>
+        )}
+      </div>
+
+      <AchievementModal
+        achievement={selectedAchievement}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
+    </div>
+  )
+}

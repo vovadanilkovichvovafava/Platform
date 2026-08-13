@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Invite" ADD COLUMN "role" TEXT NOT NULL DEFAULT 'STUDENT';

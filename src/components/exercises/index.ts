@@ -1,3 +1,5 @@
 export { MatchingExercise } from "./matching-exercise"
 export { OrderingExercise } from "./ordering-exercise"
 export { CaseAnalysisExercise } from "./case-analysis-exercise"
+export { TrueFalseExercise } from "./true-false-exercise"
+export { FillBlankExercise } from "./fill-blank-exercise"

@@ -1,0 +1,748 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { useToast } from "@/components/ui/toast"
+import {
+  X,
+  Check,
+  RefreshCw,
+  Code,
+  Target,
+  Palette,
+  Lightbulb,
+  Eye,
+  EyeOff,
+  Users,
+  ChevronDown,
+  Lock,
+  KeyRound,
+  BookOpen,
+  FolderGit2,
+} from "lucide-react"
+
+const iconOptions = [
+  { value: "Code", icon: Code, label: "Код" },
+  { value: "Target", icon: Target, label: "Цель" },
+  { value: "Palette", icon: Palette, label: "Дизайн" },
+  { value: "Lightbulb", icon: Lightbulb, label: "Идея" },
+]
+
+const colorOptions = [
+  { value: "#6366f1", label: "Индиго" },
+  { value: "#8b5cf6", label: "Фиолетовый" },
+  { value: "#ec4899", label: "Розовый" },
+  { value: "#ef4444", label: "Красный" },
+  { value: "#f97316", label: "Оранжевый" },
+  { value: "#eab308", label: "Жёлтый" },
+  { value: "#22c55e", label: "Зелёный" },
+  { value: "#14b8a6", label: "Бирюзовый" },
+  { value: "#0ea5e9", label: "Голубой" },
+  { value: "#3b82f6", label: "Синий" },
+]
+
+export interface TrailFormData {
+  id: string
+  title: string
+  subtitle: string
+  description: string
+  icon: string
+  color: string
+  duration: string
+  isPublished: boolean
+  isRestricted?: boolean // true = hidden/assigned only, false = public to all students
+  allowSkipReview?: boolean // true = students can proceed without waiting for review
+  projectAutoNavigate?: boolean // true = auto-redirect to next module after project submission
+  teacherVisibility?: string
+  assignedTeacherId?: string | null
+  // Password protection
+  isPasswordProtected?: boolean
+  passwordHint?: string | null
+  createdById?: string | null // Creator of the trail
+}
+
+interface Teacher {
+  id: string
+  name: string
+  email: string
+}
+
+const visibilityOptions = [
+  { value: "ADMIN_ONLY", label: "Только администрация" },
+  { value: "ALL_TEACHERS", label: "Все учителя" },
+  { value: "SPECIFIC", label: "Конкретный учитель" },
+]
+
+interface EditTrailModalProps {
+  open: boolean
+  trail: TrailFormData | null
+  onClose: () => void
+  onSave: (data: TrailFormData) => void
+  mode?: "edit" | "create"
+}
+
+export function EditTrailModal({
+  open,
+  trail,
+  onClose,
+  onSave,
+  mode = "edit",
+}: EditTrailModalProps) {
+  const { data: session } = useSession()
+  const [loading, setLoading] = useState(false)
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [loadingTeachers, setLoadingTeachers] = useState(false)
+  const { showToast } = useToast()
+
+  // Check if user is admin (only admins can change teacherVisibility)
+  const isAdmin = session?.user?.role === "ADMIN"
+  const [form, setForm] = useState<TrailFormData & { password?: string; passwordConfirm?: string }>({
+    id: "",
+    title: "",
+    subtitle: "",
+    description: "",
+    icon: "Code",
+    color: "#6366f1",
+    duration: "",
+    isPublished: false,
+    isRestricted: true, // Restricted by default (secure)
+    allowSkipReview: true, // Default: students can proceed without waiting for review
+    projectAutoNavigate: true, // Default: auto-redirect to next module after project submission
+    teacherVisibility: "ADMIN_ONLY",
+    assignedTeacherId: null,
+    isPasswordProtected: false,
+    passwordHint: null,
+    createdById: null,
+    password: "", // Local state for new password
+    passwordConfirm: "", // Local state for password confirmation
+  })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
+
+  // Check if current user is the creator (can edit password settings)
+  const isCreator = mode === "create" || (trail?.createdById === session?.user?.id)
+
+  // Fetch teachers list
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        setLoadingTeachers(true)
+        const res = await fetch("/api/admin/teachers")
+        if (res.ok) {
+          const data = await res.json()
+          setTeachers(data)
+        }
+      } catch {
+        console.error("Failed to fetch teachers")
+      } finally {
+        setLoadingTeachers(false)
+      }
+    }
+
+    if (open) {
+      fetchTeachers()
+    }
+  }, [open])
+
+  // Block background scroll when modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden"
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [open])
+
+  // Close on ESC key
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [open, onClose])
+
+  // Reset form when trail changes or modal opens
+  useEffect(() => {
+    if (mode === "create") {
+      // Reset to defaults for create mode
+      setForm({
+        id: "",
+        title: "",
+        subtitle: "",
+        description: "",
+        icon: "Code",
+        color: "#6366f1",
+        duration: "",
+        isPublished: false,
+        isRestricted: true, // Restricted by default (secure)
+        allowSkipReview: true, // Default: students can proceed without waiting for review
+        projectAutoNavigate: true, // Default: auto-redirect to next module after project submission
+        teacherVisibility: "ADMIN_ONLY",
+        assignedTeacherId: null,
+        isPasswordProtected: false,
+        passwordHint: null,
+        createdById: null,
+        password: "",
+        passwordConfirm: "",
+      })
+      setShowPassword(false)
+      setShowPasswordConfirm(false)
+    } else if (trail) {
+      setForm({
+        id: trail.id,
+        title: trail.title,
+        subtitle: trail.subtitle || "",
+        description: trail.description || "",
+        icon: trail.icon || "Code",
+        color: trail.color || "#6366f1",
+        duration: trail.duration || "",
+        isPublished: trail.isPublished,
+        isRestricted: trail.isRestricted ?? true,
+        allowSkipReview: trail.allowSkipReview ?? true,
+        projectAutoNavigate: trail.projectAutoNavigate ?? false,
+        teacherVisibility: trail.teacherVisibility || "ADMIN_ONLY",
+        assignedTeacherId: trail.assignedTeacherId || null,
+        isPasswordProtected: trail.isPasswordProtected || false,
+        passwordHint: trail.passwordHint || null,
+        createdById: trail.createdById || null,
+        password: "", // Never show existing password
+        passwordConfirm: "", // Never show existing password
+      })
+      setShowPassword(false)
+      setShowPasswordConfirm(false)
+    }
+  }, [trail, mode, open])
+
+  const handleSubmit = async () => {
+    if (!form.title.trim()) {
+      showToast("Название обязательно", "error")
+      return
+    }
+
+    // Validate: if SPECIFIC visibility, teacher must be selected (edit mode only, admin only)
+    if (mode === "edit" && isAdmin && form.teacherVisibility === "SPECIFIC" && !form.assignedTeacherId) {
+      showToast("Выберите учителя для конкретного назначения", "error")
+      return
+    }
+
+    // Validate: if password protected is enabled in create mode, password is required
+    if (mode === "create" && form.isPasswordProtected && !form.password?.trim()) {
+      showToast("Пароль обязателен для защищённого трейла", "error")
+      return
+    }
+
+    // Validate: passwords must match when setting a new password
+    if (form.isPasswordProtected && form.password?.trim()) {
+      if (form.password !== form.passwordConfirm) {
+        showToast("Пароли не совпадают", "error")
+        return
+      }
+    }
+
+    try {
+      setLoading(true)
+
+      // Build payload
+      const payload: Record<string, unknown> = {
+        title: form.title.trim(),
+        subtitle: form.subtitle.trim(),
+        description: form.description.trim(),
+        icon: form.icon,
+        color: form.color,
+        duration: form.duration.trim(),
+      }
+
+      // Include progression mode in both create and edit
+      payload.allowSkipReview = form.allowSkipReview
+      payload.projectAutoNavigate = form.projectAutoNavigate
+
+      if (mode === "create") {
+        // Include access settings only in create mode
+        // In edit mode, access is managed via admin/access?tab=trail-settings
+        payload.isPublished = form.isPublished
+        payload.isRestricted = form.isRestricted
+
+        // Include password protection fields for create
+        payload.isPasswordProtected = form.isPasswordProtected
+        if (form.isPasswordProtected) {
+          if (form.password?.trim()) {
+            payload.password = form.password.trim()
+          }
+          payload.passwordHint = form.passwordHint?.trim() || null
+        }
+      }
+
+      // Only include teacherVisibility for admins in edit mode
+      if (mode === "edit" && isAdmin) {
+        payload.teacherVisibility = form.teacherVisibility
+        payload.assignedTeacherId = form.teacherVisibility === "SPECIFIC" ? form.assignedTeacherId : null
+      }
+
+      let res: Response
+      if (mode === "create") {
+        // POST for creating new trail
+        res = await fetch("/api/admin/trails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      } else {
+        // PATCH for updating existing trail
+        res = await fetch(`/api/admin/trails/${form.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      }
+
+      if (!res.ok) {
+        const data = await res.json()
+        if (data.passwordRequired) {
+          throw new Error("Для редактирования этого trail необходимо ввести пароль. Закройте окно и попробуйте снова.")
+        }
+        throw new Error(data.error || (mode === "create" ? "Ошибка создания" : "Ошибка сохранения"))
+      }
+
+      const savedTrail = await res.json()
+      showToast(mode === "create" ? "Trail успешно создан" : "Trail успешно обновлён", "success")
+      onSave(mode === "create" ? { ...form, id: savedTrail.id } : form)
+      onClose()
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : (mode === "create" ? "Ошибка создания" : "Ошибка сохранения"),
+        "error"
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // In create mode, trail is not required
+  if (!open || (mode === "edit" && !trail)) return null
+
+  const SelectedIcon = iconOptions.find(i => i.value === form.icon)?.icon || Code
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto overscroll-contain">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                style={{ backgroundColor: `${form.color}20` }}
+              >
+                <SelectedIcon className="h-4 w-4" style={{ color: form.color }} />
+              </div>
+              {mode === "create" ? "Создать Trail" : "Редактировать Trail"}
+            </CardTitle>
+            <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Title */}
+          <div>
+            <Label htmlFor="trailTitle">Название *</Label>
+            <Input
+              id="trailTitle"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Например: Vibe Coder"
+            />
+          </div>
+
+          {/* Subtitle */}
+          <div>
+            <Label htmlFor="trailSubtitle">Подзаголовок</Label>
+            <Input
+              id="trailSubtitle"
+              value={form.subtitle}
+              onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+              placeholder="Краткое описание направления"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <Label htmlFor="trailDescription">Описание</Label>
+            <Textarea
+              id="trailDescription"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Полное описание trail (markdown поддерживается)"
+              rows={6}
+              className="resize-y max-h-80"
+            />
+          </div>
+
+          {/* Duration */}
+          <div>
+            <Label htmlFor="trailDuration">Длительность</Label>
+            <Input
+              id="trailDuration"
+              value={form.duration}
+              onChange={(e) => setForm({ ...form, duration: e.target.value })}
+              placeholder="4-6 недель"
+            />
+          </div>
+
+          {/* Progression mode */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-blue-600" />
+              <div>
+                <span className="text-sm font-medium">
+                  {form.allowSkipReview ? "Свободный режим" : "Строгий режим"}
+                </span>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  {form.allowSkipReview
+                    ? "Ученик может идти дальше после сдачи работы, не дожидаясь проверки"
+                    : "Переход к следующему модулю только после проверки предыдущего"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={form.allowSkipReview ?? true}
+              onCheckedChange={(checked) => setForm({ ...form, allowSkipReview: checked })}
+            />
+          </div>
+
+          {/* Project auto-navigate */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+            <div className="flex items-center gap-2">
+              <FolderGit2 className="h-4 w-4 text-orange-600" />
+              <div>
+                <span className="text-sm font-medium">
+                  {form.projectAutoNavigate ? "Авто-переход после сдачи проекта" : "Ручной переход после сдачи проекта"}
+                </span>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  {form.projectAutoNavigate
+                    ? "После сдачи проекта ученик автоматически переходит к следующему модулю"
+                    : "После сдачи проекта ученик остаётся на странице проекта"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={form.projectAutoNavigate ?? false}
+              onCheckedChange={(checked) => setForm({ ...form, projectAutoNavigate: checked })}
+            />
+          </div>
+
+          {/* Icon selection */}
+          <div>
+            <Label className="mb-2 block">Иконка</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {iconOptions.map(({ value, icon: IconComponent, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setForm({ ...form, icon: value })}
+                  className={`p-3 rounded-lg border text-center transition-colors ${
+                    form.icon === value
+                      ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-950"
+                      : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <IconComponent
+                    className={`h-5 w-5 mx-auto mb-1 ${
+                      form.icon === value ? "text-blue-600" : "text-gray-500 dark:text-slate-400"
+                    }`}
+                  />
+                  <span
+                    className={`text-xs ${
+                      form.icon === value ? "text-blue-700" : "text-gray-600 dark:text-slate-400"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color selection */}
+          <div>
+            <Label className="mb-2 block">Цвет</Label>
+            <div className="grid grid-cols-5 gap-2">
+              {colorOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setForm({ ...form, color: value })}
+                  title={label}
+                  className={`h-10 rounded-lg border-2 transition-all ${
+                    form.color === value
+                      ? "border-gray-900 dark:border-slate-100 scale-110"
+                      : "border-transparent hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: value }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Access settings: create mode shows inline, edit mode links to access tab */}
+          {mode === "create" ? (
+            <>
+              {/* Published toggle */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                <div className="flex items-center gap-2">
+                  {form.isPublished ? (
+                    <Eye className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <EyeOff className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                  )}
+                  <div>
+                    <span className="text-sm font-medium">
+                      {form.isPublished ? "Опубликован" : "Черновик"}
+                    </span>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      {form.isPublished
+                        ? "Trail доступен на платформе"
+                        : "Trail скрыт от всех (черновик)"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={form.isPublished}
+                  onCheckedChange={(checked) => setForm({ ...form, isPublished: checked })}
+                />
+              </div>
+
+              {/* Password Protection - Create mode */}
+              <div className="space-y-3 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-100 dark:border-amber-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                        Защита паролем
+                      </span>
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        {form.isPasswordProtected
+                          ? "Требуется пароль для доступа"
+                          : "Доступ без пароля"}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={form.isPasswordProtected}
+                    onCheckedChange={(checked) =>
+                      setForm({
+                        ...form,
+                        isPasswordProtected: checked,
+                        password: checked ? form.password : "",
+                        passwordConfirm: checked ? form.passwordConfirm : "",
+                        passwordHint: checked ? form.passwordHint : null,
+                      })
+                    }
+                  />
+                </div>
+
+                {form.isPasswordProtected && (
+                  <div className="space-y-3 pt-2 border-t border-amber-200">
+                    <div>
+                      <Label htmlFor="trailPassword" className="text-amber-900 dark:text-amber-100">
+                        Пароль *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="trailPassword"
+                          type={showPassword ? "text" : "password"}
+                          value={form.password || ""}
+                          onChange={(e) => setForm({ ...form, password: e.target.value })}
+                          placeholder="Введите пароль..."
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="trailPasswordConfirm" className="text-amber-900 dark:text-amber-100">
+                        Подтвердите пароль *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="trailPasswordConfirm"
+                          type={showPasswordConfirm ? "text" : "password"}
+                          value={form.passwordConfirm || ""}
+                          onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
+                          placeholder="Повторите пароль..."
+                          className={`pr-10 ${
+                            form.password && form.passwordConfirm && form.password !== form.passwordConfirm
+                              ? "border-red-500 focus:ring-red-500"
+                              : ""
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600"
+                        >
+                          {showPasswordConfirm ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      {form.password && form.passwordConfirm && form.password !== form.passwordConfirm && (
+                        <p className="text-xs text-red-600 mt-1">Пароли не совпадают</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="trailPasswordHint" className="text-amber-900 dark:text-amber-100">
+                        Подсказка (опционально)
+                      </Label>
+                      <div className="relative">
+                        <KeyRound className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-400" />
+                        <Input
+                          id="trailPasswordHint"
+                          value={form.passwordHint || ""}
+                          onChange={(e) => setForm({ ...form, passwordHint: e.target.value })}
+                          placeholder="Подсказка для студентов..."
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      Доступ получают: создатель, пользователи с паролем, привязанные студенты.
+                      Роль admin/teacher не даёт автоматического доступа.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Edit mode: link to Access Management tab */
+            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-100 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-1">
+                <Lock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-200">Настройки доступа</span>
+              </div>
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Публикация, видимость и защита паролем управляются в{" "}
+                <a
+                  href="/admin/access?tab=trail-settings"
+                  className="underline font-medium hover:text-blue-900 dark:hover:text-blue-100"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Управление доступом &rarr; Доступ студентов
+                </a>
+              </p>
+            </div>
+          )}
+
+          {/* Teacher Visibility - Admin only */}
+          {isAdmin && (
+            <div className="space-y-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-100 dark:border-blue-800">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-200">Видимость для учителей</span>
+              </div>
+
+              <div className="relative">
+                <select
+                  value={form.teacherVisibility}
+                  onChange={(e) => setForm({
+                    ...form,
+                    teacherVisibility: e.target.value,
+                    assignedTeacherId: e.target.value !== "SPECIFIC" ? null : form.assignedTeacherId
+                  })}
+                  className="w-full p-2 pr-8 border border-blue-200 dark:border-blue-800 rounded-lg bg-white dark:bg-slate-800 dark:text-slate-100 text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {visibilityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
+              </div>
+
+              {/* Teacher selection for SPECIFIC visibility */}
+              {form.teacherVisibility === "SPECIFIC" && (
+                <div className="relative">
+                  {loadingTeachers ? (
+                    <div className="flex items-center gap-2 p-2 text-sm text-gray-500 dark:text-slate-400">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Загрузка учителей...
+                    </div>
+                  ) : teachers.length === 0 ? (
+                    <div className="p-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+                      Нет учителей для назначения. Сначала создайте учителя в разделе &quot;Пользователи&quot;.
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={form.assignedTeacherId || ""}
+                        onChange={(e) => setForm({ ...form, assignedTeacherId: e.target.value || null })}
+                        className="w-full p-2 pr-8 border border-blue-200 dark:border-blue-800 rounded-lg bg-white dark:bg-slate-800 dark:text-slate-100 text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Выберите учителя...</option>
+                        {teachers.map((teacher) => (
+                          <option key={teacher.id} value={teacher.id}>
+                            {teacher.name} ({teacher.email})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
+                    </>
+                  )}
+                </div>
+              )}
+
+              <p className="text-xs text-blue-700">
+                {form.teacherVisibility === "ADMIN_ONLY" && "Только администраторы могут управлять этим trail"}
+                {form.teacherVisibility === "ALL_TEACHERS" && "Все учителя видят этот trail во вкладке \"Контент\""}
+                {form.teacherVisibility === "SPECIFIC" && "Только выбранный учитель видит этот trail во вкладке \"Контент\""}
+              </p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={onClose} disabled={loading}>
+              Отмена
+            </Button>
+            <Button onClick={handleSubmit} disabled={!form.title.trim() || loading}>
+              {loading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  {mode === "create" ? "Создать" : "Сохранить"}
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

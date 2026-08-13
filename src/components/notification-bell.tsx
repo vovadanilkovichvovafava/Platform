@@ -1,0 +1,300 @@
+"use client"
+
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { Bell, Check, X, ClipboardList } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { enableNotificationSound, playNotificationSound } from "@/lib/notification-sound"
+
+interface Notification {
+  id: string
+  type: string
+  title: string
+  message: string
+  link: string | null
+  isRead: boolean
+  createdAt: string
+  trailTitle?: string
+}
+
+interface TrailGroup {
+  title: string
+  notifications: Notification[]
+}
+
+export function NotificationBell() {
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [isOpen, setIsOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const prevUnreadCountRef = useRef<number | null>(null)
+  const isInitialFetchRef = useRef(true)
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications")
+      if (res.ok) {
+        const data = await res.json()
+        setNotifications(data.notifications)
+
+        const newCount = data.unreadCount as number
+        // Play sound only when new unread notifications appear (not on initial load)
+        if (
+          !isInitialFetchRef.current &&
+          prevUnreadCountRef.current !== null &&
+          newCount > prevUnreadCountRef.current
+        ) {
+          playNotificationSound()
+        }
+        isInitialFetchRef.current = false
+        prevUnreadCountRef.current = newCount
+        setUnreadCount(newCount)
+      }
+    } catch (err) {
+      console.error("Error fetching notifications:", err)
+    }
+  }, [])
+
+  // Enable audio on first user interaction
+  useEffect(() => {
+    const handleInteraction = () => {
+      enableNotificationSound()
+      document.removeEventListener("click", handleInteraction)
+      document.removeEventListener("keydown", handleInteraction)
+    }
+    document.addEventListener("click", handleInteraction)
+    document.addEventListener("keydown", handleInteraction)
+    return () => {
+      document.removeEventListener("click", handleInteraction)
+      document.removeEventListener("keydown", handleInteraction)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchNotifications()
+    // Poll for new notifications every 10 seconds for faster updates
+    const interval = setInterval(fetchNotifications, 10000)
+    return () => clearInterval(interval)
+  }, [fetchNotifications])
+
+  // Мгновенное обновление при синхронизации уведомлений с контентом
+  // (когда сервер автоматически помечает уведомления как прочитанные)
+  useEffect(() => {
+    const handleSync = () => fetchNotifications()
+    window.addEventListener("notifications-sync", handleSync)
+    return () => window.removeEventListener("notifications-sync", handleSync)
+  }, [fetchNotifications])
+
+  // Group unread SUBMISSION_PENDING notifications by trail
+  const { trailGroups, otherNotifications } = useMemo(() => {
+    const unreadPending = notifications.filter(
+      (n) => n.type === "SUBMISSION_PENDING" && !n.isRead && n.trailTitle
+    )
+    const rest = notifications.filter(
+      (n) => !(n.type === "SUBMISSION_PENDING" && !n.isRead && n.trailTitle)
+    )
+
+    const groupMap = new Map<string, Notification[]>()
+    for (const n of unreadPending) {
+      const trail = n.trailTitle!
+      if (!groupMap.has(trail)) groupMap.set(trail, [])
+      groupMap.get(trail)!.push(n)
+    }
+
+    const groups: TrailGroup[] = []
+    for (const [title, notifs] of groupMap) {
+      groups.push({ title, notifications: notifs })
+    }
+
+    return { trailGroups: groups, otherNotifications: rest }
+  }, [notifications])
+
+  const markAsRead = async (notificationId: string, optimistic = true) => {
+    // Optimistic update - сразу обновляем UI
+    if (optimistic) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
+      )
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    }
+
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationIds: [notificationId] }),
+        // keepalive позволяет запросу завершиться даже при переходе на другую страницу
+        keepalive: true,
+      })
+    } catch (err) {
+      // Тихий fail - не блокируем пользователя, страховка на целевой странице
+      console.error("Error marking notification as read:", err)
+    }
+  }
+
+  const markAllAsRead = async () => {
+    setLoading(true)
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllRead: true }),
+      })
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+      setUnreadCount(0)
+    } catch (err) {
+      console.error("Error marking all as read:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Отмечаем как прочитанное (оптимистично + fire-and-forget запрос с keepalive)
+    if (!notification.isRead) {
+      markAsRead(notification.id)
+    }
+
+    if (notification.link) {
+      // Добавляем notificationId в URL как страховку - если fetch не успеет,
+      // header.tsx обработает этот параметр и повторит mark-as-read
+      const url = new URL(notification.link, window.location.origin)
+      url.searchParams.set("notificationId", notification.id)
+      window.location.href = url.toString()
+    }
+    setIsOpen(false)
+  }
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return "только что"
+    if (diffMins < 60) return `${diffMins} мин. назад`
+    if (diffHours < 24) return `${diffHours} ч. назад`
+    if (diffDays < 7) return `${diffDays} дн. назад`
+    return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
+  }
+
+  // Reusable notification item renderer
+  const renderNotificationItem = (notification: Notification, compact = false) => (
+    <div
+      key={notification.id}
+      onClick={() => handleNotificationClick(notification)}
+      className={`p-3 border-b last:border-0 cursor-pointer transition-colors ${
+        notification.isRead ? "bg-white dark:bg-slate-800" : "bg-orange-50 dark:bg-orange-950"
+      } hover:bg-gray-50 dark:hover:bg-slate-800`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          {!compact && (
+            <div className="flex items-center gap-2">
+              <h4 className={`text-sm ${notification.isRead ? "text-gray-700 dark:text-slate-300" : "font-semibold text-gray-900 dark:text-slate-100"}`}>
+                {notification.title}
+              </h4>
+              {!notification.isRead && (
+                <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+              )}
+            </div>
+          )}
+          <p className={`text-xs text-gray-500 dark:text-slate-400 ${compact ? "" : "mt-0.5"} line-clamp-2`}>
+            {notification.message}
+          </p>
+          <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">
+            {formatTime(notification.createdAt)}
+          </p>
+        </div>
+        {!notification.isRead && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              markAsRead(notification.id)
+            }}
+            className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
+            title="Отметить как прочитанное"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+
+  const hasTrailGroups = trailGroups.length > 0
+  const isEmpty = notifications.length === 0
+
+  return (
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative h-10 w-10 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-80 p-0 bg-white dark:bg-slate-800" align="end">
+        <div className="flex items-center justify-between p-3 border-b">
+          <h3 className="font-semibold text-gray-900 dark:text-slate-100">Уведомления</h3>
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              disabled={loading}
+              className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1"
+            >
+              <Check className="h-3 w-3" />
+              Прочитать все
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-[400px] overflow-y-auto">
+          {isEmpty ? (
+            <div className="p-6 text-center text-gray-500 dark:text-slate-400">
+              <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Нет уведомлений</p>
+            </div>
+          ) : (
+            <>
+              {/* Trail-grouped SUBMISSION_PENDING (unread) */}
+              {trailGroups.map((group) => (
+                <div key={group.title}>
+                  <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b flex items-center gap-2">
+                    <ClipboardList className="h-3 w-3 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate">
+                      {group.title}
+                    </span>
+                    <span className="text-[10px] text-orange-500 font-medium ml-auto flex-shrink-0">
+                      {group.notifications.length}
+                    </span>
+                  </div>
+                  {group.notifications.map((n) => renderNotificationItem(n, true))}
+                </div>
+              ))}
+
+              {/* Separator between trail groups and other notifications */}
+              {hasTrailGroups && otherNotifications.length > 0 && (
+                <div className="px-3 py-1 bg-slate-50 dark:bg-slate-900 border-b">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Другие</span>
+                </div>
+              )}
+
+              {/* Other notifications (flat list) */}
+              {otherNotifications.map((n) => renderNotificationItem(n))}
+            </>
+          )}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}

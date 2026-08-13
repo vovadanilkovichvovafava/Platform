@@ -1,8 +1,9 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import Link from "next/link"
 import { authOptions } from "@/lib/auth"
-import { ClipboardList, Users, BarChart3, BookOpen } from "lucide-react"
+import { prisma } from "@/lib/prisma"
+import { TeacherSidebar } from "@/components/teacher-sidebar"
+import { isPrivileged, isHR, isAdmin as checkIsAdmin, getAdminAllowedTrailIds } from "@/lib/admin-access"
 
 export default async function TeacherLayout({
   children,
@@ -11,61 +12,73 @@ export default async function TeacherLayout({
 }) {
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR (HR for read-only analytics)
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 pt-16 bg-white border-r">
-          <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-            <div className="px-4 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Панель учителя
-              </h2>
-              <p className="text-sm text-gray-500">
-                Управление обучением
-              </p>
-            </div>
+  // Get initial pending submissions count for this teacher
+  const isAdmin = checkIsAdmin(session.user.role)
+  const isCoAdmin = session.user.role === "CO_ADMIN"
+  const isHRUser = isHR(session.user.role)
 
-            <nav className="flex-1 px-2 space-y-1">
-              <Link
-                href="/teacher"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                <ClipboardList className="h-5 w-5" />
-                Работы на проверку
-              </Link>
-              <Link
-                href="/teacher/students"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                <Users className="h-5 w-5" />
-                Ученики
-              </Link>
-              <Link
-                href="/teacher/stats"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                <BarChart3 className="h-5 w-5" />
-                Статистика
-              </Link>
-              <Link
-                href="/teacher/content"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                <BookOpen className="h-5 w-5" />
-                Контент
-              </Link>
-            </nav>
-          </div>
-        </aside>
+  let pendingCount = 0
+  if (isAdmin) {
+    // Admin sees all pending submissions
+    pendingCount = await prisma.submission.count({
+      where: { status: "PENDING" },
+    })
+  } else if (isCoAdmin || isHRUser) {
+    // CO_ADMIN/HR sees only submissions from their assigned trails
+    const allowedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+
+    if (allowedTrailIds === null) {
+      pendingCount = await prisma.submission.count({
+        where: { status: "PENDING" },
+      })
+    } else if (allowedTrailIds.length > 0) {
+      pendingCount = await prisma.submission.count({
+        where: {
+          status: "PENDING",
+          module: { trailId: { in: allowedTrailIds } },
+        },
+      })
+    }
+  } else {
+    // Teacher sees trails with teacherVisibility = "ALL_TEACHERS" + specifically assigned trails
+    const allTeacherTrails = await prisma.trail.findMany({
+      where: { teacherVisibility: "ALL_TEACHERS" },
+      select: { id: true },
+    })
+
+    const specificAssignments = await prisma.trailTeacher.findMany({
+      where: { teacherId: session.user.id },
+      select: { trailId: true },
+    })
+
+    const allTrailIds = new Set([
+      ...allTeacherTrails.map(t => t.id),
+      ...specificAssignments.map(a => a.trailId),
+    ])
+
+    const assignedTrailIds = Array.from(allTrailIds)
+
+    pendingCount = await prisma.submission.count({
+      where: {
+        status: "PENDING",
+        module: { trailId: { in: assignedTrailIds } },
+      },
+    })
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="flex">
+        {/* Sidebar with real-time updates */}
+        <TeacherSidebar initialPendingCount={pendingCount} />
 
         {/* Main content */}
-        <main className="flex-1 md:ml-64">
+        <main className="flex-1 md:ml-64 min-w-0 overflow-hidden">
           {children}
         </main>
       </div>

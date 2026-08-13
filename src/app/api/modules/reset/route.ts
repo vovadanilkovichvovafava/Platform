@@ -17,16 +17,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get module
-    const module = await prisma.module.findUnique({
+    const courseModule = await prisma.module.findUnique({
       where: { id: moduleId },
     })
 
-    if (!module) {
+    if (!courseModule) {
       return NextResponse.json({ error: "Module not found" }, { status: 404 })
     }
 
     // Only allow reset for THEORY and PRACTICE modules
-    if (module.type === "PROJECT") {
+    if (courseModule.type === "PROJECT") {
       return NextResponse.json(
         { error: "Cannot reset PROJECT modules" },
         { status: 400 }

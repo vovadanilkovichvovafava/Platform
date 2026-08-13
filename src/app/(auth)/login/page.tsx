@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -21,6 +21,7 @@ type LoginForm = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const router = useRouter()
+  const { status } = useSession()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -31,6 +32,26 @@ export default function LoginPage() {
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   })
+
+  // Redirect authenticated users to dashboard (client-side).
+  // This replaces the old middleware redirect which caused ERR_TOO_MANY_REDIRECTS
+  // because middleware reads the raw JWT cookie (without running callbacks),
+  // while useSession calls /api/auth/session which properly runs callbacks
+  // and updates the cookie if the session is stale.
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard")
+    }
+  }, [status, router])
+
+  // Show spinner while session is being checked
+  if (status === "loading" || status === "authenticated") {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
+  }
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
@@ -57,9 +78,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 px-4">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
       <div className="w-full max-w-md">
-        <div className="p-8 rounded-2xl bg-white border border-slate-200 shadow-xl">
+        <div className="p-8 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
@@ -67,8 +88,8 @@ export default function LoginPage() {
                 <Flame className="h-6 w-6 text-white" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Вход в Prometheus</h1>
-            <p className="text-slate-500 mt-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Вход в Prometheus</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2">
               Введите email и пароль для входа
             </p>
           </div>
@@ -82,14 +103,14 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-700">Email</Label>
+              <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 {...register("email")}
                 disabled={isLoading}
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
+                className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.email && (
                 <p className="text-sm text-red-500">{errors.email.message}</p>
@@ -97,14 +118,14 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-700">Пароль</Label>
+              <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">Пароль</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••"
                 {...register("password")}
                 disabled={isLoading}
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
+                className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.password && (
                 <p className="text-sm text-red-500">{errors.password.message}</p>
@@ -127,7 +148,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-slate-500">
+          <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
             Нет аккаунта?{" "}
             <Link
               href="/register"

@@ -736,7 +736,7 @@ export async function POST() {
 
       const slug = generateSlug(`marketing-${mod.id}`, mod.title)
 
-      const module = await prisma.module.create({
+      await prisma.module.create({
         data: {
           trailId: trail.id,
           slug,
@@ -776,7 +776,7 @@ export async function POST() {
     // Create project modules
     const projects = getProjectModules()
     for (const project of projects) {
-      const module = await prisma.module.create({
+      await prisma.module.create({
         data: {
           trailId: trail.id,
           slug: project.slug,

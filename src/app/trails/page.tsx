@@ -1,11 +1,18 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { TrailCard } from "@/components/trail-card"
+import { TrailSearch } from "@/components/trail-search"
+import { resolveTrailAccess } from "@/lib/trail-access"
+import { ROLE_STUDENT } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 
-export default async function TrailsPage() {
+export default async function TrailsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const resolvedSearchParams = await searchParams
   const session = await getServerSession(authOptions)
 
   // Get user's trail access if logged in
@@ -18,28 +25,101 @@ export default async function TrailsPage() {
     accessibleTrailIds = userAccess.map((a) => a.trailId)
   }
 
+  const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER" || session?.user.role === "CO_ADMIN"
+  const isStudent = session?.user.role === ROLE_STUDENT
+
+  // Build query based on role:
+  // Students: see public published trails + their explicitly assigned trails
+  // Privileged: see all published + explicitly accessible
+  // Unauthenticated: see published only
+  let whereClause
+  if (isStudent) {
+    // Students see public published trails OR their assigned trails
+    if (accessibleTrailIds.length > 0) {
+      whereClause = {
+        OR: [
+          { isPublished: true, isRestricted: false },
+          { id: { in: accessibleTrailIds } },
+        ],
+      }
+    } else {
+      whereClause = { isPublished: true, isRestricted: false }
+    }
+  } else if (accessibleTrailIds.length > 0) {
+    whereClause = {
+      OR: [
+        { isPublished: true },
+        { id: { in: accessibleTrailIds } },
+      ],
+    }
+  } else {
+    whereClause = { isPublished: true }
+  }
+
   const allTrails = await prisma.trail.findMany({
-    where: { isPublished: true },
+    where: whereClause,
     orderBy: { order: "asc" },
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      subtitle: true,
+      description: true,
+      icon: true,
+      color: true,
+      duration: true,
+      isPublished: true,
+      isRestricted: true,
+      isPasswordProtected: true,
+      createdById: true,
       modules: {
         select: { id: true },
       },
     },
   })
 
-  // Filter out restricted trails user doesn't have access to
-  // Admins and teachers can see all trails
-  const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "TEACHER"
+  // Get password access records for logged in user
+  let passwordAccessTrailIds: string[] = []
+  let enrolledTrailIdsForPassword: string[] = []
+  if (session) {
+    const passwordAccessRecords = await prisma.trailPasswordAccess.findMany({
+      where: { userId: session.user.id },
+      select: { trailId: true },
+    })
+    passwordAccessTrailIds = passwordAccessRecords.map((r) => r.trailId)
+
+    // Get enrollments for password-protected trail access check
+    const enrollmentsForPassword = await prisma.enrollment.findMany({
+      where: { userId: session.user.id },
+      select: { trailId: true },
+    })
+    enrolledTrailIdsForPassword = enrollmentsForPassword.map((e) => e.trailId)
+  }
+
+  // Filter trails using unified access resolver
+  // Priority: PASSWORD > PUBLIC > HIDDEN/ASSIGNED
   const trails = allTrails.filter((trail) => {
-    if (!trail.isRestricted) return true // Public trail
-    if (isPrivileged) return true // Admin/Teacher can see all
-    if (!session) return false // Not logged in, can't see restricted
-    return accessibleTrailIds.includes(trail.id) // Check access
+    const decision = resolveTrailAccess(
+      {
+        isPublished: trail.isPublished,
+        isRestricted: trail.isRestricted,
+        isPasswordProtected: trail.isPasswordProtected,
+        createdById: trail.createdById,
+      },
+      {
+        isAuthenticated: !!session,
+        userId: session?.user.id ?? null,
+        isPrivileged,
+        hasStudentAccess: accessibleTrailIds.includes(trail.id),
+        hasPasswordAccess: passwordAccessTrailIds.includes(trail.id),
+        isEnrolled: enrolledTrailIdsForPassword.includes(trail.id),
+      },
+    )
+    return decision.visible
   })
 
   let enrolledTrailIds: string[] = []
-  let progressMap: Record<string, number> = {}
+  const progressMap: Record<string, number> = {}
 
   if (session) {
     const enrollments = await prisma.enrollment.findMany({
@@ -71,29 +151,25 @@ export default async function TrailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b">
         <div className="container mx-auto px-4 py-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-4">
             Trails
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl">
+          <p className="text-lg text-gray-600 dark:text-slate-400 max-w-2xl">
             Выберите направление обучения и начните свой путь к мастерству
           </p>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trails.map((trail) => (
-            <TrailCard
-              key={trail.id}
-              trail={trail}
-              enrolled={enrolledTrailIds.includes(trail.id)}
-              progress={progressMap[trail.id] || 0}
-            />
-          ))}
-        </div>
+        <TrailSearch
+          trails={trails}
+          enrolledTrailIds={enrolledTrailIds}
+          progressMap={progressMap}
+          initialSearch={resolvedSearchParams.q || ""}
+        />
       </div>
     </div>
   )

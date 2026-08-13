@@ -10,10 +10,9 @@ import { Loader2, Upload, FileText, Link as LinkIcon } from "lucide-react"
 
 interface SubmitPracticeFormProps {
   moduleId: string
-  moduleSlug: string
 }
 
-export function SubmitPracticeForm({ moduleId, moduleSlug }: SubmitPracticeFormProps) {
+export function SubmitPracticeForm({ moduleId }: SubmitPracticeFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,15 +59,15 @@ export function SubmitPracticeForm({ moduleId, moduleSlug }: SubmitPracticeFormP
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950 rounded-lg">
           {error}
         </div>
       )}
 
-      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+      <div className="p-4 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg">
         <div className="flex items-start gap-3">
-          <FileText className="h-5 w-5 text-purple-600 mt-0.5" />
-          <div className="text-sm text-purple-800">
+          <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+          <div className="text-sm text-purple-800 dark:text-purple-200">
             <p className="font-medium mb-1">Как сдать практику:</p>
             <ol className="list-decimal ml-4 space-y-1">
               <li>Загрузи файл на Google Drive или Dropbox</li>
@@ -92,7 +91,7 @@ export function SubmitPracticeForm({ moduleId, moduleSlug }: SubmitPracticeFormP
           disabled={isLoading}
           required
         />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-slate-400">
           Google Drive, Dropbox, или другой файловый сервис
         </p>
       </div>
@@ -104,6 +103,7 @@ export function SubmitPracticeForm({ moduleId, moduleSlug }: SubmitPracticeFormP
           name="comment"
           placeholder="Опишите что сделано, какие были сложности, что узнали нового..."
           rows={4}
+          maxLength={5000}
           disabled={isLoading}
         />
       </div>

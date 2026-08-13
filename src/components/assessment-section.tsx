@@ -1,12 +1,24 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle2, XCircle, HelpCircle, RotateCcw } from "lucide-react"
+import { CheckCircle2, XCircle, HelpCircle, RotateCcw, BookOpen } from "lucide-react"
+import { useToast } from "@/components/ui/toast"
 import Link from "next/link"
-import { MatchingExercise, OrderingExercise, CaseAnalysisExercise } from "@/components/exercises"
+import { MatchingExercise, OrderingExercise, CaseAnalysisExercise, TrueFalseExercise, FillBlankExercise } from "@/components/exercises"
+import {
+  generateQuestionSeed,
+  generateModuleSeed,
+  deterministicShuffle,
+  shuffleSingleChoiceOptions,
+  shuffleMatchingItems,
+  shuffleOrderingItems,
+  shuffleTrueFalseStatements,
+  shuffleFillBlankOptions,
+  shuffleCaseAnalysisOptions,
+} from "@/lib/shuffle"
 
 // Remove emojis from text (clean data that may have emojis)
 const stripEmojis = (text: string): string => {
@@ -69,7 +81,7 @@ const IMPROVED_CASE_ANALYSIS: CaseAnalysisData = {
 }
 
 // Question types
-type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS"
+type QuestionType = "SINGLE_CHOICE" | "MATCHING" | "ORDERING" | "CASE_ANALYSIS" | "TRUE_FALSE" | "FILL_BLANK"
 
 interface MatchingData {
   leftItems: { id: string; text: string }[]
@@ -91,12 +103,30 @@ interface CaseAnalysisData {
   minCorrectRequired?: number
 }
 
+interface TrueFalseData {
+  statements: {
+    id: string
+    text: string
+    isTrue: boolean
+    explanation?: string
+  }[]
+}
+
+interface FillBlankData {
+  textWithBlanks: string
+  blanks: {
+    id: string
+    correctAnswer: string
+    options: string[]
+  }[]
+}
+
 interface Question {
   id: string
   type: QuestionType
   question: string
   options: string[]
-  data?: MatchingData | OrderingData | CaseAnalysisData | null
+  data?: MatchingData | OrderingData | CaseAnalysisData | TrueFalseData | FillBlankData | null
   order: number
 }
 
@@ -111,24 +141,36 @@ interface AssessmentSectionProps {
   questions: Question[]
   initialAttempts: QuestionAttempt[]
   moduleId: string
-  moduleSlug: string
   trailSlug: string
-  modulePoints: number
   moduleType: string
   isCompleted: boolean
+  userId?: string // Для детерминированной рандомизации порядка вопросов/ответов
 }
 
 export function AssessmentSection({
   questions,
   initialAttempts,
   moduleId,
-  moduleSlug,
   trailSlug,
-  modulePoints,
   moduleType,
   isCompleted: initialCompleted,
+  userId,
 }: AssessmentSectionProps) {
   const router = useRouter()
+  const { showAchievementToast } = useToast()
+
+  // МОДУЛЬ 4: Детерминированная рандомизация порядка вопросов
+  // Shuffle вопросов на уровне модуля (если есть userId)
+  const shuffledQuestions = useMemo(() => {
+    if (!userId || questions.length === 0) return questions
+
+    const seed = generateModuleSeed(userId, moduleId)
+    // Создаём массив с индексами для сохранения mapping
+    const indexed = questions.map((q, idx) => ({ question: q, originalIndex: idx }))
+    const shuffled = deterministicShuffle(indexed, seed)
+    return shuffled.map(item => item.question)
+  }, [questions, userId, moduleId])
+
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -146,6 +188,52 @@ export function AssessmentSection({
   const [attemptData, setAttemptData] = useState<Record<string, QuestionAttempt>>(
     Object.fromEntries((initialAttempts || []).map((a) => [a.questionId, a]))
   )
+  const [isResetting, setIsResetting] = useState(false)
+
+  // Get current question safely (needed for hooks that depend on it)
+  // Используем shuffledQuestions для детерминированного порядка
+  const question = shuffledQuestions[currentQuestion] || null
+  const existingAttempt = question ? attemptData[question.id] : undefined
+  const currentAttempts = existingAttempt?.attempts || 0
+  const isQuestionFinished = existingAttempt?.isCorrect || currentAttempts >= 3
+
+  // Handle completion of interactive exercises (matching, ordering, case analysis)
+  const handleExerciseComplete = useCallback(async (isCorrect: boolean, attemptCount: number) => {
+    if (!question) return
+
+    try {
+      const response = await fetch("/api/questions/answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionId: question.id,
+          selectedAnswer: 0, // Placeholder for non-single-choice
+          isInteractive: true,
+          interactiveResult: isCorrect,
+          interactiveAttempts: attemptCount,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setLastResult(data)
+        setShowResult(true)
+
+        // Update local attempt data
+        setAttemptData((prev) => ({
+          ...prev,
+          [question.id]: {
+            questionId: question.id,
+            isCorrect: data.isCorrect,
+            attempts: data.attempts,
+            earnedScore: data.earnedScore || 0,
+          },
+        }))
+      }
+    } catch (error) {
+      console.error("Error saving exercise result:", error)
+    }
+  }, [question])
 
   // Sync with props on mount and when initialAttempts change
   useEffect(() => {
@@ -154,24 +242,87 @@ export function AssessmentSection({
     )
   }, [initialAttempts])
 
-  if (questions.length === 0) {
+  const remainingAttempts = 3 - currentAttempts
+
+  // Handle module completion for modules without questions
+  const handleCompleteWithoutQuestions = async () => {
+    if (isCompleting) return
+
+    setIsCompleting(true)
+    try {
+      const response = await fetch("/api/modules/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleId }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setIsCompleted(true)
+
+        // Show achievement toasts
+        if (data.awardedAchievements?.length > 0) {
+          for (const achievement of data.awardedAchievements) {
+            showAchievementToast({
+              achievementId: achievement.id,
+              name: achievement.name,
+              rarity: achievement.rarity,
+              description: achievement.description,
+            })
+          }
+        }
+
+        router.refresh()
+      }
+    } catch (error) {
+      console.error("Error completing module:", error)
+    } finally {
+      setIsCompleting(false)
+    }
+  }
+
+  if (shuffledQuestions.length === 0) {
+    // Module without questions - allow direct completion
+    if (isCompleted) {
+      return (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Модуль завершён!</h3>
+            <p className="text-gray-600 dark:text-slate-400 text-sm mb-4">
+              Вы успешно прочитали материал
+            </p>
+            <Button asChild variant="outline" className="w-full">
+              <Link href={`/trails/${trailSlug}`}>К заданиям</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )
+    }
+
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-gray-500">Нет вопросов для этого модуля</p>
+          <BookOpen className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+          <h3 className="font-semibold text-lg mb-2">Теоретический материал</h3>
+          <p className="text-gray-500 dark:text-slate-400 mb-4">
+            Прочитайте материал слева и нажмите кнопку ниже, чтобы отметить модуль как завершённый
+          </p>
+          <Button
+            onClick={handleCompleteWithoutQuestions}
+            className="w-full bg-[#2E844A] hover:bg-[#256E3D]"
+            disabled={isCompleting}
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            {isCompleting ? "Сохранение..." : "Прочитано, завершить модуль"}
+          </Button>
         </CardContent>
       </Card>
     )
   }
 
-  const question = questions[currentQuestion]
-  const existingAttempt = attemptData[question?.id]
-  const currentAttempts = existingAttempt?.attempts || 0
-  const remainingAttempts = 3 - currentAttempts
-  const isQuestionFinished = existingAttempt?.isCorrect || currentAttempts >= 3
-
   // Calculate progress
-  const totalQuestions = questions.length
+  const totalQuestions = shuffledQuestions.length
   const answeredQuestions = Object.values(attemptData).filter(
     (a) => a.isCorrect || a.attempts >= 3
   ).length
@@ -239,7 +390,7 @@ export function AssessmentSection({
   }
 
   const handleNext = () => {
-    if (currentQuestion < questions.length - 1) {
+    if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
       setSelectedAnswer(null)
       setShowResult(false)
@@ -268,7 +419,21 @@ export function AssessmentSection({
       })
 
       if (response.ok) {
+        const data = await response.json()
         setIsCompleted(true)
+
+        // Show achievement toasts
+        if (data.awardedAchievements?.length > 0) {
+          for (const achievement of data.awardedAchievements) {
+            showAchievementToast({
+              achievementId: achievement.id,
+              name: achievement.name,
+              rarity: achievement.rarity,
+              description: achievement.description,
+            })
+          }
+        }
+
         router.refresh()
       }
     } catch (error) {
@@ -285,43 +450,11 @@ export function AssessmentSection({
     return "text-orange-600"
   }
 
-  // Handle completion of interactive exercises (matching, ordering, case analysis)
-  const handleExerciseComplete = useCallback(async (isCorrect: boolean, attemptCount: number) => {
-    if (!question) return
-
-    try {
-      const response = await fetch("/api/questions/answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId: question.id,
-          selectedAnswer: 0, // Placeholder for non-single-choice
-          isInteractive: true,
-          interactiveResult: isCorrect,
-          interactiveAttempts: attemptCount,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setLastResult(data)
-        setShowResult(true)
-
-        // Update local attempt data
-        setAttemptData((prev) => ({
-          ...prev,
-          [question.id]: {
-            questionId: question.id,
-            isCorrect: data.isCorrect,
-            attempts: data.attempts || attemptCount,
-            earnedScore: data.earnedScore || 0,
-          },
-        }))
-      }
-    } catch (error) {
-      console.error("Error saving exercise result:", error)
-    }
-  }, [question])
+  // МОДУЛЬ 4: Генерируем seed для текущего вопроса
+  const questionSeed = useMemo(() => {
+    if (!userId || !question) return 0
+    return generateQuestionSeed(userId, question.id)
+  }, [userId, question])
 
   // Render question content based on type
   const renderQuestionContent = () => {
@@ -335,11 +468,18 @@ export function AssessmentSection({
       // Clean emojis from items text
       const cleanLeftItems = data.leftItems.map(item => ({ ...item, text: stripEmojis(item.text) }))
       const cleanRightItems = data.rightItems.map(item => ({ ...item, text: stripEmojis(item.text) }))
+
+      // МОДУЛЬ 4: Детерминированный shuffle для MATCHING
+      const { shuffledLeft, shuffledRight } = userId
+        ? shuffleMatchingItems(cleanLeftItems, cleanRightItems, questionSeed)
+        : { shuffledLeft: cleanLeftItems, shuffledRight: cleanRightItems }
+
       return (
         <MatchingExercise
+          key={question.id}
           question={question.question}
-          leftItems={cleanLeftItems}
-          rightItems={cleanRightItems}
+          leftItems={shuffledLeft}
+          rightItems={shuffledRight}
           correctPairs={data.correctPairs}
           leftLabel={data.leftLabel}
           rightLabel={data.rightLabel}
@@ -351,10 +491,14 @@ export function AssessmentSection({
 
     if (questionType === "ORDERING" && question.data) {
       const data = question.data as OrderingData
-      // Shuffle items for initial display
-      const shuffledItems = [...data.items].sort(() => Math.random() - 0.5)
+      // МОДУЛЬ 4: Детерминированный shuffle для ORDERING (вместо Math.random)
+      const shuffledItems = userId
+        ? shuffleOrderingItems(data.items, questionSeed)
+        : [...data.items].sort(() => Math.random() - 0.5)
+
       return (
         <OrderingExercise
+          key={question.id}
           question={question.question}
           items={shuffledItems}
           correctOrder={data.correctOrder}
@@ -365,10 +509,24 @@ export function AssessmentSection({
     }
 
     if (questionType === "CASE_ANALYSIS" && question.data) {
-      // Use improved data from code (overrides old DB data)
-      const data = IMPROVED_CASE_ANALYSIS
+      // Use actual data from database, fall back to improved data only if missing
+      const dbData = question.data as CaseAnalysisData
+      const baseOptions = dbData.options && dbData.options.length > 0 ? dbData.options : IMPROVED_CASE_ANALYSIS.options
+
+      // МОДУЛЬ 4: Детерминированный shuffle для CASE_ANALYSIS options
+      const shuffledOptions = userId
+        ? shuffleCaseAnalysisOptions(baseOptions, questionSeed)
+        : baseOptions
+
+      const data: CaseAnalysisData = {
+        caseContent: dbData.caseContent || IMPROVED_CASE_ANALYSIS.caseContent,
+        caseLabel: dbData.caseLabel || IMPROVED_CASE_ANALYSIS.caseLabel,
+        options: shuffledOptions,
+        minCorrectRequired: dbData.minCorrectRequired || IMPROVED_CASE_ANALYSIS.minCorrectRequired,
+      }
       return (
         <CaseAnalysisExercise
+          key={question.id}
           question={question.question}
           caseContent={data.caseContent}
           caseLabel={data.caseLabel}
@@ -380,38 +538,91 @@ export function AssessmentSection({
       )
     }
 
-    // Default: SINGLE_CHOICE - original rendering
+    if (questionType === "TRUE_FALSE" && question.data) {
+      const data = question.data as TrueFalseData
+
+      // МОДУЛЬ 4: Детерминированный shuffle для TRUE_FALSE statements
+      const shuffledStatements = userId
+        ? shuffleTrueFalseStatements(data.statements, questionSeed)
+        : data.statements
+
+      return (
+        <TrueFalseExercise
+          key={question.id}
+          question={question.question}
+          statements={shuffledStatements}
+          onComplete={handleExerciseComplete}
+          disabled={isQuestionFinished}
+        />
+      )
+    }
+
+    if (questionType === "FILL_BLANK" && question.data) {
+      const data = question.data as FillBlankData
+
+      // МОДУЛЬ 4: Детерминированный shuffle для FILL_BLANK options в каждом blank
+      const shuffledBlanks = userId
+        ? shuffleFillBlankOptions(data.blanks, questionSeed)
+        : data.blanks
+
+      return (
+        <FillBlankExercise
+          key={question.id}
+          question={question.question}
+          textWithBlanks={data.textWithBlanks}
+          blanks={shuffledBlanks}
+          onComplete={handleExerciseComplete}
+          disabled={isQuestionFinished}
+        />
+      )
+    }
+
+    // Default: SINGLE_CHOICE - with deterministic shuffle
+    // МОДУЛЬ 4: Детерминированный shuffle для SINGLE_CHOICE options
+    // Важно: сохраняем mapping для правильной отправки ответа на сервер
+    const { shuffledOptions, indexMapping } = userId
+      ? (() => {
+          const result = shuffleSingleChoiceOptions(question.options, 0, questionSeed)
+          return { shuffledOptions: result.shuffledOptions, indexMapping: result.indexMapping }
+        })()
+      : { shuffledOptions: question.options, indexMapping: question.options.map((_, i) => i) }
+
     return (
       <div className="space-y-3">
-        {question.options.map((option, idx) => {
+        {shuffledOptions.map((option, displayIdx) => {
+          // displayIdx - индекс в shuffled массиве (то что видит пользователь)
+          // originalIdx - оригинальный индекс (для сервера)
+          const originalIdx = indexMapping[displayIdx]
+
           // Determine button styling
           let buttonClass = "w-full justify-start text-left h-auto py-3 px-4 whitespace-normal transition-all"
           let isDisabled = isQuestionFinished || isSubmitting
 
           // Show correct/incorrect after submit
+          // Сервер возвращает correctAnswer в оригинальных индексах
           if (showResult && lastResult) {
             isDisabled = true
-            if (lastResult.correctAnswer !== undefined && idx === lastResult.correctAnswer) {
-              buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
-            } else if (idx === selectedAnswer && !lastResult.isCorrect) {
-              buttonClass += " bg-red-100 border-red-500 border-2 text-red-700"
-            } else if (idx === selectedAnswer && lastResult.isCorrect) {
-              buttonClass += " bg-green-100 border-green-500 border-2 text-green-700"
+            if (lastResult.correctAnswer !== undefined && originalIdx === lastResult.correctAnswer) {
+              buttonClass += " bg-green-100 dark:bg-green-950 border-green-500 border-2 text-green-700"
+            } else if (originalIdx === selectedAnswer && !lastResult.isCorrect) {
+              buttonClass += " bg-red-100 dark:bg-red-950 border-red-500 border-2 text-red-700"
+            } else if (originalIdx === selectedAnswer && lastResult.isCorrect) {
+              buttonClass += " bg-green-100 dark:bg-green-950 border-green-500 border-2 text-green-700"
             }
-          } else if (selectedAnswer === idx) {
+          } else if (selectedAnswer === originalIdx) {
             // Selected but not yet submitted - prominent highlight
-            buttonClass += " border-blue-600 border-2 bg-blue-100 ring-2 ring-blue-300 ring-offset-1"
+            buttonClass += " border-blue-600 border-2 bg-blue-100 dark:bg-blue-950 ring-2 ring-blue-300 ring-offset-1"
           }
 
           return (
             <Button
-              key={idx}
+              key={displayIdx}
               variant="outline"
               className={buttonClass}
-              onClick={() => !isDisabled && setSelectedAnswer(idx)}
+              onClick={() => !isDisabled && setSelectedAnswer(originalIdx)}
               disabled={isDisabled}
             >
-              <span className="font-medium mr-2 shrink-0">{String.fromCharCode(65 + idx)}.</span>
+              <span className="font-medium mr-2 shrink-0">{String.fromCharCode(65 + displayIdx)}.</span>
               <span className="text-left">{option}</span>
             </Button>
           )
@@ -421,9 +632,7 @@ export function AssessmentSection({
   }
 
   // Check if current question is interactive type
-  const isInteractiveQuestion = question && ["MATCHING", "ORDERING", "CASE_ANALYSIS"].includes(question.type || "")
-
-  const [isResetting, setIsResetting] = useState(false)
+  const isInteractiveQuestion = question && ["MATCHING", "ORDERING", "CASE_ANALYSIS", "TRUE_FALSE", "FILL_BLANK"].includes(question.type || "")
 
   const handleReset = async () => {
     if (isResetting) return
@@ -462,7 +671,7 @@ export function AssessmentSection({
         <CardContent className="p-6 text-center">
           <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
           <h3 className="font-semibold text-lg mb-2">Оценка пройдена!</h3>
-          <p className="text-gray-600 text-sm mb-4">
+          <p className="text-gray-600 dark:text-slate-400 text-sm mb-4">
             Вы набрали {totalScore} XP
           </p>
           <div className="space-y-2">
@@ -472,7 +681,7 @@ export function AssessmentSection({
             {canReset && (
               <Button
                 variant="ghost"
-                className="w-full text-gray-500 hover:text-gray-700"
+                className="w-full text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
                 onClick={handleReset}
                 disabled={isResetting}
               >
@@ -499,7 +708,7 @@ export function AssessmentSection({
               <HelpCircle className="h-5 w-5" />
               Проверка знаний
             </CardTitle>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-slate-400">
               {answeredQuestions} / {totalQuestions} вопросов
             </div>
           </div>
@@ -512,9 +721,9 @@ export function AssessmentSection({
         <CardContent>
           {/* Progress indicators */}
           <div className="flex gap-1 mb-6">
-            {questions.map((q, idx) => {
+            {shuffledQuestions.map((q, idx) => {
               const attempt = attemptData[q.id]
-              let bgColor = "bg-gray-200"
+              let bgColor = "bg-gray-200 dark:bg-slate-700"
               if (attempt?.isCorrect) bgColor = "bg-green-500"
               else if (attempt?.attempts >= 3) bgColor = "bg-red-300"
               else if (idx === currentQuestion) bgColor = "bg-blue-500"
@@ -537,11 +746,11 @@ export function AssessmentSection({
           {/* Question */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">
-                Вопрос {currentQuestion + 1} из {questions.length}
+              <span className="text-sm text-gray-500 dark:text-slate-400">
+                Вопрос {currentQuestion + 1} из {shuffledQuestions.length}
               </span>
               {!isQuestionFinished && (
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 dark:text-slate-400">
                   Попыток: {remainingAttempts} из 3
                 </span>
               )}
@@ -550,19 +759,21 @@ export function AssessmentSection({
 
             {/* Previously finished question (not current result) */}
             {isQuestionFinished && !showResult && (
-              <div className={`mb-4 p-3 rounded-lg ${existingAttempt?.isCorrect ? "bg-green-50" : "bg-red-50"}`}>
+              <div className={`mb-4 p-3 rounded-lg ${existingAttempt?.isCorrect ? "bg-green-50 dark:bg-green-950" : "bg-red-50 dark:bg-red-950"}`}>
                 <div className="flex items-center gap-2">
                   {existingAttempt?.isCorrect ? (
                     <>
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                       <span className="text-green-700">
                         Правильно!
-                        <span className={`ml-2 ${getScoreColor(existingAttempt.attempts)}`}>
-                          +{existingAttempt.earnedScore} XP
-                          {existingAttempt.attempts === 1 && " (100%)"}
-                          {existingAttempt.attempts === 2 && " (65%)"}
-                          {existingAttempt.attempts === 3 && " (35%)"}
-                        </span>
+                        {existingAttempt.earnedScore > 0 && (
+                          <span className={`ml-2 ${getScoreColor(existingAttempt.attempts)}`}>
+                            +{existingAttempt.earnedScore} XP
+                            {existingAttempt.attempts === 1 && " (100%)"}
+                            {existingAttempt.attempts === 2 && " (65%)"}
+                            {existingAttempt.attempts === 3 && " (35%)"}
+                          </span>
+                        )}
                       </span>
                     </>
                   ) : (
@@ -581,7 +792,7 @@ export function AssessmentSection({
 
           {/* Result message */}
           {showResult && lastResult && (
-            <div className={`mb-4 p-4 rounded-lg ${lastResult.isCorrect ? "bg-green-50" : "bg-orange-50"}`}>
+            <div className={`mb-4 p-4 rounded-lg ${lastResult.isCorrect ? "bg-green-50 dark:bg-green-950" : "bg-orange-50 dark:bg-orange-950"}`}>
               <div className="flex items-center gap-2">
                 {lastResult.isCorrect ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -632,7 +843,7 @@ export function AssessmentSection({
 
               {/* Next button - when question is finished OR correct answer */}
               {(isQuestionFinished || (showResult && lastResult?.isCorrect)) &&
-               currentQuestion < questions.length - 1 && (
+               currentQuestion < shuffledQuestions.length - 1 && (
                 <Button onClick={handleNext}>Следующий вопрос</Button>
               )}
             </div>
@@ -645,12 +856,12 @@ export function AssessmentSection({
         <CardContent className="p-6">
           <div className="space-y-4">
             {/* Progress */}
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600">Прогресс теста</span>
+                <span className="text-gray-600 dark:text-slate-400">Прогресс теста</span>
                 <span className="font-medium">{answeredQuestions}/{totalQuestions}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                 <div
                   className="bg-[#0176D3] h-2 rounded-full transition-all"
                   style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}

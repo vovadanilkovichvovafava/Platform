@@ -1,7 +1,11 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { pluralizeRu } from "@/lib/utils"
+import { TeacherStatsDrilldown } from "@/components/teacher-stats-drilldown"
+import { isPrivileged, isHR, isAdmin as checkIsAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,8 +14,6 @@ import {
   Users,
   FileText,
   CheckCircle2,
-  Clock,
-  AlertCircle,
   Trophy,
   TrendingUp,
   BookOpen,
@@ -20,20 +22,51 @@ import {
 export default async function TeacherStatsPage() {
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR roles
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
 
-  // Get overall stats
+  const isAdmin = checkIsAdmin(session.user.role)
+  const isCoAdmin = session.user.role === "CO_ADMIN"
+  const isHRUser = isHR(session.user.role)
+
+  // Get assigned trail IDs based on role
+  // ADMIN: null (all trails), CO_ADMIN/HR: from AdminTrailAccess, TEACHER: from TrailTeacher
+  let assignedTrailIds: string[] | null = null // null = all trails (ADMIN)
+
+  if (isCoAdmin || isHRUser) {
+    // CO_ADMIN/HR - get trails from AdminTrailAccess
+    assignedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+  } else if (!isAdmin) {
+    // TEACHER role - get assigned trails
+    assignedTrailIds = await getTeacherAllowedTrailIds(session.user.id)
+  }
+
+  // Build filters based on assigned trails
+  const studentFilter = assignedTrailIds === null
+    ? { role: "STUDENT" as const }
+    : {
+        role: "STUDENT" as const,
+        enrollments: { some: { trailId: { in: assignedTrailIds } } },
+      }
+
+  const submissionFilter = assignedTrailIds !== null
+    ? { module: { trailId: { in: assignedTrailIds } } }
+    : undefined
+
+  // Get overall stats (filtered by assigned trails for non-admin)
   const totalStudents = await prisma.user.count({
-    where: { role: "STUDENT" },
+    where: studentFilter,
   })
 
-  const totalSubmissions = await prisma.submission.count()
+  const totalSubmissions = await prisma.submission.count({
+    where: submissionFilter,
+  })
 
   const submissionsByStatus = await prisma.submission.groupBy({
     by: ["status"],
+    where: submissionFilter,
     _count: true,
   })
 
@@ -41,8 +74,9 @@ export default async function TeacherStatsPage() {
   const approvedCount = submissionsByStatus.find((s) => s.status === "APPROVED")?._count || 0
   const revisionCount = submissionsByStatus.find((s) => s.status === "REVISION")?._count || 0
 
-  // Get submissions by trail
+  // Get submissions by trail (filtered)
   const submissionsByTrail = await prisma.submission.findMany({
+    where: submissionFilter,
     include: {
       module: {
         include: {
@@ -66,12 +100,16 @@ export default async function TeacherStatsPage() {
     return acc
   }, {} as Record<string, { total: number; approved: number; pending: number; revision: number; color: string }>)
 
-  // Get top students by XP
+  // Get top students by XP (filtered by students in assigned trails)
   const topStudents = await prisma.user.findMany({
-    where: { role: "STUDENT", totalXP: { gt: 0 } },
+    where: {
+      ...studentFilter,
+      totalXP: { gt: 0 },
+    },
     orderBy: { totalXP: "desc" },
     take: 5,
     select: {
+      id: true,
       name: true,
       totalXP: true,
       _count: {
@@ -80,35 +118,101 @@ export default async function TeacherStatsPage() {
     },
   })
 
-  // Get recent activity (last 7 days)
+  // Get recent activity (last 7 days, filtered)
   const weekAgo = new Date()
   weekAgo.setDate(weekAgo.getDate() - 7)
 
   const recentSubmissions = await prisma.submission.count({
-    where: { createdAt: { gte: weekAgo } },
+    where: {
+      createdAt: { gte: weekAgo },
+      ...(submissionFilter || {}),
+    },
   })
 
   const recentReviews = await prisma.review.count({
-    where: { createdAt: { gte: weekAgo } },
+    where: {
+      createdAt: { gte: weekAgo },
+      ...(assignedTrailIds !== null
+        ? { submission: { module: { trailId: { in: assignedTrailIds } } } }
+        : {}),
+    },
   })
 
-  // Module completion stats
+  // Module completion stats (filtered)
   const completedModules = await prisma.moduleProgress.count({
-    where: { status: "COMPLETED" },
+    where: {
+      status: "COMPLETED",
+      ...(assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+    },
   })
 
   const approvalRate = totalSubmissions > 0
     ? Math.round((approvedCount / totalSubmissions) * 100)
     : 0
 
+  // Get trails with detailed stats for drill-down (filtered)
+  const trailsWithStats = await prisma.trail.findMany({
+    where: assignedTrailIds !== null ? { id: { in: assignedTrailIds } } : {},
+    include: {
+      modules: {
+        orderBy: { order: "asc" },
+        include: {
+          submissions: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+          progress: {
+            where: { status: "COMPLETED" },
+            select: { id: true },
+          },
+        },
+      },
+    },
+    orderBy: { order: "asc" },
+  })
+
+  // Transform data for client component
+  const trailsForDrilldown = trailsWithStats.map((trail) => {
+    const modulesWithStats = trail.modules.map((module) => ({
+      id: module.id,
+      title: module.title,
+      type: module.type,
+      points: module.points,
+      submissions: module.submissions.map((sub) => ({
+        id: sub.id,
+        status: sub.status,
+        createdAt: sub.createdAt.toISOString(),
+        user: sub.user,
+      })),
+      completedCount: module.progress.length,
+      avgScore: null as number | null, // Will be calculated if reviews are needed
+    }))
+
+    const allSubmissions = modulesWithStats.flatMap((m) => m.submissions)
+
+    return {
+      id: trail.id,
+      title: trail.title,
+      color: trail.color,
+      modules: modulesWithStats,
+      totalSubmissions: allSubmissions.length,
+      pendingCount: allSubmissions.filter((s) => s.status === "PENDING").length,
+      approvedCount: allSubmissions.filter((s) => s.status === "APPROVED").length,
+    }
+  })
+
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2 flex items-center gap-2">
           <BarChart3 className="h-6 w-6" />
           Статистика
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-slate-400">
           Общая статистика платформы и прогресс обучения
         </p>
       </div>
@@ -118,12 +222,12 @@ export default async function TeacherStatsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="p-2 bg-blue-100 dark:bg-blue-950 rounded-lg">
                 <Users className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{totalStudents}</p>
-                <p className="text-xs text-gray-500">Учеников</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Учеников</p>
               </div>
             </div>
           </CardContent>
@@ -132,12 +236,12 @@ export default async function TeacherStatsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
+              <div className="p-2 bg-purple-100 dark:bg-purple-950 rounded-lg">
                 <FileText className="h-5 w-5 text-purple-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{totalSubmissions}</p>
-                <p className="text-xs text-gray-500">Работ сдано</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Работ сдано</p>
               </div>
             </div>
           </CardContent>
@@ -146,12 +250,12 @@ export default async function TeacherStatsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-2 bg-green-100 dark:bg-green-950 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-green-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{approvalRate}%</p>
-                <p className="text-xs text-gray-500">Принято</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Принято</p>
               </div>
             </div>
           </CardContent>
@@ -160,12 +264,12 @@ export default async function TeacherStatsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-950 rounded-lg">
                 <BookOpen className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{completedModules}</p>
-                <p className="text-xs text-gray-500">Модулей пройдено</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Модулей пройдено</p>
               </div>
             </div>
           </CardContent>
@@ -187,7 +291,7 @@ export default async function TeacherStatsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold">{pendingCount}</span>
-                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-24 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500"
                       style={{ width: `${totalSubmissions > 0 ? (pendingCount / totalSubmissions) * 100 : 0}%` }}
@@ -203,7 +307,7 @@ export default async function TeacherStatsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold">{approvedCount}</span>
-                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-24 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-green-500"
                       style={{ width: `${totalSubmissions > 0 ? (approvedCount / totalSubmissions) * 100 : 0}%` }}
@@ -219,7 +323,7 @@ export default async function TeacherStatsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold">{revisionCount}</span>
-                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-24 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-orange-500"
                       style={{ width: `${totalSubmissions > 0 ? (revisionCount / totalSubmissions) * 100 : 0}%` }}
@@ -238,7 +342,7 @@ export default async function TeacherStatsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-blue-600" />
                   <span className="text-sm">Новых работ</span>
@@ -248,7 +352,7 @@ export default async function TeacherStatsPage() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                   <span className="text-sm">Проверено</span>
@@ -270,25 +374,25 @@ export default async function TeacherStatsPage() {
           </CardHeader>
           <CardContent>
             {Object.keys(trailStats).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Нет данных</p>
+              <p className="text-gray-500 dark:text-slate-400 text-center py-4">Нет данных</p>
             ) : (
               <div className="space-y-4">
                 {Object.entries(trailStats).map(([trail, stats]) => (
-                  <div key={trail} className="p-3 bg-gray-50 rounded-lg">
+                  <div key={trail} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{trail}</span>
-                      <span className="text-sm text-gray-500">
-                        {stats.total} работ
+                      <span className="text-sm text-gray-500 dark:text-slate-400">
+                        {stats.total} {pluralizeRu(stats.total, ["работа", "работы", "работ"])}
                       </span>
                     </div>
                     <div className="flex gap-2 text-xs">
-                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                      <span className="px-2 py-0.5 bg-green-100 dark:bg-green-950 text-green-700 rounded">
                         {stats.approved} принято
                       </span>
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                      <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 rounded">
                         {stats.pending} ожидает
                       </span>
-                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded">
+                      <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950 text-orange-700 rounded">
                         {stats.revision} доработка
                       </span>
                     </div>
@@ -309,13 +413,14 @@ export default async function TeacherStatsPage() {
           </CardHeader>
           <CardContent>
             {topStudents.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Нет данных</p>
+              <p className="text-gray-500 dark:text-slate-400 text-center py-4">Нет данных</p>
             ) : (
               <div className="space-y-3">
                 {topStudents.map((student, idx) => (
-                  <div
-                    key={student.name}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  <Link
+                    key={student.id}
+                    href={`/dashboard/${student.id}`}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -323,10 +428,10 @@ export default async function TeacherStatsPage() {
                           idx === 0
                             ? "bg-yellow-400 text-yellow-900"
                             : idx === 1
-                            ? "bg-gray-300 text-gray-700"
+                            ? "bg-gray-300 dark:bg-slate-600 text-gray-700 dark:text-slate-300"
                             : idx === 2
                             ? "bg-orange-300 text-orange-800"
-                            : "bg-gray-100 text-gray-600"
+                            : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400"
                         }`}
                       >
                         {idx + 1}
@@ -337,16 +442,25 @@ export default async function TeacherStatsPage() {
                       <p className="font-bold text-yellow-600">
                         {student.totalXP} XP
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {student._count.submissions} работ
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
+                        {student._count.submissions} {pluralizeRu(student._count.submissions, ["работа", "работы", "работ"])}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Trail Drill-Down Section */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Детальная статистика по направлениям
+        </h2>
+        <TeacherStatsDrilldown trails={trailsForDrilldown} />
       </div>
     </div>
   )

@@ -12,24 +12,57 @@ model User {
   email         String    @unique
   password      String
   name          String
-  role          String    @default("STUDENT") // STUDENT, TEACHER, ADMIN
+  firstName     String?
+  lastName      String?
+  telegramUsername String? // @username format
+  role          String    @default("STUDENT") // STUDENT, TEACHER, HR, CO_ADMIN, ADMIN
   totalXP       Int       @default(0)
   currentStreak Int       @default(0)
   avatarUrl     String?
   invitedBy     String?   // ID of user who invited
+  skipModuleWarning   Boolean   @default(false) // Skip module start warning modal
+  telegramChatId      String?   // Telegram chat ID for notifications
+  telegramEnabled     Boolean   @default(true) // Allow user to disable TG notifications
+  telegramConnectedAt DateTime? // When Telegram was linked
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  enrollments      Enrollment[]
-  moduleProgress   ModuleProgress[]
-  unitProgress     UnitProgress[]
-  submissions      Submission[]
-  reviews          Review[]           @relation("Reviewer")
-  questionAttempts QuestionAttempt[]
-  taskProgress     TaskProgress[]
-  invitesCreated   Invite[]           @relation("InviteCreator")
-  teacherTrails    TrailTeacher[]     @relation("TeacherTrails")
-  trailAccess      StudentTrailAccess[]
+  enrollments          Enrollment[]
+  moduleProgress       ModuleProgress[]
+  unitProgress         UnitProgress[]
+  submissions          Submission[]
+  reviews              Review[]              @relation("Reviewer")
+  questionAttempts     QuestionAttempt[]
+  taskProgress         TaskProgress[]
+  invitesCreated       Invite[]              @relation("InviteCreator")
+  teacherTrails        TrailTeacher[]        @relation("TeacherTrails")
+  trailAccess          StudentTrailAccess[]
+  activityDays         UserActivity[]
+  notifications        Notification[]
+  certificates         Certificate[]
+  achievements         UserAchievement[]
+  adminTrailAccess     AdminTrailAccess[]    @relation("AdminTrails")
+  createdTrails        Trail[]               @relation("CreatedTrails")
+  trailPasswordAccess  TrailPasswordAccess[]
+  navbarPresets        NavbarPreset[]
+  trailStatuses        StudentTrailStatus[]
+  tagAssignments       StudentTagAssignment[]
+}
+
+// Track daily user activity (one record per day per user)
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date // Only date part, no time
+  actions   Int      @default(1) // Count of actions on this day
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
 }
 
 // Invite system for registration
@@ -37,6 +70,7 @@ model Invite {
   id          String    @id @default(cuid())
   code        String    @unique
   email       String?   // Optional: restrict to specific email
+  role        String    @default("STUDENT") // Role assigned on registration: STUDENT, TEACHER, HR, CO_ADMIN, ADMIN
   maxUses     Int       @default(1)
   usedCount   Int       @default(0)
   expiresAt   DateTime?
@@ -44,32 +78,99 @@ model Invite {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  createdBy User @relation("InviteCreator", fields: [createdById], references: [id])
+  createdBy User          @relation("InviteCreator", fields: [createdById], references: [id])
+  trails    InviteTrail[]
+  tags      InviteTag[]
 
   @@index([code])
   @@index([createdById])
 }
 
+// Link invites to trails - students get access to these trails on registration
+model InviteTrail {
+  id        String   @id @default(cuid())
+  inviteId  String
+  trailId   String
+  createdAt DateTime @default(now())
+
+  invite Invite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  trail  Trail  @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([inviteId, trailId])
+  @@index([inviteId])
+  @@index([trailId])
+}
+
+// Link invites to tags - students get these tags assigned on registration
+model InviteTag {
+  id        String   @id @default(cuid())
+  inviteId  String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  invite Invite     @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  tag    StudentTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([inviteId, tagId])
+  @@index([inviteId])
+  @@index([tagId])
+}
+
 model Trail {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  title               String
+  subtitle            String
+  description         String
+  icon                String
+  color               String
+  duration            String
+  order               Int      @default(0)
+  isPublished         Boolean  @default(true)
+  isRestricted        Boolean  @default(true) // If true, only specific students can access (secure by default)
+  teacherVisibility   String   @default("ADMIN_ONLY") // ADMIN_ONLY, ALL_TEACHERS, SPECIFIC
+  // Password protection
+  isPasswordProtected Boolean  @default(false) // If true, requires password to access
+  passwordHash        String?  // bcrypt hash of trail password
+  passwordHint        String?  // Optional hint for password
+  createdById         String?  // Creator/owner of the trail (always has access)
+  allowSkipReview     Boolean  @default(true) // If true, students can proceed to next module after submission without waiting for review
+  projectAutoNavigate Boolean  @default(true) // If true, auto-redirect to next module after project submission
+  // Folder grouping (purely organizational; deleting folder must not delete trails)
+  folderId            String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  modules          Module[]
+  enrollments      Enrollment[]
+  taskProgress     TaskProgress[]
+  studentAccess    StudentTrailAccess[]
+  teachers         TrailTeacher[]
+  certificates     Certificate[]
+  adminAccess      AdminTrailAccess[]
+  invites          InviteTrail[]
+  passwordAccess   TrailPasswordAccess[]
+  passwordAttempts TrailPasswordAttempt[]
+  studentStatuses  StudentTrailStatus[]
+  creator          User?                  @relation("CreatedTrails", fields: [createdById], references: [id], onDelete: SetNull)
+  folder           TrailFolder?           @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([createdById])
+  @@index([folderId])
+}
+
+// Folders/sections to group trails (organizational only — never owns content)
+model TrailFolder {
   id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  subtitle    String
-  description String
-  icon        String
-  color       String
-  duration    String
+  name        String
+  description String   @default("")
   order       Int      @default(0)
-  isPublished Boolean  @default(true)
-  isRestricted Boolean @default(false) // If true, only specific students can access
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  modules       Module[]
-  enrollments   Enrollment[]
-  taskProgress  TaskProgress[]
-  studentAccess StudentTrailAccess[]
-  teachers      TrailTeacher[]
+  trails Trail[]
+
+  @@index([order])
 }
 
 model Module {
@@ -89,13 +190,37 @@ model Module {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  trail       Trail            @relation(fields: [trailId], references: [id], onDelete: Cascade)
-  units       Unit[]
-  progress    ModuleProgress[]
-  submissions Submission[]
-  questions   Question[]
+  trail         Trail                @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  units         Unit[]
+  progress      ModuleProgress[]
+  submissions   Submission[]
+  questions     Question[]
+  contentBlocks ModuleContentBlock[]
 
   @@index([trailId])
+}
+
+// Content blocks for modules: VIDEO, AUDIO, TEXT with ordering
+model ModuleContentBlock {
+  id          String   @id @default(cuid())
+  moduleId    String
+  type        String   // VIDEO, AUDIO, TEXT
+  url         String?  // URL for video/audio (or public URL of uploaded file)
+  fileKey     String?  // Storage key for uploaded file (Supabase Storage path)
+  fileName    String?  // Original file name
+  fileSize    Int?     // File size in bytes
+  mimeType    String?  // MIME type of uploaded file
+  title       String?  // Optional title for the block
+  description String?  @db.Text // Markdown description for video/audio blocks
+  content     String?  @db.Text // Markdown content for TEXT blocks
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId])
+  @@index([moduleId, order])
 }
 
 // Assign teachers to specific trails they can review
@@ -125,6 +250,21 @@ model StudentTrailAccess {
 
   @@unique([studentId, trailId])
   @@index([studentId])
+  @@index([trailId])
+}
+
+// Grant specific CO_ADMINs/HRs access to specific trails (ADMIN has access to all)
+model AdminTrailAccess {
+  id        String   @id @default(cuid())
+  adminId   String
+  trailId   String
+  createdAt DateTime @default(now())
+
+  admin User  @relation("AdminTrails", fields: [adminId], references: [id], onDelete: Cascade)
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, trailId])
+  @@index([adminId])
   @@index([trailId])
 }
 
@@ -161,15 +301,18 @@ model Enrollment {
 }
 
 model ModuleProgress {
-  id          String    @id @default(cuid())
-  userId      String
-  moduleId    String
-  status      String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
-  startedAt   DateTime?
-  completedAt DateTime?
-  hasEarnedXP Boolean   @default(false) // Prevents earning XP again after reset
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  userId           String
+  moduleId         String
+  status           String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  startedAt        DateTime?
+  completedAt      DateTime?
+  hasEarnedXP      Boolean   @default(false) // Prevents earning XP again after reset
+  skippedByTeacher Boolean   @default(false) // Teacher marked as skipped
+  skippedAt        DateTime? // When it was skipped
+  skippedBy        String?   // Teacher who skipped it
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
@@ -200,20 +343,47 @@ model Submission {
   id        String   @id @default(cuid())
   githubUrl String?
   deployUrl String?
+  demoUrl   String?
   comment   String?
   fileUrl   String?
   status    String   @default("PENDING") // PENDING, APPROVED, REVISION, FAILED
   userId    String
   moduleId  String
+  telegramNotifiedAt DateTime? // When TG notification was sent (idempotency)
+  lastRenotifiedAt   DateTime? // When last re-notification was sent (rate limit: once per day)
+  editCount    Int       @default(0)  // Number of student edits after initial submission
+  lastEditedAt DateTime?              // Last time student edited (distinct from system updatedAt)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  module Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  review Review?
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module   Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  review         Review?
+  aiReview       AiSubmissionReview?
+  googleDocsScan GoogleDocsScan?
 
   @@index([userId])
   @@index([moduleId])
+  @@index([status])
+}
+
+// AI-powered analysis of a submission (isolated feature)
+model AiSubmissionReview {
+  id              String   @id @default(cuid())
+  submissionId    String   @unique
+  status          String   @default("pending") // pending, processing, completed, failed
+  analysisSummary String?  @db.Text            // JSON: analysis object
+  questions       String?  @db.Text            // JSON: array of questions
+  sourceCoverage  String?  @db.Text            // JSON: what sources were used
+  errorMessage    String?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
   @@index([status])
 }
 
@@ -291,4 +461,217 @@ model TaskProgress {
   @@unique([userId, trailId])
   @@index([userId])
   @@index([trailId])
+}
+
+// Notifications for users
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // REVIEW_RECEIVED, MODULE_COMPLETED, etc.
+  title     String
+  message   String
+  link      String?  // URL to navigate to when clicked
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// Certificates for completed trails
+model Certificate {
+  id         String   @id @default(cuid())
+  userId     String
+  trailId    String
+  code       String   @unique // Unique verification code
+  issuedAt   DateTime @default(now())
+  totalXP    Int      // XP earned at time of issue
+  level      String   // Level achieved (Junior, Middle, Senior)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trailId])
+  @@index([userId])
+  @@index([trailId])
+  @@index([code])
+}
+
+// Audit log for tracking changes
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  userName   String
+  action     String   // CREATE, UPDATE, DELETE, REORDER
+  entityType String   // TRAIL, MODULE, USER, etc.
+  entityId   String
+  entityName String
+  details    String?  // JSON with additional details
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+// User achievements/badges
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String   // FIRST_MODULE, STREAK_7, etc.
+  earnedAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+// Telegram connection tokens (for secure linking)
+model TelegramLinkToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique // One pending token per user
+  token     String   @unique // HMAC-signed token
+  expiresAt DateTime // TTL for security
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// Navbar presets for customizable navigation (per-admin)
+model NavbarPreset {
+  id        String   @id @default(cuid())
+  name      String   // Preset name, e.g., "Default", "Minimal", "Full"
+  isActive  Boolean  @default(false) // Only one preset per admin can be active
+  adminId   String?  // The admin who owns this preset (nullable for legacy rows)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admin User?        @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  items NavbarItem[]
+
+  @@index([isActive])
+  @@index([adminId])
+}
+
+// Individual navigation items within a preset
+model NavbarItem {
+  id        String @id @default(cuid())
+  presetId  String
+  label     String // Display text
+  href      String // Navigation path
+  icon      String // Lucide icon name (e.g., "Flame", "BookOpen")
+  order     Int    @default(0)
+  // JSON array of roles that can see this item: ["STUDENT","TEACHER","CO_ADMIN","ADMIN"]
+  visibleTo String @default("[\"STUDENT\",\"TEACHER\",\"CO_ADMIN\",\"ADMIN\"]")
+
+  preset NavbarPreset @relation(fields: [presetId], references: [id], onDelete: Cascade)
+
+  @@index([presetId])
+  @@index([order])
+}
+
+// Track student status per trail (Отклонен/Обучается/Принят)
+// Status is set by teachers/admins and is NOT visible to students
+model StudentTrailStatus {
+  id        String   @id @default(cuid())
+  studentId String
+  trailId   String
+  status    String   @default("LEARNING") // NOT_ADMITTED, LEARNING, ACCEPTED
+  setBy     String   // ID of user who set this status
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  trail   Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, trailId])
+  @@index([studentId])
+  @@index([trailId])
+  @@index([status])
+}
+
+// Track users who unlocked a password-protected trail
+model TrailPasswordAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  trailId    String
+  unlockedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trailId])
+  @@index([userId])
+  @@index([trailId])
+}
+
+// Audit log for password attempts (no plaintext passwords stored)
+model TrailPasswordAttempt {
+  id        String   @id @default(cuid())
+  trailId   String
+  userId    String?  // Nullable if not logged in (but we require login)
+  ipAddress String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+
+  @@index([trailId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([ipAddress])
+}
+
+// Custom tags for marking/categorizing students (HR feature)
+model StudentTag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("gray") // gray, blue, green, red, purple, amber, pink
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments StudentTagAssignment[]
+  invites     InviteTag[]
+}
+
+// Many-to-many: assign tags to students
+model StudentTagAssignment {
+  id         String   @id @default(cuid())
+  studentId  String
+  tagId      String
+  assignedBy String   // ID of user who assigned
+  createdAt  DateTime @default(now())
+
+  student User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tag     StudentTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, tagId])
+  @@index([studentId])
+  @@index([tagId])
+}
+
+// Google Docs/Drive link scanner — auto-scans public document links on submission
+model GoogleDocsScan {
+  id              String   @id @default(cuid())
+  submissionId    String   @unique
+  status          String   @default("pending")   // pending, processing, completed, failed
+  initialScanData String?  @db.Text              // JSON: first scan result (IMMUTABLE after set)
+  rescanData      String?  @db.Text              // JSON: latest re-scan result (replaced on each re-scan)
+  rescanStatus    String?                         // pending, processing, completed, failed
+  errorMessage    String?
+  rescanError     String?
+  scannedAt       DateTime?
+  rescannedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([status])
 }

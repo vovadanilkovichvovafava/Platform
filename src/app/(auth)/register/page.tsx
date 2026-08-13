@@ -1,20 +1,25 @@
 "use client"
 
-import { useState, Suspense } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Flame, Loader2, Ticket } from "lucide-react"
+import { Flame, Loader2, Ticket, Send } from "lucide-react"
 
 const registerSchema = z.object({
   inviteCode: z.string().min(1, "Введите код приглашения"),
-  name: z.string().min(2, "Имя должно быть минимум 2 символа"),
+  firstName: z.string().min(2, "Имя должно быть минимум 2 символа"),
+  lastName: z.string().min(2, "Фамилия должна быть минимум 2 символа"),
+  telegramUsername: z
+    .string()
+    .min(1, "Введите Telegram-ник")
+    .regex(/^@[a-zA-Z0-9_]{5,32}$/, "Формат: @username (от 5 символов, латиница, цифры, _)"),
   email: z.string().email("Некорректный email"),
   password: z.string().min(6, "Пароль должен быть минимум 6 символов"),
   confirmPassword: z.string(),
@@ -27,6 +32,7 @@ type RegisterForm = z.infer<typeof registerSchema>
 
 function RegisterFormComponent() {
   const router = useRouter()
+  const { status } = useSession()
   const searchParams = useSearchParams()
   const inviteFromUrl = searchParams.get("invite") || ""
 
@@ -44,6 +50,22 @@ function RegisterFormComponent() {
     },
   })
 
+  // Redirect authenticated users to dashboard (client-side)
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard")
+    }
+  }, [status, router])
+
+  // Show spinner while session is being checked
+  if (status === "loading" || status === "authenticated") {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
+  }
+
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     setError(null)
@@ -54,7 +76,9 @@ function RegisterFormComponent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           inviteCode: data.inviteCode,
-          name: data.name,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          telegramUsername: data.telegramUsername,
           email: data.email,
           password: data.password,
         }),
@@ -88,9 +112,9 @@ function RegisterFormComponent() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 px-4 py-8">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="p-8 rounded-2xl bg-white border border-slate-200 shadow-xl">
+        <div className="p-8 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
@@ -98,8 +122,8 @@ function RegisterFormComponent() {
                 <Flame className="h-6 w-6 text-white" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Регистрация</h1>
-            <p className="text-slate-500 mt-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Регистрация</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2">
               Создайте аккаунт по приглашению
             </p>
           </div>
@@ -113,7 +137,7 @@ function RegisterFormComponent() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="inviteCode" className="text-slate-700 flex items-center gap-2">
+              <Label htmlFor="inviteCode" className="text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <Ticket className="h-4 w-4" />
                 Код приглашения
               </Label>
@@ -123,37 +147,71 @@ function RegisterFormComponent() {
                 placeholder="PROMETHEUS2024"
                 {...register("inviteCode")}
                 disabled={isLoading}
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20 uppercase"
+                className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20 uppercase"
               />
               {errors.inviteCode && (
                 <p className="text-sm text-red-500">{errors.inviteCode.message}</p>
               )}
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-slate-700 dark:text-slate-300">Имя</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Иван"
+                  {...register("firstName")}
+                  disabled={isLoading}
+                  className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20"
+                />
+                {errors.firstName && (
+                  <p className="text-sm text-red-500">{errors.firstName.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-slate-700 dark:text-slate-300">Фамилия</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Иванов"
+                  {...register("lastName")}
+                  disabled={isLoading}
+                  className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20"
+                />
+                {errors.lastName && (
+                  <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-slate-700">Имя</Label>
+              <Label htmlFor="telegramUsername" className="text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Telegram
+              </Label>
               <Input
-                id="name"
+                id="telegramUsername"
                 type="text"
-                placeholder="Ваше имя"
-                {...register("name")}
+                placeholder="@username"
+                {...register("telegramUsername")}
                 disabled={isLoading}
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
+                className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20"
               />
-              {errors.name && (
-                <p className="text-sm text-red-500">{errors.name.message}</p>
+              {errors.telegramUsername && (
+                <p className="text-sm text-red-500">{errors.telegramUsername.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-700">Email</Label>
+              <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 {...register("email")}
                 disabled={isLoading}
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
+                className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.email && (
                 <p className="text-sm text-red-500">{errors.email.message}</p>
@@ -161,14 +219,14 @@ function RegisterFormComponent() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-700">Пароль</Label>
+              <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">Пароль</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="Минимум 6 символов"
                 {...register("password")}
                 disabled={isLoading}
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
+                className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.password && (
                 <p className="text-sm text-red-500">{errors.password.message}</p>
@@ -176,14 +234,14 @@ function RegisterFormComponent() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-slate-700">Подтвердите пароль</Label>
+              <Label htmlFor="confirmPassword" className="text-slate-700 dark:text-slate-300">Подтвердите пароль</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 placeholder="Повторите пароль"
                 {...register("confirmPassword")}
                 disabled={isLoading}
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:ring-orange-500/20"
+                className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500/20"
               />
               {errors.confirmPassword && (
                 <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
@@ -206,7 +264,7 @@ function RegisterFormComponent() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-slate-500">
+          <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
             Уже есть аккаунт?{" "}
             <Link
               href="/login"
@@ -216,8 +274,8 @@ function RegisterFormComponent() {
             </Link>
           </div>
 
-          <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-            <p className="font-medium mb-1 text-slate-600">Нет кода приглашения?</p>
+          <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+            <p className="font-medium mb-1 text-slate-600 dark:text-slate-400">Нет кода приглашения?</p>
             <p>Регистрация доступна только по приглашению. Обратитесь к администратору.</p>
           </div>
         </div>
@@ -229,7 +287,7 @@ function RegisterFormComponent() {
 export default function RegisterPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50">
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     }>

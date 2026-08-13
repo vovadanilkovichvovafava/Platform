@@ -1,45 +1,63 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isPrivileged, isHR, isAdmin as checkIsAdmin, getAdminAllowedTrailIds, getTeacherAllowedTrailIds } from "@/lib/admin-access"
+import { INACTIVE_DAYS, NEWCOMER_DAYS, getLastActiveDate, getDaysSinceActive } from "@/lib/activity"
 
 export const dynamic = "force-dynamic"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import {
-  Users,
-  Trophy,
-  BookOpen,
-  CheckCircle2,
-  Clock,
-  FileText,
-} from "lucide-react"
+import { Users } from "lucide-react"
+import { StudentsSearch } from "@/components/students-search"
 
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-export default async function TeacherStudentsPage() {
+export default async function TeacherStudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; trail?: string; sort?: string; page?: string; perPage?: string }>
+}) {
+  const resolvedSearchParams = await searchParams
   const session = await getServerSession(authOptions)
 
-  // Allow both TEACHER and ADMIN roles
-  if (!session || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  // Allow TEACHER, CO_ADMIN, ADMIN, and HR roles
+  if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
 
-  // Get all students with their progress
+  const isAdmin = checkIsAdmin(session.user.role)
+  const isCoAdmin = session.user.role === "CO_ADMIN"
+  const isHRUser = isHR(session.user.role)
+
+  // Get assigned trail IDs based on role
+  let assignedTrailIds: string[] | null = null // null = all trails (ADMIN)
+
+  if (isCoAdmin || isHRUser) {
+    // CO_ADMIN/HR - get trails from AdminTrailAccess
+    assignedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
+  } else if (!isAdmin) {
+    // TEACHER role - get assigned trails
+    assignedTrailIds = await getTeacherAllowedTrailIds(session.user.id)
+  }
+
+  // Build filter for students: only those enrolled in assigned trails
+  // ADMIN sees all students, others see only students in their assigned trails
+  const studentFilter = assignedTrailIds === null
+    ? { role: "STUDENT" as const }
+    : {
+        role: "STUDENT" as const,
+        enrollments: {
+          some: {
+            trailId: { in: assignedTrailIds },
+          },
+        },
+      }
+
+  // Get students with their progress (filtered by assigned trails)
   const students = await prisma.user.findMany({
-    where: { role: "STUDENT" },
+    where: studentFilter,
     orderBy: { totalXP: "desc" },
     include: {
       enrollments: {
+        // For non-admin, only show enrollments in assigned trails
+        where: assignedTrailIds !== null ? { trailId: { in: assignedTrailIds } } : undefined,
         include: {
           trail: {
             select: {
@@ -51,9 +69,25 @@ export default async function TeacherStudentsPage() {
         },
       },
       moduleProgress: {
-        where: { status: "COMPLETED" },
+        where: {
+          status: "COMPLETED",
+          // Only count completed modules from enrolled trails
+          ...(assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : {}),
+        },
+        select: {
+          id: true,
+          updatedAt: true,
+          module: {
+            select: {
+              points: true,
+              trailId: true,
+            },
+          },
+        },
       },
       submissions: {
+        // Filter submissions by assigned trails for non-admin
+        where: assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : undefined,
         include: {
           module: {
             select: { title: true },
@@ -62,17 +96,48 @@ export default async function TeacherStudentsPage() {
         orderBy: { createdAt: "desc" },
         take: 1,
       },
+      activityDays: {
+        orderBy: { date: "desc" as const },
+        take: 1,
+        select: { date: true },
+      },
       _count: {
         select: {
           submissions: true,
+          activityDays: true,
         },
       },
     },
   })
 
-  // Get all trails with their modules to calculate max XP
-  // XP is earned through quiz questions - each module's questions give up to module.points total
-  const trails = await prisma.trail.findMany({
+  // Filter out inactive students, but keep newcomers (registered < NEWCOMER_DAYS ago)
+  const now = new Date()
+
+  const activeStudents = isHRUser ? students : students.filter((student) => {
+    // Newcomers always visible regardless of activity
+    const daysSinceRegistered = Math.floor(
+      (now.getTime() - new Date(student.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    if (daysSinceRegistered < NEWCOMER_DAYS) return true
+
+    // Determine last activity from all interaction sources
+    const lastActive = getLastActiveDate({
+      activityDays: student.activityDays,
+      submissions: student.submissions,
+      enrollments: student.enrollments,
+      moduleProgress: student.moduleProgress,
+    })
+
+    // No activity at all — inactive, hide
+    if (!lastActive) return false
+
+    const daysSinceActive = getDaysSinceActive(lastActive, student.createdAt)
+    return daysSinceActive < INACTIVE_DAYS
+  })
+
+  // Get trails with their modules to calculate max XP (filtered for non-admin)
+  const allTrails = await prisma.trail.findMany({
+    where: assignedTrailIds !== null ? { id: { in: assignedTrailIds } } : undefined,
     include: {
       modules: {
         select: {
@@ -84,18 +149,14 @@ export default async function TeacherStudentsPage() {
 
   // Calculate max XP per trail (sum of all module points)
   const maxXPByTrail: Record<string, number> = {}
-  for (const trail of trails) {
+  for (const trail of allTrails) {
     maxXPByTrail[trail.id] = trail.modules.reduce((sum, m) => sum + m.points, 0)
   }
 
-  // Function to calculate max XP for a student based on their enrollments
-  const getStudentMaxXP = (enrollments: { trail: { id: string } }[]) => {
-    return enrollments.reduce((sum, e) => sum + (maxXPByTrail[e.trail.id] || 0), 0)
-  }
-
-  // Get submission stats per student
+  // Get submission stats per student (filtered by assigned trails for non-admin)
   const submissionStats = await prisma.submission.groupBy({
     by: ["userId", "status"],
+    where: assignedTrailIds !== null ? { module: { trailId: { in: assignedTrailIds } } } : undefined,
     _count: true,
   })
 
@@ -108,163 +169,120 @@ export default async function TeacherStudentsPage() {
     }
   }
 
+  // Fetch all trail statuses for active students in batch
+  const activeStudentIds = activeStudents.map((s) => s.id)
+  const allTrailStatusRecords = activeStudentIds.length > 0
+    ? await prisma.studentTrailStatus.findMany({
+        where: { studentId: { in: activeStudentIds } },
+        select: { studentId: true, trailId: true, status: true },
+      })
+    : []
+  // Build a map: studentId -> { trailId -> status }
+  const studentTrailStatusMap: Record<string, Record<string, string>> = {}
+  for (const r of allTrailStatusRecords) {
+    if (!studentTrailStatusMap[r.studentId]) {
+      studentTrailStatusMap[r.studentId] = {}
+    }
+    studentTrailStatusMap[r.studentId][r.trailId] = r.status
+  }
+
+  // Get unique trail names for filter
+  const trailNames = [...new Set(allTrails.map((t) => t.title))].sort()
+
+  // Fetch tags and tag assignments for filtering
+  const [allTags, allTagAssignments] = await Promise.all([
+    prisma.studentTag.findMany({
+      select: { id: true, name: true, color: true, _count: { select: { assignments: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.studentTagAssignment.findMany({
+      select: { studentId: true, tagId: true },
+    }),
+  ])
+
+  const tagsForFilter = allTags.map((t) => ({
+    id: t.id,
+    name: t.name,
+    color: t.color,
+    count: t._count.assignments,
+  }))
+
+  // Build studentId -> tagIds mapping
+  const studentTagIdsMap: Record<string, string[]> = {}
+  for (const a of allTagAssignments) {
+    if (!studentTagIdsMap[a.studentId]) studentTagIdsMap[a.studentId] = []
+    studentTagIdsMap[a.studentId].push(a.tagId)
+  }
+
+  // Serialize students data for client component (inactive/at-risk filtered out, newcomers kept)
+  const serializedStudents = activeStudents.map((student) => {
+    // Get enrolled trail IDs for this student
+    const enrolledTrailIds = new Set(student.enrollments.map((e) => e.trail.id))
+
+    // Calculate XP only from completed modules in enrolled trails
+    const calculatedXP = student.moduleProgress
+      .filter((mp) => mp.module && enrolledTrailIds.has(mp.module.trailId))
+      .reduce((sum, mp) => sum + (mp.module?.points || 0), 0)
+
+    // Calculate max XP for enrolled trails
+    const maxXP = student.enrollments.reduce(
+      (sum, e) => sum + (maxXPByTrail[e.trail.id] || 0),
+      0
+    )
+
+    return {
+      id: student.id,
+      name: student.name,
+      email: student.email,
+      telegramUsername: student.telegramUsername,
+      totalXP: calculatedXP,
+      enrollments: student.enrollments,
+      moduleProgress: student.moduleProgress,
+      submissions: student.submissions.map((s) => ({
+        ...s,
+        createdAt: s.createdAt.toISOString(),
+      })),
+      _count: student._count,
+      stats: getStudentStats(student.id),
+      maxXP,
+      trailStatuses: studentTrailStatusMap[student.id] || {},
+    }
+  })
+
+  // Handle empty state for teachers with no assigned trails
+  const hasNoAccess = assignedTrailIds !== null && assignedTrailIds.length === 0
+
   return (
-    <div className="p-8">
+    <div className="p-8 pb-40">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2 flex items-center gap-2">
           <Users className="h-6 w-6" />
           Ученики
         </h1>
-        <p className="text-gray-600">
-          {students.length} студентов на платформе
+        <p className="text-gray-600 dark:text-slate-400">
+          {hasNoAccess
+            ? "У вас пока нет назначенных направлений"
+            : isAdmin
+              ? `${activeStudents.length} активных студентов на платформе`
+              : isHRUser
+                ? `${activeStudents.length} кандидатов на платформе`
+              : `${activeStudents.length} активных студентов в ваших направлениях`}
         </p>
       </div>
 
-      {students.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Пока нет учеников
-            </h3>
-            <p className="text-gray-600">
-              Ученики появятся после регистрации по инвайту
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {students.map((student) => {
-            const stats = getStudentStats(student.id)
-            const lastSubmission = student.submissions[0]
-            const maxXP = getStudentMaxXP(student.enrollments)
-            const progressPercent = maxXP > 0 ? Math.round((student.totalXP / maxXP) * 100) : 0
-
-            return (
-              <Card key={student.id}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center gap-4">
-                    {/* Avatar & Info */}
-                    <div className="flex items-center gap-4 flex-1">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-blue-100 text-blue-700">
-                          {getInitials(student.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {student.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">{student.email}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {student.enrollments.map((e) => (
-                            <Badge
-                              key={e.trailId}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {e.trail.title}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex items-center gap-6">
-                      <div className="text-center">
-                        <div className="flex items-center gap-1 text-blue-600">
-                          <BookOpen className="h-4 w-4" />
-                          <span className="font-bold">
-                            {student.moduleProgress.length}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">Модулей</p>
-                      </div>
-
-                      <div className="text-center">
-                        <div className="flex items-center gap-1 text-green-600">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span className="font-bold">{stats.approved}</span>
-                        </div>
-                        <p className="text-xs text-gray-500">Принято</p>
-                      </div>
-
-                      <div className="text-center">
-                        <div className="flex items-center gap-1 text-orange-600">
-                          <Clock className="h-4 w-4" />
-                          <span className="font-bold">{stats.pending}</span>
-                        </div>
-                        <p className="text-xs text-gray-500">Ожидает</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* XP Progress Bar */}
-                  {maxXP > 0 && (
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Trophy className="h-4 w-4 text-yellow-500" />
-                          <span className="text-sm font-medium text-gray-700">Прогресс XP</span>
-                        </div>
-                        <span className="text-sm font-bold text-yellow-600">
-                          {student.totalXP} / {maxXP} XP
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all"
-                          style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1 text-right">{progressPercent}% завершено</p>
-                    </div>
-                  )}
-
-                  {/* Last submission */}
-                  {lastSubmission && (
-                    <div className={`mt-4 pt-4 ${maxXP > 0 ? "" : "border-t"}`}>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <FileText className="h-4 w-4" />
-                        <span>Последняя работа:</span>
-                        <span className="font-medium text-gray-700">
-                          {lastSubmission.module.title}
-                        </span>
-                        <span>—</span>
-                        <span>
-                          {new Date(lastSubmission.createdAt).toLocaleDateString(
-                            "ru-RU",
-                            {
-                              day: "numeric",
-                              month: "short",
-                            }
-                          )}
-                        </span>
-                        <Badge
-                          className={`text-xs ${
-                            lastSubmission.status === "APPROVED"
-                              ? "bg-green-100 text-green-700"
-                              : lastSubmission.status === "PENDING"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-orange-100 text-orange-700"
-                          } border-0`}
-                        >
-                          {lastSubmission.status === "APPROVED"
-                            ? "Принято"
-                            : lastSubmission.status === "PENDING"
-                            ? "На проверке"
-                            : "На доработку"}
-                        </Badge>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      )}
+      <StudentsSearch
+        students={serializedStudents}
+        trails={trailNames}
+        tagsForFilter={tagsForFilter}
+        studentTagIdsMap={studentTagIdsMap}
+        initialFilters={{
+          q: resolvedSearchParams.q || "",
+          trail: resolvedSearchParams.trail || "all",
+          sort: resolvedSearchParams.sort || "xp",
+          page: resolvedSearchParams.page || "1",
+          perPage: resolvedSearchParams.perPage || "10",
+        }}
+      />
     </div>
   )
 }

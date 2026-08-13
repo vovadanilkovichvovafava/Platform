@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Upload, Github, Globe } from "lucide-react"
+import { Loader2, Upload, Github, Globe, Play } from "lucide-react"
 
 interface SubmitProjectFormProps {
   moduleId: string
-  moduleSlug: string
+  nextModuleSlug?: string | null
+  autoNavigate?: boolean
 }
 
-export function SubmitProjectForm({ moduleId, moduleSlug }: SubmitProjectFormProps) {
+export function SubmitProjectForm({ moduleId, nextModuleSlug, autoNavigate }: SubmitProjectFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +29,7 @@ export function SubmitProjectForm({ moduleId, moduleSlug }: SubmitProjectFormPro
       moduleId,
       githubUrl: formData.get("githubUrl") as string,
       deployUrl: formData.get("deployUrl") as string,
+      demoUrl: formData.get("demoUrl") as string,
       comment: formData.get("comment") as string,
     }
 
@@ -43,7 +45,11 @@ export function SubmitProjectForm({ moduleId, moduleSlug }: SubmitProjectFormPro
         throw new Error(result.error || "Ошибка при отправке")
       }
 
-      router.refresh()
+      if (autoNavigate && nextModuleSlug) {
+        router.push(`/module/${nextModuleSlug}`)
+      } else {
+        router.refresh()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при отправке")
     } finally {
@@ -54,7 +60,7 @@ export function SubmitProjectForm({ moduleId, moduleSlug }: SubmitProjectFormPro
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950 rounded-lg">
           {error}
         </div>
       )}
@@ -88,12 +94,27 @@ export function SubmitProjectForm({ moduleId, moduleSlug }: SubmitProjectFormPro
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="demoUrl" className="flex items-center gap-2">
+          <Play className="h-4 w-4" />
+          Ссылка на демо
+        </Label>
+        <Input
+          id="demoUrl"
+          name="demoUrl"
+          type="url"
+          placeholder="https://www.loom.com/share/..."
+          disabled={isLoading}
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="comment">Комментарий</Label>
         <Textarea
           id="comment"
           name="comment"
           placeholder="Опишите что сделано, какие были сложности..."
           rows={4}
+          maxLength={5000}
           disabled={isLoading}
         />
       </div>
