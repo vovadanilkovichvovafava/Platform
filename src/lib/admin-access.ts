@@ -47,21 +47,21 @@ export function isPrivileged(role: string | null | undefined): boolean {
 
 /**
  * Get list of trail IDs that admin/HR has access to
- * - ADMIN: returns null (has access to ALL trails)
- * - CO_ADMIN/HR: returns array of allowed trail IDs (empty array = no access)
+ * - ADMIN/HR: returns null (has access to ALL trails)
+ * - CO_ADMIN: returns array of allowed trail IDs (empty array = no access)
  *
- * @returns null for ADMIN (unlimited access), string[] for CO_ADMIN/HR
+ * @returns null for ADMIN/HR (unlimited read scope), string[] for CO_ADMIN
  */
 export async function getAdminAllowedTrailIds(
   adminId: string,
   role: string
 ): Promise<string[] | null> {
-  // ADMIN has access to all trails
-  if (isAdmin(role)) {
+  // ADMIN has full access; HR has the same visibility with read-only permissions.
+  if (isAdmin(role) || isHR(role)) {
     return null // null means "all trails"
   }
 
-  // CO_ADMIN and HR - fetch allowed trails from AdminTrailAccess
+  // CO_ADMIN - fetch allowed trails from AdminTrailAccess
   const accessRecords = await prisma.adminTrailAccess.findMany({
     where: { adminId },
     select: { trailId: true },
@@ -228,7 +228,8 @@ export async function teacherHasTrailAccess(
 /**
  * Unified: Get allowed trail IDs for any privileged role (including HR).
  * - ADMIN: returns null (all trails)
- * - CO_ADMIN/HR: returns AdminTrailAccess trail IDs
+ * - HR: returns null (all trails, read-only)
+ * - CO_ADMIN: returns AdminTrailAccess trail IDs
  * - TEACHER: returns TrailTeacher + ALL_TEACHERS trail IDs
  * - Other: returns empty array (no access)
  *
@@ -238,10 +239,10 @@ export async function getPrivilegedAllowedTrailIds(
   userId: string,
   role: string
 ): Promise<string[] | null> {
-  if (isAdmin(role)) {
+  if (isAdmin(role) || isHR(role)) {
     return null
   }
-  if (role === ROLE_CO_ADMIN || role === ROLE_HR) {
+  if (role === ROLE_CO_ADMIN) {
     return getAdminAllowedTrailIds(userId, role)
   }
   if (role === ROLE_TEACHER) {
@@ -252,8 +253,8 @@ export async function getPrivilegedAllowedTrailIds(
 
 /**
  * Unified: Check if a privileged user (or HR) has access to a specific trail.
- * - ADMIN: always true
- * - CO_ADMIN/HR: checks AdminTrailAccess
+ * - ADMIN/HR: always true (HR remains read-only at route level)
+ * - CO_ADMIN: checks AdminTrailAccess
  * - TEACHER: checks TrailTeacher / ALL_TEACHERS
  */
 export async function privilegedHasTrailAccess(
@@ -261,10 +262,10 @@ export async function privilegedHasTrailAccess(
   role: string,
   trailId: string
 ): Promise<boolean> {
-  if (isAdmin(role)) {
+  if (isAdmin(role) || isHR(role)) {
     return true
   }
-  if (role === ROLE_CO_ADMIN || role === ROLE_HR) {
+  if (role === ROLE_CO_ADMIN) {
     return adminHasTrailAccess(userId, role, trailId)
   }
   if (role === ROLE_TEACHER) {

@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged, isHR, isAdmin as checkIsAdmin, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
+import { isPrivileged, isHR, getPrivilegedAllowedTrailIds } from "@/lib/admin-access"
 
 export const dynamic = "force-dynamic"
 import { Card, CardContent } from "@/components/ui/card"
@@ -26,8 +26,6 @@ export default async function TeacherDashboard({
   if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
     redirect("/dashboard")
   }
-
-  const isAdmin = checkIsAdmin(session.user.role)
 
   // Get teacher's assigned trails via unified helper
   // - ADMIN: null (all), CO_ADMIN/TEACHER: specific trail IDs
@@ -89,7 +87,7 @@ export default async function TeacherDashboard({
     by: ["status"],
     where: shouldFilter
       ? { module: { trailId: { in: assignedTrailIds } } }
-      : (!isAdmin && assignedTrailIds.length === 0 ? { id: "__NEVER_MATCH__" } : {}),
+      : (allowedTrailIds !== null && assignedTrailIds.length === 0 ? { id: "__NEVER_MATCH__" } : {}),
     _count: true,
   })
 

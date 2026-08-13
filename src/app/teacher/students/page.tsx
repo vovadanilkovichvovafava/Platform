@@ -113,7 +113,7 @@ export default async function TeacherStudentsPage({
   // Filter out inactive students, but keep newcomers (registered < NEWCOMER_DAYS ago)
   const now = new Date()
 
-  const activeStudents = students.filter((student) => {
+  const activeStudents = isHRUser ? students : students.filter((student) => {
     // Newcomers always visible regardless of activity
     const daysSinceRegistered = Math.floor(
       (now.getTime() - new Date(student.createdAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -264,6 +264,8 @@ export default async function TeacherStudentsPage({
             ? "У вас пока нет назначенных направлений"
             : isAdmin
               ? `${activeStudents.length} активных студентов на платформе`
+              : isHRUser
+                ? `${activeStudents.length} кандидатов на платформе`
               : `${activeStudents.length} активных студентов в ваших направлениях`}
         </p>
       </div>

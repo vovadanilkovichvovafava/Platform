@@ -32,7 +32,11 @@ export default async function TeacherLayout({
     // CO_ADMIN/HR sees only submissions from their assigned trails
     const allowedTrailIds = await getAdminAllowedTrailIds(session.user.id, session.user.role)
 
-    if (allowedTrailIds && allowedTrailIds.length > 0) {
+    if (allowedTrailIds === null) {
+      pendingCount = await prisma.submission.count({
+        where: { status: "PENDING" },
+      })
+    } else if (allowedTrailIds.length > 0) {
       pendingCount = await prisma.submission.count({
         where: {
           status: "PENDING",

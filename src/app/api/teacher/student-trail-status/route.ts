@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isPrivileged, isAdmin, getTeacherAllowedTrailIds, adminHasTrailAccess } from "@/lib/admin-access"
+import { isPrivileged, isHR, isAdmin, getTeacherAllowedTrailIds, adminHasTrailAccess } from "@/lib/admin-access"
 
 /**
  * Check if the current user has access to manage the given trail
@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || !isPrivileged(session.user.role)) {
+    if (!session || (!isPrivileged(session.user.role) && !isHR(session.user.role))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         name: true, // Only for response display, not sent to AI
+        role: true,
         totalXP: true,
         activityDays: {
           orderBy: { date: "desc" },
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    if (!student) {
+    if (!student || student.role !== "STUDENT") {
       return NextResponse.json(
         { error: "Студент не найден" },
         { status: 404 }
