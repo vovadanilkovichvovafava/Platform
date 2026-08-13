@@ -10,7 +10,7 @@ Runbook для миграции с Railway + Supabase на внутреннюю 
 
 | Ресурс | Требование | Почему |
 |---|---|---|
-| Контейнер | Node.js 20+, порт из `PORT` (по умолчанию 8080) | образ собирается из `Dockerfile` |
+| Контейнер | Node.js 20+, порт из `PORT` (по умолчанию 3000) | образ собирается из `Dockerfile` |
 | PostgreSQL | 14+, внутри периметра | сейчас Supabase — **обязательно заменить** |
 | Persistent volume | смонтировать в `/app/public/uploads` | **иначе загруженные медиафайлы теряются при каждом рестарте** |
 | Health-пробы | `GET /api/health` (liveness), `GET /api/health?db=1` (readiness) | добавлены в этой ветке |
@@ -21,7 +21,7 @@ Runbook для миграции с Railway + Supabase на внутреннюю 
 ```bash
 cp .env.example .env          # заполнить NEXTAUTH_SECRET
 docker compose up --build     # поднимет app + PostgreSQL, без внешних сервисов
-curl localhost:8080/api/health?db=1
+curl localhost:3000/api/health?db=1
 ```
 
 ---

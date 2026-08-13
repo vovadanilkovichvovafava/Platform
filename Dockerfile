@@ -3,7 +3,7 @@
 # R&D Academy — production image for container platforms (Saturn / Kubernetes / Docker).
 #
 # Build:  docker build -t rnd-academy:latest .
-# Run:    docker run -p 8080:8080 --env-file .env -v rnd-uploads:/app/public/uploads rnd-academy:latest
+# Run:    docker run -p 3000:3000 --env-file .env -v rnd-uploads:/app/public/uploads rnd-academy:latest
 #
 # NOTE: uploaded media lives in /app/public/uploads — mount a persistent volume there
 # or the files are lost on every restart. See SATURN_MIGRATION.md.
@@ -41,7 +41,10 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=8080
+# Port is NOT hardcoded: the platform (Coolify/Saturn, k8s) injects PORT and
+# routes to it. Next.js standalone falls back to 3000 when PORT is unset, which
+# matches the usual "Ports Exposes" default — so the image works out of the box
+# and still honours whatever the platform sets.
 ENV HOSTNAME=0.0.0.0
 
 RUN addgroup -S -g 1001 nodejs \
@@ -72,10 +75,10 @@ RUN mkdir -p /app/public/uploads/media && chown -R nextjs:nodejs /app/public/upl
 VOLUME ["/app/public/uploads"]
 
 USER nextjs
-EXPOSE 8080
+EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["./scripts/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

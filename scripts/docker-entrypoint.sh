@@ -42,5 +42,5 @@ case "$MODE" in
     ;;
 esac
 
-echo "[entrypoint] Starting application on port ${PORT:-8080}..."
+echo "[entrypoint] Starting application on port ${PORT:-3000}..."
 exec "$@"
