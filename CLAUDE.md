@@ -128,12 +128,18 @@ CONFLICT | INTERNAL_ERROR`.
 - **Загруженные медиафайлы лежат на локальном диске** (`public/uploads/media/`).
   Без persistent volume теряются при рестарте.
 - **`scripts/start.js` по умолчанию делает `prisma db push --accept-data-loss`.**
-  Управляется `DB_MIGRATE_MODE`; на бою должно быть `deploy`.
+  Управляется `DB_MIGRATE_MODE`; `deploy` пока неприменим — см. ниже.
 - **Автосид срабатывает на пустой БД** — восстанавливать дамп до первого старта.
 - Внешние хосты (Anthropic, Telegram, Google Docs, Unsplash, Iconify) в закрытом
   контуре недоступны — соответствующие функции отключаются.
 
 ## Известные проблемы
+
+- **В `prisma/migrations` нет baseline-миграции.** Ни одна не создаёт `User`,
+  `Trail` и прочие базовые таблицы — схема всегда поднималась через `db push`,
+  а миграции добавляют только инкременты. Поэтому `prisma migrate deploy` на
+  чистой БД падает (`P3009`) и блокирует последующие запуски. Рабочий режим —
+  `DB_MIGRATE_MODE=push`. Детали и путь к baseline — в `SATURN_MIGRATION.md` 4.3.
 
 - `src/__tests__/rate-limit.test.ts` ожидает `submissions.maxRequests: 10`,
   в коде `50` — тест падает на `main`.
