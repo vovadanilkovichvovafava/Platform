@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider"
 import { Header } from "@/components/header"
 import { ToastProvider } from "@/components/ui/toast"
 import { ConfirmProvider } from "@/components/ui/confirm-dialog"
+import { ForcePasswordChange } from "@/components/force-password-change"
 
 export const metadata: Metadata = {
   title: "R&D Academy - Обучающая платформа",
@@ -33,6 +34,7 @@ export default function RootLayout({
               <ConfirmProvider>
                 <Header />
                 <main>{children}</main>
+                <ForcePasswordChange />
               </ConfirmProvider>
             </ToastProvider>
           </AuthProvider>

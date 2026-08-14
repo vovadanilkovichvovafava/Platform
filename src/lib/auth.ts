@@ -38,6 +38,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          mustChangePassword: user.mustChangePassword,
         }
       },
     }),
@@ -50,15 +51,19 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.mustChangePassword = user.mustChangePassword
       } else if (token.id) {
-        // Sync role from database on every request (handles role changes by admin)
+        // Sync role from database on every request (handles role changes by admin).
+        // Also re-reads mustChangePassword so the forced-change modal appears right
+        // after an admin reset and disappears right after the user changes it.
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true },
+            select: { role: true, mustChangePassword: true },
           })
           if (dbUser) {
             token.role = dbUser.role
+            token.mustChangePassword = dbUser.mustChangePassword
           } else {
             // User confirmed deleted from DB — invalidate token
             // This prevents redirect loop: middleware won't treat as authenticated
@@ -78,7 +83,7 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { id: true, role: true },
+            select: { id: true, role: true, mustChangePassword: true },
           })
 
           if (!dbUser) {
@@ -86,16 +91,19 @@ export const authOptions: NextAuthOptions = {
             // JWT callback will also clear token.id on next request
             session.user.id = ""
             session.user.role = ""
+            session.user.mustChangePassword = false
             return session
           }
 
           session.user.id = dbUser.id
           session.user.role = dbUser.role
+          session.user.mustChangePassword = dbUser.mustChangePassword
         } catch {
           // DB error (timeout, connection issue) — use token values as fallback
           // This prevents redirect loop: session stays valid even if DB is temporarily down
           session.user.id = token.id as string
           session.user.role = (token.role as string) || ""
+          session.user.mustChangePassword = token.mustChangePassword ?? false
         }
       }
       return session

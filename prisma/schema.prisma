@@ -21,6 +21,7 @@ model User {
   avatarUrl     String?
   invitedBy     String?   // ID of user who invited
   skipModuleWarning   Boolean   @default(false) // Skip module start warning modal
+  mustChangePassword  Boolean   @default(false) // Admin reset the password to a temp one — force a change on next login
   telegramChatId      String?   // Telegram chat ID for notifications
   telegramEnabled     Boolean   @default(true) // Allow user to disable TG notifications
   telegramConnectedAt DateTime? // When Telegram was linked
