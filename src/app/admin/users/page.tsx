@@ -25,6 +25,7 @@ import {
   KeyRound,
   Copy,
   Check,
+  Link2,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import {
@@ -111,6 +112,9 @@ function AdminUsersPageContent() {
   const [resettingId, setResettingId] = useState<string | null>(null)
   const [resetResult, setResetResult] = useState<{ name: string; email: string; tempPassword: string } | null>(null)
   const [copiedTemp, setCopiedTemp] = useState(false)
+  const [linkingId, setLinkingId] = useState<string | null>(null)
+  const [linkResult, setLinkResult] = useState<{ name: string; email: string; url: string; expiresAt: string } | null>(null)
+  const [copiedLink, setCopiedLink] = useState(false)
   const [allTags, setAllTags] = useState<TagInfo[]>([])
   const [allTagsRaw, setAllTagsRaw] = useState<(TagInfo & { _count?: { assignments: number } })[]>([])
   const [tagAssignments, setTagAssignments] = useState<TagAssignment[]>([])
@@ -575,6 +579,39 @@ function AdminUsersPageContent() {
     }
   }
 
+  const createResetLink = async (userId: string, userName: string, userEmail: string) => {
+    try {
+      setLinkingId(userId)
+      const res = await fetch(`/api/admin/users/${userId}/reset-link`, {
+        method: "POST",
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        showToast(data.error || "Ошибка при создании ссылки", "error")
+        return
+      }
+
+      setCopiedLink(false)
+      setLinkResult({ name: userName, email: userEmail, url: data.url, expiresAt: data.expiresAt })
+    } catch {
+      showToast("Ошибка при создании ссылки", "error")
+    } finally {
+      setLinkingId(null)
+    }
+  }
+
+  const copyResetLink = async () => {
+    if (!linkResult) return
+    try {
+      await navigator.clipboard.writeText(linkResult.url)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2000)
+    } catch {
+      showToast("Не удалось скопировать", "error")
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
@@ -840,12 +877,28 @@ function AdminUsersPageContent() {
                             onClick={() => resetPassword(user.id, user.name, user.email)}
                             disabled={resettingId === user.id}
                             className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors disabled:opacity-50"
-                            title="Сбросить пароль"
+                            title="Сбросить пароль (временный)"
                           >
                             {resettingId === user.id ? (
                               <RefreshCw className="h-4 w-4 animate-spin" />
                             ) : (
                               <KeyRound className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
+
+                        {/* Reset link button — super admin (ADMIN) only */}
+                        {isAdmin && (
+                          <button
+                            onClick={() => createResetLink(user.id, user.name, user.email)}
+                            disabled={linkingId === user.id}
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors disabled:opacity-50"
+                            title="Ссылка для сброса пароля"
+                          >
+                            {linkingId === user.id ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Link2 className="h-4 w-4" />
                             )}
                           </button>
                         )}
@@ -951,6 +1004,55 @@ function AdminUsersPageContent() {
 
             <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900 rounded-b-xl flex justify-end">
               <Button onClick={() => setResetResult(null)}>Готово</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset link result modal */}
+      {linkResult && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50 animate-in fade-in duration-200"
+            onClick={() => setLinkResult(null)}
+          />
+          <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
+                  <Link2 className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                    Ссылка для сброса
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
+                    Отправьте её пользователю <strong>{linkResult.name}</strong> ({linkResult.email}).
+                    Он сам задаст новый пароль. Ссылка одноразовая и действует 24 часа.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 rounded-lg bg-gray-100 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-mono text-xs break-all select-all">
+                  {linkResult.url}
+                </code>
+                <button
+                  onClick={copyResetLink}
+                  className="p-2 text-gray-500 dark:text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg transition-colors shrink-0"
+                  title="Скопировать"
+                >
+                  {copiedLink ? (
+                    <Check className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <Copy className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900 rounded-b-xl flex justify-end">
+              <Button onClick={() => setLinkResult(null)}>Готово</Button>
             </div>
           </div>
         </div>

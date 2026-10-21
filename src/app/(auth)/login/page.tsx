@@ -157,6 +157,10 @@ export default function LoginPage() {
               Зарегистрироваться
             </Link>
           </div>
+
+          <p className="mt-3 text-center text-xs text-slate-400 dark:text-slate-500">
+            Забыли пароль? Напишите администратору — он пришлёт ссылку для сброса.
+          </p>
         </div>
       </div>
     </div>

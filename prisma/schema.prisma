@@ -48,6 +48,21 @@ model User {
   navbarPresets        NavbarPreset[]
   trailStatuses        StudentTrailStatus[]
   tagAssignments       StudentTagAssignment[]
+  passwordResetTokens  PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique // random, goes into the reset link
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime? // set when the token is consumed; single-use
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
 }
 
 // Track daily user activity (one record per day per user)
