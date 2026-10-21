@@ -115,6 +115,9 @@ const authMiddleware = withAuth(
           path === "/" ||
           path === "/login" ||
           path === "/register" ||
+          // Password reset via one-time link — reached by logged-out users
+          path === "/reset-password" ||
+          path === "/api/reset-password" ||
           path.startsWith("/trails") ||
           path.startsWith("/api/auth") ||
           path.startsWith("/api/register") ||
